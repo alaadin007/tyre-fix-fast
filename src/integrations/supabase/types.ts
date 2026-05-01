@@ -14,7 +14,57 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      jobs: {
+        Row: {
+          created_at: string
+          customer_email: string | null
+          customer_name: string
+          customer_phone: string
+          damage_confidence: string | null
+          damage_summary: string | null
+          damage_type: string | null
+          id: string
+          issue_description: string | null
+          issue_type: string
+          photo_urls: string[]
+          postcode: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          customer_email?: string | null
+          customer_name: string
+          customer_phone: string
+          damage_confidence?: string | null
+          damage_summary?: string | null
+          damage_type?: string | null
+          id?: string
+          issue_description?: string | null
+          issue_type: string
+          photo_urls?: string[]
+          postcode: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          customer_email?: string | null
+          customer_name?: string
+          customer_phone?: string
+          damage_confidence?: string | null
+          damage_summary?: string | null
+          damage_type?: string | null
+          id?: string
+          issue_description?: string | null
+          issue_type?: string
+          photo_urls?: string[]
+          postcode?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
