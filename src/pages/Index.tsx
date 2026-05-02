@@ -161,7 +161,7 @@ const Index = () => {
   };
 
   const smsBody =
-    "Hi FlatTyreNearMe.Com — I need help with a flat tyre.\n\n" +
+    "Hi FTNM — I need help with a flat tyre.\n\n" +
     "📍 Location / postcode: \n" +
     "📷 Photos of the tyre attached (use flash if it's dark)\n" +
     "🛞 If the sidewall isn't legible, tyre type & size: \n\n" +
@@ -413,7 +413,7 @@ const Index = () => {
                   <span>To: {SMS_DISPLAY}</span>
                 </div>
                 <pre className="whitespace-pre-wrap font-sans text-[13px] leading-relaxed text-white/90">
-{`Hi FlatTyreNearMe.Com — I need help with a flat tyre.
+{`Hi FTNM — I need help with a flat tyre.
 
 📍 Location / postcode: 
 📷 Photos of the tyre attached
@@ -575,7 +575,8 @@ const Index = () => {
         <div className="container grid gap-8 py-12 md:grid-cols-4">
           <div>
             <div className="text-2xl font-black">
-              Flat Tyre <span className="text-accent">Near Me</span>
+              FlatTyreNearMe<span className="text-accent">.Com</span>
+              <span className="ml-2 align-middle text-xs font-bold text-white/50">FTNM</span>
             </div>
             <p className="mt-3 text-sm text-white/70">
               The UK's fastest mobile tyre network. 24/7/365.
