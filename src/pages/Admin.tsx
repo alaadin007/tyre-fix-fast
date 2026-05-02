@@ -132,7 +132,7 @@ export default function Admin() {
     if (mRes.data) setMessages(mRes.data as SmsMessage[]);
     if (aRes.data) setAllocations(aRes.data as Allocation[]);
     if (jRes.data) setJobs(jRes.data as Job[]);
-    if (qRes.data) setQuotes(qRes.data as Quote[]);
+    if (qRes.data) setQuotes(qRes.data as unknown as Quote[]);
     if (sRes.data) {
       setSettingsId((sRes.data as any).id);
       setAutoAssign(Boolean((sRes.data as any).value?.auto_assign));
