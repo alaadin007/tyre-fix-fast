@@ -206,7 +206,7 @@ export default function Admin() {
     <div className="min-h-screen bg-aurora">
       {/* Header */}
       <header className="border-b border-white/10 backdrop-blur-xl bg-white/5">
-        <div className="mx-auto flex max-w-[1700px] items-center justify-between px-6 py-4">
+        <div className="mx-auto flex w-full max-w-[1700px] items-center justify-between gap-2 px-3 sm:px-6 py-3 sm:py-4">
           <div className="flex items-center gap-4">
             <Link to="/" className="flex items-center gap-1.5 text-xs text-white/70 hover:text-white">
               <ArrowLeft className="h-3 w-3" /> FlatTyreNearMe.Com
@@ -229,7 +229,7 @@ export default function Admin() {
       </header>
 
       {/* 4-column layout */}
-      <main className="mx-auto max-w-[1900px] px-6 py-6">
+      <main className="mx-auto w-full max-w-[1900px] px-3 sm:px-6 py-4 sm:py-6 overflow-x-hidden">
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-4 lg:h-[calc(100vh-9rem)]">
           {/* COL 1 — AI chat */}
           <section className="glass-dark flex flex-col rounded-2xl p-5">
