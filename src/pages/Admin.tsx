@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import {
   Plus, Trash2, Star, Phone, MapPin, RefreshCw, Upload, Settings,
   MessageSquare, MessageCircle, CheckCircle2, Clock, Sparkles, Users, ArrowLeft, Navigation,
-  ShieldCheck, Zap, Check, X, ChevronsUpDown, Send,
+  ShieldCheck, Zap, Check, X, ChevronsUpDown, Send, ChevronDown, ChevronUp, Image as ImageIcon, PoundSterling, User as UserIcon,
 } from "lucide-react";
 import { parseTechniciansFile, type ParsedTechnician } from "@/lib/parseTechnicians";
 import { Button } from "@/components/ui/button";
@@ -49,6 +49,11 @@ type Job = {
   damage_type: string | null; damage_summary: string | null; damage_confidence: string | null;
   photo_urls: string[];
 };
+type Quote = {
+  id: string; job_id: string | null; technician_id: string | null;
+  price_gbp: number | null; eta_minutes: number | null;
+  status: string; raw_message: string | null; confidence: string | null; created_at: string;
+};
 
 const techSchema = z.object({
   name: z.string().trim().min(2, "Name required").max(100),
@@ -87,6 +92,7 @@ export default function Admin() {
   const [messages, setMessages] = useState<SmsMessage[]>([]);
   const [allocations, setAllocations] = useState<Allocation[]>([]);
   const [jobs, setJobs] = useState<Job[]>([]);
+  const [quotes, setQuotes] = useState<Quote[]>([]);
   const [loading, setLoading] = useState(true);
   const [autoAssign, setAutoAssign] = useState<boolean>(false);
   const [settingsId, setSettingsId] = useState<string | null>(null);
@@ -97,19 +103,36 @@ export default function Admin() {
     return m;
   }, [techs]);
 
+  const quotesByJob = useMemo(() => {
+    const m = new Map<string, Quote[]>();
+    quotes.forEach((q) => {
+      if (!q.job_id) return;
+      const arr = m.get(q.job_id) ?? [];
+      arr.push(q);
+      m.set(q.job_id, arr);
+    });
+    // sort each list cheapest-first, then fastest
+    for (const arr of m.values()) {
+      arr.sort((a, b) => (a.price_gbp ?? 1e9) - (b.price_gbp ?? 1e9) || (a.eta_minutes ?? 1e9) - (b.eta_minutes ?? 1e9));
+    }
+    return m;
+  }, [quotes]);
+
   const refreshAll = async () => {
     setLoading(true);
-    const [tRes, mRes, aRes, jRes, sRes] = await Promise.all([
+    const [tRes, mRes, aRes, jRes, sRes, qRes] = await Promise.all([
       supabase.from("technicians").select("*").order("created_at", { ascending: false }),
       supabase.from("sms_messages").select("*").order("created_at", { ascending: false }).limit(100),
       supabase.from("job_allocations").select("*").order("created_at", { ascending: false }).limit(100),
       supabase.from("jobs").select("*").order("created_at", { ascending: false }).limit(100),
       supabase.from("app_settings" as any).select("*").eq("key", "dispatch").maybeSingle(),
+      supabase.from("quotes" as any).select("*").order("created_at", { ascending: false }).limit(200),
     ]);
     if (tRes.data) setTechs(tRes.data as Technician[]);
     if (mRes.data) setMessages(mRes.data as SmsMessage[]);
     if (aRes.data) setAllocations(aRes.data as Allocation[]);
     if (jRes.data) setJobs(jRes.data as Job[]);
+    if (qRes.data) setQuotes(qRes.data as unknown as Quote[]);
     if (sRes.data) {
       setSettingsId((sRes.data as any).id);
       setAutoAssign(Boolean((sRes.data as any).value?.auto_assign));
@@ -233,21 +256,16 @@ export default function Admin() {
               isEmpty={incoming.length === 0 && messages.filter(m => m.direction === "inbound").length === 0}
             >
               <div className="space-y-2">
-                {incoming.map((j) => {
-                  const eta = estimateEta(j, techs);
-                  return (
-                    <JobCard
-                      key={j.id}
-                      job={j}
-                      eta={eta}
-                      tone="incoming"
-                      onAccept={async () => {
-                        await supabase.from("jobs" as any).update({ status: "accepted" }).eq("id", j.id);
-                        toast.success("Job moved to in-progress");
-                      }}
-                    />
-                  );
-                })}
+                {incoming.map((j) => (
+                  <IncomingInquiryCard
+                    key={j.id}
+                    job={j}
+                    techs={techs}
+                    techMap={techMap}
+                    quotes={quotesByJob.get(j.id) ?? []}
+                    fallbackEta={estimateEta(j, techs)}
+                  />
+                ))}
                 {messages.filter(m => m.direction === "inbound").slice(0, 8).map((m) => {
                   const loc = extractLocation(m.body);
                   const isWA = m.channel === "whatsapp";
@@ -466,6 +484,251 @@ function JobCard({
           <Phone className="h-3 w-3" />Call
         </a>
       </div>
+    </div>
+  );
+}
+
+/* ---------- Rich expandable Incoming Inquiry card (message-style) ---------- */
+function IncomingInquiryCard({
+  job, techs, techMap, quotes, fallbackEta,
+}: {
+  job: Job;
+  techs: Technician[];
+  techMap: Map<string, Technician>;
+  quotes: Quote[];
+  fallbackEta: { minutes: number; tech: Technician } | null;
+}) {
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [lightbox, setLightbox] = useState<string | null>(null);
+
+  const liveQuotes = quotes.filter((q) => q.status !== "rejected");
+  const hasQuotes = liveQuotes.length > 0;
+  const cheapest = liveQuotes[0] ?? null;
+  const matchedTech = cheapest?.technician_id ? techMap.get(cheapest.technician_id) ?? null : null;
+  const headlineEta = cheapest?.eta_minutes ?? fallbackEta?.minutes ?? null;
+  const headlinePrice = cheapest?.price_gbp ?? null;
+  const headlineTechName = matchedTech?.name ?? fallbackEta?.tech?.name ?? null;
+
+  const approveQuote = async (q: Quote) => {
+    setBusy(true);
+    // Mark quote accepted, others rejected, move job to accepted
+    await supabase.from("quotes" as any).update({ status: "rejected" }).eq("job_id", job.id);
+    await supabase.from("quotes" as any).update({ status: "accepted" }).eq("id", q.id);
+    await supabase.from("jobs" as any).update({ status: "accepted" }).eq("id", job.id);
+    setBusy(false);
+    toast.success(`Job assigned${matchedTech ? ` to ${techMap.get(q.technician_id ?? "")?.name ?? "technician"}` : ""}`);
+  };
+
+  const acceptWithoutQuote = async () => {
+    setBusy(true);
+    await supabase.from("jobs" as any).update({ status: "accepted" }).eq("id", job.id);
+    setBusy(false);
+    toast.success("Job accepted (no quotes yet)");
+  };
+
+  return (
+    <div className="rounded-xl border border-[hsl(var(--accent))]/30 bg-[hsl(var(--accent))]/5 backdrop-blur transition hover:border-[hsl(var(--accent))]/50">
+      {/* Compact header — always visible */}
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-start justify-between gap-2 p-3 text-left"
+      >
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <p className="truncate text-sm font-semibold">{job.customer_name}</p>
+            {job.photo_urls?.length > 0 && (
+              <Badge variant="outline" className="h-4 gap-1 px-1 text-[10px]">
+                <ImageIcon className="h-2.5 w-2.5" />{job.photo_urls.length}
+              </Badge>
+            )}
+            {hasQuotes && (
+              <Badge className="h-4 gap-1 bg-[hsl(var(--success))]/15 px-1 text-[10px] text-[hsl(var(--success))] hover:bg-[hsl(var(--success))]/15">
+                {liveQuotes.length} quote{liveQuotes.length === 1 ? "" : "s"}
+              </Badge>
+            )}
+          </div>
+          <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
+            <MapPin className="h-3 w-3" />{job.postcode} · {job.issue_type}
+          </p>
+          {!open && job.damage_summary && (
+            <p className="mt-1 line-clamp-1 text-xs text-foreground/70">{job.damage_summary}</p>
+          )}
+        </div>
+        <div className="flex flex-col items-end gap-1">
+          {headlineEta != null && (
+            <Badge className="bg-[hsl(var(--primary))] text-white hover:bg-[hsl(var(--primary))]">
+              <Clock className="mr-1 h-3 w-3" />~{headlineEta}m
+            </Badge>
+          )}
+          {headlinePrice != null && (
+            <Badge variant="outline" className="text-[10px]">
+              <PoundSterling className="mr-0.5 h-2.5 w-2.5" />{headlinePrice}
+            </Badge>
+          )}
+          <span className="text-[10px] text-muted-foreground">{relTime(job.created_at)}</span>
+          {open ? <ChevronUp className="h-3.5 w-3.5 text-muted-foreground" /> : <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />}
+        </div>
+      </button>
+
+      {/* Expanded body */}
+      {open && (
+        <div className="border-t border-[hsl(var(--accent))]/20 px-3 pb-3 pt-2 space-y-3">
+          {/* Customer + location */}
+          <div className="flex flex-wrap items-center gap-2 text-xs">
+            <a
+              href={`tel:${job.customer_phone}`}
+              className="inline-flex items-center gap-1 rounded-md border bg-white px-2 py-1 hover:bg-muted"
+            >
+              <Phone className="h-3 w-3" />{job.customer_phone}
+            </a>
+            <a
+              href={`sms:${job.customer_phone}`}
+              className="inline-flex items-center gap-1 rounded-md border bg-white px-2 py-1 hover:bg-muted"
+            >
+              <MessageSquare className="h-3 w-3" />Text
+            </a>
+            <a
+              href={`https://wa.me/${job.customer_phone.replace(/\D/g, "")}`}
+              target="_blank" rel="noreferrer"
+              className="inline-flex items-center gap-1 rounded-md border bg-white px-2 py-1 hover:bg-muted"
+            >
+              <MessageCircle className="h-3 w-3" />WhatsApp
+            </a>
+            <a
+              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(job.postcode)}`}
+              target="_blank" rel="noreferrer"
+              className="inline-flex items-center gap-1 rounded-md border bg-white px-2 py-1 hover:bg-muted"
+            >
+              <Navigation className="h-3 w-3" />Map · {job.postcode}
+            </a>
+          </div>
+
+          {/* Description / damage */}
+          {(job.issue_description || job.damage_summary) && (
+            <div className="rounded-md bg-white/70 p-2 text-xs">
+              {job.issue_description && (
+                <p className="whitespace-pre-wrap text-foreground/85">{job.issue_description}</p>
+              )}
+              {job.damage_summary && (
+                <p className={`${job.issue_description ? "mt-1.5 border-t pt-1.5" : ""} flex items-start gap-1 text-foreground/75`}>
+                  <Sparkles className="mt-0.5 h-3 w-3 shrink-0 text-[hsl(var(--accent))]" />
+                  <span><span className="font-medium">AI:</span> {job.damage_summary}</span>
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Photos */}
+          {job.photo_urls?.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {job.photo_urls.map((u, i) => (
+                <button
+                  key={i}
+                  onClick={() => setLightbox(u)}
+                  className="block h-20 w-20 overflow-hidden rounded-md border bg-muted hover:opacity-80"
+                >
+                  <img src={u} alt={`Damage ${i + 1}`} className="h-full w-full object-cover" />
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Technician quotes — the matchmaking section */}
+          <div>
+            <div className="mb-1.5 flex items-center justify-between">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Technician quotes
+              </p>
+              {!hasQuotes && fallbackEta && (
+                <span className="text-[10px] text-muted-foreground">
+                  AI suggests <span className="font-medium text-foreground">{fallbackEta.tech.name}</span>
+                </span>
+              )}
+            </div>
+
+            {hasQuotes ? (
+              <div className="space-y-1.5">
+                {liveQuotes.map((q, idx) => {
+                  const t = q.technician_id ? techMap.get(q.technician_id) : null;
+                  const isCheapest = idx === 0;
+                  return (
+                    <div
+                      key={q.id}
+                      className={`flex items-center justify-between gap-2 rounded-md border p-2 ${
+                        isCheapest ? "border-[hsl(var(--success))]/40 bg-[hsl(var(--success))]/5" : "border-white/60 bg-white/70"
+                      }`}
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5">
+                          <UserIcon className="h-3 w-3 text-muted-foreground" />
+                          <span className="truncate text-xs font-medium">{t?.name ?? "Unknown tech"}</span>
+                          {isCheapest && (
+                            <Badge className="h-4 bg-[hsl(var(--success))] px-1 text-[9px] text-white hover:bg-[hsl(var(--success))]">
+                              best
+                            </Badge>
+                          )}
+                          {t?.rating != null && (
+                            <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
+                              <Star className="h-2.5 w-2.5 fill-amber-400 text-amber-400" />{t.rating}
+                            </span>
+                          )}
+                        </div>
+                        <div className="mt-0.5 flex items-center gap-2 text-[11px] text-muted-foreground">
+                          {q.price_gbp != null && (
+                            <span className="font-semibold text-foreground">£{q.price_gbp}</span>
+                          )}
+                          {q.eta_minutes != null && (
+                            <span className="inline-flex items-center gap-0.5">
+                              <Clock className="h-2.5 w-2.5" />{q.eta_minutes}m
+                            </span>
+                          )}
+                          {q.confidence && q.confidence !== "high" && (
+                            <Badge variant="outline" className="h-3.5 px-1 text-[9px]">{q.confidence}</Badge>
+                          )}
+                        </div>
+                      </div>
+                      <Button
+                        size="sm"
+                        className="h-7 bg-[hsl(var(--accent))] px-2 text-xs hover:bg-[hsl(var(--accent-glow))]"
+                        disabled={busy}
+                        onClick={() => approveQuote(q)}
+                      >
+                        <Check className="h-3 w-3" />Approve
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="rounded-md border border-dashed border-muted-foreground/30 p-2 text-center">
+                <p className="text-[11px] text-muted-foreground">
+                  Waiting for technician replies… you can also accept now and assign manually.
+                </p>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="mt-1.5 h-6 text-[11px]"
+                  disabled={busy}
+                  onClick={acceptWithoutQuote}
+                >
+                  Accept without quote
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Lightbox */}
+      <Dialog open={!!lightbox} onOpenChange={(v) => !v && setLightbox(null)}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle className="text-sm">Damage photo</DialogTitle>
+          </DialogHeader>
+          {lightbox && <img src={lightbox} alt="Damage" className="w-full rounded-md" />}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
