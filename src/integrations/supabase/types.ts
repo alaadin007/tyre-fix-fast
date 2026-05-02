@@ -81,6 +81,7 @@ export type Database = {
       }
       jobs: {
         Row: {
+          assigned_technician_id: string | null
           broadcast_count: number
           created_at: string
           customer_email: string | null
@@ -98,13 +99,20 @@ export type Database = {
           lat: number | null
           lng: number | null
           photo_urls: string[]
+          platform_fee_paid_at: string | null
+          platform_fee_refunded_at: string | null
+          platform_fee_status: string
           postcode: string
           region: string | null
           severity: string | null
           status: string
+          stripe_checkout_url: string | null
+          stripe_payment_intent_id: string | null
+          stripe_session_id: string | null
           updated_at: string
         }
         Insert: {
+          assigned_technician_id?: string | null
           broadcast_count?: number
           created_at?: string
           customer_email?: string | null
@@ -122,13 +130,20 @@ export type Database = {
           lat?: number | null
           lng?: number | null
           photo_urls?: string[]
+          platform_fee_paid_at?: string | null
+          platform_fee_refunded_at?: string | null
+          platform_fee_status?: string
           postcode: string
           region?: string | null
           severity?: string | null
           status?: string
+          stripe_checkout_url?: string | null
+          stripe_payment_intent_id?: string | null
+          stripe_session_id?: string | null
           updated_at?: string
         }
         Update: {
+          assigned_technician_id?: string | null
           broadcast_count?: number
           created_at?: string
           customer_email?: string | null
@@ -146,10 +161,16 @@ export type Database = {
           lat?: number | null
           lng?: number | null
           photo_urls?: string[]
+          platform_fee_paid_at?: string | null
+          platform_fee_refunded_at?: string | null
+          platform_fee_status?: string
           postcode?: string
           region?: string | null
           severity?: string | null
           status?: string
+          stripe_checkout_url?: string | null
+          stripe_payment_intent_id?: string | null
+          stripe_session_id?: string | null
           updated_at?: string
         }
         Relationships: []
