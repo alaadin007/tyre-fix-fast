@@ -8,6 +8,9 @@ import JobStatus from "./pages/JobStatus.tsx";
 import Admin from "./pages/Admin.tsx";
 import Confirmed from "./pages/Confirmed.tsx";
 import NotFound from "./pages/NotFound.tsx";
+import TechnicianLogin from "./pages/TechnicianLogin.tsx";
+import TechnicianOnboarding from "./pages/TechnicianOnboarding.tsx";
+import TechnicianDashboard from "./pages/TechnicianDashboard.tsx";
 
 const queryClient = new QueryClient();
 
@@ -22,6 +25,9 @@ const App = () => (
           <Route path="/job/:id" element={<JobStatus />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="/confirmed" element={<Confirmed />} />
+          <Route path="/technician/login" element={<TechnicianLogin />} />
+          <Route path="/technician/onboarding" element={<TechnicianOnboarding />} />
+          <Route path="/technician" element={<TechnicianDashboard />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
