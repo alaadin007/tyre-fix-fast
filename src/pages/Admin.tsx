@@ -260,7 +260,7 @@ export default function Admin() {
               </CardHeader>
               <CardContent>
                 {messages.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No messages yet. Point your Twilio number's "A MESSAGE COMES IN" webhook to the URL below.</p>
+                  <p className="text-sm text-muted-foreground">No messages yet. Incoming SMS will appear here in real time.</p>
                 ) : (
                   <div className="space-y-2">
                     {messages.map((m) => (
