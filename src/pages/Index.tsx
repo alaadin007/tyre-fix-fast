@@ -78,7 +78,7 @@ const STEPS = [
 
 const FAQS = [
   { q: "How fast can someone get to me?", a: "Most jobs in major UK cities are reached within 30–60 minutes. Rural callouts may take a little longer — you'll see the ETA before you accept." },
-  { q: "Do you operate at night?", a: "Yes. Flat Tyre Near Me runs 24/7/365. Whether it's 3am on the M25 or a Sunday morning in the Lakes, a local pro is on call." },
+  { q: "Do you operate at night?", a: "Yes. FlatTyreNearMe.Com runs 24/7/365. Whether it's 3am on the M25 or a Sunday morning in the Lakes, a local pro is on call." },
   { q: "How much does it cost?", a: "Puncture repairs typically £40–£70. Replacements depend on tyre size and brand. You'll get a transparent quote before booking — no hidden fees." },
   { q: "Are your technicians vetted?", a: "Every pro is ID-checked, insured, and rated by customers. Anyone falling below 4.5 stars is removed from the network." },
   { q: "What areas do you cover?", a: "All of mainland UK plus Northern Ireland. From central London to remote Highland roads, we route the closest available technician." },
@@ -161,7 +161,7 @@ const Index = () => {
   };
 
   const smsBody =
-    "Hi Flat Tyre Near Me — I need help with a flat tyre.\n\n" +
+    "Hi FlatTyreNearMe.Com — I need help with a flat tyre.\n\n" +
     "📍 Location / postcode: \n" +
     "📷 Photos of the tyre attached (use flash if it's dark)\n" +
     "🛞 If the sidewall isn't legible, tyre type & size: \n\n" +
@@ -283,7 +283,7 @@ const Index = () => {
                   Flat tyre on A40, just past Hanger Lane. Postcode W5 1DJ
                 </div>
                 <div className="w-fit max-w-[85%] rounded-2xl rounded-bl-sm bg-muted px-3 py-2 text-sm">
-                  Hi! Sam here from Flat Tyre Near Me — 12 mins away. £65 to plug & inflate. Reply YES to confirm.
+                  Hi! Sam here from FlatTyreNearMe.Com — 12 mins away. £65 to plug & inflate. Reply YES to confirm.
                 </div>
                 <div className="ml-auto w-fit max-w-[40%] rounded-2xl rounded-br-sm bg-accent px-3 py-2 text-sm text-accent-foreground">
                   YES
@@ -386,7 +386,7 @@ const Index = () => {
           <a
             href={smsHref}
             className="group relative block overflow-hidden rounded-3xl bg-accent-gradient p-8 text-accent-foreground shadow-accent transition-transform hover:scale-[1.01] md:p-12"
-            aria-label="Open your messages app to text Flat Tyre Near Me"
+            aria-label="Open your messages app to text FlatTyreNearMe.Com"
           >
             <div
               aria-hidden
@@ -413,7 +413,7 @@ const Index = () => {
                   <span>To: {SMS_DISPLAY}</span>
                 </div>
                 <pre className="whitespace-pre-wrap font-sans text-[13px] leading-relaxed text-white/90">
-{`Hi Flat Tyre Near Me — I need help with a flat tyre.
+{`Hi FlatTyreNearMe.Com — I need help with a flat tyre.
 
 📍 Location / postcode: 
 📷 Photos of the tyre attached
@@ -553,7 +553,7 @@ const Index = () => {
             Don't let a flat tyre ruin your day.
           </h2>
           <p className="mx-auto mt-4 max-w-xl text-white/80">
-            Text us right now — your local Flat Tyre Near Me pro is standing by.
+            Text us right now — your local FlatTyreNearMe.Com pro is standing by.
           </p>
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <a href={smsHref}>
@@ -616,7 +616,7 @@ const Index = () => {
           </div>
         </div>
         <div className="border-t border-white/10 py-4 text-center text-xs text-white/60">
-          © {new Date().getFullYear()} Flat Tyre Near Me Ltd. All rights reserved.
+          © {new Date().getFullYear()} FlatTyreNearMe.Com Ltd. All rights reserved.
         </div>
       </footer>
     </main>
