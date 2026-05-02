@@ -256,21 +256,16 @@ export default function Admin() {
               isEmpty={incoming.length === 0 && messages.filter(m => m.direction === "inbound").length === 0}
             >
               <div className="space-y-2">
-                {incoming.map((j) => {
-                  const eta = estimateEta(j, techs);
-                  return (
-                    <JobCard
-                      key={j.id}
-                      job={j}
-                      eta={eta}
-                      tone="incoming"
-                      onAccept={async () => {
-                        await supabase.from("jobs" as any).update({ status: "accepted" }).eq("id", j.id);
-                        toast.success("Job moved to in-progress");
-                      }}
-                    />
-                  );
-                })}
+                {incoming.map((j) => (
+                  <IncomingInquiryCard
+                    key={j.id}
+                    job={j}
+                    techs={techs}
+                    techMap={techMap}
+                    quotes={quotesByJob.get(j.id) ?? []}
+                    fallbackEta={estimateEta(j, techs)}
+                  />
+                ))}
                 {messages.filter(m => m.direction === "inbound").slice(0, 8).map((m) => {
                   const loc = extractLocation(m.body);
                   const isWA = m.channel === "whatsapp";
