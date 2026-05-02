@@ -1192,7 +1192,13 @@ function JobDecisionCard({
 
   const repliedCount = roster.filter((r) => r.quote).length;
 
-  const dispatch = async (techId: string, allocId: string | null) => {
+  const dispatch = async (techId: string, allocId: string | null, hasQuote: boolean) => {
+    if (!hasQuote) {
+      const ok = confirm(
+        "This technician hasn't replied with a price + ETA yet.\n\nDispatch anyway? You'll need to agree pricing manually with the customer.",
+      );
+      if (!ok) return;
+    }
     setBusyId(techId);
     try {
       let targetId = allocId;
@@ -1252,12 +1258,12 @@ function JobDecisionCard({
   );
 
   return (
-    <div className="rounded-xl border-2 border-[hsl(var(--accent))]/40 bg-white/85 p-3 shadow-sm">
+    <div className="overflow-hidden rounded-xl border-2 border-[hsl(var(--accent))]/40 bg-white/85 p-3 shadow-sm">
       {/* Enquiry header */}
-      <div className="min-w-0">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-sm font-bold">{job.customer_name}</span>
-          <Badge className="bg-[hsl(var(--accent))]/15 text-[hsl(var(--accent))] hover:bg-[hsl(var(--accent))]/15 capitalize">
+      <div className="min-w-0 break-words">
+        <div className="flex items-center gap-2 flex-wrap min-w-0">
+          <span className="text-sm font-bold truncate max-w-[55%]">{job.customer_name}</span>
+          <Badge className="bg-[hsl(var(--accent))]/15 text-[hsl(var(--accent))] hover:bg-[hsl(var(--accent))]/15 capitalize shrink-0">
             {job.issue_type.replace(/_/g, " ")}
           </Badge>
           {job.damage_confidence && (
@@ -1265,13 +1271,13 @@ function JobDecisionCard({
           )}
           <span className="text-[10px] text-muted-foreground ml-auto">{relTime(job.created_at)}</span>
         </div>
-        <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-          <MapPin className="h-3 w-3" />{job.postcode}
+        <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5 flex-wrap min-w-0">
+          <MapPin className="h-3 w-3 shrink-0" /><span className="truncate">{job.postcode}</span>
           <span className="mx-1">·</span>
-          <Phone className="h-3 w-3" />{job.customer_phone}
+          <Phone className="h-3 w-3 shrink-0" /><span className="truncate">{job.customer_phone}</span>
         </p>
         {job.damage_summary && (
-          <p className="mt-1.5 rounded-md bg-muted/60 p-2 text-xs text-foreground/85">
+          <p className="mt-1.5 rounded-md bg-muted/60 p-2 text-xs text-foreground/85 break-words">
             <Sparkles className="inline h-3 w-3 mr-1 text-[hsl(var(--accent))]" />
             {job.damage_summary}
           </p>
@@ -1313,10 +1319,10 @@ function JobDecisionCard({
               <button
                 key={alloc.id}
                 type="button"
-                onClick={() => tech && dispatch(tech.id, alloc.id)}
+                onClick={() => tech && dispatch(tech.id, alloc.id, replied)}
                 disabled={!tech || busyId !== null}
                 className={[
-                  "group w-full rounded-lg border p-2 text-left transition",
+                  "group block w-full max-w-full overflow-hidden rounded-lg border p-2 text-left transition",
                   isPick
                     ? "border-[hsl(var(--success))]/60 bg-[hsl(var(--success))]/8 hover:bg-[hsl(var(--success))]/15"
                     : replied
@@ -1401,7 +1407,7 @@ function JobDecisionCard({
                   <button
                     key={t.id}
                     type="button"
-                    onClick={() => dispatch(t.id, null)}
+                    onClick={() => dispatch(t.id, null, false)}
                     disabled={busyId !== null}
                     className="w-full rounded-md border border-dashed border-foreground/15 bg-white/50 px-2 py-1.5 text-left text-xs hover:bg-white"
                   >
