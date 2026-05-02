@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { z } from "zod";
 import { toast } from "sonner";
@@ -12,7 +12,9 @@ import {
   Phone,
   MapPin,
   RefreshCw,
+  Upload,
 } from "lucide-react";
+import { parseTechniciansFile, type ParsedTechnician } from "@/lib/parseTechnicians";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -165,6 +167,51 @@ export default function Admin() {
   const deleteTech = async (id: string) => {
     if (!confirm("Remove this technician?")) return;
     await supabase.from("technicians").delete().eq("id", id);
+  };
+
+  // Bulk import
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [importing, setImporting] = useState(false);
+  const [preview, setPreview] = useState<ParsedTechnician[] | null>(null);
+
+  const handleFileChosen = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    try {
+      const parsed = await parseTechniciansFile(file);
+      if (parsed.length === 0) {
+        toast.error("No technicians found. Need columns/fields: name, phone, postcodes.");
+        return;
+      }
+      setPreview(parsed);
+      toast.success(`Found ${parsed.length} technician(s) — review & confirm`);
+    } catch (err) {
+      console.error(err);
+      toast.error("Could not read that file");
+    }
+  };
+
+  const confirmImport = async () => {
+    if (!preview || preview.length === 0) return;
+    setImporting(true);
+    const rows = preview.map((p) => ({
+      name: p.name,
+      phone: p.phone,
+      email: p.email || null,
+      service_postcodes: p.service_postcodes,
+      vehicle: p.vehicle || null,
+      notes: p.notes || null,
+      active: true,
+    }));
+    const { error } = await supabase.from("technicians").insert(rows);
+    setImporting(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success(`Imported ${rows.length} technician(s)`);
+    setPreview(null);
   };
 
   return (
@@ -324,6 +371,58 @@ export default function Admin() {
                     </div>
                     <Button type="submit" className="w-full">Add technician</Button>
                   </form>
+
+                  <div className="mt-6 border-t pt-4">
+                    <p className="text-sm font-semibold mb-2">Bulk import</p>
+                    <p className="text-xs text-muted-foreground mb-3">
+                      Upload CSV, Excel (.xlsx/.xls), Word (.docx), or text file. Headers expected:
+                      <span className="font-mono"> name, phone, postcodes, email, vehicle, notes</span>.
+                    </p>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".csv,.xlsx,.xls,.xlsm,.ods,.docx,.txt,.tsv,text/csv,text/plain,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                      className="hidden"
+                      onChange={handleFileChosen}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      <Upload /> Choose file…
+                    </Button>
+
+                    {preview && (
+                      <div className="mt-4 rounded-md border bg-muted/30 p-3">
+                        <p className="text-xs font-semibold mb-2">
+                          Preview — {preview.length} technician(s)
+                        </p>
+                        <div className="max-h-48 overflow-y-auto text-xs space-y-1">
+                          {preview.slice(0, 20).map((p, i) => (
+                            <div key={i} className="truncate">
+                              <span className="font-medium">{p.name}</span> · {p.phone}
+                              {p.service_postcodes.length > 0 && (
+                                <span className="text-muted-foreground"> · {p.service_postcodes.join(", ")}</span>
+                              )}
+                            </div>
+                          ))}
+                          {preview.length > 20 && (
+                            <div className="text-muted-foreground">…and {preview.length - 20} more</div>
+                          )}
+                        </div>
+                        <div className="mt-3 flex gap-2">
+                          <Button size="sm" onClick={confirmImport} disabled={importing} className="flex-1">
+                            {importing ? "Importing…" : `Import ${preview.length}`}
+                          </Button>
+                          <Button size="sm" variant="ghost" onClick={() => setPreview(null)}>
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
 
