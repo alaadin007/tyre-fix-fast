@@ -203,8 +203,14 @@ export default function Admin() {
             </div>
           </section>
 
-          {/* MIDDLE — incoming + accepted/waiting */}
+          {/* MIDDLE — approvals + incoming + accepted/waiting */}
           <section className="flex flex-col gap-5">
+            <PendingApprovalsPanel
+              allocations={pendingAllocs}
+              techs={techs}
+              messages={messages}
+              autoAssign={autoAssign}
+            />
             <Panel
               icon={<MessageSquare className="h-4 w-4" />}
               title="Incoming Inquiries"
