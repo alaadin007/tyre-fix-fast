@@ -4,8 +4,8 @@ import { z } from "zod";
 import { toast } from "sonner";
 import {
   Plus, Trash2, Star, Phone, MapPin, RefreshCw, Upload, Settings,
-  MessageSquare, CheckCircle2, Clock, Sparkles, Users, ArrowLeft, Navigation,
-  ShieldCheck, Zap, Check, X, ChevronsUpDown,
+  MessageSquare, MessageCircle, CheckCircle2, Clock, Sparkles, Users, ArrowLeft, Navigation,
+  ShieldCheck, Zap, Check, X, ChevronsUpDown, Send,
 } from "lucide-react";
 import { parseTechniciansFile, type ParsedTechnician } from "@/lib/parseTechnicians";
 import { Button } from "@/components/ui/button";
