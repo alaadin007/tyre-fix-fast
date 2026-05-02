@@ -1,35 +1,66 @@
 
-# Connect your custom domain to FlatTyreNearMe
+# Switch WhatsApp from Twilio Sandbox → your Meta-verified number
 
-## What you do (in the Lovable UI)
+You're already on the right Twilio account (the connector is linked). Today the code uses:
 
-1. **Publish the project** if you haven't yet — Publish button (top-right desktop / `…` menu mobile). This creates the `*.lovable.app` URL the domain will sit on top of.
-2. **Project Settings → Domains → Buy new domain** → search the domain you have in mind → complete payment.
-3. Lovable auto-creates the A records, verifies, and provisions SSL. Status will move: *Verifying → Setting up → Active* (usually minutes; up to 72h worst case).
-4. Add **both** the apex (`yourdomain.com`) **and** `www.yourdomain.com` and pick one as **Primary** so the other redirects.
+- **SMS** from `+447447184489` (your real UK number)
+- **WhatsApp** from `+14155238886` (Twilio's shared **sandbox** number — requires customers to text `join <code>` first, not production-grade)
 
-Requires a paid plan; project must be published first.
+We swap WhatsApp to use your Meta-verified number — same number as SMS — so one number does both.
 
-## What I'll change in the code (after the domain shows as Active)
+## What I need from you
 
-The site already hardcodes `https://flattyrenearme.com/` in several places. If your purchased domain matches that, **no code changes are needed**. If it differs, I'll do a clean sweep:
+Just **confirm the number** that has Meta WhatsApp approval in the Twilio account currently connected. Two scenarios:
 
-1. **`index.html` SEO tags** — update canonical, `og:url`, `og:image`, Twitter image, and JSON-LD `url` to the real domain.
-2. **Generate `public/sitemap.xml`** — single entry for `/` (and `/job/:id` is dynamic so excluded). Reference it from `robots.txt`.
-3. **Customer SMS payment-link stub** — in `supabase/functions/twilio-inbound/index.ts` the booking confirmation currently says *"Payment link: (stub)"*. I'll replace the stub with `https://yourdomain.com/job/<id>` so customers tap straight into their live status page.
-4. **Add a tiny shared constant** `SITE_URL` (read from `import.meta.env.VITE_SITE_URL` with a hardcoded fallback) so future references stay in one place.
-5. **No DNS / email work** — per your answer, domain only.
+- **A. The same `+447447184489` is already approved as a WhatsApp Sender** → I change one line and deploy. Done.
+- **B. A different number in that same account is the approved WhatsApp Sender** → Tell me the E.164 (e.g. `+44…`) and whether you want to also switch SMS to it (recommended, single number for everything).
 
-## Verification checklist (I'll run after deploy)
+How to check: Twilio Console → **Messaging → Senders → WhatsApp senders**. Status must be **Online / Approved**, not Sandbox.
 
-- `curl -I https://yourdomain.com` → `200` + valid TLS
-- `https://yourdomain.com/job/<test-id>` loads the status page (proves SPA fallback works on the new domain)
-- View-source on `/` shows the canonical pointing at the new domain
-- `/sitemap.xml` and `/robots.txt` both load
+## Code changes (one file)
 
-## What I need from you to start
+`supabase/functions/twilio-send/index.ts`:
 
-- Tell me the exact domain you bought (e.g. `flattyrenearme.co.uk`) so I know whether to keep the existing `flattyrenearme.com` hardcoding or swap it.
-- Confirm when status in **Settings → Domains** shows **Active** so I don't ship code against a domain that isn't live yet.
+```ts
+// Replace these two lines
+const FROM_SMS = "+447447184489";
+const FROM_WHATSAPP = "+14155238886";
 
-That's it — buying happens in Lovable's UI; my job is the SEO + status-link cleanup once it's connected.
+// With (read from env so we don't hardcode again)
+const FROM_SMS = Deno.env.get("TWILIO_PHONE_NUMBER") ?? "+447447184489";
+const FROM_WHATSAPP = Deno.env.get("TWILIO_WHATSAPP_NUMBER") ?? FROM_SMS;
+```
+
+Then I add `TWILIO_WHATSAPP_NUMBER` as a runtime secret set to your verified number (with `whatsapp:` stripped — code adds the prefix).
+
+The inbound function (`twilio-inbound`) already handles both channels correctly via the `whatsapp:` prefix on `From`/`To`, so no change there.
+
+## Twilio Console steps (you do these once)
+
+1. **Messaging → Senders → WhatsApp senders → [your number] → Sender configuration**
+   - Set **"When a message comes in"** webhook to:
+     `https://ctxtvezeeijkjjuzodvi.supabase.co/functions/v1/twilio-inbound`
+   - Method: `POST`
+2. **(Already done for SMS, verify it's still there)** Phone Numbers → Manage → Active Numbers → `+447447184489` → Messaging → "A MESSAGE COMES IN" → same URL above.
+3. **Recommended hardening** before any real customer traffic:
+   - Messaging → **SMS Pumping Protection** → Enable
+   - Messaging → **Geo Permissions** → enable only **United Kingdom** (and any other country you serve)
+
+## Frontend changes (only if WhatsApp number differs from SMS number)
+
+`src/pages/Index.tsx` has `wa.me` links hardcoded to the SMS number. If WhatsApp uses the same number → no change. If different → I'll swap those links to the WhatsApp number.
+
+## Verification after deploy
+
+1. Send "TEST" via WhatsApp from my phone to your verified number → should appear in Admin Console with the **WhatsApp** badge (not SMS).
+2. Hit **Reply** in admin, pick **WhatsApp** channel, send → arrives on my phone via WhatsApp (no `join` step required).
+3. Check `twilio-send` edge function logs for the `From: whatsapp:+44…` line.
+
+## Out of scope (per your earlier answers)
+
+- Web domain purchase / SEO swap — separate task, waiting on your domain name.
+- Email setup on the domain — not now.
+
+---
+
+**Tell me the verified WhatsApp number** (or just "same as SMS, +447447184489") and I'll execute.

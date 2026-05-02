@@ -10,10 +10,10 @@ const corsHeaders = {
 
 const GATEWAY_URL = "https://connector-gateway.lovable.dev/twilio";
 
-// Your Twilio numbers — change here when production WhatsApp is approved
-const FROM_SMS = "+447447184489";
-// Twilio's shared sandbox WhatsApp number (works until your own number is WA-approved)
-const FROM_WHATSAPP = "+14155238886";
+// Twilio numbers — read from secrets so we can swap to Meta-verified numbers without redeploying code.
+// Falls back to the original sandbox/business numbers if secrets are not set.
+const FROM_SMS = Deno.env.get("TWILIO_PHONE_NUMBER") ?? "+447447184489";
+const FROM_WHATSAPP = Deno.env.get("TWILIO_WHATSAPP_NUMBER") ?? FROM_SMS;
 
 const BodySchema = z.object({
   to: z.string().trim().min(7).max(20),
