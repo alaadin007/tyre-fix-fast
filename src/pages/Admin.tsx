@@ -309,9 +309,11 @@ export default function Admin() {
           {/* COL 3 — Pending approvals + Accepted/Waiting */}
           <section className="flex flex-col gap-5">
             <PendingApprovalsPanel
-              allocations={pendingAllocs}
+              allocations={allocations}
+              jobs={jobs}
               techs={techs}
               messages={messages}
+              quotesByJob={quotesByJob}
               autoAssign={autoAssign}
             />
             <Panel
