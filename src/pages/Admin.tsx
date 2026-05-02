@@ -456,9 +456,209 @@ function relTime(iso: string) {
   return `${Math.floor(h / 24)}d ago`;
 }
 
+/* ---------- Dispatch mode toggle (header pill) ---------- */
+
+function DispatchModeToggle({
+  autoAssign, onChange,
+}: { autoAssign: boolean; onChange: (next: boolean) => void }) {
+  return (
+    <div className="hidden sm:flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 backdrop-blur">
+      {autoAssign ? (
+        <Zap className="h-3.5 w-3.5 text-[hsl(var(--accent))]" />
+      ) : (
+        <ShieldCheck className="h-3.5 w-3.5 text-white/80" />
+      )}
+      <span className="text-xs font-medium text-white">
+        {autoAssign ? "Auto-assign" : "Manual approval"}
+      </span>
+      <Switch checked={autoAssign} onCheckedChange={onChange} className="data-[state=checked]:bg-[hsl(var(--accent))]" />
+    </div>
+  );
+}
+
+/* ---------- Pending approvals panel ---------- */
+
+function PendingApprovalsPanel({
+  allocations, techs, messages, autoAssign,
+}: {
+  allocations: Allocation[];
+  techs: Technician[];
+  messages: SmsMessage[];
+  autoAssign: boolean;
+}) {
+  const techMap = useMemo(() => {
+    const m = new Map<string, Technician>();
+    techs.forEach((t) => m.set(t.id, t));
+    return m;
+  }, [techs]);
+  const smsMap = useMemo(() => {
+    const m = new Map<string, SmsMessage>();
+    messages.forEach((s) => m.set(s.id, s));
+    return m;
+  }, [messages]);
+
+  return (
+    <div className="glass flex min-h-[12rem] flex-col rounded-2xl p-4">
+      <div className="mb-3 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[hsl(var(--accent))] text-white">
+            <ShieldCheck className="h-4 w-4" />
+          </div>
+          <div>
+            <h3 className="text-sm font-bold uppercase tracking-wider text-foreground">Pending approvals</h3>
+            <p className="text-[10px] text-muted-foreground">
+              {autoAssign ? "Auto-assign is ON — new jobs dispatch instantly" : "Review each AI suggestion before dispatch"}
+            </p>
+          </div>
+        </div>
+        <Badge variant="outline" className="border-[hsl(var(--accent))]/40 bg-[hsl(var(--accent))]/10 text-[hsl(var(--accent))]">
+          {allocations.length}
+        </Badge>
+      </div>
+      <ScrollArea className="flex-1 -mr-2 pr-2">
+        {allocations.length === 0 ? (
+          <p className="py-6 text-center text-xs text-muted-foreground">
+            {autoAssign ? "Nothing to review — AI is dispatching automatically." : "No suggestions waiting. New inbound jobs will appear here for approval."}
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {allocations.map((a) => (
+              <ApprovalCard
+                key={a.id}
+                alloc={a}
+                tech={a.technician_id ? techMap.get(a.technician_id) ?? null : null}
+                sms={a.job_id ? smsMap.get(a.job_id) ?? null : null}
+                techs={techs}
+              />
+            ))}
+          </div>
+        )}
+      </ScrollArea>
+    </div>
+  );
+}
+
+function ApprovalCard({
+  alloc, tech, sms, techs,
+}: {
+  alloc: Allocation;
+  tech: Technician | null;
+  sms: SmsMessage | null;
+  techs: Technician[];
+}) {
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  const update = async (patch: Record<string, any>) => {
+    setBusy(true);
+    const { error } = await supabase
+      .from("job_allocations")
+      .update(patch)
+      .eq("id", alloc.id);
+    setBusy(false);
+    if (error) toast.error(error.message);
+  };
+
+  const approve = () =>
+    update({ status: "approved", approved_at: new Date().toISOString(), approved_by: "manual" })
+      .then(() => toast.success(`Dispatched to ${tech?.name ?? "technician"}`));
+
+  const reject = () =>
+    update({ status: "rejected" }).then(() => toast.success("Rejected"));
+
+  const reassign = (newTechId: string) => {
+    const t = techs.find((x) => x.id === newTechId);
+    update({ technician_id: newTechId, ai_reasoning: `Manually reassigned to ${t?.name ?? "tech"}` })
+      .then(() => {
+        setPickerOpen(false);
+        toast.success(`Reassigned to ${t?.name}`);
+      });
+  };
+
+  return (
+    <div className="rounded-xl border-2 border-[hsl(var(--accent))]/40 bg-white/80 p-3 shadow-sm">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-sm font-bold">{tech?.name ?? "Unassigned"}</span>
+            {alloc.match_score != null && (
+              <Badge variant="outline" className="text-[10px]">score {alloc.match_score}</Badge>
+            )}
+            <span className="text-[10px] text-muted-foreground">{relTime(alloc.created_at)}</span>
+          </div>
+          {tech && (
+            <p className="text-xs text-muted-foreground flex items-center gap-1">
+              <MapPin className="h-3 w-3" />{tech.service_postcodes.join(", ") || "no areas"}
+            </p>
+          )}
+          {alloc.ai_reasoning && (
+            <p className="mt-1 text-xs text-foreground/85"><Sparkles className="inline h-3 w-3 mr-1 text-[hsl(var(--accent))]" />{alloc.ai_reasoning}</p>
+          )}
+          {sms && (
+            <p className="mt-1 line-clamp-2 rounded-md bg-muted/60 p-1.5 text-[11px] text-foreground/80">
+              <Phone className="inline h-3 w-3 mr-1" />{sms.from_number}: {sms.body}
+            </p>
+          )}
+        </div>
+      </div>
+
+      <div className="mt-2.5 flex items-center gap-2">
+        <Button
+          size="sm"
+          className="h-7 flex-1 bg-[hsl(var(--success))] text-xs text-white hover:bg-[hsl(var(--success))]/90"
+          disabled={busy || !tech}
+          onClick={approve}
+        >
+          <Check className="h-3.5 w-3.5" /> Approve
+        </Button>
+        <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
+          <PopoverTrigger asChild>
+            <Button size="sm" variant="outline" className="h-7 text-xs" disabled={busy}>
+              <ChevronsUpDown className="h-3.5 w-3.5" /> Reassign
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-64 p-1">
+            <div className="max-h-60 overflow-y-auto">
+              {techs.filter(t => t.active).length === 0 && (
+                <p className="px-2 py-1.5 text-xs text-muted-foreground">No active technicians</p>
+              )}
+              {techs.filter(t => t.active).map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => reassign(t.id)}
+                  className="w-full rounded-md px-2 py-1.5 text-left text-xs hover:bg-muted"
+                >
+                  <div className="font-medium">{t.name}</div>
+                  <div className="text-[10px] text-muted-foreground">{t.service_postcodes.join(", ") || "no areas"}</div>
+                </button>
+              ))}
+            </div>
+          </PopoverContent>
+        </Popover>
+        <Button
+          size="sm"
+          variant="ghost"
+          className="h-7 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive"
+          disabled={busy}
+          onClick={reject}
+        >
+          <X className="h-3.5 w-3.5" /> Reject
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 /* ---------- Settings (technicians + live ETAs) ---------- */
 
-function SettingsSheet({ techs, jobs }: { techs: Technician[]; jobs: Job[] }) {
+function SettingsSheet({
+  techs, jobs, autoAssign, onToggleAuto,
+}: {
+  techs: Technician[];
+  jobs: Job[];
+  autoAssign: boolean;
+  onToggleAuto: (next: boolean) => void;
+}) {
   const [form, setForm] = useState({
     name: "", phone: "", email: "", service_postcodes: "", vehicle: "", notes: "",
   });
