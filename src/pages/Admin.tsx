@@ -176,12 +176,13 @@ export default function Admin() {
               <p className="text-xs text-white/60">Live · {jobs.length} jobs · {techs.filter(t => t.active).length} techs on duty</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
+            <DispatchModeToggle autoAssign={autoAssign} onChange={toggleAutoAssign} />
             <Button variant="ghost" size="sm" onClick={refreshAll} disabled={loading} className="text-white hover:bg-white/10 hover:text-white">
               <RefreshCw className={loading ? "animate-spin" : ""} />
               Refresh
             </Button>
-            <SettingsSheet techs={techs} jobs={jobs} />
+            <SettingsSheet techs={techs} jobs={jobs} autoAssign={autoAssign} onToggleAuto={toggleAutoAssign} />
           </div>
         </div>
       </header>
