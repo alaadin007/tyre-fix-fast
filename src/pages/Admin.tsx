@@ -256,7 +256,7 @@ export default function Admin() {
             <Card>
               <CardHeader>
                 <CardTitle>Incoming SMS</CardTitle>
-                <CardDescription>Live feed of messages received via Twilio</CardDescription>
+                <CardDescription>Live feed of incoming messages from customers</CardDescription>
               </CardHeader>
               <CardContent>
                 {messages.length === 0 ? (
