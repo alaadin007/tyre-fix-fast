@@ -169,6 +169,51 @@ export default function Admin() {
     await supabase.from("technicians").delete().eq("id", id);
   };
 
+  // Bulk import
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [importing, setImporting] = useState(false);
+  const [preview, setPreview] = useState<ParsedTechnician[] | null>(null);
+
+  const handleFileChosen = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    try {
+      const parsed = await parseTechniciansFile(file);
+      if (parsed.length === 0) {
+        toast.error("No technicians found. Need columns/fields: name, phone, postcodes.");
+        return;
+      }
+      setPreview(parsed);
+      toast.success(`Found ${parsed.length} technician(s) — review & confirm`);
+    } catch (err) {
+      console.error(err);
+      toast.error("Could not read that file");
+    }
+  };
+
+  const confirmImport = async () => {
+    if (!preview || preview.length === 0) return;
+    setImporting(true);
+    const rows = preview.map((p) => ({
+      name: p.name,
+      phone: p.phone,
+      email: p.email || null,
+      service_postcodes: p.service_postcodes,
+      vehicle: p.vehicle || null,
+      notes: p.notes || null,
+      active: true,
+    }));
+    const { error } = await supabase.from("technicians").insert(rows);
+    setImporting(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success(`Imported ${rows.length} technician(s)`);
+    setPreview(null);
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b bg-card">
