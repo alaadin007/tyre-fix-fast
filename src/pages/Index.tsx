@@ -163,7 +163,11 @@ const Index = () => {
   const smsBody =
     "Hi FTNM — I need help with a flat tyre.\n\n" +
     "📍 Location / postcode: \n" +
-    "📷 Photos of the tyre attached (use flash if it's dark)\n" +
+    "📷 Please send clear photos (use flash 🔦) showing:\n" +
+    "   • the nail / screw / object if visible\n" +
+    "   • the rupture, cut or sidewall damage\n" +
+    "   • the whole tyre & wheel\n" +
+    "So we can see if it's repairable or needs replacing and quote you accurately.\n\n" +
     "🛞 If the sidewall isn't legible, tyre type & size: \n\n" +
     "Please send a quote and ETA. Thanks!";
   const smsHref = `sms:${SMS_NUMBER}?body=${encodeURIComponent(smsBody)}`;
@@ -416,8 +420,12 @@ const Index = () => {
 {`Hi FTNM — I need help with a flat tyre.
 
 📍 Location / postcode: 
-📷 Photos of the tyre attached
-   (use flash if it's dark)
+📷 Photos with flash 🔦 showing:
+   • the nail / screw / object
+   • the rupture or sidewall cut
+   • the whole tyre & wheel
+   so we can see if it's repairable
+   or needs replacing & quote accurately
 🛞 If sidewall isn't legible,
    tyre type & size: `}
                 </pre>
