@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import {
   Plus, Trash2, Star, Phone, MapPin, RefreshCw, Upload, Settings,
   MessageSquare, CheckCircle2, Clock, Sparkles, Users, ArrowLeft, Navigation,
+  ShieldCheck, Zap, Check, X, ChevronsUpDown,
 } from "lucide-react";
 import { parseTechniciansFile, type ParsedTechnician } from "@/lib/parseTechnicians";
 import { Button } from "@/components/ui/button";
@@ -17,6 +18,9 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger,
 } from "@/components/ui/sheet";
+import {
+  Popover, PopoverContent, PopoverTrigger,
+} from "@/components/ui/popover";
 import { supabase } from "@/integrations/supabase/client";
 import { AdminAIChat } from "@/components/admin/AdminAIChat";
 
@@ -32,6 +36,7 @@ type SmsMessage = {
 type Allocation = {
   id: string; job_id: string | null; technician_id: string | null;
   ai_reasoning: string | null; match_score: number | null; status: string; created_at: string;
+  approved_at?: string | null; approved_by?: string | null;
 };
 type Job = {
   id: string; status: string; created_at: string;
@@ -79,6 +84,8 @@ export default function Admin() {
   const [allocations, setAllocations] = useState<Allocation[]>([]);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
+  const [autoAssign, setAutoAssign] = useState<boolean>(false);
+  const [settingsId, setSettingsId] = useState<string | null>(null);
 
   const techMap = useMemo(() => {
     const m = new Map<string, Technician>();
@@ -88,17 +95,38 @@ export default function Admin() {
 
   const refreshAll = async () => {
     setLoading(true);
-    const [tRes, mRes, aRes, jRes] = await Promise.all([
+    const [tRes, mRes, aRes, jRes, sRes] = await Promise.all([
       supabase.from("technicians").select("*").order("created_at", { ascending: false }),
       supabase.from("sms_messages").select("*").order("created_at", { ascending: false }).limit(100),
       supabase.from("job_allocations").select("*").order("created_at", { ascending: false }).limit(100),
       supabase.from("jobs").select("*").order("created_at", { ascending: false }).limit(100),
+      supabase.from("app_settings" as any).select("*").eq("key", "dispatch").maybeSingle(),
     ]);
     if (tRes.data) setTechs(tRes.data as Technician[]);
     if (mRes.data) setMessages(mRes.data as SmsMessage[]);
     if (aRes.data) setAllocations(aRes.data as Allocation[]);
     if (jRes.data) setJobs(jRes.data as Job[]);
+    if (sRes.data) {
+      setSettingsId((sRes.data as any).id);
+      setAutoAssign(Boolean((sRes.data as any).value?.auto_assign));
+    }
     setLoading(false);
+  };
+
+  const toggleAutoAssign = async (next: boolean) => {
+    setAutoAssign(next);
+    if (settingsId) {
+      await supabase.from("app_settings" as any)
+        .update({ value: { auto_assign: next } })
+        .eq("id", settingsId);
+    } else {
+      const { data } = await supabase.from("app_settings" as any)
+        .insert({ key: "dispatch", value: { auto_assign: next } })
+        .select()
+        .maybeSingle();
+      if (data) setSettingsId((data as any).id);
+    }
+    toast.success(next ? "Auto-assign ON — AI dispatches without approval" : "Manual approval ON — you confirm every job");
   };
 
   useEffect(() => {
@@ -109,10 +137,25 @@ export default function Admin() {
       .on("postgres_changes", { event: "*", schema: "public", table: "job_allocations" }, refreshAll)
       .on("postgres_changes", { event: "*", schema: "public", table: "technicians" }, refreshAll)
       .on("postgres_changes", { event: "*", schema: "public", table: "jobs" }, refreshAll)
+      .on("postgres_changes", { event: "*", schema: "public", table: "app_settings" }, refreshAll)
       .subscribe();
     return () => { supabase.removeChannel(ch); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // When auto-assign is ON, automatically approve any "proposed" allocations with a tech.
+  useEffect(() => {
+    if (!autoAssign) return;
+    const toApprove = allocations.filter(a => a.status === "proposed" && a.technician_id);
+    if (toApprove.length === 0) return;
+    (async () => {
+      await supabase.from("job_allocations")
+        .update({ status: "approved", approved_at: new Date().toISOString(), approved_by: "auto" })
+        .in("id", toApprove.map(a => a.id));
+    })();
+  }, [autoAssign, allocations]);
+
+  const pendingAllocs = allocations.filter(a => a.status === "proposed");
 
   const incoming = jobs.filter((j) => j.status === "pending" || j.status === "new");
   const inProgress = jobs.filter((j) => j.status === "accepted" || j.status === "assigned" || j.status === "en_route" || j.status === "in_progress");
@@ -133,12 +176,13 @@ export default function Admin() {
               <p className="text-xs text-white/60">Live · {jobs.length} jobs · {techs.filter(t => t.active).length} techs on duty</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
+            <DispatchModeToggle autoAssign={autoAssign} onChange={toggleAutoAssign} />
             <Button variant="ghost" size="sm" onClick={refreshAll} disabled={loading} className="text-white hover:bg-white/10 hover:text-white">
               <RefreshCw className={loading ? "animate-spin" : ""} />
               Refresh
             </Button>
-            <SettingsSheet techs={techs} jobs={jobs} />
+            <SettingsSheet techs={techs} jobs={jobs} autoAssign={autoAssign} onToggleAuto={toggleAutoAssign} />
           </div>
         </div>
       </header>
@@ -159,8 +203,14 @@ export default function Admin() {
             </div>
           </section>
 
-          {/* MIDDLE — incoming + accepted/waiting */}
+          {/* MIDDLE — approvals + incoming + accepted/waiting */}
           <section className="flex flex-col gap-5">
+            <PendingApprovalsPanel
+              allocations={pendingAllocs}
+              techs={techs}
+              messages={messages}
+              autoAssign={autoAssign}
+            />
             <Panel
               icon={<MessageSquare className="h-4 w-4" />}
               title="Incoming Inquiries"
@@ -406,9 +456,209 @@ function relTime(iso: string) {
   return `${Math.floor(h / 24)}d ago`;
 }
 
+/* ---------- Dispatch mode toggle (header pill) ---------- */
+
+function DispatchModeToggle({
+  autoAssign, onChange,
+}: { autoAssign: boolean; onChange: (next: boolean) => void }) {
+  return (
+    <div className="hidden sm:flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 backdrop-blur">
+      {autoAssign ? (
+        <Zap className="h-3.5 w-3.5 text-[hsl(var(--accent))]" />
+      ) : (
+        <ShieldCheck className="h-3.5 w-3.5 text-white/80" />
+      )}
+      <span className="text-xs font-medium text-white">
+        {autoAssign ? "Auto-assign" : "Manual approval"}
+      </span>
+      <Switch checked={autoAssign} onCheckedChange={onChange} className="data-[state=checked]:bg-[hsl(var(--accent))]" />
+    </div>
+  );
+}
+
+/* ---------- Pending approvals panel ---------- */
+
+function PendingApprovalsPanel({
+  allocations, techs, messages, autoAssign,
+}: {
+  allocations: Allocation[];
+  techs: Technician[];
+  messages: SmsMessage[];
+  autoAssign: boolean;
+}) {
+  const techMap = useMemo(() => {
+    const m = new Map<string, Technician>();
+    techs.forEach((t) => m.set(t.id, t));
+    return m;
+  }, [techs]);
+  const smsMap = useMemo(() => {
+    const m = new Map<string, SmsMessage>();
+    messages.forEach((s) => m.set(s.id, s));
+    return m;
+  }, [messages]);
+
+  return (
+    <div className="glass flex min-h-[12rem] flex-col rounded-2xl p-4">
+      <div className="mb-3 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[hsl(var(--accent))] text-white">
+            <ShieldCheck className="h-4 w-4" />
+          </div>
+          <div>
+            <h3 className="text-sm font-bold uppercase tracking-wider text-foreground">Pending approvals</h3>
+            <p className="text-[10px] text-muted-foreground">
+              {autoAssign ? "Auto-assign is ON — new jobs dispatch instantly" : "Review each AI suggestion before dispatch"}
+            </p>
+          </div>
+        </div>
+        <Badge variant="outline" className="border-[hsl(var(--accent))]/40 bg-[hsl(var(--accent))]/10 text-[hsl(var(--accent))]">
+          {allocations.length}
+        </Badge>
+      </div>
+      <ScrollArea className="flex-1 -mr-2 pr-2">
+        {allocations.length === 0 ? (
+          <p className="py-6 text-center text-xs text-muted-foreground">
+            {autoAssign ? "Nothing to review — AI is dispatching automatically." : "No suggestions waiting. New inbound jobs will appear here for approval."}
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {allocations.map((a) => (
+              <ApprovalCard
+                key={a.id}
+                alloc={a}
+                tech={a.technician_id ? techMap.get(a.technician_id) ?? null : null}
+                sms={a.job_id ? smsMap.get(a.job_id) ?? null : null}
+                techs={techs}
+              />
+            ))}
+          </div>
+        )}
+      </ScrollArea>
+    </div>
+  );
+}
+
+function ApprovalCard({
+  alloc, tech, sms, techs,
+}: {
+  alloc: Allocation;
+  tech: Technician | null;
+  sms: SmsMessage | null;
+  techs: Technician[];
+}) {
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  const update = async (patch: Record<string, any>) => {
+    setBusy(true);
+    const { error } = await supabase
+      .from("job_allocations")
+      .update(patch as any)
+      .eq("id", alloc.id);
+    setBusy(false);
+    if (error) toast.error(error.message);
+  };
+
+  const approve = () =>
+    update({ status: "approved", approved_at: new Date().toISOString(), approved_by: "manual" })
+      .then(() => toast.success(`Dispatched to ${tech?.name ?? "technician"}`));
+
+  const reject = () =>
+    update({ status: "rejected" }).then(() => toast.success("Rejected"));
+
+  const reassign = (newTechId: string) => {
+    const t = techs.find((x) => x.id === newTechId);
+    update({ technician_id: newTechId, ai_reasoning: `Manually reassigned to ${t?.name ?? "tech"}` })
+      .then(() => {
+        setPickerOpen(false);
+        toast.success(`Reassigned to ${t?.name}`);
+      });
+  };
+
+  return (
+    <div className="rounded-xl border-2 border-[hsl(var(--accent))]/40 bg-white/80 p-3 shadow-sm">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-sm font-bold">{tech?.name ?? "Unassigned"}</span>
+            {alloc.match_score != null && (
+              <Badge variant="outline" className="text-[10px]">score {alloc.match_score}</Badge>
+            )}
+            <span className="text-[10px] text-muted-foreground">{relTime(alloc.created_at)}</span>
+          </div>
+          {tech && (
+            <p className="text-xs text-muted-foreground flex items-center gap-1">
+              <MapPin className="h-3 w-3" />{tech.service_postcodes.join(", ") || "no areas"}
+            </p>
+          )}
+          {alloc.ai_reasoning && (
+            <p className="mt-1 text-xs text-foreground/85"><Sparkles className="inline h-3 w-3 mr-1 text-[hsl(var(--accent))]" />{alloc.ai_reasoning}</p>
+          )}
+          {sms && (
+            <p className="mt-1 line-clamp-2 rounded-md bg-muted/60 p-1.5 text-[11px] text-foreground/80">
+              <Phone className="inline h-3 w-3 mr-1" />{sms.from_number}: {sms.body}
+            </p>
+          )}
+        </div>
+      </div>
+
+      <div className="mt-2.5 flex items-center gap-2">
+        <Button
+          size="sm"
+          className="h-7 flex-1 bg-[hsl(var(--success))] text-xs text-white hover:bg-[hsl(var(--success))]/90"
+          disabled={busy || !tech}
+          onClick={approve}
+        >
+          <Check className="h-3.5 w-3.5" /> Approve
+        </Button>
+        <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
+          <PopoverTrigger asChild>
+            <Button size="sm" variant="outline" className="h-7 text-xs" disabled={busy}>
+              <ChevronsUpDown className="h-3.5 w-3.5" /> Reassign
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-64 p-1">
+            <div className="max-h-60 overflow-y-auto">
+              {techs.filter(t => t.active).length === 0 && (
+                <p className="px-2 py-1.5 text-xs text-muted-foreground">No active technicians</p>
+              )}
+              {techs.filter(t => t.active).map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => reassign(t.id)}
+                  className="w-full rounded-md px-2 py-1.5 text-left text-xs hover:bg-muted"
+                >
+                  <div className="font-medium">{t.name}</div>
+                  <div className="text-[10px] text-muted-foreground">{t.service_postcodes.join(", ") || "no areas"}</div>
+                </button>
+              ))}
+            </div>
+          </PopoverContent>
+        </Popover>
+        <Button
+          size="sm"
+          variant="ghost"
+          className="h-7 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive"
+          disabled={busy}
+          onClick={reject}
+        >
+          <X className="h-3.5 w-3.5" /> Reject
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 /* ---------- Settings (technicians + live ETAs) ---------- */
 
-function SettingsSheet({ techs, jobs }: { techs: Technician[]; jobs: Job[] }) {
+function SettingsSheet({
+  techs, jobs, autoAssign, onToggleAuto,
+}: {
+  techs: Technician[];
+  jobs: Job[];
+  autoAssign: boolean;
+  onToggleAuto: (next: boolean) => void;
+}) {
   const [form, setForm] = useState({
     name: "", phone: "", email: "", service_postcodes: "", vehicle: "", notes: "",
   });
@@ -486,6 +736,29 @@ function SettingsSheet({ techs, jobs }: { techs: Technician[]; jobs: Job[] }) {
           <SheetTitle>Settings</SheetTitle>
           <SheetDescription>Technicians, fleet status & live ETAs</SheetDescription>
         </SheetHeader>
+
+        {/* Dispatch mode */}
+        <section className="mt-6 rounded-xl border-2 border-[hsl(var(--accent))]/20 bg-[hsl(var(--accent))]/5 p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h3 className="flex items-center gap-2 text-sm font-bold uppercase tracking-wider">
+                {autoAssign ? <Zap className="h-4 w-4 text-[hsl(var(--accent))]" /> : <ShieldCheck className="h-4 w-4" />}
+                Dispatch mode
+              </h3>
+              <p className="mt-1 text-sm font-medium">
+                {autoAssign ? "Auto-assign — AI dispatches without approval" : "Manual approval — you review every job"}
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Keep manual on while you build trust with the AI's matching. Flip to auto when you're happy.
+              </p>
+            </div>
+            <Switch
+              checked={autoAssign}
+              onCheckedChange={onToggleAuto}
+              className="data-[state=checked]:bg-[hsl(var(--accent))]"
+            />
+          </div>
+        </section>
 
         {/* Active technicians */}
         <section className="mt-6">
