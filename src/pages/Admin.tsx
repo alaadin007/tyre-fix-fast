@@ -161,9 +161,9 @@ export default function Admin() {
 
   const pendingAllocs = allocations.filter(a => a.status === "proposed");
 
-  const incoming = jobs.filter((j) => j.status === "pending" || j.status === "new");
-  const inProgress = jobs.filter((j) => j.status === "accepted" || j.status === "assigned" || j.status === "en_route" || j.status === "in_progress");
-  const done = jobs.filter((j) => j.status === "completed" || j.status === "done");
+  const incoming = jobs.filter((j) => ["pending", "new", "intake_complete", "awaiting_approval", "broadcasting"].includes(j.status));
+  const inProgress = jobs.filter((j) => ["accepted", "assigned", "en_route", "in_progress", "awaiting_payment", "confirmed"].includes(j.status));
+  const done = jobs.filter((j) => ["completed", "done", "closed_pending_review", "closed", "no_response"].includes(j.status));
 
   return (
     <div className="min-h-screen bg-aurora">
