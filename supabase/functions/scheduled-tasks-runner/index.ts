@@ -98,9 +98,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Aggregate technician ratings + suspend low performers
-    const { data: lowTechs } = await supabase.rpc("noop"); // placeholder if needed
-    // Cheap approach: pull recent reviews per tech
+    // Aggregate technician ratings + suspend low performers (last 30 days)
     const { data: recentReviews } = await supabase
       .from("reviews")
       .select("technician_id, score")
