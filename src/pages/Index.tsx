@@ -71,9 +71,9 @@ const SERVICES = [
 ];
 
 const STEPS = [
-  { n: "01", title: "Text us your postcode", desc: "Send a quick SMS or fill the form. Photos optional but speed things up." },
-  { n: "02", title: "Get instant quotes", desc: "Local pros reply with price + ETA. AI parses the best offer for you." },
-  { n: "03", title: "Pro arrives & fixes it", desc: "Pay securely after the job. Most callouts done in under an hour." },
+  { n: "01", title: "Text us your postcode & tyre pics", desc: "Our AI connects you to local pros and you get a quote within minutes." },
+  { n: "02", title: "Pay a small deposit", desc: "Lock in your job and your technician with a secure deposit — the rest is paid when it's done." },
+  { n: "03", title: "Pro arrives & sorts it", desc: "Your local mobile tyre professional rolls up, fixes the issue, and you're back on the road." },
 ];
 
 const FAQS = [
