@@ -109,28 +109,15 @@ const Index = () => {
     }
     setSubmitting(true);
     try {
-      setStage("Creating your request…");
-      const { data: job, error } = await supabase
-        .from("jobs")
-        .insert({
-          customer_name: parsed.data.customer_name,
-          customer_phone: parsed.data.customer_phone,
-          customer_email: parsed.data.customer_email || null,
-          postcode: parsed.data.postcode.toUpperCase(),
-          issue_type: parsed.data.issue_type,
-          issue_description: parsed.data.issue_description || null,
-        })
-        .select("id")
-        .single();
-      if (error || !job) throw error ?? new Error("Insert failed");
-
+      // 1. Upload photos first (if any) to a temp path keyed by a client-side UUID
       let photoUrls: string[] = [];
+      const tempJobKey = crypto.randomUUID();
       if (photos.length) {
         setStage("Uploading photos…");
         photoUrls = await Promise.all(
           photos.map(async ({ file }, idx) => {
             const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
-            const path = `jobs/${job.id}/${idx}-${crypto.randomUUID()}.${ext}`;
+            const path = `jobs/${tempJobKey}/${idx}-${crypto.randomUUID()}.${ext}`;
             const { error: upErr } = await supabase.storage
               .from("job-photos")
               .upload(path, file, { contentType: file.type || "image/jpeg" });
@@ -138,9 +125,27 @@ const Index = () => {
             return supabase.storage.from("job-photos").getPublicUrl(path).data.publicUrl;
           })
         );
-        await supabase.from("jobs").update({ photo_urls: photoUrls }).eq("id", job.id);
       }
 
+      // 2. Call Intake Agent — it validates postcode, classifies, dedupes, then
+      //    inserts the job with status='intake_complete' which fires the Dispatch Agent.
+      setStage("Routing your request to a technician…");
+      const { data, error } = await supabase.functions.invoke("intake-agent", {
+        body: {
+          customer_name: parsed.data.customer_name,
+          customer_phone: parsed.data.customer_phone,
+          customer_email: parsed.data.customer_email || null,
+          postcode: parsed.data.postcode.toUpperCase(),
+          issue_type: parsed.data.issue_type,
+          issue_description: parsed.data.issue_description || null,
+          photo_urls: photoUrls,
+        },
+      });
+      if (error) throw error;
+      const job = data?.job;
+      if (!job?.id) throw new Error(data?.error || "Intake failed");
+
+      // 3. Fire-and-forget photo analysis (the existing function)
       if (photoUrls.length) {
         supabase.functions.invoke("analyze-damage", {
           body: {
