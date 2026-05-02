@@ -14,9 +14,32 @@ export type Database = {
   }
   public: {
     Tables: {
+      app_settings: {
+        Row: {
+          id: string
+          key: string
+          updated_at: string
+          value: Json
+        }
+        Insert: {
+          id?: string
+          key: string
+          updated_at?: string
+          value?: Json
+        }
+        Update: {
+          id?: string
+          key?: string
+          updated_at?: string
+          value?: Json
+        }
+        Relationships: []
+      }
       job_allocations: {
         Row: {
           ai_reasoning: string | null
+          approved_at: string | null
+          approved_by: string | null
           created_at: string
           id: string
           job_id: string | null
@@ -26,6 +49,8 @@ export type Database = {
         }
         Insert: {
           ai_reasoning?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
           created_at?: string
           id?: string
           job_id?: string | null
@@ -35,6 +60,8 @@ export type Database = {
         }
         Update: {
           ai_reasoning?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
           created_at?: string
           id?: string
           job_id?: string | null
