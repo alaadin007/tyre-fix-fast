@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import {
   Plus, Trash2, Star, Phone, MapPin, RefreshCw, Upload, Settings,
   MessageSquare, MessageCircle, CheckCircle2, Clock, Sparkles, Users, ArrowLeft, Navigation,
-  ShieldCheck, Zap, Check, X, ChevronsUpDown, Send,
+  ShieldCheck, Zap, Check, X, ChevronsUpDown, Send, ChevronDown, ChevronUp, Image as ImageIcon, PoundSterling, User as UserIcon,
 } from "lucide-react";
 import { parseTechniciansFile, type ParsedTechnician } from "@/lib/parseTechnicians";
 import { Button } from "@/components/ui/button";
