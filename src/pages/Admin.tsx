@@ -95,17 +95,38 @@ export default function Admin() {
 
   const refreshAll = async () => {
     setLoading(true);
-    const [tRes, mRes, aRes, jRes] = await Promise.all([
+    const [tRes, mRes, aRes, jRes, sRes] = await Promise.all([
       supabase.from("technicians").select("*").order("created_at", { ascending: false }),
       supabase.from("sms_messages").select("*").order("created_at", { ascending: false }).limit(100),
       supabase.from("job_allocations").select("*").order("created_at", { ascending: false }).limit(100),
       supabase.from("jobs").select("*").order("created_at", { ascending: false }).limit(100),
+      supabase.from("app_settings" as any).select("*").eq("key", "dispatch").maybeSingle(),
     ]);
     if (tRes.data) setTechs(tRes.data as Technician[]);
     if (mRes.data) setMessages(mRes.data as SmsMessage[]);
     if (aRes.data) setAllocations(aRes.data as Allocation[]);
     if (jRes.data) setJobs(jRes.data as Job[]);
+    if (sRes.data) {
+      setSettingsId((sRes.data as any).id);
+      setAutoAssign(Boolean((sRes.data as any).value?.auto_assign));
+    }
     setLoading(false);
+  };
+
+  const toggleAutoAssign = async (next: boolean) => {
+    setAutoAssign(next);
+    if (settingsId) {
+      await supabase.from("app_settings" as any)
+        .update({ value: { auto_assign: next } })
+        .eq("id", settingsId);
+    } else {
+      const { data } = await supabase.from("app_settings" as any)
+        .insert({ key: "dispatch", value: { auto_assign: next } })
+        .select()
+        .maybeSingle();
+      if (data) setSettingsId((data as any).id);
+    }
+    toast.success(next ? "Auto-assign ON — AI dispatches without approval" : "Manual approval ON — you confirm every job");
   };
 
   useEffect(() => {
@@ -116,10 +137,25 @@ export default function Admin() {
       .on("postgres_changes", { event: "*", schema: "public", table: "job_allocations" }, refreshAll)
       .on("postgres_changes", { event: "*", schema: "public", table: "technicians" }, refreshAll)
       .on("postgres_changes", { event: "*", schema: "public", table: "jobs" }, refreshAll)
+      .on("postgres_changes", { event: "*", schema: "public", table: "app_settings" }, refreshAll)
       .subscribe();
     return () => { supabase.removeChannel(ch); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // When auto-assign is ON, automatically approve any "proposed" allocations with a tech.
+  useEffect(() => {
+    if (!autoAssign) return;
+    const toApprove = allocations.filter(a => a.status === "proposed" && a.technician_id);
+    if (toApprove.length === 0) return;
+    (async () => {
+      await supabase.from("job_allocations")
+        .update({ status: "approved", approved_at: new Date().toISOString(), approved_by: "auto" })
+        .in("id", toApprove.map(a => a.id));
+    })();
+  }, [autoAssign, allocations]);
+
+  const pendingAllocs = allocations.filter(a => a.status === "proposed");
 
   const incoming = jobs.filter((j) => j.status === "pending" || j.status === "new");
   const inProgress = jobs.filter((j) => j.status === "accepted" || j.status === "assigned" || j.status === "en_route" || j.status === "in_progress");
