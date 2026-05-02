@@ -562,6 +562,32 @@ function IncomingInquiryCard({
   const headlinePrice = cheapest?.price_gbp ?? null;
   const headlineTechName = matchedTech?.name ?? fallbackEta?.tech?.name ?? null;
 
+  // Build a ranked dispatch shortlist (top 3) so the operator can see WHO the AI
+  // will contact, in what order, and WHY. The AI texts #1 first; if no reply
+  // within the dispatch window, it falls through to #2, then #3.
+  const shortlist = useMemo(() => {
+    const area = (job.postcode || "").toUpperCase().replace(/\s+/g, "").slice(0, 4);
+    const scored = techs
+      .filter((t) => t.active)
+      .map((t) => {
+        const localMatch = t.service_postcodes.some((p) => area.startsWith(p.toUpperCase()));
+        const rating = t.rating ?? 0;
+        // local postcode match dominates; rating + completed jobs break ties
+        const score = (localMatch ? 1000 : 0) + rating * 50 + Math.min(t.jobs_completed, 50);
+        const reasons: string[] = [];
+        if (localMatch) reasons.push(`covers ${area}`);
+        else reasons.push("nearest available (out of area)");
+        if (rating >= 4.5) reasons.push(`${rating.toFixed(1)}★ rating`);
+        else if (rating > 0) reasons.push(`${rating.toFixed(1)}★`);
+        if (t.jobs_completed > 0) reasons.push(`${t.jobs_completed} jobs done`);
+        const hasReplied = liveQuotes.some((q) => q.technician_id === t.id);
+        return { tech: t, score, reasons, localMatch, hasReplied };
+      })
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 3);
+    return scored;
+  }, [job.postcode, techs, liveQuotes]);
+
   const triggerFeeCheckout = async (assignedTech: Technician | null) => {
     // 1. Create Stripe Checkout session for the £15 fee
     const { data, error } = await supabase.functions.invoke("create-fee-checkout", {
@@ -704,6 +730,59 @@ function IncomingInquiryCard({
                   <img src={u} alt={`Damage ${i + 1}`} className="h-full w-full object-cover" />
                 </button>
               ))}
+            </div>
+          )}
+
+          {/* Dispatch shortlist — who AI is contacting and why */}
+          {shortlist.length > 0 && (
+            <div>
+              <div className="mb-1.5 flex items-center justify-between">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  AI dispatch order
+                </p>
+                <span className="text-[10px] text-muted-foreground">
+                  Texts #1 first → falls back if no reply
+                </span>
+              </div>
+              <div className="space-y-1">
+                {shortlist.map((s, idx) => (
+                  <div
+                    key={s.tech.id}
+                    className={`flex items-start gap-2 rounded-md border p-2 ${
+                      idx === 0
+                        ? "border-[hsl(var(--accent))]/40 bg-[hsl(var(--accent))]/5"
+                        : "border-white/60 bg-white/60"
+                    }`}
+                  >
+                    <span
+                      className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${
+                        idx === 0
+                          ? "bg-[hsl(var(--accent))] text-white"
+                          : "bg-muted text-foreground/70"
+                      }`}
+                    >
+                      {idx + 1}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="truncate text-xs font-medium">{s.tech.name}</span>
+                        {s.localMatch && (
+                          <Badge variant="outline" className="h-3.5 px-1 text-[9px]">local</Badge>
+                        )}
+                        {s.hasReplied && (
+                          <Badge className="h-3.5 bg-[hsl(var(--success))]/15 px-1 text-[9px] text-[hsl(var(--success))] hover:bg-[hsl(var(--success))]/15">
+                            replied
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="mt-0.5 flex items-start gap-1 text-[10px] text-muted-foreground">
+                        <Sparkles className="mt-0.5 h-2.5 w-2.5 shrink-0 text-[hsl(var(--accent))]" />
+                        <span>{s.reasons.join(" · ")}</span>
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 
