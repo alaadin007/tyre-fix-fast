@@ -371,6 +371,58 @@ export default function Admin() {
                     </div>
                     <Button type="submit" className="w-full">Add technician</Button>
                   </form>
+
+                  <div className="mt-6 border-t pt-4">
+                    <p className="text-sm font-semibold mb-2">Bulk import</p>
+                    <p className="text-xs text-muted-foreground mb-3">
+                      Upload CSV, Excel (.xlsx/.xls), Word (.docx), or text file. Headers expected:
+                      <span className="font-mono"> name, phone, postcodes, email, vehicle, notes</span>.
+                    </p>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".csv,.xlsx,.xls,.xlsm,.ods,.docx,.txt,.tsv,text/csv,text/plain,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                      className="hidden"
+                      onChange={handleFileChosen}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      <Upload /> Choose file…
+                    </Button>
+
+                    {preview && (
+                      <div className="mt-4 rounded-md border bg-muted/30 p-3">
+                        <p className="text-xs font-semibold mb-2">
+                          Preview — {preview.length} technician(s)
+                        </p>
+                        <div className="max-h-48 overflow-y-auto text-xs space-y-1">
+                          {preview.slice(0, 20).map((p, i) => (
+                            <div key={i} className="truncate">
+                              <span className="font-medium">{p.name}</span> · {p.phone}
+                              {p.service_postcodes.length > 0 && (
+                                <span className="text-muted-foreground"> · {p.service_postcodes.join(", ")}</span>
+                              )}
+                            </div>
+                          ))}
+                          {preview.length > 20 && (
+                            <div className="text-muted-foreground">…and {preview.length - 20} more</div>
+                          )}
+                        </div>
+                        <div className="mt-3 flex gap-2">
+                          <Button size="sm" onClick={confirmImport} disabled={importing} className="flex-1">
+                            {importing ? "Importing…" : `Import ${preview.length}`}
+                          </Button>
+                          <Button size="sm" variant="ghost" onClick={() => setPreview(null)}>
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
 
