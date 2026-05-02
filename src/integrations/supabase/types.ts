@@ -133,6 +133,7 @@ export type Database = {
       sms_messages: {
         Row: {
           body: string
+          channel: string
           created_at: string
           direction: string
           from_number: string
@@ -146,6 +147,7 @@ export type Database = {
         }
         Insert: {
           body?: string
+          channel?: string
           created_at?: string
           direction: string
           from_number: string
@@ -159,6 +161,7 @@ export type Database = {
         }
         Update: {
           body?: string
+          channel?: string
           created_at?: string
           direction?: string
           from_number?: string
