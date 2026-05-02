@@ -49,6 +49,11 @@ type Job = {
   damage_type: string | null; damage_summary: string | null; damage_confidence: string | null;
   photo_urls: string[];
 };
+type Quote = {
+  id: string; job_id: string | null; technician_id: string | null;
+  price_gbp: number | null; eta_minutes: number | null;
+  status: string; raw_message: string | null; confidence: string | null; created_at: string;
+};
 
 const techSchema = z.object({
   name: z.string().trim().min(2, "Name required").max(100),
