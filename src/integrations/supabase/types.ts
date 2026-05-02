@@ -81,6 +81,7 @@ export type Database = {
       }
       jobs: {
         Row: {
+          broadcast_count: number
           created_at: string
           customer_email: string | null
           customer_name: string
@@ -88,15 +89,23 @@ export type Database = {
           damage_confidence: string | null
           damage_summary: string | null
           damage_type: string | null
+          dispatch_deadline: string | null
+          dispatch_phase: number
           id: string
+          is_duplicate: boolean
           issue_description: string | null
           issue_type: string
+          lat: number | null
+          lng: number | null
           photo_urls: string[]
           postcode: string
+          region: string | null
+          severity: string | null
           status: string
           updated_at: string
         }
         Insert: {
+          broadcast_count?: number
           created_at?: string
           customer_email?: string | null
           customer_name: string
@@ -104,15 +113,23 @@ export type Database = {
           damage_confidence?: string | null
           damage_summary?: string | null
           damage_type?: string | null
+          dispatch_deadline?: string | null
+          dispatch_phase?: number
           id?: string
+          is_duplicate?: boolean
           issue_description?: string | null
           issue_type: string
+          lat?: number | null
+          lng?: number | null
           photo_urls?: string[]
           postcode: string
+          region?: string | null
+          severity?: string | null
           status?: string
           updated_at?: string
         }
         Update: {
+          broadcast_count?: number
           created_at?: string
           customer_email?: string | null
           customer_name?: string
@@ -120,13 +137,178 @@ export type Database = {
           damage_confidence?: string | null
           damage_summary?: string | null
           damage_type?: string | null
+          dispatch_deadline?: string | null
+          dispatch_phase?: number
           id?: string
+          is_duplicate?: boolean
           issue_description?: string | null
           issue_type?: string
+          lat?: number | null
+          lng?: number | null
           photo_urls?: string[]
           postcode?: string
+          region?: string | null
+          severity?: string | null
           status?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      ops_alerts: {
+        Row: {
+          body: string | null
+          created_at: string
+          id: string
+          job_id: string | null
+          level: string
+          read: boolean
+          title: string
+        }
+        Insert: {
+          body?: string | null
+          created_at?: string
+          id?: string
+          job_id?: string | null
+          level?: string
+          read?: boolean
+          title: string
+        }
+        Update: {
+          body?: string | null
+          created_at?: string
+          id?: string
+          job_id?: string | null
+          level?: string
+          read?: boolean
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ops_alerts_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quotes: {
+        Row: {
+          confidence: string | null
+          created_at: string
+          eta_minutes: number | null
+          id: string
+          job_id: string | null
+          price_gbp: number | null
+          raw_message: string | null
+          status: string
+          technician_id: string | null
+        }
+        Insert: {
+          confidence?: string | null
+          created_at?: string
+          eta_minutes?: number | null
+          id?: string
+          job_id?: string | null
+          price_gbp?: number | null
+          raw_message?: string | null
+          status?: string
+          technician_id?: string | null
+        }
+        Update: {
+          confidence?: string | null
+          created_at?: string
+          eta_minutes?: number | null
+          id?: string
+          job_id?: string | null
+          price_gbp?: number | null
+          raw_message?: string | null
+          status?: string
+          technician_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quotes_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotes_technician_id_fkey"
+            columns: ["technician_id"]
+            isOneToOne: false
+            referencedRelation: "technicians"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reviews: {
+        Row: {
+          comment: string | null
+          created_at: string
+          id: string
+          job_id: string | null
+          score: number
+          technician_id: string | null
+        }
+        Insert: {
+          comment?: string | null
+          created_at?: string
+          id?: string
+          job_id?: string | null
+          score: number
+          technician_id?: string | null
+        }
+        Update: {
+          comment?: string | null
+          created_at?: string
+          id?: string
+          job_id?: string | null
+          score?: number
+          technician_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reviews_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_technician_id_fkey"
+            columns: ["technician_id"]
+            isOneToOne: false
+            referencedRelation: "technicians"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scheduled_tasks: {
+        Row: {
+          created_at: string
+          done: boolean
+          id: string
+          kind: string
+          payload: Json
+          run_at: string
+        }
+        Insert: {
+          created_at?: string
+          done?: boolean
+          id?: string
+          kind: string
+          payload?: Json
+          run_at: string
+        }
+        Update: {
+          created_at?: string
+          done?: boolean
+          id?: string
+          kind?: string
+          payload?: Json
+          run_at?: string
         }
         Relationships: []
       }
