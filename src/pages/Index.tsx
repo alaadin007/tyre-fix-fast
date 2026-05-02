@@ -252,14 +252,6 @@ const Index = () => {
                   <ChevronRight className="ml-1 h-4 w-4 transition-transform group-hover:translate-x-1" />
                 </Button>
               </a>
-              <a href={waHref} target="_blank" rel="noreferrer">
-                <Button
-                  size="lg"
-                  className="h-14 w-full bg-[hsl(142_71%_38%)] px-6 text-base font-bold text-white hover:bg-[hsl(142_71%_34%)] sm:w-auto"
-                >
-                  <MessageCircle className="mr-2 h-5 w-5" /> WhatsApp us
-                </Button>
-              </a>
               <a href={telHref}>
                 <Button
                   size="lg"
