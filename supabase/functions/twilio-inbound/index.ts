@@ -22,8 +22,13 @@ Deno.serve(async (req) => {
     const params: Record<string, string> = {};
     for (const [k, v] of formData.entries()) params[k] = String(v);
 
-    const from = params.From ?? "";
-    const to = params.To ?? "";
+    const fromRaw = params.From ?? "";
+    const toRaw = params.To ?? "";
+    // WhatsApp messages arrive as "whatsapp:+447..." — strip prefix and remember channel
+    const isWhatsApp = fromRaw.startsWith("whatsapp:") || toRaw.startsWith("whatsapp:");
+    const channel = isWhatsApp ? "whatsapp" : "sms";
+    const from = fromRaw.replace(/^whatsapp:/, "");
+    const to = toRaw.replace(/^whatsapp:/, "");
     const body = params.Body ?? "";
     const sid = params.MessageSid ?? null;
     const numMedia = parseInt(params.NumMedia ?? "0", 10) || 0;
@@ -33,11 +38,12 @@ Deno.serve(async (req) => {
       if (u) mediaUrls.push(u);
     }
 
-    // 1. Save inbound SMS
+    // 1. Save inbound message
     const { data: sms, error: smsErr } = await supabase
       .from("sms_messages")
       .insert({
         direction: "inbound",
+        channel,
         from_number: from,
         to_number: to,
         body,

@@ -4,8 +4,8 @@ import { z } from "zod";
 import { toast } from "sonner";
 import {
   Plus, Trash2, Star, Phone, MapPin, RefreshCw, Upload, Settings,
-  MessageSquare, CheckCircle2, Clock, Sparkles, Users, ArrowLeft, Navigation,
-  ShieldCheck, Zap, Check, X, ChevronsUpDown,
+  MessageSquare, MessageCircle, CheckCircle2, Clock, Sparkles, Users, ArrowLeft, Navigation,
+  ShieldCheck, Zap, Check, X, ChevronsUpDown, Send,
 } from "lucide-react";
 import { parseTechniciansFile, type ParsedTechnician } from "@/lib/parseTechnicians";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,9 @@ import {
 import {
   Popover, PopoverContent, PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
+} from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { AdminAIChat } from "@/components/admin/AdminAIChat";
 
@@ -32,6 +35,7 @@ type Technician = {
 type SmsMessage = {
   id: string; direction: string; from_number: string; to_number: string;
   body: string; num_media: number; media_urls: string[]; status: string; created_at: string;
+  channel?: string;
 };
 type Allocation = {
   id: string; job_id: string | null; technician_id: string | null;
@@ -236,11 +240,18 @@ export default function Admin() {
                 })}
                 {messages.filter(m => m.direction === "inbound").slice(0, 8).map((m) => {
                   const loc = extractLocation(m.body);
+                  const isWA = m.channel === "whatsapp";
                   return (
                     <div key={m.id} className="rounded-xl border border-white/40 bg-white/60 p-3 backdrop-blur">
                       <div className="mb-1 flex items-center justify-between">
                         <div className="flex items-center gap-2 text-xs font-medium">
-                          <Badge className="bg-[hsl(var(--accent))]/15 text-[hsl(var(--accent))] hover:bg-[hsl(var(--accent))]/15">SMS</Badge>
+                          {isWA ? (
+                            <Badge className="bg-[hsl(142_71%_38%)]/15 text-[hsl(142_71%_30%)] hover:bg-[hsl(142_71%_38%)]/15">
+                              <MessageCircle className="mr-1 h-3 w-3" />WhatsApp
+                            </Badge>
+                          ) : (
+                            <Badge className="bg-[hsl(var(--accent))]/15 text-[hsl(var(--accent))] hover:bg-[hsl(var(--accent))]/15">SMS</Badge>
+                          )}
                           <Phone className="h-3 w-3" />
                           <span>{m.from_number}</span>
                         </div>
@@ -259,6 +270,9 @@ export default function Admin() {
                           ))}
                         </div>
                       )}
+                      <div className="mt-2">
+                        <ReplyButton to={m.from_number} channel={isWA ? "whatsapp" : "sms"} />
+                      </div>
                     </div>
                   );
                 })}
@@ -454,6 +468,87 @@ function relTime(iso: string) {
   const h = Math.floor(m / 60);
   if (h < 24) return `${h}h ago`;
   return `${Math.floor(h / 24)}d ago`;
+}
+
+/* ---------- Reply (SMS / WhatsApp) ---------- */
+
+function ReplyButton({
+  to, channel: initialChannel,
+}: { to: string; channel: "sms" | "whatsapp" }) {
+  const [open, setOpen] = useState(false);
+  const [channel, setChannel] = useState<"sms" | "whatsapp">(initialChannel);
+  const [body, setBody] = useState("");
+  const [sending, setSending] = useState(false);
+
+  const send = async () => {
+    if (!body.trim()) return;
+    setSending(true);
+    const { data, error } = await supabase.functions.invoke("twilio-send", {
+      body: { to, channel, body: body.trim() },
+    });
+    setSending(false);
+    if (error || (data as any)?.error) {
+      toast.error((data as any)?.error ?? error?.message ?? "Send failed");
+      return;
+    }
+    toast.success(`${channel === "whatsapp" ? "WhatsApp" : "SMS"} sent to ${to}`);
+    setBody("");
+    setOpen(false);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm" variant="outline" className="h-7 text-xs">
+          <Send className="h-3 w-3" /> Reply
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Reply to {to}</DialogTitle>
+          <DialogDescription>Send a message via Twilio.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              variant={channel === "sms" ? "default" : "outline"}
+              onClick={() => setChannel("sms")}
+              className="flex-1"
+            >
+              <MessageSquare className="h-3.5 w-3.5" /> SMS
+            </Button>
+            <Button
+              size="sm"
+              variant={channel === "whatsapp" ? "default" : "outline"}
+              onClick={() => setChannel("whatsapp")}
+              className={`flex-1 ${channel === "whatsapp" ? "bg-[hsl(142_71%_38%)] hover:bg-[hsl(142_71%_34%)]" : ""}`}
+            >
+              <MessageCircle className="h-3.5 w-3.5" /> WhatsApp
+            </Button>
+          </div>
+          <Textarea
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            rows={4}
+            placeholder="Type your message…"
+            maxLength={1500}
+          />
+          <p className="text-[10px] text-muted-foreground">
+            {channel === "whatsapp"
+              ? "WhatsApp uses Twilio's sandbox until your number is approved. Recipient must have joined the sandbox."
+              : `Sent from your business number.`}
+          </p>
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
+          <Button onClick={send} disabled={sending || !body.trim()}>
+            {sending ? "Sending…" : `Send ${channel === "whatsapp" ? "WhatsApp" : "SMS"}`}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
 }
 
 /* ---------- Dispatch mode toggle (header pill) ---------- */
