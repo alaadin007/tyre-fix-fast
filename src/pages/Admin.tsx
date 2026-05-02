@@ -92,6 +92,7 @@ export default function Admin() {
   const [messages, setMessages] = useState<SmsMessage[]>([]);
   const [allocations, setAllocations] = useState<Allocation[]>([]);
   const [jobs, setJobs] = useState<Job[]>([]);
+  const [quotes, setQuotes] = useState<Quote[]>([]);
   const [loading, setLoading] = useState(true);
   const [autoAssign, setAutoAssign] = useState<boolean>(false);
   const [settingsId, setSettingsId] = useState<string | null>(null);
@@ -101,6 +102,21 @@ export default function Admin() {
     techs.forEach((t) => m.set(t.id, t));
     return m;
   }, [techs]);
+
+  const quotesByJob = useMemo(() => {
+    const m = new Map<string, Quote[]>();
+    quotes.forEach((q) => {
+      if (!q.job_id) return;
+      const arr = m.get(q.job_id) ?? [];
+      arr.push(q);
+      m.set(q.job_id, arr);
+    });
+    // sort each list cheapest-first, then fastest
+    for (const arr of m.values()) {
+      arr.sort((a, b) => (a.price_gbp ?? 1e9) - (b.price_gbp ?? 1e9) || (a.eta_minutes ?? 1e9) - (b.eta_minutes ?? 1e9));
+    }
+    return m;
+  }, [quotes]);
 
   const refreshAll = async () => {
     setLoading(true);
