@@ -4,6 +4,7 @@ import { z } from "zod";
 import { toast } from "sonner";
 import {
   MessageSquare,
+  MessageCircle,
   Phone,
   Clock,
   ShieldCheck,
@@ -172,6 +173,8 @@ const Index = () => {
     "Please send a quote and ETA. Thanks!";
   const smsHref = `sms:${SMS_NUMBER}?body=${encodeURIComponent(smsBody)}`;
   const telHref = `tel:${SMS_NUMBER}`;
+  // wa.me uses the number without + or spaces
+  const waHref = `https://wa.me/${SMS_NUMBER.replace(/\D/g, "")}?text=${encodeURIComponent(smsBody)}`;
 
   return (
     <main className="min-h-screen bg-background">
