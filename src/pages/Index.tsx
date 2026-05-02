@@ -44,7 +44,7 @@ const Index = () => {
       </header>
 
       {/* Centre block */}
-      <section className="flex-1 w-full flex flex-col items-center justify-center text-center max-w-md mx-auto">
+      <section className="flex-1 w-full flex flex-col items-center justify-center text-center max-w-md mx-auto pt-10 sm:pt-6">
         <h1 className="text-[56px] sm:text-7xl font-bold leading-[0.95] tracking-tight">
           Flat tyre?
         </h1>
