@@ -364,6 +364,7 @@ Deno.serve(async (req) => {
 
     await sendReply(from, INTAKE_TEMPLATE, channel);
     return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+  } catch (e) {
     console.error("twilio-inbound error", e);
     return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
   }
