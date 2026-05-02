@@ -420,8 +420,12 @@ const Index = () => {
 {`Hi FTNM — I need help with a flat tyre.
 
 📍 Location / postcode: 
-📷 Photos of the tyre attached
-   (use flash if it's dark)
+📷 Photos with flash 🔦 showing:
+   • the nail / screw / object
+   • the rupture or sidewall cut
+   • the whole tyre & wheel
+   so we can see if it's repairable
+   or needs replacing & quote accurately
 🛞 If sidewall isn't legible,
    tyre type & size: `}
                 </pre>
