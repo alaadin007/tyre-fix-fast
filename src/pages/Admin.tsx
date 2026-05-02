@@ -761,9 +761,30 @@ function IncomingInquiryCard({
                   AI dispatch order
                 </p>
                 <span className="text-[10px] text-muted-foreground">
-                  Texts #1 first → falls back if no reply
+                  Texts #1 first → if no reply in ~3 min, tries #2, then #3
                 </span>
               </div>
+
+              {/* Plain-English summary the operator can read at a glance */}
+              <p className="mb-1.5 rounded-md bg-white/70 p-2 text-[11px] leading-relaxed text-foreground/80">
+                <Sparkles className="mr-1 inline h-3 w-3 text-[hsl(var(--accent))]" />
+                AI will contact{" "}
+                {shortlist.map((s, i) => (
+                  <span key={s.tech.id}>
+                    {i === 0 ? "" : i === shortlist.length - 1 ? ", then " : ", then "}
+                    <span className="font-semibold text-foreground">{s.tech.name}</span>
+                    {s.phoneLast4 && <span className="text-muted-foreground"> (····{s.phoneLast4})</span>}{" "}
+                    <span className="text-muted-foreground">
+                      — ~{s.estMins} min away
+                      {s.quote?.price_gbp != null
+                        ? `, quoting £${s.quote.price_gbp}`
+                        : ", awaiting quote"}
+                    </span>
+                  </span>
+                ))}
+                .
+              </p>
+
               <div className="space-y-1">
                 {shortlist.map((s, idx) => (
                   <div
@@ -786,18 +807,31 @@ function IncomingInquiryCard({
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-1.5">
                         <span className="truncate text-xs font-medium">{s.tech.name}</span>
+                        {s.phoneLast4 && (
+                          <span className="text-[10px] text-muted-foreground">····{s.phoneLast4}</span>
+                        )}
                         {s.localMatch && (
                           <Badge variant="outline" className="h-3.5 px-1 text-[9px]">local</Badge>
                         )}
-                        {s.hasReplied && (
+                        {s.hasReplied ? (
                           <Badge className="h-3.5 bg-[hsl(var(--success))]/15 px-1 text-[9px] text-[hsl(var(--success))] hover:bg-[hsl(var(--success))]/15">
                             replied
                           </Badge>
+                        ) : idx === 0 ? (
+                          <Badge variant="outline" className="h-3.5 px-1 text-[9px]">contacting…</Badge>
+                        ) : (
+                          <Badge variant="outline" className="h-3.5 px-1 text-[9px] text-muted-foreground">queued</Badge>
                         )}
+                        {s.quote?.price_gbp != null && (
+                          <span className="text-[10px] font-semibold text-foreground">£{s.quote.price_gbp}</span>
+                        )}
+                        <span className="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground">
+                          <Clock className="h-2.5 w-2.5" />~{s.estMins}m
+                        </span>
                       </div>
                       <p className="mt-0.5 flex items-start gap-1 text-[10px] text-muted-foreground">
                         <Sparkles className="mt-0.5 h-2.5 w-2.5 shrink-0 text-[hsl(var(--accent))]" />
-                        <span>{s.reasons.join(" · ")}</span>
+                        <span>{s.reasonParts.join(" · ")}</span>
                       </p>
                     </div>
                   </div>
