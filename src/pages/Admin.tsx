@@ -120,17 +120,19 @@ export default function Admin() {
 
   const refreshAll = async () => {
     setLoading(true);
-    const [tRes, mRes, aRes, jRes, sRes] = await Promise.all([
+    const [tRes, mRes, aRes, jRes, sRes, qRes] = await Promise.all([
       supabase.from("technicians").select("*").order("created_at", { ascending: false }),
       supabase.from("sms_messages").select("*").order("created_at", { ascending: false }).limit(100),
       supabase.from("job_allocations").select("*").order("created_at", { ascending: false }).limit(100),
       supabase.from("jobs").select("*").order("created_at", { ascending: false }).limit(100),
       supabase.from("app_settings" as any).select("*").eq("key", "dispatch").maybeSingle(),
+      supabase.from("quotes" as any).select("*").order("created_at", { ascending: false }).limit(200),
     ]);
     if (tRes.data) setTechs(tRes.data as Technician[]);
     if (mRes.data) setMessages(mRes.data as SmsMessage[]);
     if (aRes.data) setAllocations(aRes.data as Allocation[]);
     if (jRes.data) setJobs(jRes.data as Job[]);
+    if (qRes.data) setQuotes(qRes.data as Quote[]);
     if (sRes.data) {
       setSettingsId((sRes.data as any).id);
       setAutoAssign(Boolean((sRes.data as any).value?.auto_assign));
