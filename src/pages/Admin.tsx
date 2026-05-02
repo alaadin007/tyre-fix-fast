@@ -733,6 +733,59 @@ function IncomingInquiryCard({
             </div>
           )}
 
+          {/* Dispatch shortlist — who AI is contacting and why */}
+          {shortlist.length > 0 && (
+            <div>
+              <div className="mb-1.5 flex items-center justify-between">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  AI dispatch order
+                </p>
+                <span className="text-[10px] text-muted-foreground">
+                  Texts #1 first → falls back if no reply
+                </span>
+              </div>
+              <div className="space-y-1">
+                {shortlist.map((s, idx) => (
+                  <div
+                    key={s.tech.id}
+                    className={`flex items-start gap-2 rounded-md border p-2 ${
+                      idx === 0
+                        ? "border-[hsl(var(--accent))]/40 bg-[hsl(var(--accent))]/5"
+                        : "border-white/60 bg-white/60"
+                    }`}
+                  >
+                    <span
+                      className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${
+                        idx === 0
+                          ? "bg-[hsl(var(--accent))] text-white"
+                          : "bg-muted text-foreground/70"
+                      }`}
+                    >
+                      {idx + 1}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="truncate text-xs font-medium">{s.tech.name}</span>
+                        {s.localMatch && (
+                          <Badge variant="outline" className="h-3.5 px-1 text-[9px]">local</Badge>
+                        )}
+                        {s.hasReplied && (
+                          <Badge className="h-3.5 bg-[hsl(var(--success))]/15 px-1 text-[9px] text-[hsl(var(--success))] hover:bg-[hsl(var(--success))]/15">
+                            replied
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="mt-0.5 flex items-start gap-1 text-[10px] text-muted-foreground">
+                        <Sparkles className="mt-0.5 h-2.5 w-2.5 shrink-0 text-[hsl(var(--accent))]" />
+                        <span>{s.reasons.join(" · ")}</span>
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Technician quotes — the matchmaking section */}
           <div>
             <div className="mb-1.5 flex items-center justify-between">
