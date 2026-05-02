@@ -48,6 +48,9 @@ type Job = {
   issue_type: string; issue_description: string | null;
   damage_type: string | null; damage_summary: string | null; damage_confidence: string | null;
   photo_urls: string[];
+  platform_fee_status?: string | null;
+  stripe_checkout_url?: string | null;
+  assigned_technician_id?: string | null;
 };
 type Quote = {
   id: string; job_id: string | null; technician_id: string | null;
@@ -435,6 +438,35 @@ function JobCard({
   onAccept?: () => void;
   onComplete?: () => void;
 }) {
+  const fee = job.platform_fee_status ?? "pending";
+  const feeBadge =
+    fee === "paid"
+      ? { cls: "bg-[hsl(var(--success))]/15 text-[hsl(var(--success))]", label: "Fee £15 paid" }
+      : fee === "refunded"
+      ? { cls: "bg-destructive/15 text-destructive", label: "Refunded" }
+      : { cls: "bg-amber-500/15 text-amber-700", label: "Awaiting £15" };
+
+  const refund = async () => {
+    if (!confirm("Refund the customer's £15 (no-show)?")) return;
+    const { error } = await supabase.functions.invoke("refund-fee", {
+      body: { job_id: job.id, reason: "no-show" },
+    });
+    if (error) toast.error(error.message);
+    else toast.success("Refund issued");
+  };
+
+  const resendLink = async () => {
+    if (!job.stripe_checkout_url) { toast.error("No payment link yet"); return; }
+    await supabase.functions.invoke("twilio-send", {
+      body: {
+        to: job.customer_phone,
+        body: `FlatTyreNearMe reminder: pay the £15 platform fee to confirm your tech: ${job.stripe_checkout_url}`,
+        channel: "sms",
+      },
+    });
+    toast.success("Payment link re-sent");
+  };
+
   return (
     <div className={
       tone === "incoming"
@@ -460,6 +492,13 @@ function JobCard({
           <p className="mt-1 text-[10px] text-muted-foreground">{relTime(job.created_at)}</p>
         </div>
       </div>
+      {tone === "progress" && (
+        <div className="mt-2">
+          <Badge className={`${feeBadge.cls} hover:${feeBadge.cls}`}>
+            <PoundSterling className="mr-0.5 h-3 w-3" />{feeBadge.label}
+          </Badge>
+        </div>
+      )}
       {eta && (
         <p className="mt-2 text-[11px] text-muted-foreground">Suggested: <span className="font-medium text-foreground">{eta.tech.name}</span></p>
       )}
@@ -472,15 +511,25 @@ function JobCard({
           ))}
         </div>
       )}
-      <div className="mt-2 flex gap-2">
+      <div className="mt-2 flex flex-wrap gap-2">
         {tone === "incoming" && onAccept && (
           <Button size="sm" className="h-7 flex-1 bg-[hsl(var(--accent))] text-xs hover:bg-[hsl(var(--accent-glow))]" onClick={onAccept}>
             Accept
           </Button>
         )}
-        {tone === "progress" && onComplete && (
+        {tone === "progress" && fee === "pending" && job.stripe_checkout_url && (
+          <Button size="sm" variant="outline" className="h-7 text-xs" onClick={resendLink}>
+            Resend link
+          </Button>
+        )}
+        {tone === "progress" && fee === "paid" && onComplete && (
           <Button size="sm" variant="outline" className="h-7 flex-1 text-xs" onClick={onComplete}>
             Mark complete
+          </Button>
+        )}
+        {tone === "progress" && fee === "paid" && (
+          <Button size="sm" variant="ghost" className="h-7 text-xs text-destructive hover:text-destructive" onClick={refund}>
+            No-show · refund
           </Button>
         )}
         <a href={`tel:${job.customer_phone}`} className="inline-flex h-7 items-center gap-1 rounded-md border bg-white px-2 text-xs hover:bg-muted">
@@ -513,21 +562,42 @@ function IncomingInquiryCard({
   const headlinePrice = cheapest?.price_gbp ?? null;
   const headlineTechName = matchedTech?.name ?? fallbackEta?.tech?.name ?? null;
 
+  const triggerFeeCheckout = async (assignedTech: Technician | null) => {
+    // 1. Create Stripe Checkout session for the £15 fee
+    const { data, error } = await supabase.functions.invoke("create-fee-checkout", {
+      body: { job_id: job.id, origin: window.location.origin },
+    });
+    if (error || !data?.url) {
+      toast.error(`Couldn't create payment link: ${error?.message ?? "unknown error"}`);
+      return;
+    }
+    // 2. SMS the customer the link
+    const techName = assignedTech?.name ?? "your technician";
+    const smsBody = `FlatTyreNearMe: ${techName} is matched for your tyre job. Pay the £15 platform fee to confirm and get their direct number: ${data.url}`;
+    await supabase.functions.invoke("twilio-send", {
+      body: { to: job.customer_phone, body: smsBody, channel: "sms" },
+    });
+    toast.success(`Payment link sent to ${job.customer_phone}`);
+  };
+
   const approveQuote = async (q: Quote) => {
     setBusy(true);
-    // Mark quote accepted, others rejected, move job to accepted
+    const assignedTech = q.technician_id ? techMap.get(q.technician_id) ?? null : null;
     await supabase.from("quotes" as any).update({ status: "rejected" }).eq("job_id", job.id);
     await supabase.from("quotes" as any).update({ status: "accepted" }).eq("id", q.id);
-    await supabase.from("jobs" as any).update({ status: "accepted" }).eq("id", job.id);
+    await supabase.from("jobs" as any).update({
+      status: "awaiting_payment",
+      assigned_technician_id: assignedTech?.id ?? null,
+    }).eq("id", job.id);
+    await triggerFeeCheckout(assignedTech);
     setBusy(false);
-    toast.success(`Job assigned${matchedTech ? ` to ${techMap.get(q.technician_id ?? "")?.name ?? "technician"}` : ""}`);
   };
 
   const acceptWithoutQuote = async () => {
     setBusy(true);
-    await supabase.from("jobs" as any).update({ status: "accepted" }).eq("id", job.id);
+    await supabase.from("jobs" as any).update({ status: "awaiting_payment" }).eq("id", job.id);
+    await triggerFeeCheckout(null);
     setBusy(false);
-    toast.success("Job accepted (no quotes yet)");
   };
 
   return (
