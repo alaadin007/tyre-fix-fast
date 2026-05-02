@@ -470,6 +470,87 @@ function relTime(iso: string) {
   return `${Math.floor(h / 24)}d ago`;
 }
 
+/* ---------- Reply (SMS / WhatsApp) ---------- */
+
+function ReplyButton({
+  to, channel: initialChannel,
+}: { to: string; channel: "sms" | "whatsapp" }) {
+  const [open, setOpen] = useState(false);
+  const [channel, setChannel] = useState<"sms" | "whatsapp">(initialChannel);
+  const [body, setBody] = useState("");
+  const [sending, setSending] = useState(false);
+
+  const send = async () => {
+    if (!body.trim()) return;
+    setSending(true);
+    const { data, error } = await supabase.functions.invoke("twilio-send", {
+      body: { to, channel, body: body.trim() },
+    });
+    setSending(false);
+    if (error || (data as any)?.error) {
+      toast.error((data as any)?.error ?? error?.message ?? "Send failed");
+      return;
+    }
+    toast.success(`${channel === "whatsapp" ? "WhatsApp" : "SMS"} sent to ${to}`);
+    setBody("");
+    setOpen(false);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm" variant="outline" className="h-7 text-xs">
+          <Send className="h-3 w-3" /> Reply
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Reply to {to}</DialogTitle>
+          <DialogDescription>Send a message via Twilio.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              variant={channel === "sms" ? "default" : "outline"}
+              onClick={() => setChannel("sms")}
+              className="flex-1"
+            >
+              <MessageSquare className="h-3.5 w-3.5" /> SMS
+            </Button>
+            <Button
+              size="sm"
+              variant={channel === "whatsapp" ? "default" : "outline"}
+              onClick={() => setChannel("whatsapp")}
+              className={`flex-1 ${channel === "whatsapp" ? "bg-[hsl(142_71%_38%)] hover:bg-[hsl(142_71%_34%)]" : ""}`}
+            >
+              <MessageCircle className="h-3.5 w-3.5" /> WhatsApp
+            </Button>
+          </div>
+          <Textarea
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            rows={4}
+            placeholder="Type your message…"
+            maxLength={1500}
+          />
+          <p className="text-[10px] text-muted-foreground">
+            {channel === "whatsapp"
+              ? "WhatsApp uses Twilio's sandbox until your number is approved. Recipient must have joined the sandbox."
+              : `Sent from your business number.`}
+          </p>
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
+          <Button onClick={send} disabled={sending || !body.trim()}>
+            {sending ? "Sending…" : `Send ${channel === "whatsapp" ? "WhatsApp" : "SMS"}`}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 /* ---------- Dispatch mode toggle (header pill) ---------- */
 
 function DispatchModeToggle({
