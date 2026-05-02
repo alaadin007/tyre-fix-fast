@@ -142,6 +142,16 @@ export default function Admin() {
       .on("postgres_changes", { event: "*", schema: "public", table: "technicians" }, refreshAll)
       .on("postgres_changes", { event: "*", schema: "public", table: "jobs" }, refreshAll)
       .on("postgres_changes", { event: "*", schema: "public", table: "app_settings" }, refreshAll)
+      .on("postgres_changes", { event: "*", schema: "public", table: "quotes" }, refreshAll)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "ops_alerts" },
+        (payload) => {
+          const a: any = payload.new;
+          const fn = a.level === "critical" ? toast.error : a.level === "warn" ? toast.warning : toast.message;
+          fn(a.title, { description: a.body });
+        }
+      )
       .subscribe();
     return () => { supabase.removeChannel(ch); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
