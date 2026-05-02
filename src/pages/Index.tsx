@@ -158,9 +158,12 @@ const Index = () => {
       </section>
 
       {/* Bottom call fallback */}
-      <footer className="w-full text-center pb-2">
-        <a href="tel:08000000000" className="text-xs text-white/40 hover:text-white/70 transition-colors">
+      <footer className="w-full text-center pb-2 space-y-1">
+        <a href="tel:08000000000" className="block text-xs text-white/40 hover:text-white/70 transition-colors">
           Or call 0800 000 0000
+        </a>
+        <a href="/technician/login" className="block text-xs text-white/30 hover:text-white/60 transition-colors">
+          Technicians: sign in →
         </a>
       </footer>
 
