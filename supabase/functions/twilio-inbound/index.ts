@@ -204,7 +204,7 @@ Deno.serve(async (req) => {
       return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
     }
 
-    // 3. Customer? Look up their open job
+    // 3. Customer? Look up their most recent job
     const { data: customerJobs } = await supabase
       .from("jobs")
       .select("*")
@@ -213,12 +213,80 @@ Deno.serve(async (req) => {
       .limit(1);
     const job: any = customerJobs?.[0];
 
-    if (job) {
+    const INTAKE_TEMPLATE =
+      "Hi 👋 FlatTyreNearMe here. To get a technician to you ASAP, please reply with:\n" +
+      "1) Your name\n" +
+      "2) Postcode or location (a Google Maps pin works too)\n" +
+      "3) What happened (puncture, flat, blowout, locked wheel...)\n" +
+      "4) A photo of the tyre if you can\n\n" +
+      "Reply all in one message or several — we'll put it together.";
+
+    // Helpers for parsing follow-up intake messages
+    const POSTCODE_RE = /\b([A-Z]{1,2}\d[A-Z\d]?)\s*(\d[A-Z]{2})\b/i;
+    const extractPostcode = (t: string) => {
+      const m = t.match(POSTCODE_RE);
+      return m ? `${m[1].toUpperCase()} ${m[2].toUpperCase()}` : null;
+    };
+    const guessIssueType = (t: string) => {
+      const s = t.toLowerCase();
+      if (/blow.?out/.test(s)) return "blowout";
+      if (/lock|locking/.test(s)) return "locked wheel";
+      if (/flat|deflat/.test(s)) return "flat tyre";
+      if (/punct|nail|screw/.test(s)) return "puncture";
+      if (/sidewall|bulge/.test(s)) return "sidewall damage";
+      return null;
+    };
+
+    // 3a. If there's an in-flight intake (intake_pending), enrich it
+    if (job && job.status === "intake_pending") {
+      const updates: Record<string, any> = { updated_at: new Date().toISOString() };
+      const newDesc = [job.issue_description, body].filter(Boolean).join("\n").slice(0, 2000);
+      updates.issue_description = newDesc;
+      if (mediaUrls.length > 0) {
+        updates.photo_urls = [...(job.photo_urls ?? []), ...mediaUrls].slice(0, 12);
+      }
+      const pc = extractPostcode(body);
+      if (pc && !job.postcode) updates.postcode = pc;
+      const it = guessIssueType(body);
+      if (it && (!job.issue_type || job.issue_type === "unknown")) updates.issue_type = it;
+      // Naive name capture: first non-postcode/issue line if name still placeholder
+      if (!job.customer_name || job.customer_name === "Customer") {
+        const firstLine = body.split(/\n|,|\./).map((s) => s.trim()).find((s) =>
+          s && s.length < 40 && !POSTCODE_RE.test(s) && !/punct|flat|blow|lock|tyre|tire|nail/i.test(s),
+        );
+        if (firstLine && /^[A-Za-z][A-Za-z .'-]{1,38}$/.test(firstLine)) {
+          updates.customer_name = firstLine;
+        }
+      }
+
+      const haveName = (updates.customer_name ?? job.customer_name) && (updates.customer_name ?? job.customer_name) !== "Customer";
+      const havePostcode = !!(updates.postcode ?? job.postcode);
+      const haveDetails = (newDesc?.length ?? 0) > 5 || (updates.photo_urls ?? job.photo_urls ?? []).length > 0;
+
+      if (haveName && havePostcode && haveDetails) {
+        updates.status = "intake_complete"; // fires dispatch trigger
+      }
+
+      await supabase.from("jobs").update(updates).eq("id", job.id);
+
+      // Acknowledge with what's still missing
+      const missing: string[] = [];
+      if (!haveName) missing.push("your name");
+      if (!havePostcode) missing.push("postcode/location");
+      if (!haveDetails) missing.push("what happened (and a photo if possible)");
+      const reply = missing.length === 0
+        ? "Got it — finding you a technician now. We'll text the moment one is matched."
+        : `Thanks! Still need: ${missing.join(", ")}.`;
+      await sendReply(from, reply, channel);
+      return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+    }
+
+    // 3b. Existing customer with a known job — handle review or quote acceptance
+    if (job && ["closed_pending_review", "broadcasting", "awaiting_approval", "intake_complete", "pending"].includes(job.status)) {
       // Review (numeric 1-5)
       const ratingMatch = body.match(/^\s*([1-5])\b/);
       if (ratingMatch && job.status === "closed_pending_review") {
         const score = parseInt(ratingMatch[1], 10);
-        // Find the technician who did the job (last accepted quote)
         const { data: q } = await supabase
           .from("quotes")
           .select("technician_id")
@@ -236,7 +304,7 @@ Deno.serve(async (req) => {
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
       }
 
-      // Quote acceptance ("yes" / "accept" / quote id)
+      // Quote acceptance ("yes" / "accept")
       if (/\b(yes|y|accept|ok|book it)\b/i.test(body)) {
         const { data: pending } = await supabase
           .from("quotes")
@@ -248,32 +316,53 @@ Deno.serve(async (req) => {
         const cheapest: any = pending?.[0];
         if (cheapest) {
           await supabase.from("quotes").update({ status: "accepted" }).eq("id", cheapest.id);
-          await supabase
-            .from("quotes")
-            .update({ status: "lost" })
-            .eq("job_id", job.id)
-            .eq("status", "pending");
-          await supabase
-            .from("jobs")
-            .update({ status: "awaiting_payment" })
-            .eq("id", job.id);
+          await supabase.from("quotes").update({ status: "lost" }).eq("job_id", job.id).eq("status", "pending");
+          await supabase.from("jobs").update({ status: "awaiting_payment" }).eq("id", job.id);
           await sendReply(
             from,
-            `Booked! £${cheapest.price_gbp}, ETA ${cheapest.eta_minutes} min. Payment link: (stub) — you'll receive a confirmation shortly.`,
+            `Booked! £${cheapest.price_gbp}, ETA ${cheapest.eta_minutes} min. Payment link will follow shortly.`,
             channel,
           );
         }
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
       }
+
+      // Otherwise treat extra texts/photos as enrichment to the open job
+      const updates: Record<string, any> = { updated_at: new Date().toISOString() };
+      if (body) updates.issue_description = [job.issue_description, body].filter(Boolean).join("\n").slice(0, 2000);
+      if (mediaUrls.length > 0) updates.photo_urls = [...(job.photo_urls ?? []), ...mediaUrls].slice(0, 12);
+      if (Object.keys(updates).length > 1) {
+        await supabase.from("jobs").update(updates).eq("id", job.id);
+        await sendReply(from, "Thanks — added that to your job. We'll text as soon as a technician is matched.", channel);
+        return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+      }
     }
 
-    // 4. Unknown sender — alert ops, no auto reply
+    // 4. Unknown sender (or stale closed job) → start intake automatically
+    const pc0 = extractPostcode(body);
+    const it0 = guessIssueType(body);
+    const { data: newJob } = await supabase
+      .from("jobs")
+      .insert({
+        customer_name: "Customer",
+        customer_phone: from,
+        postcode: pc0 ?? "",
+        issue_type: it0 ?? "unknown",
+        issue_description: body || null,
+        photo_urls: mediaUrls,
+        status: "intake_pending",
+      })
+      .select()
+      .single();
+
     await supabase.from("ops_alerts").insert({
       level: "info",
-      title: "Unrecognised inbound message",
+      title: "New inbound — intake started",
       body: `From ${from} (${channel}): "${body.slice(0, 120)}"`,
+      job_id: newJob?.id ?? null,
     });
 
+    await sendReply(from, INTAKE_TEMPLATE, channel);
     return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
   } catch (e) {
     console.error("twilio-inbound error", e);

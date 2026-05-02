@@ -197,7 +197,7 @@ export default function Admin() {
 
   const pendingAllocs = allocations.filter(a => a.status === "proposed");
 
-  const incoming = jobs.filter((j) => ["pending", "new", "intake_complete", "awaiting_approval", "broadcasting"].includes(j.status));
+  const incoming = jobs.filter((j) => ["pending", "new", "intake_pending", "intake_complete", "awaiting_approval", "broadcasting"].includes(j.status));
   const inProgress = jobs.filter((j) => ["accepted", "assigned", "en_route", "in_progress", "awaiting_payment", "confirmed"].includes(j.status));
   const done = jobs.filter((j) => ["completed", "done", "closed_pending_review", "closed", "no_response"].includes(j.status));
 
