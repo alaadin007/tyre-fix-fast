@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import {
   Plus, Trash2, Star, Phone, MapPin, RefreshCw, Upload, Settings,
   MessageSquare, CheckCircle2, Clock, Sparkles, Users, ArrowLeft, Navigation,
+  ShieldCheck, Zap, Check, X, ChevronsUpDown,
 } from "lucide-react";
 import { parseTechniciansFile, type ParsedTechnician } from "@/lib/parseTechnicians";
 import { Button } from "@/components/ui/button";
@@ -17,6 +18,9 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger,
 } from "@/components/ui/sheet";
+import {
+  Popover, PopoverContent, PopoverTrigger,
+} from "@/components/ui/popover";
 import { supabase } from "@/integrations/supabase/client";
 import { AdminAIChat } from "@/components/admin/AdminAIChat";
 
