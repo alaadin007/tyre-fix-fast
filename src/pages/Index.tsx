@@ -108,6 +108,53 @@ const Index = () => {
             UK-wide
           </span>
         </div>
+
+        {/* Testimonials */}
+        <div className="mt-10 w-full">
+          <div className="flex items-center justify-center gap-2 mb-4">
+            <div className="flex items-center gap-0.5">
+              {[0, 1, 2, 3, 4].map((i) => (
+                <Star key={i} className="h-4 w-4" style={{ color: "#FF6B1A" }} fill="#FF6B1A" />
+              ))}
+            </div>
+            <span className="text-xs text-white/60">4.9 · 1,200+ jobs</span>
+          </div>
+
+          <div className="space-y-2.5">
+            {[
+              {
+                quote: "Texted at 11pm on the M25. Fitter arrived in 38 mins. Lifesaver.",
+                name: "Sarah K.",
+                meta: "London",
+              },
+              {
+                quote: "No app, no faff. One message and sorted in the morning.",
+                name: "James R.",
+                meta: "Manchester",
+              },
+              {
+                quote: "Cheaper than the AA and twice as fast. Will use again.",
+                name: "Priya M.",
+                meta: "Birmingham",
+              },
+            ].map((t, i) => (
+              <div
+                key={i}
+                className="text-left rounded-xl px-4 py-3 border border-white/10 bg-white/[0.03]"
+              >
+                <div className="flex items-center gap-0.5 mb-1.5">
+                  {[0, 1, 2, 3, 4].map((s) => (
+                    <Star key={s} className="h-3 w-3" style={{ color: "#FF6B1A" }} fill="#FF6B1A" />
+                  ))}
+                </div>
+                <p className="text-[13px] text-white/80 leading-snug">"{t.quote}"</p>
+                <p className="mt-1.5 text-[11px] text-white/40">
+                  {t.name} · {t.meta}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
       </section>
 
       {/* Bottom call fallback */}
