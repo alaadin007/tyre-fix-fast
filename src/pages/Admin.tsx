@@ -1536,8 +1536,9 @@ function SettingsSheet({
   return (
     <Sheet>
       <SheetTrigger asChild>
-        <Button size="sm" className="bg-[hsl(var(--accent))] text-white hover:bg-[hsl(var(--accent-glow))]">
-          <Settings /> Settings
+        <Button size="sm" aria-label="Settings" className="h-9 gap-1.5 bg-[hsl(var(--accent))] px-2.5 sm:px-3 text-white hover:bg-[hsl(var(--accent-glow))]">
+          <Settings className="h-4 w-4" />
+          <span className="hidden sm:inline">Settings</span>
         </Button>
       </SheetTrigger>
       <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
