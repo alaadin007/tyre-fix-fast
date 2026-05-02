@@ -224,10 +224,10 @@ export default function Admin() {
         </div>
       </header>
 
-      {/* 3-column layout */}
-      <main className="mx-auto max-w-[1700px] px-6 py-6">
-        <div className="grid grid-cols-1 gap-5 lg:grid-cols-3 lg:h-[calc(100vh-9rem)]">
-          {/* LEFT — AI chat */}
+      {/* 4-column layout */}
+      <main className="mx-auto max-w-[1900px] px-6 py-6">
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-4 lg:h-[calc(100vh-9rem)]">
+          {/* COL 1 — AI chat */}
           <section className="glass-dark flex flex-col rounded-2xl p-5">
             <ColumnHeader
               icon={<Sparkles className="h-4 w-4" />}
@@ -240,14 +240,8 @@ export default function Admin() {
             </div>
           </section>
 
-          {/* MIDDLE — approvals + incoming + accepted/waiting */}
-          <section className="flex flex-col gap-5">
-            <PendingApprovalsPanel
-              allocations={pendingAllocs}
-              techs={techs}
-              messages={messages}
-              autoAssign={autoAssign}
-            />
+          {/* COL 2 — Incoming inquiries (full column) */}
+          <section className="flex flex-col">
             <Panel
               icon={<MessageSquare className="h-4 w-4" />}
               title="Incoming Inquiries"
@@ -306,7 +300,16 @@ export default function Admin() {
                 })}
               </div>
             </Panel>
+          </section>
 
+          {/* COL 3 — Pending approvals + Accepted/Waiting */}
+          <section className="flex flex-col gap-5">
+            <PendingApprovalsPanel
+              allocations={pendingAllocs}
+              techs={techs}
+              messages={messages}
+              autoAssign={autoAssign}
+            />
             <Panel
               icon={<Clock className="h-4 w-4" />}
               title="Accepted & Waiting"
