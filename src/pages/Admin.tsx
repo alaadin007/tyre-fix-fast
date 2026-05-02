@@ -1060,11 +1060,13 @@ function DispatchModeToggle({
 /* ---------- Pending approvals panel ---------- */
 
 function PendingApprovalsPanel({
-  allocations, techs, messages, autoAssign,
+  allocations, jobs, techs, messages: _messages, quotesByJob, autoAssign,
 }: {
   allocations: Allocation[];
+  jobs: Job[];
   techs: Technician[];
   messages: SmsMessage[];
+  quotesByJob: Map<string, Quote[]>;
   autoAssign: boolean;
 }) {
   const techMap = useMemo(() => {
@@ -1072,11 +1074,29 @@ function PendingApprovalsPanel({
     techs.forEach((t) => m.set(t.id, t));
     return m;
   }, [techs]);
-  const smsMap = useMemo(() => {
-    const m = new Map<string, SmsMessage>();
-    messages.forEach((s) => m.set(s.id, s));
-    return m;
-  }, [messages]);
+
+  // Group allocations by job; only show jobs that still need a decision
+  // (have proposed/broadcast allocations and no approved one yet).
+  const decisionJobs = useMemo(() => {
+    const byJob = new Map<string, Allocation[]>();
+    for (const a of allocations) {
+      if (!a.job_id) continue;
+      const arr = byJob.get(a.job_id) ?? [];
+      arr.push(a);
+      byJob.set(a.job_id, arr);
+    }
+    const out: { job: Job; allocs: Allocation[] }[] = [];
+    for (const [jobId, allocs] of byJob.entries()) {
+      const hasApproved = allocs.some((a) => a.status === "approved");
+      const needsDecision = allocs.some((a) => ["proposed", "broadcast"].includes(a.status));
+      if (hasApproved || !needsDecision) continue;
+      const job = jobs.find((j) => j.id === jobId);
+      if (!job) continue;
+      out.push({ job, allocs });
+    }
+    out.sort((a, b) => +new Date(b.job.created_at) - +new Date(a.job.created_at));
+    return out;
+  }, [allocations, jobs]);
 
   return (
     <div className="glass flex min-h-[12rem] flex-col rounded-2xl p-4">
@@ -1086,30 +1106,31 @@ function PendingApprovalsPanel({
             <ShieldCheck className="h-4 w-4" />
           </div>
           <div>
-            <h3 className="text-sm font-bold uppercase tracking-wider text-foreground">Pending approvals</h3>
+            <h3 className="text-sm font-bold uppercase tracking-wider text-foreground">Decide & dispatch</h3>
             <p className="text-[10px] text-muted-foreground">
-              {autoAssign ? "Auto-assign is ON — new jobs dispatch instantly" : "Review each AI suggestion before dispatch"}
+              {autoAssign ? "Auto-assign is ON — jobs dispatch instantly" : "Pick the best technician for each enquiry"}
             </p>
           </div>
         </div>
         <Badge variant="outline" className="border-[hsl(var(--accent))]/40 bg-[hsl(var(--accent))]/10 text-[hsl(var(--accent))]">
-          {allocations.length}
+          {decisionJobs.length}
         </Badge>
       </div>
       <ScrollArea className="flex-1 -mr-2 pr-2">
-        {allocations.length === 0 ? (
+        {decisionJobs.length === 0 ? (
           <p className="py-6 text-center text-xs text-muted-foreground">
-            {autoAssign ? "Nothing to review — AI is dispatching automatically." : "No suggestions waiting. New inbound jobs will appear here for approval."}
+            {autoAssign ? "Nothing to review — AI is dispatching automatically." : "No enquiries waiting. Jobs appear here once technicians are messaged."}
           </p>
         ) : (
-          <div className="space-y-2">
-            {allocations.map((a) => (
-              <ApprovalCard
-                key={a.id}
-                alloc={a}
-                tech={a.technician_id ? techMap.get(a.technician_id) ?? null : null}
-                sms={a.job_id ? smsMap.get(a.job_id) ?? null : null}
+          <div className="space-y-3">
+            {decisionJobs.map(({ job, allocs }) => (
+              <JobDecisionCard
+                key={job.id}
+                job={job}
+                allocs={allocs}
+                quotes={quotesByJob.get(job.id) ?? []}
                 techs={techs}
+                techMap={techMap}
               />
             ))}
           </div>
@@ -1119,116 +1140,300 @@ function PendingApprovalsPanel({
   );
 }
 
-function ApprovalCard({
-  alloc, tech, sms, techs,
+/* ---------- Rich job decision card ---------- */
+function JobDecisionCard({
+  job, allocs, quotes, techs, techMap,
 }: {
-  alloc: Allocation;
-  tech: Technician | null;
-  sms: SmsMessage | null;
+  job: Job;
+  allocs: Allocation[];
+  quotes: Quote[];
   techs: Technician[];
+  techMap: Map<string, Technician>;
 }) {
-  const [pickerOpen, setPickerOpen] = useState(false);
-  const [busy, setBusy] = useState(false);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [showAllTechs, setShowAllTechs] = useState(false);
 
-  const update = async (patch: Record<string, any>) => {
-    setBusy(true);
-    const { error } = await supabase
+  // Roster of every tech we broadcast to + their reply (if any).
+  const roster = useMemo(() => {
+    const quoteByTech = new Map<string, Quote>();
+    for (const q of quotes) if (q.technician_id) quoteByTech.set(q.technician_id, q);
+    const rows = allocs
+      .filter((a) => a.technician_id)
+      .map((a) => ({
+        alloc: a,
+        tech: techMap.get(a.technician_id!) ?? null,
+        quote: quoteByTech.get(a.technician_id!) ?? null,
+      }));
+    rows.sort((a, b) => {
+      const ar = a.quote ? 1 : 0;
+      const br = b.quote ? 1 : 0;
+      if (ar !== br) return br - ar;
+      return (b.alloc.match_score ?? 0) - (a.alloc.match_score ?? 0);
+    });
+    return rows;
+  }, [allocs, quotes, techMap]);
+
+  // AI's recommended pick: cheapest of the replies, then fastest ETA.
+  // Falls back to top-scored allocation when nobody has replied yet.
+  const recommended = useMemo(() => {
+    const replied = roster.filter((r) => r.quote);
+    if (replied.length > 0) {
+      const sorted = [...replied].sort(
+        (a, b) =>
+          (a.quote!.price_gbp ?? 1e9) - (b.quote!.price_gbp ?? 1e9) ||
+          (a.quote!.eta_minutes ?? 1e9) - (b.quote!.eta_minutes ?? 1e9),
+      );
+      return { tech: sorted[0].tech, alloc: sorted[0].alloc, quote: sorted[0].quote, reason: "cheapest price · fastest ETA" };
+    }
+    const sorted = [...roster].sort((a, b) => (b.alloc.match_score ?? 0) - (a.alloc.match_score ?? 0));
+    if (sorted[0]) return { tech: sorted[0].tech, alloc: sorted[0].alloc, quote: null, reason: sorted[0].alloc.ai_reasoning ?? "highest match score" };
+    return null;
+  }, [roster]);
+
+  const repliedCount = roster.filter((r) => r.quote).length;
+
+  const dispatch = async (techId: string, allocId: string | null) => {
+    setBusyId(techId);
+    try {
+      let targetId = allocId;
+      if (!targetId) {
+        const { data, error } = await supabase
+          .from("job_allocations")
+          .insert({
+            job_id: job.id,
+            technician_id: techId,
+            ai_reasoning: "Manually selected from full technician list",
+            status: "approved",
+            approved_at: new Date().toISOString(),
+            approved_by: "manual",
+          })
+          .select()
+          .single();
+        if (error) throw error;
+        targetId = (data as any).id;
+      } else {
+        const { error } = await supabase
+          .from("job_allocations")
+          .update({ status: "approved", approved_at: new Date().toISOString(), approved_by: "manual" })
+          .eq("id", targetId);
+        if (error) throw error;
+      }
+      const others = allocs.filter((a) => a.id !== targetId && ["proposed", "broadcast"].includes(a.status));
+      if (others.length > 0) {
+        await supabase
+          .from("job_allocations")
+          .update({ status: "rejected" })
+          .in("id", others.map((a) => a.id));
+      }
+      await supabase
+        .from("jobs" as any)
+        .update({ status: "accepted", assigned_technician_id: techId })
+        .eq("id", job.id);
+      const t = techMap.get(techId);
+      toast.success(`Dispatched to ${t?.name ?? "technician"}`);
+    } catch (e: any) {
+      toast.error(e.message ?? "Could not dispatch");
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const skipJob = async () => {
+    if (!confirm("Reject all suggestions for this job?")) return;
+    await supabase
       .from("job_allocations")
-      .update(patch as any)
-      .eq("id", alloc.id);
-    setBusy(false);
-    if (error) toast.error(error.message);
+      .update({ status: "rejected" })
+      .in("id", allocs.filter((a) => ["proposed", "broadcast"].includes(a.status)).map((a) => a.id));
+    toast.success("All suggestions rejected");
   };
 
-  const approve = () =>
-    update({ status: "approved", approved_at: new Date().toISOString(), approved_by: "manual" })
-      .then(() => toast.success(`Dispatched to ${tech?.name ?? "technician"}`));
-
-  const reject = () =>
-    update({ status: "rejected" }).then(() => toast.success("Rejected"));
-
-  const reassign = (newTechId: string) => {
-    const t = techs.find((x) => x.id === newTechId);
-    update({ technician_id: newTechId, ai_reasoning: `Manually reassigned to ${t?.name ?? "tech"}` })
-      .then(() => {
-        setPickerOpen(false);
-        toast.success(`Reassigned to ${t?.name}`);
-      });
-  };
+  const otherTechs = techs.filter(
+    (t) => t.active && !roster.some((r) => r.tech?.id === t.id),
+  );
 
   return (
-    <div className="rounded-xl border-2 border-[hsl(var(--accent))]/40 bg-white/80 p-3 shadow-sm">
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-sm font-bold">{tech?.name ?? "Unassigned"}</span>
-            {alloc.match_score != null && (
-              <Badge variant="outline" className="text-[10px]">score {alloc.match_score}</Badge>
-            )}
-            <span className="text-[10px] text-muted-foreground">{relTime(alloc.created_at)}</span>
-          </div>
-          {tech && (
-            <p className="text-xs text-muted-foreground flex items-center gap-1">
-              <MapPin className="h-3 w-3" />{tech.service_postcodes.join(", ") || "no areas"}
-            </p>
+    <div className="rounded-xl border-2 border-[hsl(var(--accent))]/40 bg-white/85 p-3 shadow-sm">
+      {/* Enquiry header */}
+      <div className="min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-sm font-bold">{job.customer_name}</span>
+          <Badge className="bg-[hsl(var(--accent))]/15 text-[hsl(var(--accent))] hover:bg-[hsl(var(--accent))]/15 capitalize">
+            {job.issue_type.replace(/_/g, " ")}
+          </Badge>
+          {job.damage_confidence && (
+            <Badge variant="outline" className="text-[10px] capitalize">{job.damage_confidence} confidence</Badge>
           )}
-          {alloc.ai_reasoning && (
-            <p className="mt-1 text-xs text-foreground/85"><Sparkles className="inline h-3 w-3 mr-1 text-[hsl(var(--accent))]" />{alloc.ai_reasoning}</p>
-          )}
-          {sms && (
-            <p className="mt-1 line-clamp-2 rounded-md bg-muted/60 p-1.5 text-[11px] text-foreground/80">
-              <Phone className="inline h-3 w-3 mr-1" />{sms.from_number}: {sms.body}
-            </p>
-          )}
+          <span className="text-[10px] text-muted-foreground ml-auto">{relTime(job.created_at)}</span>
         </div>
+        <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+          <MapPin className="h-3 w-3" />{job.postcode}
+          <span className="mx-1">·</span>
+          <Phone className="h-3 w-3" />{job.customer_phone}
+        </p>
+        {job.damage_summary && (
+          <p className="mt-1.5 rounded-md bg-muted/60 p-2 text-xs text-foreground/85">
+            <Sparkles className="inline h-3 w-3 mr-1 text-[hsl(var(--accent))]" />
+            {job.damage_summary}
+          </p>
+        )}
+        {job.photo_urls?.length > 0 && (
+          <div className="mt-1.5 flex gap-1">
+            {job.photo_urls.slice(0, 4).map((u, i) => (
+              <a key={i} href={u} target="_blank" rel="noreferrer" className="block h-10 w-10 overflow-hidden rounded-md border bg-muted">
+                <img src={u} alt="" className="h-full w-full object-cover" />
+              </a>
+            ))}
+          </div>
+        )}
       </div>
 
-      <div className="mt-2.5 flex items-center gap-2">
-        <Button
-          size="sm"
-          className="h-7 flex-1 bg-[hsl(var(--success))] text-xs text-white hover:bg-[hsl(var(--success))]/90"
-          disabled={busy || !tech}
-          onClick={approve}
-        >
-          <Check className="h-3.5 w-3.5" /> Approve
-        </Button>
-        <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
-          <PopoverTrigger asChild>
-            <Button size="sm" variant="outline" className="h-7 text-xs" disabled={busy}>
-              <ChevronsUpDown className="h-3.5 w-3.5" /> Reassign
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-64 p-1">
-            <div className="max-h-60 overflow-y-auto">
-              {techs.filter(t => t.active).length === 0 && (
-                <p className="px-2 py-1.5 text-xs text-muted-foreground">No active technicians</p>
-              )}
-              {techs.filter(t => t.active).map((t) => (
-                <button
-                  key={t.id}
-                  onClick={() => reassign(t.id)}
-                  className="w-full rounded-md px-2 py-1.5 text-left text-xs hover:bg-muted"
-                >
-                  <div className="font-medium">{t.name}</div>
-                  <div className="text-[10px] text-muted-foreground">{t.service_postcodes.join(", ") || "no areas"}</div>
-                </button>
-              ))}
-            </div>
-          </PopoverContent>
-        </Popover>
+      {/* AI recommendation banner */}
+      {recommended?.tech && (
+        <div className="mt-2.5 rounded-lg border border-[hsl(var(--success))]/40 bg-[hsl(var(--success))]/5 p-2">
+          <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-[hsl(var(--success))]">
+            <Sparkles className="h-3 w-3" /> AI recommends
+          </div>
+          <p className="text-xs mt-0.5">
+            <span className="font-bold">{recommended.tech.name}</span>{" "}
+            <span className="text-muted-foreground">— {recommended.reason}</span>
+          </p>
+        </div>
+      )}
+
+      {/* Broadcast roster */}
+      <div className="mt-3">
+        <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+          Messaged {roster.length} · {repliedCount} replied · click anyone to dispatch
+        </p>
+        <div className="space-y-1.5">
+          {roster.map(({ alloc, tech, quote }) => {
+            const isPick = recommended?.tech?.id === tech?.id;
+            const replied = !!quote;
+            return (
+              <button
+                key={alloc.id}
+                type="button"
+                onClick={() => tech && dispatch(tech.id, alloc.id)}
+                disabled={!tech || busyId !== null}
+                className={[
+                  "group w-full rounded-lg border p-2 text-left transition",
+                  isPick
+                    ? "border-[hsl(var(--success))]/60 bg-[hsl(var(--success))]/8 hover:bg-[hsl(var(--success))]/15"
+                    : replied
+                    ? "border-foreground/15 bg-white hover:bg-muted/60"
+                    : "border-dashed border-foreground/15 bg-white/40 hover:bg-white",
+                  busyId === tech?.id ? "opacity-60" : "",
+                ].join(" ")}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-xs font-semibold">{tech?.name ?? "Unknown"}</span>
+                      {isPick && (
+                        <Badge className="bg-[hsl(var(--success))] text-white hover:bg-[hsl(var(--success))] text-[9px] h-4 px-1.5">
+                          BEST MATCH
+                        </Badge>
+                      )}
+                      {tech?.rating != null && (
+                        <span className="text-[10px] text-muted-foreground">★{Number(tech.rating).toFixed(1)}</span>
+                      )}
+                      {tech?.jobs_completed != null && (
+                        <span className="text-[10px] text-muted-foreground">· {tech.jobs_completed} jobs</span>
+                      )}
+                    </div>
+                    {tech?.service_postcodes && tech.service_postcodes.length > 0 && (
+                      <p className="text-[10px] text-muted-foreground truncate">
+                        {tech.service_postcodes.slice(0, 4).join(", ")}
+                      </p>
+                    )}
+                    {alloc.ai_reasoning && (
+                      <p className="text-[10px] text-muted-foreground italic line-clamp-1">{alloc.ai_reasoning}</p>
+                    )}
+                    {quote?.raw_message && (
+                      <p className="mt-1 line-clamp-2 rounded bg-muted/70 px-1.5 py-1 text-[11px] text-foreground/85">
+                        “{quote.raw_message}”
+                      </p>
+                    )}
+                  </div>
+                  <div className="text-right shrink-0">
+                    {quote ? (
+                      <div className="flex flex-col items-end gap-0.5">
+                        {quote.price_gbp != null && (
+                          <Badge className="bg-[hsl(var(--primary))] text-white hover:bg-[hsl(var(--primary))] text-[10px] h-5">
+                            <PoundSterling className="h-3 w-3" />{quote.price_gbp}
+                          </Badge>
+                        )}
+                        {quote.eta_minutes != null && (
+                          <Badge variant="outline" className="text-[10px] h-5">
+                            <Clock className="mr-0.5 h-3 w-3" />{quote.eta_minutes}m
+                          </Badge>
+                        )}
+                      </div>
+                    ) : (
+                      <Badge variant="outline" className="text-[10px] h-5 text-muted-foreground">
+                        <Clock className="mr-0.5 h-3 w-3" />waiting
+                      </Badge>
+                    )}
+                    <p className="mt-1 text-[9px] text-[hsl(var(--accent))] opacity-0 group-hover:opacity-100 font-semibold">
+                      Dispatch →
+                    </p>
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Override: pick any other active technician */}
+        {otherTechs.length > 0 && (
+          <div className="mt-2">
+            <button
+              type="button"
+              onClick={() => setShowAllTechs((v) => !v)}
+              className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground"
+            >
+              {showAllTechs ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+              Override · pick any other technician ({otherTechs.length})
+            </button>
+            {showAllTechs && (
+              <div className="mt-1.5 space-y-1 max-h-48 overflow-y-auto">
+                {otherTechs.map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => dispatch(t.id, null)}
+                    disabled={busyId !== null}
+                    className="w-full rounded-md border border-dashed border-foreground/15 bg-white/50 px-2 py-1.5 text-left text-xs hover:bg-white"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-medium truncate">{t.name}</span>
+                      <span className="text-[10px] text-muted-foreground truncate">
+                        {t.service_postcodes.slice(0, 3).join(", ") || "no areas"}
+                      </span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      <div className="mt-2.5 flex items-center justify-end">
         <Button
           size="sm"
           variant="ghost"
           className="h-7 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive"
-          disabled={busy}
-          onClick={reject}
+          disabled={busyId !== null}
+          onClick={skipJob}
         >
-          <X className="h-3.5 w-3.5" /> Reject
+          <X className="h-3.5 w-3.5" /> Skip this job
         </Button>
       </div>
     </div>
   );
 }
+
 
 /* ---------- Settings (technicians + live ETAs) ---------- */
 
