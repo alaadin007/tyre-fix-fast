@@ -12,8 +12,8 @@ const corsHeaders = {
 };
 
 const PHASE_DEADLINES_MIN = [8, 8]; // phase1 -> 8 min, phase2 -> +8 min
-const PHASE1_TIER_SIZE = 5;
-const PHASE2_TIER_SIZE = 15;
+const PHASE1_TIER_SIZE = 3;  // AI auto-contacts the top 3 techs in parallel for quotes
+const PHASE2_TIER_SIZE = 6;  // widen to 6 nearby techs if no quotes after phase 1
 const HARD_CAP_PER_JOB = 50;
 
 type Tech = {
@@ -88,13 +88,10 @@ async function sendSMS(supabase: any, tech: Tech, job: Job) {
 }
 
 async function dispatchOne(supabase: any, job: Job, phase: 1 | 2) {
-  // Get auto-dispatch setting
-  const { data: setting } = await supabase
-    .from("app_settings")
-    .select("value")
-    .eq("key", "auto_dispatch")
-    .maybeSingle();
-  const autoDispatch = setting?.value === true || setting?.value === "true";
+  // NOTE: We always auto-SMS the shortlisted technicians to collect quotes in
+  // parallel. The admin approval gate is on the CUSTOMER side — quotes land
+  // as `pending` and the admin clicks Approve to forward the chosen quote
+  // (and trigger the £15 payment link) to the customer.
 
   // Find matching techs
   const { data: techsRaw } = await supabase
@@ -126,34 +123,33 @@ async function dispatchOne(supabase: any, job: Job, phase: 1 | 2) {
 
   let sent = 0;
   for (const { tech, score, reason } of toBroadcast) {
-    const allocStatus = autoDispatch ? "broadcast" : "proposed";
     await supabase.from("job_allocations").insert({
       job_id: job.id,
       technician_id: tech.id,
       ai_reasoning: `Phase ${phase} · ${reason}`,
       match_score: score,
-      status: allocStatus,
+      status: "broadcast",
     });
-    if (autoDispatch) {
-      const ok = await sendSMS(supabase, tech, job);
-      if (ok) sent++;
-    }
+    const ok = await sendSMS(supabase, tech, job);
+    if (ok) sent++;
   }
 
-  // Update job phase + deadline
+  // Update job phase + deadline. Job stays in `broadcasting` while we wait
+  // for technician quotes. Once a quote arrives the admin reviews and
+  // approves before anything is sent to the customer.
   const deadlineMin = PHASE_DEADLINES_MIN[phase - 1] ?? 8;
   const newDeadline = new Date(Date.now() + deadlineMin * 60_000).toISOString();
   await supabase
     .from("jobs")
     .update({
-      status: autoDispatch ? "broadcasting" : "awaiting_approval",
+      status: "broadcasting",
       dispatch_phase: phase,
       dispatch_deadline: newDeadline,
       broadcast_count: (job.broadcast_count ?? 0) + sent,
     })
     .eq("id", job.id);
 
-  return { phase, candidates: scored.length, sent, autoDispatch };
+  return { phase, candidates: scored.length, sent };
 }
 
 async function escalate(supabase: any, job: Job) {
