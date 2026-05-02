@@ -553,7 +553,7 @@ function ApprovalCard({
     setBusy(true);
     const { error } = await supabase
       .from("job_allocations")
-      .update(patch)
+      .update(patch as any)
       .eq("id", alloc.id);
     setBusy(false);
     if (error) toast.error(error.message);
