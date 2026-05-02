@@ -59,53 +59,21 @@ export function AdminAIChat() {
         setLoading(false);
         return;
       }
-      if (!resp.ok || !resp.body) {
+      if (!resp.ok) {
         toast.error("Couldn't reach the AI right now.");
         setLoading(false);
         return;
       }
 
-      const reader = resp.body.getReader();
-      const decoder = new TextDecoder();
-      let textBuffer = "";
-      let assistantSoFar = "";
-      let streamDone = false;
-
-      const upsert = (chunk: string) => {
-        assistantSoFar += chunk;
-        setMessages((prev) => {
-          const last = prev[prev.length - 1];
-          if (last?.role === "assistant") {
-            return prev.map((m, i) => (i === prev.length - 1 ? { ...m, content: assistantSoFar } : m));
-          }
-          return [...prev, { role: "assistant", content: assistantSoFar }];
-        });
-        scrollDown();
-      };
-
-      while (!streamDone) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        textBuffer += decoder.decode(value, { stream: true });
-        let nl: number;
-        while ((nl = textBuffer.indexOf("\n")) !== -1) {
-          let line = textBuffer.slice(0, nl);
-          textBuffer = textBuffer.slice(nl + 1);
-          if (line.endsWith("\r")) line = line.slice(0, -1);
-          if (line.startsWith(":") || line.trim() === "") continue;
-          if (!line.startsWith("data: ")) continue;
-          const jsonStr = line.slice(6).trim();
-          if (jsonStr === "[DONE]") { streamDone = true; break; }
-          try {
-            const parsed = JSON.parse(jsonStr);
-            const content = parsed.choices?.[0]?.delta?.content as string | undefined;
-            if (content) upsert(content);
-          } catch {
-            textBuffer = line + "\n" + textBuffer;
-            break;
-          }
-        }
-      }
+      const data = await resp.json();
+      const content: string = data.content || data.error || "(no response)";
+      const trace: Array<{ name: string; content: string }> = data.trace ?? [];
+      const toolNote =
+        trace.length > 0
+          ? `\n\n_used: ${trace.map((t) => `\`${t.name}\``).join(", ")}_`
+          : "";
+      setMessages((prev) => [...prev, { role: "assistant", content: content + toolNote }]);
+      scrollDown();
     } catch (e) {
       console.error(e);
       toast.error("Chat failed. Try again.");
