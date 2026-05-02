@@ -14,6 +14,44 @@ export type Database = {
   }
   public: {
     Tables: {
+      job_allocations: {
+        Row: {
+          ai_reasoning: string | null
+          created_at: string
+          id: string
+          job_id: string | null
+          match_score: number | null
+          status: string
+          technician_id: string | null
+        }
+        Insert: {
+          ai_reasoning?: string | null
+          created_at?: string
+          id?: string
+          job_id?: string | null
+          match_score?: number | null
+          status?: string
+          technician_id?: string | null
+        }
+        Update: {
+          ai_reasoning?: string | null
+          created_at?: string
+          id?: string
+          job_id?: string | null
+          match_score?: number | null
+          status?: string
+          technician_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_allocations_technician_id_fkey"
+            columns: ["technician_id"]
+            isOneToOne: false
+            referencedRelation: "technicians"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       jobs: {
         Row: {
           created_at: string
@@ -62,6 +100,93 @@ export type Database = {
           postcode?: string
           status?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      sms_messages: {
+        Row: {
+          body: string
+          created_at: string
+          direction: string
+          from_number: string
+          id: string
+          job_id: string | null
+          media_urls: string[]
+          num_media: number
+          status: string
+          to_number: string
+          twilio_sid: string | null
+        }
+        Insert: {
+          body?: string
+          created_at?: string
+          direction: string
+          from_number: string
+          id?: string
+          job_id?: string | null
+          media_urls?: string[]
+          num_media?: number
+          status?: string
+          to_number: string
+          twilio_sid?: string | null
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          direction?: string
+          from_number?: string
+          id?: string
+          job_id?: string | null
+          media_urls?: string[]
+          num_media?: number
+          status?: string
+          to_number?: string
+          twilio_sid?: string | null
+        }
+        Relationships: []
+      }
+      technicians: {
+        Row: {
+          active: boolean
+          created_at: string
+          email: string | null
+          id: string
+          jobs_completed: number
+          name: string
+          notes: string | null
+          phone: string
+          rating: number | null
+          service_postcodes: string[]
+          updated_at: string
+          vehicle: string | null
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          email?: string | null
+          id?: string
+          jobs_completed?: number
+          name: string
+          notes?: string | null
+          phone: string
+          rating?: number | null
+          service_postcodes?: string[]
+          updated_at?: string
+          vehicle?: string | null
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          email?: string | null
+          id?: string
+          jobs_completed?: number
+          name?: string
+          notes?: string | null
+          phone?: string
+          rating?: number | null
+          service_postcodes?: string[]
+          updated_at?: string
+          vehicle?: string | null
         }
         Relationships: []
       }
