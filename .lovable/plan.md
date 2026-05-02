@@ -1,66 +1,67 @@
+# £15 Customer Unlock Fee (Stripe)
 
-# Switch WhatsApp from Twilio Sandbox → your Meta-verified number
+## How it works in plain English
 
-You're already on the right Twilio account (the connector is linked). Today the code uses:
+1. Customer submits a job → technicians SMS quotes → admin (or auto-assign) **approves a quote**.
+2. Instead of immediately handing over phone numbers, the customer gets an **SMS with a payment link** for £15 ("Pay £15 to confirm your tech and unlock their direct number").
+3. Once Stripe confirms payment:
+   - Customer sees the technician's name, photo (if any) and **direct phone number** on a confirmation page.
+   - Technician gets an SMS: *"Customer has paid the platform fee. Their number is 07… — please call to arrange ETA. Collect the £X job total directly (cash / bank / card)."*
+4. If the technician **no-shows** (admin marks it in the console), Stripe automatically refunds the £15 to the customer.
 
-- **SMS** from `+447447184489` (your real UK number)
-- **WhatsApp** from `+14155238886` (Twilio's shared **sandbox** number — requires customers to text `join <code>` first, not production-grade)
+The £80 (or whatever) job money never touches the platform — tech and customer settle directly.
 
-We swap WhatsApp to use your Meta-verified number — same number as SMS — so one number does both.
+## Plan
 
-## What I need from you
+### 1. Enable Stripe payments (Lovable built-in)
+- Run `enable_stripe_payments` (Stripe is the right fit — physical/in-person service, not Paddle-eligible).
+- Configure with **full compliance handling** so VAT on the £15 is collected, filed and remitted automatically (+3.5% on top of base Stripe fees).
 
-Just **confirm the number** that has Meta WhatsApp approval in the Twilio account currently connected. Two scenarios:
+### 2. Create the product in Stripe
+- One product: **"Platform connection fee"**, one-time price **£15.00 GBP**, tax code = `txcd_10000000` (general services). Created via `batch_create_product` after enable.
 
-- **A. The same `+447447184489` is already approved as a WhatsApp Sender** → I change one line and deploy. Done.
-- **B. A different number in that same account is the approved WhatsApp Sender** → Tell me the E.164 (e.g. `+44…`) and whether you want to also switch SMS to it (recommended, single number for everything).
+### 3. Database changes
+Add to `jobs`:
+- `platform_fee_status` text (`pending` | `paid` | `refunded`) default `pending`
+- `platform_fee_paid_at` timestamptz
+- `stripe_session_id` text
+- `stripe_payment_intent_id` text
+- `assigned_technician_id` uuid — the tech whose quote was approved (so we know who to release on payment).
 
-How to check: Twilio Console → **Messaging → Senders → WhatsApp senders**. Status must be **Online / Approved**, not Sandbox.
+### 4. New flow in admin "Approve quote"
+When admin clicks **Approve** on a quote (existing button in `Admin.tsx → approveQuote`):
+- Mark quote accepted, job status → `awaiting_payment` (instead of `accepted`).
+- Set `assigned_technician_id` on the job.
+- Call new edge function `create-fee-checkout` → returns Stripe Checkout URL.
+- Send SMS to customer via existing `twilio-send`:
+  > "Your tyre tech is matched! Pay the £15 platform fee to confirm and get their direct number: <link>"
 
-## Code changes (one file)
+### 5. New edge functions
+- **`create-fee-checkout`** — creates a Stripe Checkout Session (mode=`payment`, £15 line item, `managed_payments.enabled=true`, `success_url` = `/confirmed?job=<id>`, metadata `{ job_id }`).
+- **`stripe-webhook`** — handles `checkout.session.completed`:
+  - Mark job `platform_fee_status='paid'`, status `confirmed`, store IDs.
+  - SMS the technician their customer's number.
+  - SMS the customer the technician's number + "Your tech will call shortly."
+- **`refund-fee`** — called from the admin "Mark no-show" button: refunds the PaymentIntent and sets `platform_fee_status='refunded'`.
 
-`supabase/functions/twilio-send/index.ts`:
+### 6. Frontend additions
+- **`/confirmed?job=<id>` page** — polls the job, then shows tech name + tappable phone number once `platform_fee_status='paid'`.
+- **Admin console**: in the "Accepted / Waiting" column add a small badge — `Fee: pending / paid / refunded` — and a **"Mark no-show & refund"** button on rows where status = paid.
 
-```ts
-// Replace these two lines
-const FROM_SMS = "+447447184489";
-const FROM_WHATSAPP = "+14155238886";
+### 7. Customer-facing wording on the homepage
+Tiny line under the form: *"£15 platform fee on confirmed match. The technician quotes the job separately and is paid directly."* (transparency).
 
-// With (read from env so we don't hardcode again)
-const FROM_SMS = Deno.env.get("TWILIO_PHONE_NUMBER") ?? "+447447184489";
-const FROM_WHATSAPP = Deno.env.get("TWILIO_WHATSAPP_NUMBER") ?? FROM_SMS;
-```
+## Technical notes
 
-Then I add `TWILIO_WHATSAPP_NUMBER` as a runtime secret set to your verified number (with `whatsapp:` stripped — code adds the prefix).
+- Stripe webhook signature verified using the Lovable-managed `STRIPE_WEBHOOK_SIGNING_SECRET` provided after `enable_stripe_payments`.
+- All money flows go through Stripe — we never store card data.
+- Refund logic: full refund only (no partial). One refund per job.
+- Job status machine becomes: `pending → intake_complete → quoted → awaiting_payment → confirmed → in_progress → completed` (with `refunded` as a terminal off-ramp).
+- The existing `approveQuote` function in `src/pages/Admin.tsx` is the single mutation point — all change funnels through there, no other callers need updating.
 
-The inbound function (`twilio-inbound`) already handles both channels correctly via the `whatsapp:` prefix on `From`/`To`, so no change there.
+## What I will NOT change
+- Twilio / SMS quote intake — untouched.
+- Dispatch agent + matching logic — untouched.
+- The 4-column admin layout you just approved — untouched, only badges + one button added.
 
-## Twilio Console steps (you do these once)
-
-1. **Messaging → Senders → WhatsApp senders → [your number] → Sender configuration**
-   - Set **"When a message comes in"** webhook to:
-     `https://ctxtvezeeijkjjuzodvi.supabase.co/functions/v1/twilio-inbound`
-   - Method: `POST`
-2. **(Already done for SMS, verify it's still there)** Phone Numbers → Manage → Active Numbers → `+447447184489` → Messaging → "A MESSAGE COMES IN" → same URL above.
-3. **Recommended hardening** before any real customer traffic:
-   - Messaging → **SMS Pumping Protection** → Enable
-   - Messaging → **Geo Permissions** → enable only **United Kingdom** (and any other country you serve)
-
-## Frontend changes (only if WhatsApp number differs from SMS number)
-
-`src/pages/Index.tsx` has `wa.me` links hardcoded to the SMS number. If WhatsApp uses the same number → no change. If different → I'll swap those links to the WhatsApp number.
-
-## Verification after deploy
-
-1. Send "TEST" via WhatsApp from my phone to your verified number → should appear in Admin Console with the **WhatsApp** badge (not SMS).
-2. Hit **Reply** in admin, pick **WhatsApp** channel, send → arrives on my phone via WhatsApp (no `join` step required).
-3. Check `twilio-send` edge function logs for the `From: whatsapp:+44…` line.
-
-## Out of scope (per your earlier answers)
-
-- Web domain purchase / SEO swap — separate task, waiting on your domain name.
-- Email setup on the domain — not now.
-
----
-
-**Tell me the verified WhatsApp number** (or just "same as SMS, +447447184489") and I'll execute.
+Approve and I'll start by enabling Stripe (that triggers a form for you to fill in), then create the product, then ship the rest.
