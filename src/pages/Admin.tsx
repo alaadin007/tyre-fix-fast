@@ -32,6 +32,7 @@ type Technician = {
 type SmsMessage = {
   id: string; direction: string; from_number: string; to_number: string;
   body: string; num_media: number; media_urls: string[]; status: string; created_at: string;
+  channel?: string;
 };
 type Allocation = {
   id: string; job_id: string | null; technician_id: string | null;
