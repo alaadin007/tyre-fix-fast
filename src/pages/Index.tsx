@@ -582,10 +582,15 @@ const Index = () => {
           <p className="mx-auto mt-4 max-w-xl text-white/80">
             Text us right now — your local FlatTyreNearMe.Com pro is standing by.
           </p>
-          <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+          <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row sm:flex-wrap">
             <a href={smsHref}>
               <Button size="lg" className="h-14 bg-accent-gradient px-8 text-base font-bold text-accent-foreground shadow-accent">
                 <MessageSquare className="mr-2 h-5 w-5" /> Text us now
+              </Button>
+            </a>
+            <a href={waHref} target="_blank" rel="noreferrer">
+              <Button size="lg" className="h-14 bg-[hsl(142_71%_38%)] px-8 text-base font-bold text-white hover:bg-[hsl(142_71%_34%)]">
+                <MessageCircle className="mr-2 h-5 w-5" /> WhatsApp us
               </Button>
             </a>
             <a href={telHref}>
@@ -634,6 +639,14 @@ const Index = () => {
               className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-accent-gradient px-4 py-3 text-sm font-bold text-accent-foreground shadow-accent transition-transform hover:scale-[1.02]"
             >
               <MessageSquare className="h-5 w-5" /> Text us now
+            </a>
+            <a
+              href={waHref}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[hsl(142_71%_38%)] px-4 py-3 text-sm font-bold text-white transition-transform hover:scale-[1.02]"
+            >
+              <MessageCircle className="h-5 w-5" /> WhatsApp us
             </a>
             <a
               href={telHref}
