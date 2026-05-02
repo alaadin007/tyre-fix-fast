@@ -577,11 +577,6 @@ const Index = () => {
                 <MessageSquare className="mr-2 h-5 w-5" /> Text us now
               </Button>
             </a>
-            <a href={waHref} target="_blank" rel="noreferrer">
-              <Button size="lg" className="h-14 bg-[hsl(142_71%_38%)] px-8 text-base font-bold text-white hover:bg-[hsl(142_71%_34%)]">
-                <MessageCircle className="mr-2 h-5 w-5" /> WhatsApp us
-              </Button>
-            </a>
             <a href={telHref}>
               <Button size="lg" variant="outline" className="h-14 border-white/30 bg-white/5 px-6 text-base font-semibold text-white hover:bg-white/15 hover:text-white">
                 <Phone className="mr-2 h-5 w-5" /> Call 0800 000 0000
