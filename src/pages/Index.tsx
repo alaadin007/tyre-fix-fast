@@ -508,6 +508,9 @@ const Index = () => {
             >
               {submitting ? stage || "Submitting…" : "Get quotes now"}
             </Button>
+            <p className="text-center text-[11px] text-muted-foreground">
+              £15 platform fee on confirmed match. Your technician quotes the job separately and is paid directly (cash, card or bank transfer).
+            </p>
           </form>
         </details>
       </section>
