@@ -207,19 +207,36 @@ export default function Admin() {
       {/* Header */}
       <header className="border-b border-white/10 backdrop-blur-xl bg-white/5">
         <div className="mx-auto flex w-full max-w-[1700px] items-center justify-between gap-2 px-3 sm:px-6 py-3 sm:py-4">
-          <div className="flex items-center gap-4">
-            <Link to="/" className="flex items-center gap-1.5 text-xs text-white/70 hover:text-white">
-              <ArrowLeft className="h-3 w-3" /> FlatTyreNearMe.Com
+          <div className="flex min-w-0 items-center gap-2 sm:gap-4">
+            <Link to="/" className="flex shrink-0 items-center gap-1 text-xs text-white/70 hover:text-white" aria-label="Back to home">
+              <ArrowLeft className="h-3 w-3" />
+              <span className="hidden sm:inline">FlatTyreNearMe.Com</span>
             </Link>
-            <div className="h-5 w-px bg-white/20" />
-            <div>
-              <h1 className="text-xl font-bold tracking-tight text-white">Operations Console</h1>
-              <p className="text-xs text-white/60">Live · {jobs.length} jobs · {techs.filter(t => t.active).length} techs on duty</p>
+            <div className="hidden sm:block h-5 w-px bg-white/20" />
+            <div className="min-w-0">
+              <h1 className="truncate text-base sm:text-xl font-bold tracking-tight text-white">Operations Console</h1>
+              <p className="truncate text-[10px] sm:text-xs text-white/60">Live · {jobs.length} jobs · {techs.filter(t => t.active).length} on duty</p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">
             <DispatchModeToggle autoAssign={autoAssign} onChange={toggleAutoAssign} />
-            <Button variant="ghost" size="sm" onClick={refreshAll} disabled={loading} className="text-white hover:bg-white/10 hover:text-white">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={refreshAll}
+              disabled={loading}
+              aria-label="Refresh"
+              className="h-9 w-9 text-white hover:bg-white/10 hover:text-white sm:hidden"
+            >
+              <RefreshCw className={loading ? "animate-spin" : ""} />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={refreshAll}
+              disabled={loading}
+              className="hidden sm:inline-flex text-white hover:bg-white/10 hover:text-white"
+            >
               <RefreshCw className={loading ? "animate-spin" : ""} />
               Refresh
             </Button>
@@ -1519,8 +1536,9 @@ function SettingsSheet({
   return (
     <Sheet>
       <SheetTrigger asChild>
-        <Button size="sm" className="bg-[hsl(var(--accent))] text-white hover:bg-[hsl(var(--accent-glow))]">
-          <Settings /> Settings
+        <Button size="sm" aria-label="Settings" className="h-9 gap-1.5 bg-[hsl(var(--accent))] px-2.5 sm:px-3 text-white hover:bg-[hsl(var(--accent-glow))]">
+          <Settings className="h-4 w-4" />
+          <span className="hidden sm:inline">Settings</span>
         </Button>
       </SheetTrigger>
       <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
