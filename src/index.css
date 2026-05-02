@@ -94,4 +94,34 @@
   .shadow-elegant { box-shadow: var(--shadow-elegant); }
   .shadow-accent { box-shadow: var(--shadow-accent); }
   .text-balance { text-wrap: balance; }
+
+  /* Glassmorphism */
+  .glass {
+    background: hsl(0 0% 100% / 0.55);
+    backdrop-filter: blur(22px) saturate(180%);
+    -webkit-backdrop-filter: blur(22px) saturate(180%);
+    border: 1px solid hsl(0 0% 100% / 0.5);
+    box-shadow: 0 12px 40px -12px hsl(222 60% 11% / 0.25), inset 0 1px 0 hsl(0 0% 100% / 0.6);
+  }
+  .glass-dark {
+    background: hsl(222 47% 8% / 0.55);
+    backdrop-filter: blur(22px) saturate(180%);
+    -webkit-backdrop-filter: blur(22px) saturate(180%);
+    border: 1px solid hsl(0 0% 100% / 0.08);
+    box-shadow: 0 12px 40px -12px hsl(0 0% 0% / 0.5), inset 0 1px 0 hsl(0 0% 100% / 0.08);
+    color: hsl(0 0% 98%);
+  }
+  .glass-panel {
+    background: hsl(0 0% 100% / 0.4);
+    backdrop-filter: blur(28px) saturate(180%);
+    -webkit-backdrop-filter: blur(28px) saturate(180%);
+    border: 1px solid hsl(0 0% 100% / 0.55);
+  }
+  .bg-aurora {
+    background:
+      radial-gradient(900px 600px at 8% 8%,  hsl(18 100% 65% / 0.35), transparent 60%),
+      radial-gradient(900px 700px at 95% 15%, hsl(222 80% 55% / 0.35), transparent 60%),
+      radial-gradient(900px 700px at 50% 95%, hsl(280 80% 60% / 0.30), transparent 60%),
+      linear-gradient(135deg, hsl(222 60% 8%) 0%, hsl(222 55% 14%) 60%, hsl(18 70% 22%) 100%);
+  }
 }
