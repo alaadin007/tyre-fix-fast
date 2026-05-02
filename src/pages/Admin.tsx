@@ -1322,7 +1322,7 @@ function JobDecisionCard({
                 onClick={() => tech && dispatch(tech.id, alloc.id, replied)}
                 disabled={!tech || busyId !== null}
                 className={[
-                  "group w-full rounded-lg border p-2 text-left transition",
+                  "group block w-full max-w-full overflow-hidden rounded-lg border p-2 text-left transition",
                   isPick
                     ? "border-[hsl(var(--success))]/60 bg-[hsl(var(--success))]/8 hover:bg-[hsl(var(--success))]/15"
                     : replied
