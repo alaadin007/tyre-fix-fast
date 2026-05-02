@@ -178,12 +178,18 @@ const Index = () => {
             <span className="inline-flex h-2 w-2 animate-pulse rounded-full bg-accent" />
             <span className="font-medium">Live now — 1,200+ pros on call across the UK</span>
           </div>
-          <div className="hidden items-center gap-4 md:flex">
-            <a href={telHref} className="inline-flex items-center gap-1.5 hover:text-accent">
+          <div className="flex items-center gap-2 md:gap-4">
+            <a
+              href={smsHref}
+              className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1 text-xs font-bold text-accent-foreground shadow-accent transition-transform hover:scale-105 md:text-sm"
+            >
+              <MessageSquare className="h-3.5 w-3.5" /> Text us
+            </a>
+            <a href={telHref} className="hidden items-center gap-1.5 hover:text-accent md:inline-flex">
               <Phone className="h-3.5 w-3.5" /> 0800 000 0000
             </a>
-            <span className="opacity-60">|</span>
-            <span className="inline-flex items-center gap-1.5">
+            <span className="hidden opacity-60 md:inline">|</span>
+            <span className="hidden items-center gap-1.5 md:inline-flex">
               <Clock className="h-3.5 w-3.5" /> 24/7/365
             </span>
           </div>
