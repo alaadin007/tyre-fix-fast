@@ -60,6 +60,20 @@ const Index = () => {
         </p>
         <p className="mt-2 text-sm text-white/40">24/7 · No hold music · UK-wide</p>
 
+        {/* Services strip */}
+        <div className="mt-6 w-full max-w-xs">
+          <div className="flex flex-wrap items-center justify-center gap-1.5 text-[11px] text-white/55">
+            <span className="px-2.5 py-1 rounded-full border border-white/10 bg-white/[0.03]">Punctures</span>
+            <span className="px-2.5 py-1 rounded-full border border-white/10 bg-white/[0.03]">Tyre changes</span>
+            <span className="px-2.5 py-1 rounded-full border border-white/10 bg-white/[0.03]">Blowouts</span>
+            <span className="px-2.5 py-1 rounded-full border border-white/10 bg-white/[0.03]">Locked wheels</span>
+            <span className="px-2.5 py-1 rounded-full border border-white/10 bg-white/[0.03]">Seasonal swaps</span>
+          </div>
+          <p className="mt-2 text-[11px] text-white/35">
+            Get in touch for all — emergency or routine.
+          </p>
+        </div>
+
         {/* Primary CTA */}
         <a
           href={SMS_HREF}
