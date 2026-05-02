@@ -217,8 +217,13 @@ Deno.serve(async (req) => {
       "Hi 👋 Tyre Fly here. To get a technician to you ASAP, please reply with:\n\n" +
       "1) Your name\n" +
       "2) Postcode or location (a Google Maps pin works too)\n" +
-      "3) What happened (puncture, flat, blowout, locked wheel...)\n" +
-      "4) A photo of the tyre if you can — damaged area, nail etc, plus the tyre model number (on the outside tyre wall). Use flash at night.\n\n" +
+      "3) What happened, and what do YOU think it is? E.g.\n" +
+      "   • Slow puncture (still drivable)?\n" +
+      "   • Fully flat / blowout?\n" +
+      "   • Bulge or split on the sidewall?\n" +
+      "   • Nail or screw still in the tyre?\n" +
+      "   • Locked wheel / lost locking key?\n" +
+      "4) A photo really helps — the damaged area, any nail/screw, AND the tyre size on the sidewall (e.g. 225/45 R17). Use flash at night.\n\n" +
       "Reply all in one message or several — we'll put it together.";
 
     // Helpers for parsing follow-up intake messages
@@ -261,9 +266,22 @@ Deno.serve(async (req) => {
 
       const haveName = (updates.customer_name ?? job.customer_name) && (updates.customer_name ?? job.customer_name) !== "Customer";
       const havePostcode = !!(updates.postcode ?? job.postcode);
-      const haveDetails = (newDesc?.length ?? 0) > 5 || (updates.photo_urls ?? job.photo_urls ?? []).length > 0;
+      const finalDesc: string = updates.issue_description ?? job.issue_description ?? "";
+      const finalPhotos: string[] = updates.photo_urls ?? job.photo_urls ?? [];
+      const haveDetails = finalDesc.length > 5 || finalPhotos.length > 0;
 
-      if (haveName && havePostcode && haveDetails) {
+      // Diagnostic depth: do we actually understand the problem?
+      // We need EITHER a photo OR a description that mentions a specific
+      // failure mode (puncture/blowout/sidewall/etc.) AND some extra context
+      // (nail, slow, driving, when it happened, etc.).
+      const finalIssueType = updates.issue_type ?? job.issue_type;
+      const lowerDesc = finalDesc.toLowerCase();
+      const hasContext =
+        /(nail|screw|slow|fast|sudden|drove|driving|park|kerb|pothole|bulge|split|crack|flat overnight|lost.*key|valve|leak)/i.test(lowerDesc) ||
+        lowerDesc.length > 60;
+      const diagnosisOk = finalPhotos.length > 0 || (finalIssueType && finalIssueType !== "unknown" && hasContext);
+
+      if (haveName && havePostcode && haveDetails && diagnosisOk) {
         updates.status = "intake_complete"; // fires dispatch trigger
       }
 
@@ -274,9 +292,32 @@ Deno.serve(async (req) => {
       if (!haveName) missing.push("your name");
       if (!havePostcode) missing.push("postcode/location");
       if (!haveDetails) missing.push("what happened (and a photo if possible)");
-      const reply = missing.length === 0
-        ? "Got it — finding you a technician now. We'll text the moment one is matched."
-        : `Thanks! Still need: ${missing.join(", ")}.`;
+
+      let reply: string;
+      if (missing.length > 0) {
+        reply = `Thanks! Still need: ${missing.join(", ")}.`;
+      } else if (!diagnosisOk) {
+        // We have the basics but not enough to brief the technician well.
+        // Ask the customer's own theory + a photo.
+        const probes: string[] = [];
+        if (finalPhotos.length === 0) {
+          probes.push("📸 A quick photo of the tyre helps a lot (damaged area + the tyre size on the sidewall, e.g. 225/45 R17).");
+        }
+        if (!finalIssueType || finalIssueType === "unknown") {
+          probes.push("What do YOU think it is? Slow puncture, blowout, sidewall bulge, nail still in it, or locked wheel?");
+        } else {
+          probes.push(
+            `You mentioned ${finalIssueType}. A bit more would help the technician arrive prepared:\n` +
+            "• Did it happen suddenly or go down slowly?\n" +
+            "• Can you see anything stuck in it (nail/screw)?\n" +
+            "• Any bulge or split on the side wall?\n" +
+            "• Is the car drivable or stuck?",
+          );
+        }
+        reply = `Thanks ${(updates.customer_name ?? job.customer_name) || ""}! Before we dispatch, two quick things:\n\n${probes.join("\n\n")}`;
+      } else {
+        reply = "Got it — finding you a technician now. We'll text the moment one is matched.";
+      }
       await sendReply(from, reply, channel);
       return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
     }
