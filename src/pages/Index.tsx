@@ -351,16 +351,16 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Form (still available) */}
+      {/* Big SMS click target */}
       <section id="request" className="container py-16 md:py-24">
-        <div className="mx-auto grid max-w-6xl gap-10 lg:grid-cols-[1.1fr_1fr]">
+        <div className="mx-auto grid max-w-6xl gap-10 lg:grid-cols-[1fr_1.1fr] lg:items-center">
           <div>
-            <p className="text-sm font-bold uppercase tracking-wider text-accent">Prefer the form?</p>
-            <h2 className="mt-2 text-3xl font-black md:text-4xl">
-              Send the details and we'll do the rest.
+            <p className="text-sm font-bold uppercase tracking-wider text-accent">Fastest way to get help</p>
+            <h2 className="mt-2 text-3xl font-black md:text-5xl">
+              One tap. One text. <span className="text-accent">Sorted.</span>
             </h2>
             <p className="mt-4 text-muted-foreground">
-              Add a photo of the damage and our AI gives technicians an instant heads-up — so the quotes you get back are accurate the first time.
+              Tap the button — your phone opens a new SMS, already filled in. Just add your postcode and a couple of tyre photos (use flash if it's dark). Our AI takes it from there.
             </p>
             <ul className="mt-6 space-y-3 text-sm">
               {[
@@ -377,9 +377,63 @@ const Index = () => {
             </ul>
           </div>
 
+          <a
+            href={smsHref}
+            className="group relative block overflow-hidden rounded-3xl bg-accent-gradient p-8 text-accent-foreground shadow-accent transition-transform hover:scale-[1.01] md:p-12"
+            aria-label="Open your messages app to text Flat Tyre Near Me"
+          >
+            <div
+              aria-hidden
+              className="absolute -right-10 -top-10 h-48 w-48 rounded-full bg-white/10 blur-2xl"
+            />
+            <div className="relative flex flex-col items-center text-center">
+              <div className="mb-6 flex h-28 w-28 items-center justify-center rounded-3xl bg-white/15 backdrop-blur transition-transform group-hover:scale-110">
+                <MessageSquare className="h-16 w-16" strokeWidth={2.2} />
+              </div>
+              <p className="text-xs font-bold uppercase tracking-[0.2em] opacity-90">
+                Tap to text us
+              </p>
+              <p className="mt-2 text-3xl font-black leading-tight md:text-4xl">
+                Send an SMS now
+              </p>
+              <p className="mt-3 max-w-sm text-sm opacity-95">
+                We'll reply within 60 seconds with quotes from your nearest mobile tyre pro.
+              </p>
+
+              {/* Pre-filled message preview */}
+              <div className="mt-6 w-full rounded-2xl bg-primary/95 p-4 text-left text-sm text-primary-foreground shadow-elegant">
+                <div className="mb-2 flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-accent">
+                  <span>Pre-filled message</span>
+                  <span>To: {SMS_DISPLAY}</span>
+                </div>
+                <pre className="whitespace-pre-wrap font-sans text-[13px] leading-relaxed text-white/90">
+{`Hi Flat Tyre Near Me — I need help with a flat tyre.
+
+📍 Location / postcode: 
+📷 Photos of the tyre attached
+   (use flash if it's dark)
+🛞 If sidewall isn't legible,
+   tyre type & size: `}
+                </pre>
+              </div>
+
+              <div className="mt-6 inline-flex items-center gap-2 rounded-full bg-white/15 px-5 py-2 text-sm font-bold backdrop-blur">
+                <MessageSquare className="h-4 w-4" />
+                Open Messages
+                <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+              </div>
+            </div>
+          </a>
+        </div>
+
+        {/* Fallback web form toggle */}
+        <details className="mx-auto mt-12 max-w-3xl rounded-2xl border border-border bg-card p-6">
+          <summary className="cursor-pointer text-sm font-semibold text-muted-foreground hover:text-foreground">
+            Can't text right now? Use the web form instead →
+          </summary>
           <form
             onSubmit={onSubmit}
-            className="space-y-5 rounded-2xl border border-border bg-card p-6 shadow-elegant md:p-8"
+            className="mt-6 space-y-5"
           >
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
@@ -435,7 +489,7 @@ const Index = () => {
               {submitting ? stage || "Submitting…" : "Get quotes now"}
             </Button>
           </form>
-        </div>
+        </details>
       </section>
 
       {/* Coverage / cities — SEO */}
