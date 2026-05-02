@@ -237,11 +237,18 @@ export default function Admin() {
                 })}
                 {messages.filter(m => m.direction === "inbound").slice(0, 8).map((m) => {
                   const loc = extractLocation(m.body);
+                  const isWA = m.channel === "whatsapp";
                   return (
                     <div key={m.id} className="rounded-xl border border-white/40 bg-white/60 p-3 backdrop-blur">
                       <div className="mb-1 flex items-center justify-between">
                         <div className="flex items-center gap-2 text-xs font-medium">
-                          <Badge className="bg-[hsl(var(--accent))]/15 text-[hsl(var(--accent))] hover:bg-[hsl(var(--accent))]/15">SMS</Badge>
+                          {isWA ? (
+                            <Badge className="bg-[hsl(142_71%_38%)]/15 text-[hsl(142_71%_30%)] hover:bg-[hsl(142_71%_38%)]/15">
+                              <MessageCircle className="mr-1 h-3 w-3" />WhatsApp
+                            </Badge>
+                          ) : (
+                            <Badge className="bg-[hsl(var(--accent))]/15 text-[hsl(var(--accent))] hover:bg-[hsl(var(--accent))]/15">SMS</Badge>
+                          )}
                           <Phone className="h-3 w-3" />
                           <span>{m.from_number}</span>
                         </div>
@@ -260,6 +267,9 @@ export default function Admin() {
                           ))}
                         </div>
                       )}
+                      <div className="mt-2">
+                        <ReplyButton to={m.from_number} channel={isWA ? "whatsapp" : "sms"} />
+                      </div>
                     </div>
                   );
                 })}
