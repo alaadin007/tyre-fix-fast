@@ -36,6 +36,7 @@ type SmsMessage = {
 type Allocation = {
   id: string; job_id: string | null; technician_id: string | null;
   ai_reasoning: string | null; match_score: number | null; status: string; created_at: string;
+  approved_at?: string | null; approved_by?: string | null;
 };
 type Job = {
   id: string; status: string; created_at: string;
