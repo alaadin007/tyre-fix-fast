@@ -142,6 +142,16 @@ export default function Admin() {
       .on("postgres_changes", { event: "*", schema: "public", table: "technicians" }, refreshAll)
       .on("postgres_changes", { event: "*", schema: "public", table: "jobs" }, refreshAll)
       .on("postgres_changes", { event: "*", schema: "public", table: "app_settings" }, refreshAll)
+      .on("postgres_changes", { event: "*", schema: "public", table: "quotes" }, refreshAll)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "ops_alerts" },
+        (payload) => {
+          const a: any = payload.new;
+          const fn = a.level === "critical" ? toast.error : a.level === "warn" ? toast.warning : toast.message;
+          fn(a.title, { description: a.body });
+        }
+      )
       .subscribe();
     return () => { supabase.removeChannel(ch); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -161,9 +171,9 @@ export default function Admin() {
 
   const pendingAllocs = allocations.filter(a => a.status === "proposed");
 
-  const incoming = jobs.filter((j) => j.status === "pending" || j.status === "new");
-  const inProgress = jobs.filter((j) => j.status === "accepted" || j.status === "assigned" || j.status === "en_route" || j.status === "in_progress");
-  const done = jobs.filter((j) => j.status === "completed" || j.status === "done");
+  const incoming = jobs.filter((j) => ["pending", "new", "intake_complete", "awaiting_approval", "broadcasting"].includes(j.status));
+  const inProgress = jobs.filter((j) => ["accepted", "assigned", "en_route", "in_progress", "awaiting_payment", "confirmed"].includes(j.status));
+  const done = jobs.filter((j) => ["completed", "done", "closed_pending_review", "closed", "no_response"].includes(j.status));
 
   return (
     <div className="min-h-screen bg-aurora">
