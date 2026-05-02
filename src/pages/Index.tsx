@@ -35,8 +35,8 @@ import { PhotoUploader, type PhotoFile } from "@/components/PhotoUploader";
 import { supabase } from "@/integrations/supabase/client";
 import heroImage from "@/assets/hero-technician.jpg";
 
-const SMS_NUMBER = "+447700900123"; // placeholder shortcode/number
-const SMS_DISPLAY = "60777";
+const SMS_NUMBER = "+447447184489";
+const SMS_DISPLAY = "07447 184489";
 
 const UK_POSTCODE = /^[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}$/i;
 const UK_PHONE = /^(?:\+44|0)\s?7\d{3}\s?\d{6}$/;
