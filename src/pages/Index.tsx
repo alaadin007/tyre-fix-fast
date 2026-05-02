@@ -601,11 +601,16 @@ const Index = () => {
           </div>
           <div>
             <h4 className="text-sm font-bold uppercase tracking-wider text-accent">Get help now</h4>
-            <a href={smsHref} className="mt-3 inline-flex items-center gap-2 text-sm font-semibold hover:text-accent">
-              <MessageSquare className="h-4 w-4" /> Text us
+            <a
+              href={smsHref}
+              className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-accent-gradient px-4 py-3 text-sm font-bold text-accent-foreground shadow-accent transition-transform hover:scale-[1.02]"
+            >
+              <MessageSquare className="h-5 w-5" /> Text us now
             </a>
-            <br />
-            <a href={telHref} className="mt-2 inline-flex items-center gap-2 text-sm font-semibold hover:text-accent">
+            <a
+              href={telHref}
+              className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-white/85 hover:text-accent"
+            >
               <Phone className="h-4 w-4" /> 0800 000 0000
             </a>
           </div>
