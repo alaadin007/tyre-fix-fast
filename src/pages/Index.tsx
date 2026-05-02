@@ -160,9 +160,13 @@ const Index = () => {
     }
   };
 
-  const smsHref = `sms:${SMS_NUMBER}?body=${encodeURIComponent(
-    "Flat Tyre Near Me — flat tyre, my postcode is "
-  )}`;
+  const smsBody =
+    "Hi Flat Tyre Near Me — I need help with a flat tyre.\n\n" +
+    "📍 Location / postcode: \n" +
+    "📷 Photos of the tyre attached (use flash if it's dark)\n" +
+    "🛞 If the sidewall isn't legible, tyre type & size: \n\n" +
+    "Please send a quote and ETA. Thanks!";
+  const smsHref = `sms:${SMS_NUMBER}?body=${encodeURIComponent(smsBody)}`;
   const telHref = `tel:${SMS_NUMBER}`;
 
   return (
