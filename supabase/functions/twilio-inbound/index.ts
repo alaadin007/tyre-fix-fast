@@ -214,11 +214,11 @@ Deno.serve(async (req) => {
     const job: any = customerJobs?.[0];
 
     const INTAKE_TEMPLATE =
-      "Hi 👋 FlatTyreNearMe here. To get a technician to you ASAP, please reply with:\n" +
+      "Hi 👋 Tyre Fly here. To get a technician to you ASAP, please reply with:\n\n" +
       "1) Your name\n" +
       "2) Postcode or location (a Google Maps pin works too)\n" +
       "3) What happened (puncture, flat, blowout, locked wheel...)\n" +
-      "4) A photo of the tyre if you can\n\n" +
+      "4) A photo of the tyre if you can — damaged area, nail etc, plus the tyre model number (on the outside tyre wall). Use flash at night.\n\n" +
       "Reply all in one message or several — we'll put it together.";
 
     // Helpers for parsing follow-up intake messages
