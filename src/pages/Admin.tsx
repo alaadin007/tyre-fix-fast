@@ -256,11 +256,11 @@ export default function Admin() {
             <Card>
               <CardHeader>
                 <CardTitle>Incoming SMS</CardTitle>
-                <CardDescription>Live feed of messages received via Twilio</CardDescription>
+                <CardDescription>Live feed of incoming messages from customers</CardDescription>
               </CardHeader>
               <CardContent>
                 {messages.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No messages yet. Point your Twilio number's "A MESSAGE COMES IN" webhook to the URL below.</p>
+                  <p className="text-sm text-muted-foreground">No messages yet. Incoming SMS will appear here in real time.</p>
                 ) : (
                   <div className="space-y-2">
                     {messages.map((m) => (
@@ -473,20 +473,6 @@ export default function Admin() {
           </TabsContent>
         </Tabs>
 
-        <Card className="mt-6 border-dashed">
-          <CardHeader>
-            <CardTitle className="text-base">Twilio Webhook Setup</CardTitle>
-            <CardDescription>Paste this into your Twilio number's "A MESSAGE COMES IN" webhook (HTTP POST):</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <code className="block bg-muted p-3 rounded text-xs break-all">
-              {`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/twilio-inbound`}
-            </code>
-            <p className="text-xs text-muted-foreground mt-2">
-              Twilio Console → Phone Numbers → Active numbers → +447447184489 → Messaging configuration.
-            </p>
-          </CardContent>
-        </Card>
       </main>
     </div>
   );
