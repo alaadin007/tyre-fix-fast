@@ -93,12 +93,27 @@ async function dispatchOne(supabase: any, job: Job, phase: 1 | 2) {
   // as `pending` and the admin clicks Approve to forward the chosen quote
   // (and trigger the £15 payment link) to the customer.
 
-  // Find matching techs
+  // Find matching techs: must be active, approved, and currently available
+  // (either "available now" toggle, or within today's weekly schedule).
   const { data: techsRaw } = await supabase
     .from("technicians")
     .select("*")
-    .eq("active", true);
-  const techs = (techsRaw ?? []) as Tech[];
+    .eq("active", true)
+    .eq("approval_status", "approved");
+  const now = new Date();
+  const dayKey = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"][now.getUTCDay()];
+  const hhmm = `${String(now.getUTCHours()).padStart(2, "0")}:${String(now.getUTCMinutes()).padStart(2, "0")}`;
+  const techs = ((techsRaw ?? []) as Tech[]).filter((t: any) => {
+    if (t.availability_now) {
+      if (!t.available_until) return true;
+      return new Date(t.available_until).getTime() > now.getTime();
+    }
+    const slot = (t.weekly_schedule || {})[dayKey];
+    if (slot && slot.start && slot.end) {
+      return hhmm >= slot.start && hhmm <= slot.end;
+    }
+    return false;
+  });
 
   const outward = (job.postcode.split(" ")[0] || job.postcode).toUpperCase();
   const outwards = phase === 1 ? [outward] : neighbourOutwards(outward);
