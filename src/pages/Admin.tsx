@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { AdminAIChat } from "@/components/admin/AdminAIChat";
+import { PendingTechnicians } from "@/components/admin/PendingTechnicians";
 
 type Technician = {
   id: string; name: string; phone: string; email: string | null;
@@ -377,6 +378,10 @@ export default function Admin() {
               <></>
             </Panel>
           </section>
+        </div>
+
+        <div className="mt-6">
+          <PendingTechnicians />
         </div>
       </main>
     </div>
