@@ -4,7 +4,7 @@ import { z } from "zod";
 import { toast } from "sonner";
 import {
   MessageSquare,
-  MessageCircle,
+  
   Phone,
   Clock,
   ShieldCheck,
@@ -178,8 +178,6 @@ const Index = () => {
     "Please send a quote and ETA. Thanks!";
   const smsHref = `sms:${SMS_NUMBER}?body=${encodeURIComponent(smsBody)}`;
   const telHref = `tel:${SMS_NUMBER}`;
-  // wa.me uses the number without + or spaces
-  const waHref = `https://wa.me/${SMS_NUMBER.replace(/\D/g, "")}?text=${encodeURIComponent(smsBody)}`;
 
   return (
     <main className="min-h-screen bg-background">
@@ -196,14 +194,6 @@ const Index = () => {
               className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1 text-xs font-bold text-accent-foreground shadow-accent transition-transform hover:scale-105 md:text-sm"
             >
               <MessageSquare className="h-3.5 w-3.5" /> Text us
-            </a>
-            <a
-              href={waHref}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-1.5 rounded-full bg-[hsl(142_71%_38%)] px-3 py-1 text-xs font-bold text-white transition-transform hover:scale-105 md:text-sm"
-            >
-              <MessageCircle className="h-3.5 w-3.5" /> WhatsApp
             </a>
             <a href={telHref} className="hidden items-center gap-1.5 hover:text-accent md:inline-flex">
               <Phone className="h-3.5 w-3.5" /> 0800 000 0000
@@ -258,14 +248,6 @@ const Index = () => {
                   <MessageSquare className="mr-2 h-5 w-5" />
                   Text us — Get help now
                   <ChevronRight className="ml-1 h-4 w-4 transition-transform group-hover:translate-x-1" />
-                </Button>
-              </a>
-              <a href={waHref} target="_blank" rel="noreferrer">
-                <Button
-                  size="lg"
-                  className="h-14 w-full bg-[hsl(142_71%_38%)] px-6 text-base font-bold text-white hover:bg-[hsl(142_71%_34%)] sm:w-auto"
-                >
-                  <MessageCircle className="mr-2 h-5 w-5" /> WhatsApp us
                 </Button>
               </a>
               <a href={telHref}>
@@ -593,11 +575,6 @@ const Index = () => {
                 <MessageSquare className="mr-2 h-5 w-5" /> Text us now
               </Button>
             </a>
-            <a href={waHref} target="_blank" rel="noreferrer">
-              <Button size="lg" className="h-14 bg-[hsl(142_71%_38%)] px-8 text-base font-bold text-white hover:bg-[hsl(142_71%_34%)]">
-                <MessageCircle className="mr-2 h-5 w-5" /> WhatsApp us
-              </Button>
-            </a>
             <a href={telHref}>
               <Button size="lg" variant="outline" className="h-14 border-white/30 bg-white/5 px-6 text-base font-semibold text-white hover:bg-white/15 hover:text-white">
                 <Phone className="mr-2 h-5 w-5" /> Call 0800 000 0000
@@ -644,14 +621,6 @@ const Index = () => {
               className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-accent-gradient px-4 py-3 text-sm font-bold text-accent-foreground shadow-accent transition-transform hover:scale-[1.02]"
             >
               <MessageSquare className="h-5 w-5" /> Text us now
-            </a>
-            <a
-              href={waHref}
-              target="_blank"
-              rel="noreferrer"
-              className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[hsl(142_71%_38%)] px-4 py-3 text-sm font-bold text-white transition-transform hover:scale-[1.02]"
-            >
-              <MessageCircle className="h-5 w-5" /> WhatsApp us
             </a>
             <a
               href={telHref}
