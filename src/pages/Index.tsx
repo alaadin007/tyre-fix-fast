@@ -1,33 +1,47 @@
 import { MessageSquare, Star, ShieldCheck, MapPin } from "lucide-react";
+import logo from "@/assets/tyrefly-logo.png";
 
 const SMS_NUMBER = "+447447184489";
-const SMS_BODY = encodeURIComponent("Hi FTNM — I need tyre help");
+const SMS_BODY = encodeURIComponent("Hi Tyre Fly — I need tyre help");
 // iOS uses &body=, Android uses ?body= — sms:?&body= works on both modern OSes
 const SMS_HREF = `sms:${SMS_NUMBER}?&body=${SMS_BODY}`;
 
 const Index = () => {
   return (
     <main
-      className="min-h-[100dvh] w-full flex flex-col items-center justify-between px-6 py-8 text-white"
+      className="min-h-[100dvh] w-full flex flex-col items-center px-6 pt-5 pb-8 text-white"
       style={{ backgroundColor: "#0D0D0D", fontFamily: "Inter, system-ui, -apple-system, sans-serif" }}
     >
-      {/* Top status pill */}
-      <div className="w-full flex justify-center pt-2">
+      {/* Header */}
+      <header className="w-full max-w-md mx-auto flex items-center justify-between">
+        <a href="/" className="flex items-center gap-2.5" aria-label="Tyre Fly home">
+          <img
+            src={logo}
+            alt="Tyre Fly logo"
+            width={36}
+            height={36}
+            className="h-9 w-9 object-contain"
+          />
+          <span className="text-[20px] font-bold tracking-tight leading-none">
+            Tyre <span style={{ color: "#FF6B1A" }}>Fly</span>
+          </span>
+        </a>
+
         <div
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium"
+          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[11px] font-medium"
           style={{ backgroundColor: "rgba(255,107,26,0.12)", border: "1px solid rgba(255,107,26,0.35)" }}
         >
-          <span className="relative flex h-2 w-2">
+          <span className="relative flex h-1.5 w-1.5">
             <span
               className="absolute inline-flex h-full w-full rounded-full opacity-75 animate-ping"
               style={{ backgroundColor: "#FF6B1A" }}
             />
-            <span className="relative inline-flex rounded-full h-2 w-2" style={{ backgroundColor: "#FF6B1A" }} />
+            <span className="relative inline-flex rounded-full h-1.5 w-1.5" style={{ backgroundColor: "#FF6B1A" }} />
           </span>
           <span style={{ color: "#FF6B1A" }}>Live</span>
-          <span className="text-white/70">· techs on call near you</span>
+          <span className="text-white/70">· UK-wide</span>
         </div>
-      </div>
+      </header>
 
       {/* Centre block */}
       <section className="flex-1 w-full flex flex-col items-center justify-center text-center max-w-md mx-auto">
@@ -35,10 +49,10 @@ const Index = () => {
           Flat tyre?
         </h1>
         <p
-          className="mt-3 text-[44px] sm:text-6xl font-bold leading-[0.95] tracking-tight"
+          className="mt-3 text-[40px] sm:text-5xl font-bold leading-[0.95] tracking-tight"
           style={{ color: "#FF6B1A" }}
         >
-          Text us now.
+          Text us. We fly to you.
         </p>
 
         <p className="mt-8 text-base sm:text-lg text-white/60 leading-relaxed max-w-xs">
@@ -57,7 +71,7 @@ const Index = () => {
             boxShadow: "0 0 0 0 rgba(255,107,26,0.7)",
             animation: "ftnm-pulse 2s infinite",
           }}
-          aria-label="Text us to get help now"
+          aria-label="Text Tyre Fly to get help now"
         >
           <MessageSquare className="h-5 w-5" strokeWidth={2.5} />
           Text us — get help now
