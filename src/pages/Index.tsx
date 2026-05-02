@@ -9,7 +9,7 @@ const SMS_HREF = `sms:${SMS_NUMBER}?&body=${SMS_BODY}`;
 const Index = () => {
   return (
     <main
-      className="min-h-[100dvh] w-full flex flex-col items-center px-6 pt-5 pb-8 text-white"
+      className="min-h-[100dvh] w-full max-w-full overflow-x-hidden flex flex-col items-center px-6 pt-5 pb-8 text-white"
       style={{ backgroundColor: "#0D0D0D", fontFamily: "Inter, system-ui, -apple-system, sans-serif" }}
     >
       {/* Header */}
