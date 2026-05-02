@@ -625,14 +625,6 @@ const Index = () => {
               <MessageSquare className="h-5 w-5" /> Text us now
             </a>
             <a
-              href={waHref}
-              target="_blank"
-              rel="noreferrer"
-              className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[hsl(142_71%_38%)] px-4 py-3 text-sm font-bold text-white transition-transform hover:scale-[1.02]"
-            >
-              <MessageCircle className="h-5 w-5" /> WhatsApp us
-            </a>
-            <a
               href={telHref}
               className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-white/85 hover:text-accent"
             >
