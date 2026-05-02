@@ -84,6 +84,8 @@ export default function Admin() {
   const [allocations, setAllocations] = useState<Allocation[]>([]);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
+  const [autoAssign, setAutoAssign] = useState<boolean>(false);
+  const [settingsId, setSettingsId] = useState<string | null>(null);
 
   const techMap = useMemo(() => {
     const m = new Map<string, Technician>();
