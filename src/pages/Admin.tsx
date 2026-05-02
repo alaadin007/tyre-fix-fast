@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { z } from "zod";
 import { toast } from "sonner";
@@ -12,7 +12,9 @@ import {
   Phone,
   MapPin,
   RefreshCw,
+  Upload,
 } from "lucide-react";
+import { parseTechniciansFile, type ParsedTechnician } from "@/lib/parseTechnicians";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
