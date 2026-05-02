@@ -1192,7 +1192,13 @@ function JobDecisionCard({
 
   const repliedCount = roster.filter((r) => r.quote).length;
 
-  const dispatch = async (techId: string, allocId: string | null) => {
+  const dispatch = async (techId: string, allocId: string | null, hasQuote: boolean) => {
+    if (!hasQuote) {
+      const ok = confirm(
+        "This technician hasn't replied with a price + ETA yet.\n\nDispatch anyway? You'll need to agree pricing manually with the customer.",
+      );
+      if (!ok) return;
+    }
     setBusyId(techId);
     try {
       let targetId = allocId;
