@@ -737,6 +737,29 @@ function SettingsSheet({
           <SheetDescription>Technicians, fleet status & live ETAs</SheetDescription>
         </SheetHeader>
 
+        {/* Dispatch mode */}
+        <section className="mt-6 rounded-xl border-2 border-[hsl(var(--accent))]/20 bg-[hsl(var(--accent))]/5 p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h3 className="flex items-center gap-2 text-sm font-bold uppercase tracking-wider">
+                {autoAssign ? <Zap className="h-4 w-4 text-[hsl(var(--accent))]" /> : <ShieldCheck className="h-4 w-4" />}
+                Dispatch mode
+              </h3>
+              <p className="mt-1 text-sm font-medium">
+                {autoAssign ? "Auto-assign — AI dispatches without approval" : "Manual approval — you review every job"}
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Keep manual on while you build trust with the AI's matching. Flip to auto when you're happy.
+              </p>
+            </div>
+            <Switch
+              checked={autoAssign}
+              onCheckedChange={onToggleAuto}
+              className="data-[state=checked]:bg-[hsl(var(--accent))]"
+            />
+          </div>
+        </section>
+
         {/* Active technicians */}
         <section className="mt-6">
           <h3 className="mb-2 flex items-center gap-2 text-sm font-bold uppercase tracking-wider">
