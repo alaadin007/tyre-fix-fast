@@ -511,7 +511,7 @@ const Index = () => {
         <div className="container grid gap-8 py-12 md:grid-cols-4">
           <div>
             <div className="text-2xl font-black">
-              Tyre<span className="text-accent">Ninja</span>
+              Flat Tyre <span className="text-accent">Near Me</span>
             </div>
             <p className="mt-3 text-sm text-white/70">
               The UK's fastest mobile tyre network. 24/7/365.
