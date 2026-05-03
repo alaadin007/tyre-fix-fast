@@ -143,6 +143,47 @@ Deno.serve(async (req) => {
 
     const fromN = normPhone(from);
 
+    // 1b. Master admin? → can add technicians via SMS
+    const { data: masterSetting } = await supabase
+      .from("app_settings")
+      .select("value")
+      .eq("key", "master_numbers")
+      .maybeSingle();
+    const masterNumbers: string[] = ((masterSetting?.value as any)?.numbers ?? []).map((n: string) => normPhone(n));
+    const isMaster = masterNumbers.includes(fromN);
+
+    if (isMaster && /^\s*add\s+tech/i.test(body)) {
+      // Format: ADD TECH: Name | +447... | W5,W12 | Vehicle (opt) | Notes (opt)
+      const payload = body.replace(/^\s*add\s+tech\s*[:\-]?\s*/i, "");
+      const parts = payload.split("|").map((s) => s.trim());
+      const [name, phone, postcodes, vehicle, notes] = parts;
+      if (!name || !phone || !postcodes) {
+        await sendReply(
+          from,
+          "Format: ADD TECH: Name | +447... | W5,W12 | Vehicle (opt) | Notes (opt)",
+          channel,
+        );
+        return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+      }
+      const pcs = postcodes.split(",").map((p) => p.trim().toUpperCase()).filter(Boolean);
+      const { error: insErr } = await supabase.from("technicians").insert({
+        name,
+        phone: phone.trim(),
+        service_postcodes: pcs,
+        vehicle: vehicle || null,
+        notes: notes || null,
+        active: true,
+        approval_status: "approved",
+        approved_at: new Date().toISOString(),
+      });
+      if (insErr) {
+        await sendReply(from, `Couldn't add: ${insErr.message}`, channel);
+      } else {
+        await sendReply(from, `✅ Added ${name} (${pcs.join(", ")}) — live in dispatch.`, channel);
+      }
+      return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+    }
+
     // 2. Technician? → Parsing Agent
     const { data: techMatch } = await supabase
       .from("technicians")
