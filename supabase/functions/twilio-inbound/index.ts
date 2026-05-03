@@ -392,11 +392,34 @@ Deno.serve(async (req) => {
         const cheapest: any = pending?.[0];
         if (cheapest) {
           await supabase.from("quotes").update({ status: "accepted" }).eq("id", cheapest.id);
-          await supabase.from("quotes").update({ status: "lost" }).eq("job_id", job.id).eq("status", "pending");
-          await supabase.from("jobs").update({ status: "awaiting_payment" }).eq("id", job.id);
+          await supabase.from("quotes").update({ status: "lost" }).eq("job_id", job.id).eq("status", "pending").neq("id", cheapest.id);
+          await supabase.from("jobs").update({
+            status: "awaiting_payment",
+            assigned_technician_id: cheapest.technician_id,
+          }).eq("id", job.id);
+
+          // Mint the Stripe checkout link for the £15 deposit and SMS it now
+          let payUrl: string | null = null;
+          try {
+            const r = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/create-fee-checkout`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+              },
+              body: JSON.stringify({ job_id: job.id }),
+            });
+            const j = await r.json();
+            payUrl = j?.url ?? null;
+          } catch (e) {
+            console.error("create-fee-checkout failed", e);
+          }
+
           await sendReply(
             from,
-            `Booked! £${cheapest.price_gbp}, ETA ${cheapest.eta_minutes} min. Payment link will follow shortly.`,
+            payUrl
+              ? `Booked! £${cheapest.price_gbp}, ETA ${cheapest.eta_minutes} min. Pay the £15 deposit to confirm and we'll share your technician's number: ${payUrl}`
+              : `Booked! £${cheapest.price_gbp}, ETA ${cheapest.eta_minutes} min. We'll text the payment link in a moment.`,
             channel,
           );
         }
