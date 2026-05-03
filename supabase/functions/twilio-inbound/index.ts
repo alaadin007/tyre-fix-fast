@@ -255,17 +255,11 @@ Deno.serve(async (req) => {
     const job: any = customerJobs?.[0];
 
     const INTAKE_TEMPLATE =
-      "Hi 👋 Tyre Fly here. To get a technician to you ASAP, please reply with:\n\n" +
-      "1) Your name\n" +
-      "2) Postcode or location (a Google Maps pin works too)\n" +
-      "3) What happened, and what do YOU think it is? E.g.\n" +
-      "   • Slow puncture (still drivable)?\n" +
-      "   • Fully flat / blowout?\n" +
-      "   • Bulge or split on the sidewall?\n" +
-      "   • Nail or screw still in the tyre?\n" +
-      "   • Locked wheel / lost locking key?\n" +
-      "4) A photo really helps — the damaged area, any nail/screw, AND the tyre size on the sidewall (e.g. 225/45 R17). Use flash at night.\n\n" +
-      "Reply all in one message or several — we'll put it together.";
+      "Hey 👋 Tyre Fly here. What happened and where are you?\n\n" +
+      "• Name\n" +
+      "• Postcode / Maps pin\n" +
+      "• Issue (puncture, flat, blowout, locked wheel?)\n" +
+      "• Photo of the tyre + sidewall size (e.g. 225/45 R17)";
 
     // Helpers for parsing follow-up intake messages
     const POSTCODE_RE = /\b([A-Z]{1,2}\d[A-Z\d]?)\s*(\d[A-Z]{2})\b/i;
