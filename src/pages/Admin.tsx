@@ -1570,6 +1570,9 @@ function SettingsSheet({
           </div>
         </section>
 
+        <MasterNumbersSection />
+
+
         {/* Active technicians */}
         <section className="mt-6">
           <h3 className="mb-2 flex items-center gap-2 text-sm font-bold uppercase tracking-wider">
@@ -1697,5 +1700,80 @@ function SettingsSheet({
         </section>
       </SheetContent>
     </Sheet>
+  );
+}
+
+/* ---------- Master Numbers (admins who can add techs via SMS) ---------- */
+function MasterNumbersSection() {
+  const [numbers, setNumbers] = useState<string[]>([]);
+  const [rowId, setRowId] = useState<string | null>(null);
+  const [input, setInput] = useState("");
+
+  const load = async () => {
+    const { data } = await supabase
+      .from("app_settings" as any)
+      .select("*")
+      .eq("key", "master_numbers")
+      .maybeSingle();
+    if (data) {
+      setRowId((data as any).id);
+      setNumbers(((data as any).value?.numbers ?? []) as string[]);
+    }
+  };
+  useEffect(() => { load(); }, []);
+
+  const save = async (next: string[]) => {
+    setNumbers(next);
+    if (rowId) {
+      await supabase.from("app_settings" as any)
+        .update({ value: { numbers: next } }).eq("id", rowId);
+    } else {
+      const { data } = await supabase.from("app_settings" as any)
+        .insert({ key: "master_numbers", value: { numbers: next } })
+        .select().maybeSingle();
+      if (data) setRowId((data as any).id);
+    }
+  };
+
+  const add = () => {
+    const n = input.trim();
+    if (!n) return;
+    if (numbers.includes(n)) { toast.error("Already added"); return; }
+    save([...numbers, n]);
+    setInput("");
+    toast.success("Master number added");
+  };
+  const remove = (n: string) => save(numbers.filter((x) => x !== n));
+
+  return (
+    <section className="mt-8 rounded-xl border-2 border-amber-500/30 bg-amber-500/5 p-4">
+      <h3 className="mb-1 flex items-center gap-2 text-sm font-bold uppercase tracking-wider">
+        <ShieldCheck className="h-4 w-4 text-amber-600" /> Master phone numbers
+      </h3>
+      <p className="mb-3 text-xs text-muted-foreground">
+        These numbers can text to add technicians. Format:<br />
+        <code className="text-[11px]">ADD TECH: Name | +447... | W5,W12 | Vehicle | Notes</code>
+      </p>
+      <div className="flex gap-2">
+        <Input
+          placeholder="+447700900111"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+        />
+        <Button onClick={add} type="button"><Plus className="h-4 w-4" /></Button>
+      </div>
+      {numbers.length > 0 && (
+        <div className="mt-3 space-y-1">
+          {numbers.map((n) => (
+            <div key={n} className="flex items-center justify-between rounded-md border bg-background px-3 py-1.5 text-sm">
+              <span className="font-mono">{n}</span>
+              <Button variant="ghost" size="icon" onClick={() => remove(n)}>
+                <Trash2 className="h-4 w-4 text-destructive" />
+              </Button>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
   );
 }

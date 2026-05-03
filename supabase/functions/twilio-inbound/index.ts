@@ -143,6 +143,47 @@ Deno.serve(async (req) => {
 
     const fromN = normPhone(from);
 
+    // 1b. Master admin? → can add technicians via SMS
+    const { data: masterSetting } = await supabase
+      .from("app_settings")
+      .select("value")
+      .eq("key", "master_numbers")
+      .maybeSingle();
+    const masterNumbers: string[] = ((masterSetting?.value as any)?.numbers ?? []).map((n: string) => normPhone(n));
+    const isMaster = masterNumbers.includes(fromN);
+
+    if (isMaster && /^\s*add\s+tech/i.test(body)) {
+      // Format: ADD TECH: Name | +447... | W5,W12 | Vehicle (opt) | Notes (opt)
+      const payload = body.replace(/^\s*add\s+tech\s*[:\-]?\s*/i, "");
+      const parts = payload.split("|").map((s) => s.trim());
+      const [name, phone, postcodes, vehicle, notes] = parts;
+      if (!name || !phone || !postcodes) {
+        await sendReply(
+          from,
+          "Format: ADD TECH: Name | +447... | W5,W12 | Vehicle (opt) | Notes (opt)",
+          channel,
+        );
+        return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+      }
+      const pcs = postcodes.split(",").map((p) => p.trim().toUpperCase()).filter(Boolean);
+      const { error: insErr } = await supabase.from("technicians").insert({
+        name,
+        phone: phone.trim(),
+        service_postcodes: pcs,
+        vehicle: vehicle || null,
+        notes: notes || null,
+        active: true,
+        approval_status: "approved",
+        approved_at: new Date().toISOString(),
+      });
+      if (insErr) {
+        await sendReply(from, `Couldn't add: ${insErr.message}`, channel);
+      } else {
+        await sendReply(from, `✅ Added ${name} (${pcs.join(", ")}) — live in dispatch.`, channel);
+      }
+      return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+    }
+
     // 2. Technician? → Parsing Agent
     const { data: techMatch } = await supabase
       .from("technicians")
@@ -214,17 +255,11 @@ Deno.serve(async (req) => {
     const job: any = customerJobs?.[0];
 
     const INTAKE_TEMPLATE =
-      "Hi 👋 Tyre Fly here. To get a technician to you ASAP, please reply with:\n\n" +
-      "1) Your name\n" +
-      "2) Postcode or location (a Google Maps pin works too)\n" +
-      "3) What happened, and what do YOU think it is? E.g.\n" +
-      "   • Slow puncture (still drivable)?\n" +
-      "   • Fully flat / blowout?\n" +
-      "   • Bulge or split on the sidewall?\n" +
-      "   • Nail or screw still in the tyre?\n" +
-      "   • Locked wheel / lost locking key?\n" +
-      "4) A photo really helps — the damaged area, any nail/screw, AND the tyre size on the sidewall (e.g. 225/45 R17). Use flash at night.\n\n" +
-      "Reply all in one message or several — we'll put it together.";
+      "Hey 👋 Tyre Fly here. What happened and where are you?\n\n" +
+      "• Name\n" +
+      "• Postcode / Maps pin\n" +
+      "• Issue (puncture, flat, blowout, locked wheel?)\n" +
+      "• Photo of the tyre + sidewall size (e.g. 225/45 R17)";
 
     // Helpers for parsing follow-up intake messages
     const POSTCODE_RE = /\b([A-Z]{1,2}\d[A-Z\d]?)\s*(\d[A-Z]{2})\b/i;
