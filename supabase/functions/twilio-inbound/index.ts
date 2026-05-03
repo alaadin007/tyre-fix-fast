@@ -123,9 +123,45 @@ Deno.serve(async (req) => {
     const sid = params.MessageSid ?? null;
     const numMedia = parseInt(params.NumMedia ?? "0", 10) || 0;
     const mediaUrls: string[] = [];
+
+    // Twilio media URLs require Basic Auth. Download with credentials and
+    // re-upload to our public job-photos bucket so they render in the browser
+    // and survive Twilio's retention window.
+    const TWILIO_ACCOUNT_SID = Deno.env.get("TWILIO_ACCOUNT_SID");
+    const TWILIO_AUTH_TOKEN = Deno.env.get("TWILIO_AUTH_TOKEN");
+
     for (let i = 0; i < numMedia; i++) {
       const u = params[`MediaUrl${i}`];
-      if (u) mediaUrls.push(u);
+      const ct = params[`MediaContentType${i}`] || "image/jpeg";
+      if (!u) continue;
+      try {
+        const headers: Record<string, string> = {};
+        if (TWILIO_ACCOUNT_SID && TWILIO_AUTH_TOKEN) {
+          headers["Authorization"] = "Basic " + btoa(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`);
+        }
+        const mediaRes = await fetch(u, { headers, redirect: "follow" });
+        if (!mediaRes.ok) {
+          console.error("media fetch failed", u, mediaRes.status);
+          mediaUrls.push(u);
+          continue;
+        }
+        const buf = new Uint8Array(await mediaRes.arrayBuffer());
+        const ext = (ct.split("/")[1] || "jpg").split(";")[0];
+        const path = `inbound/${Date.now()}-${crypto.randomUUID()}.${ext}`;
+        const { error: upErr } = await supabase.storage
+          .from("job-photos")
+          .upload(path, buf, { contentType: ct, upsert: false });
+        if (upErr) {
+          console.error("media upload failed", upErr);
+          mediaUrls.push(u);
+          continue;
+        }
+        const { data: pub } = supabase.storage.from("job-photos").getPublicUrl(path);
+        mediaUrls.push(pub.publicUrl);
+      } catch (e) {
+        console.error("media handling error", e);
+        mediaUrls.push(u);
+      }
     }
 
     // 1. Always log
