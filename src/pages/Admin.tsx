@@ -266,9 +266,9 @@ export default function Admin() {
             <Panel
               icon={<MessageSquare className="h-4 w-4" />}
               title="Incoming Inquiries"
-              count={incoming.length + messages.filter(m => m.direction === "inbound").length}
+              count={incoming.length + groupedThreads(messages).length}
               emptyText="Nothing incoming. SMS & web inquiries land here."
-              isEmpty={incoming.length === 0 && messages.filter(m => m.direction === "inbound").length === 0}
+              isEmpty={incoming.length === 0 && groupedThreads(messages).length === 0}
             >
               <div className="space-y-2">
                 {incoming.map((j) => (
@@ -281,44 +281,9 @@ export default function Admin() {
                     fallbackEta={estimateEta(j, techs)}
                   />
                 ))}
-                {messages.filter(m => m.direction === "inbound").slice(0, 8).map((m) => {
-                  const loc = extractLocation(m.body);
-                  const isWA = m.channel === "whatsapp";
-                  return (
-                    <div key={m.id} className="rounded-xl border border-white/40 bg-white/60 p-3 backdrop-blur">
-                      <div className="mb-1 flex items-center justify-between">
-                        <div className="flex items-center gap-2 text-xs font-medium">
-                          {isWA ? (
-                            <Badge className="bg-[hsl(142_71%_38%)]/15 text-[hsl(142_71%_30%)] hover:bg-[hsl(142_71%_38%)]/15">
-                              <MessageCircle className="mr-1 h-3 w-3" />WhatsApp
-                            </Badge>
-                          ) : (
-                            <Badge className="bg-[hsl(var(--accent))]/15 text-[hsl(var(--accent))] hover:bg-[hsl(var(--accent))]/15">SMS</Badge>
-                          )}
-                          <Phone className="h-3 w-3" />
-                          <span>{m.from_number}</span>
-                        </div>
-                        <span className="text-[10px] text-muted-foreground">{relTime(m.created_at)}</span>
-                      </div>
-                      <p className="text-sm whitespace-pre-wrap">{m.body || <em className="text-muted-foreground">(no text)</em>}</p>
-                      {loc && (
-                        <a href={loc.url} target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-[hsl(var(--accent))] hover:underline">
-                          <Navigation className="h-3 w-3" /> Live location
-                        </a>
-                      )}
-                      {m.media_urls?.length > 0 && (
-                        <div className="mt-2 flex flex-wrap gap-2">
-                          {m.media_urls.map((u, i) => (
-                            <a key={i} href={u} target="_blank" rel="noreferrer" className="text-xs text-[hsl(var(--accent))] underline">📎 photo {i + 1}</a>
-                          ))}
-                        </div>
-                      )}
-                      <div className="mt-2">
-                        <ReplyButton to={m.from_number} channel={isWA ? "whatsapp" : "sms"} />
-                      </div>
-                    </div>
-                  );
-                })}
+                {groupedThreads(messages).map((thread) => (
+                  <ConversationThread key={thread.phone} thread={thread} />
+                ))}
               </div>
             </Panel>
           </section>
@@ -974,6 +939,123 @@ function relTime(iso: string) {
 }
 
 /* ---------- Reply (SMS / WhatsApp) ---------- */
+
+type Thread = {
+  phone: string;
+  channel: "sms" | "whatsapp";
+  messages: SmsMessage[];
+  lastAt: string;
+  unreadInbound: number;
+};
+
+function groupedThreads(messages: SmsMessage[]): Thread[] {
+  const map = new Map<string, Thread>();
+  // sort oldest first so thread messages render chronologically
+  const sorted = [...messages].sort((a, b) => a.created_at.localeCompare(b.created_at));
+  for (const m of sorted) {
+    const phone = m.direction === "inbound" ? m.from_number : m.to_number;
+    if (!phone) continue;
+    const key = phone.replace(/[^\d+]/g, "");
+    const ch: "sms" | "whatsapp" = m.channel === "whatsapp" ? "whatsapp" : "sms";
+    let t = map.get(key);
+    if (!t) {
+      t = { phone, channel: ch, messages: [], lastAt: m.created_at, unreadInbound: 0 };
+      map.set(key, t);
+    }
+    t.messages.push(m);
+    t.lastAt = m.created_at;
+    t.channel = ch;
+    if (m.direction === "inbound") t.unreadInbound += 1;
+  }
+  return [...map.values()].sort((a, b) => b.lastAt.localeCompare(a.lastAt));
+}
+
+function ConversationThread({ thread }: { thread: Thread }) {
+  const [open, setOpen] = useState(false);
+  const isWA = thread.channel === "whatsapp";
+  const last = thread.messages[thread.messages.length - 1];
+  const visible = open ? thread.messages : thread.messages.slice(-3);
+
+  return (
+    <div className="rounded-xl border border-white/40 bg-white/60 p-3 backdrop-blur">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="flex w-full items-center justify-between gap-2 text-left"
+      >
+        <div className="flex min-w-0 items-center gap-2">
+          {isWA ? (
+            <Badge className="bg-[hsl(142_71%_38%)]/15 text-[hsl(142_71%_30%)] hover:bg-[hsl(142_71%_38%)]/15">
+              <MessageCircle className="mr-1 h-3 w-3" />WhatsApp
+            </Badge>
+          ) : (
+            <Badge className="bg-[hsl(var(--accent))]/15 text-[hsl(var(--accent))] hover:bg-[hsl(var(--accent))]/15">SMS</Badge>
+          )}
+          <Phone className="h-3 w-3 shrink-0" />
+          <span className="truncate text-xs font-medium">{thread.phone}</span>
+          <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">{thread.messages.length}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] text-muted-foreground whitespace-nowrap">{relTime(thread.lastAt)}</span>
+          {open ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+        </div>
+      </button>
+
+      <div className="mt-2 space-y-1.5">
+        {visible.map((m) => {
+          const inbound = m.direction === "inbound";
+          const loc = inbound ? extractLocation(m.body) : null;
+          return (
+            <div key={m.id} className={`flex ${inbound ? "justify-start" : "justify-end"}`}>
+              <div
+                className={[
+                  "max-w-[85%] rounded-2xl px-3 py-1.5 text-sm break-words",
+                  inbound
+                    ? "rounded-tl-sm bg-white border border-border"
+                    : isWA
+                      ? "rounded-tr-sm bg-[hsl(142_71%_92%)] text-foreground"
+                      : "rounded-tr-sm bg-[hsl(var(--accent))] text-white",
+                ].join(" ")}
+              >
+                {m.body ? (
+                  <p className="whitespace-pre-wrap leading-snug">{m.body}</p>
+                ) : (
+                  <em className="text-xs opacity-70">(no text)</em>
+                )}
+                {loc && (
+                  <a href={loc.url} target="_blank" rel="noreferrer" className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-[hsl(var(--accent))] hover:underline">
+                    <Navigation className="h-3 w-3" /> Live location
+                  </a>
+                )}
+                {m.media_urls?.length > 0 && (
+                  <div className="mt-1 flex flex-wrap gap-1.5">
+                    {m.media_urls.map((u, i) => (
+                      <a key={i} href={u} target="_blank" rel="noreferrer" className={`text-[11px] underline ${inbound ? "text-[hsl(var(--accent))]" : "text-white/90"}`}>📎 photo {i + 1}</a>
+                    ))}
+                  </div>
+                )}
+                <div className={`mt-0.5 text-[9px] ${inbound ? "text-muted-foreground" : "opacity-70"}`}>
+                  {relTime(m.created_at)}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+        {!open && thread.messages.length > 3 && (
+          <button
+            onClick={() => setOpen(true)}
+            className="w-full text-center text-[11px] text-muted-foreground hover:text-foreground"
+          >
+            Show {thread.messages.length - 3} earlier message{thread.messages.length - 3 === 1 ? "" : "s"}
+          </button>
+        )}
+      </div>
+
+      <div className="mt-2 flex justify-end">
+        <ReplyButton to={thread.phone} channel={thread.channel} />
+      </div>
+    </div>
+  );
+}
 
 function ReplyButton({
   to, channel: initialChannel,
