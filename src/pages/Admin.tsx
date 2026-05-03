@@ -1133,7 +1133,7 @@ function PendingApprovalsPanel({
           {decisionJobs.length}
         </Badge>
       </div>
-      <ScrollArea className="flex-1 -mr-2 pr-2">
+      <div className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden -mr-2 pr-2">
         {decisionJobs.length === 0 ? (
           <p className="py-6 text-center text-xs text-muted-foreground">
             {autoAssign ? "Nothing to review — AI is dispatching automatically." : "No enquiries waiting. Jobs appear here once technicians are messaged."}
@@ -1152,7 +1152,7 @@ function PendingApprovalsPanel({
             ))}
           </div>
         )}
-      </ScrollArea>
+      </div>
     </div>
   );
 }
