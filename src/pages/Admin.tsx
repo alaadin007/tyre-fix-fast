@@ -446,9 +446,9 @@ function Panel({
         </div>
         <Badge variant="outline" className="border-foreground/15 bg-white/40 text-xs font-semibold">{count}</Badge>
       </div>
-      <ScrollArea className="flex-1 -mr-2 pr-2">
+      <div className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden -mr-2 pr-2">
         {isEmpty ? <p className="py-6 text-center text-xs text-muted-foreground">{emptyText}</p> : children}
-      </ScrollArea>
+      </div>
     </div>
   );
 }
