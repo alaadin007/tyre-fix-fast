@@ -165,6 +165,11 @@ const Index = () => {
         <a href="/technician/login" className="block text-xs text-white/30 hover:text-white/60 transition-colors">
           Technicians: sign in →
         </a>
+        <div className="flex items-center justify-center gap-3 text-xs text-white/30 pt-1">
+          <a href="/privacy" className="hover:text-white/60 transition-colors">Privacy</a>
+          <span>·</span>
+          <a href="/terms" className="hover:text-white/60 transition-colors">Terms</a>
+        </div>
       </footer>
 
       {/* Pulse keyframes */}

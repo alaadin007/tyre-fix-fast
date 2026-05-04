@@ -11,6 +11,8 @@ import NotFound from "./pages/NotFound.tsx";
 import TechnicianLogin from "./pages/TechnicianLogin.tsx";
 import TechnicianOnboarding from "./pages/TechnicianOnboarding.tsx";
 import TechnicianDashboard from "./pages/TechnicianDashboard.tsx";
+import Privacy from "./pages/Privacy.tsx";
+import Terms from "./pages/Terms.tsx";
 
 const queryClient = new QueryClient();
 
@@ -28,6 +30,8 @@ const App = () => (
           <Route path="/technician/login" element={<TechnicianLogin />} />
           <Route path="/technician/onboarding" element={<TechnicianOnboarding />} />
           <Route path="/technician" element={<TechnicianDashboard />} />
+          <Route path="/privacy" element={<Privacy />} />
+          <Route path="/terms" element={<Terms />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
