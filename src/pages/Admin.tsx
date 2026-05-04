@@ -245,23 +245,10 @@ export default function Admin() {
         </div>
       </header>
 
-      {/* 4-column layout */}
+      {/* 3-column layout (AI co-pilot is a floating panel) */}
       <main className="mx-auto w-full max-w-[1900px] px-3 sm:px-6 py-4 sm:py-6 overflow-x-hidden">
-        <div className="grid grid-cols-1 gap-5 lg:grid-cols-4 lg:h-[calc(100vh-9rem)]">
-          {/* COL 1 — AI chat */}
-          <section className="glass-dark flex flex-col rounded-2xl p-5">
-            <ColumnHeader
-              icon={<Sparkles className="h-4 w-4" />}
-              title="AI Co-pilot"
-              subtitle="Discuss anything with your ops AI"
-              accent
-            />
-            <div className="mt-4 flex-1 overflow-hidden">
-              <AdminAIChat />
-            </div>
-          </section>
-
-          {/* COL 2 — Incoming inquiries (full column) */}
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-3 lg:h-[calc(100vh-9rem)]">
+          {/* COL 1 — Incoming inquiries (full column) */}
           <section className="flex flex-col">
             <Panel
               icon={<MessageSquare className="h-4 w-4" />}
@@ -368,6 +355,37 @@ export default function Admin() {
           <PendingTechnicians />
         </div>
       </main>
+
+      {/* Floating AI Co-pilot */}
+      <Sheet>
+        <SheetTrigger asChild>
+          <Button
+            size="lg"
+            className="fixed bottom-6 right-6 z-50 h-14 w-14 rounded-full bg-[hsl(var(--accent))] p-0 shadow-accent hover:bg-[hsl(var(--accent-glow))] sm:h-auto sm:w-auto sm:rounded-full sm:px-5 sm:py-3"
+            aria-label="Open AI Co-pilot"
+          >
+            <Sparkles className="h-5 w-5 sm:mr-2" />
+            <span className="hidden sm:inline">AI Co-pilot</span>
+          </Button>
+        </SheetTrigger>
+        <SheetContent
+          side="right"
+          className="flex w-full flex-col border-l border-white/10 bg-[hsl(var(--background))] p-5 sm:max-w-md"
+        >
+          <SheetHeader className="space-y-1">
+            <SheetTitle className="flex items-center gap-2 text-white">
+              <Sparkles className="h-4 w-4 text-[hsl(var(--accent))]" />
+              AI Co-pilot
+            </SheetTitle>
+            <SheetDescription className="text-white/70">
+              Discuss anything with your ops AI
+            </SheetDescription>
+          </SheetHeader>
+          <div className="mt-4 flex-1 overflow-hidden">
+            <AdminAIChat />
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
