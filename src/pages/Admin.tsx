@@ -245,23 +245,10 @@ export default function Admin() {
         </div>
       </header>
 
-      {/* 4-column layout */}
+      {/* 3-column layout (AI co-pilot is a floating panel) */}
       <main className="mx-auto w-full max-w-[1900px] px-3 sm:px-6 py-4 sm:py-6 overflow-x-hidden">
-        <div className="grid grid-cols-1 gap-5 lg:grid-cols-4 lg:h-[calc(100vh-9rem)]">
-          {/* COL 1 — AI chat */}
-          <section className="glass-dark flex flex-col rounded-2xl p-5">
-            <ColumnHeader
-              icon={<Sparkles className="h-4 w-4" />}
-              title="AI Co-pilot"
-              subtitle="Discuss anything with your ops AI"
-              accent
-            />
-            <div className="mt-4 flex-1 overflow-hidden">
-              <AdminAIChat />
-            </div>
-          </section>
-
-          {/* COL 2 — Incoming inquiries (full column) */}
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-3 lg:h-[calc(100vh-9rem)]">
+          {/* COL 1 — Incoming inquiries (full column) */}
           <section className="flex flex-col">
             <Panel
               icon={<MessageSquare className="h-4 w-4" />}
