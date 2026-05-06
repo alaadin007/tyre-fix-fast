@@ -157,13 +157,28 @@ const Index = () => {
         </div>
       </section>
 
+      {/* Technician CTA */}
+      <section className="w-full px-4 pb-4">
+        <a
+          href="/technician/login"
+          className="block w-full max-w-md mx-auto rounded-2xl border border-[#FF6B1A]/40 bg-gradient-to-br from-[#FF6B1A]/15 to-[#FF6B1A]/5 px-5 py-5 text-center hover:border-[#FF6B1A] hover:from-[#FF6B1A]/25 transition-all"
+        >
+          <p className="text-[11px] uppercase tracking-[0.2em] text-[#FF6B1A] font-semibold">
+            Mobile tyre technician?
+          </p>
+          <p className="mt-2 text-lg font-semibold text-white">
+            Sign in or join the network
+          </p>
+          <p className="mt-1 text-xs text-white/60">
+            Get jobs near you · paid direct · verify with SMS or WhatsApp
+          </p>
+        </a>
+      </section>
+
       {/* Bottom call fallback */}
       <footer className="w-full text-center pb-2 space-y-1">
         <a href="tel:08000000000" className="block text-xs text-white/40 hover:text-white/70 transition-colors">
           Or call 0800 000 0000
-        </a>
-        <a href="/technician/login" className="block text-xs text-white/30 hover:text-white/60 transition-colors">
-          Technicians: sign in →
         </a>
         <div className="flex items-center justify-center gap-3 text-xs text-white/30 pt-1">
           <a href="/privacy" className="hover:text-white/60 transition-colors">Privacy</a>
