@@ -53,6 +53,8 @@ type Job = {
   stripe_checkout_url?: string | null;
   assigned_technician_id?: string | null;
 };
+
+const getJobLiveLocation = (job: Job) => extractLocation(job.issue_description ?? "");
 type Quote = {
   id: string; job_id: string | null; technician_id: string | null;
   price_gbp: number | null; eta_minutes: number | null;
@@ -653,6 +655,8 @@ function IncomingInquiryCard({
     setBusy(false);
   };
 
+  const liveLocation = getJobLiveLocation(job);
+
   return (
     <div className="rounded-xl border border-[hsl(var(--accent))]/30 bg-[hsl(var(--accent))]/5 backdrop-blur transition hover:border-[hsl(var(--accent))]/50">
       {/* Compact header — always visible */}
@@ -728,6 +732,16 @@ function IncomingInquiryCard({
             >
               <Navigation className="h-3 w-3" />Map · {job.postcode}
             </a>
+            {liveLocation && (
+              <a
+                href={liveLocation.url}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1 rounded-md border bg-white px-2 py-1 hover:bg-muted"
+              >
+                <MapPin className="h-3 w-3" />Live pin
+              </a>
+            )}
           </div>
 
           {/* Description / damage */}
@@ -1045,9 +1059,18 @@ function ConversationThread({ thread }: { thread: Thread }) {
                   </a>
                 )}
                 {m.media_urls?.length > 0 && (
-                  <div className="mt-1 flex flex-wrap gap-1.5">
+                  <div className="mt-2 flex flex-wrap gap-2">
                     {m.media_urls.map((u, i) => (
-                      <a key={i} href={u} target="_blank" rel="noreferrer" className={`text-[11px] underline ${inbound ? "text-[hsl(var(--accent))]" : "text-white/90"}`}>📎 photo {i + 1}</a>
+                      <a
+                        key={i}
+                        href={u}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="block h-16 w-16 overflow-hidden rounded-md border border-border bg-white/70"
+                        title={`Photo ${i + 1}`}
+                      >
+                        <img src={u} alt={`Photo ${i + 1}`} className="h-full w-full object-cover" loading="lazy" />
+                      </a>
                     ))}
                   </div>
                 )}
