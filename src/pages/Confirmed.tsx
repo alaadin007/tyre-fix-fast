@@ -4,7 +4,7 @@ import { CheckCircle2, Phone, Loader2, ArrowLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 
-type Tech = { id: string; name: string; phone: string; vehicle: string | null; rating: number | null };
+type Tech = { id: string; name: string; phone: string; whatsapp: string | null; vehicle: string | null; rating: number | null };
 type JobRow = {
   id: string;
   customer_name: string;
