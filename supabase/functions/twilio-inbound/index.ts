@@ -279,12 +279,22 @@ Deno.serve(async (req) => {
         const lat = Number(techCoords[1]);
         const lng = Number(techCoords[2]);
         if (Number.isFinite(lat) && Number.isFinite(lng)) {
+          const now = new Date();
+          const expires = new Date(now.getTime() + 8 * 60 * 60 * 1000); // 8 hours
           await supabase.from("technicians").update({
             last_lat: lat,
             last_lng: lng,
-            last_location_at: new Date().toISOString(),
+            last_location_at: now.toISOString(),
+            live_location_until: expires.toISOString(),
           }).eq("id", tech.id);
-          console.log("tech location updated", JSON.stringify({ tech: tech.id, lat, lng }));
+          await supabase.from("technician_locations").insert({
+            technician_id: tech.id,
+            lat,
+            lng,
+            source: channel === "whatsapp" ? "whatsapp" : "sms",
+            expires_at: expires.toISOString(),
+          });
+          console.log("tech location updated", JSON.stringify({ tech: tech.id, lat, lng, expires: expires.toISOString() }));
         }
       }
 
@@ -301,7 +311,7 @@ Deno.serve(async (req) => {
       if (!alloc?.job_id) {
         // Pure location ping with no open job → just ack
         if (techCoords && !body.replace(COORD_RE, "").trim()) {
-          await sendReply(from, "Got your location 📍 — saved. We'll match you to nearby jobs.", channel);
+          await sendReply(from, "Got your live location 📍 — tracking for the next 8 hours. We'll match you to nearby jobs.", channel);
         } else {
           await sendReply(from, "Thanks — no open job for you right now. We'll text when one matches.", channel);
         }

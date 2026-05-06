@@ -414,6 +414,39 @@ export type Database = {
         }
         Relationships: []
       }
+      technician_locations: {
+        Row: {
+          accuracy: number | null
+          created_at: string
+          expires_at: string
+          id: string
+          lat: number
+          lng: number
+          source: string
+          technician_id: string
+        }
+        Insert: {
+          accuracy?: number | null
+          created_at?: string
+          expires_at: string
+          id?: string
+          lat: number
+          lng: number
+          source?: string
+          technician_id: string
+        }
+        Update: {
+          accuracy?: number | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          lat?: number
+          lng?: number
+          source?: string
+          technician_id?: string
+        }
+        Relationships: []
+      }
       technicians: {
         Row: {
           active: boolean
@@ -430,7 +463,9 @@ export type Database = {
           jobs_completed: number
           last_lat: number | null
           last_lng: number | null
+          last_location_accuracy: number | null
           last_location_at: string | null
+          live_location_until: string | null
           name: string
           notes: string | null
           phone: string
@@ -461,7 +496,9 @@ export type Database = {
           jobs_completed?: number
           last_lat?: number | null
           last_lng?: number | null
+          last_location_accuracy?: number | null
           last_location_at?: string | null
+          live_location_until?: string | null
           name: string
           notes?: string | null
           phone: string
@@ -492,7 +529,9 @@ export type Database = {
           jobs_completed?: number
           last_lat?: number | null
           last_lng?: number | null
+          last_location_accuracy?: number | null
           last_location_at?: string | null
+          live_location_until?: string | null
           name?: string
           notes?: string | null
           phone?: string
