@@ -51,7 +51,11 @@ serve(async (req) => {
           `A customer reported a tyre issue.\n` +
           `Issue type selected: ${issue_type ?? "unspecified"}\n` +
           `Customer description: ${issue_description ?? "(none)"}\n\n` +
-          `Look at the attached photo(s) of the tyre/wheel and classify the damage. ` +
+          `Look at the attached photo(s) of the tyre/wheel and:\n` +
+          `1. Classify the damage (type, severity, confidence).\n` +
+          `2. Identify tyre details where visible: size markings (e.g. 225/45R17 94Y), brand/manufacturer, ` +
+          `tyre type (summer/winter/all-season/run-flat), tread condition (new/good/worn/illegal), ` +
+          `and wheel type (alloy/steel). If something is not legible in the photo, return null for that field — do not guess.\n` +
           `Use the record_damage_assessment tool to return your answer.`,
       },
       ...photo_urls.slice(0, 3).map((url: string) => ({
@@ -103,6 +107,38 @@ serve(async (req) => {
                       enum: ["low", "medium", "high"],
                       description:
                         "How confident you are based on the photo quality and clarity of the damage.",
+                    },
+                    tyre_size: {
+                      type: ["string", "null"],
+                      description:
+                        "Tyre size marking if legible, e.g. '225/45R17 94Y'. Null if not visible.",
+                    },
+                    tyre_brand: {
+                      type: ["string", "null"],
+                      description:
+                        "Brand/manufacturer if legible (e.g. Michelin, Continental, Pirelli). Null if unclear.",
+                    },
+                    tyre_type: {
+                      type: ["string", "null"],
+                      enum: ["summer", "winter", "all-season", "run-flat", "performance", null],
+                      description:
+                        "Best guess of tyre category from tread pattern and markings. Null if unclear.",
+                    },
+                    tread_condition: {
+                      type: ["string", "null"],
+                      enum: ["new", "good", "worn", "illegal", null],
+                      description:
+                        "Visual tread depth assessment. 'illegal' = below 1.6mm UK legal limit. Null if not visible.",
+                    },
+                    wheel_type: {
+                      type: ["string", "null"],
+                      enum: ["alloy", "steel", null],
+                      description: "Wheel material if visible. Null if unclear.",
+                    },
+                    tyre_details: {
+                      type: ["string", "null"],
+                      description:
+                        "Any other useful observations about the tyre/wheel (load index, speed rating, DOT date, locking nut, kerb damage on rim, etc.).",
                     },
                   },
                   required: [
@@ -172,6 +208,12 @@ serve(async (req) => {
       damage_type: string;
       damage_summary: string;
       damage_confidence: string;
+      tyre_size?: string | null;
+      tyre_brand?: string | null;
+      tyre_type?: string | null;
+      tread_condition?: string | null;
+      wheel_type?: string | null;
+      tyre_details?: string | null;
     };
 
     const { error: updateError } = await supabase
@@ -180,6 +222,12 @@ serve(async (req) => {
         damage_type: parsed.damage_type,
         damage_summary: parsed.damage_summary,
         damage_confidence: parsed.damage_confidence,
+        tyre_size: parsed.tyre_size ?? null,
+        tyre_brand: parsed.tyre_brand ?? null,
+        tyre_type: parsed.tyre_type ?? null,
+        tread_condition: parsed.tread_condition ?? null,
+        wheel_type: parsed.wheel_type ?? null,
+        tyre_details: parsed.tyre_details ?? null,
         updated_at: new Date().toISOString(),
       })
       .eq("id", job_id);
