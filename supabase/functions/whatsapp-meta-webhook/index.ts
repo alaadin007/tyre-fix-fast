@@ -10,15 +10,48 @@ const corsHeaders = {
 
 const META_GRAPH = "https://graph.facebook.com/v22.0";
 
+async function reverseGeocodePostcode(lat: number, lng: number): Promise<string> {
+  try {
+    const nominatim = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
+      { headers: { "User-Agent": "tyre-fix-fast/1.0" } },
+    );
+    if (nominatim.ok) {
+      const j = await nominatim.json();
+      const pc = j?.address?.postcode;
+      if (typeof pc === "string" && pc.trim()) return pc.trim().toUpperCase();
+    }
+  } catch (e) {
+    console.error("nominatim reverse geocode failed", e);
+  }
+
+  try {
+    const r = await fetch(`https://api.postcodes.io/postcodes?lon=${lng}&lat=${lat}&limit=1`);
+    if (r.ok) {
+      const j = await r.json();
+      const pc = j?.result?.[0]?.postcode;
+      if (typeof pc === "string" && pc.trim()) return pc.trim().toUpperCase();
+    }
+  } catch (e) {
+    console.error("postcodes.io reverse geocode failed", e);
+  }
+
+  return "";
+}
+
 async function fetchMediaUrl(mediaId: string, token: string): Promise<{ url: string; mime: string } | null> {
   try {
     const r = await fetch(`${META_GRAPH}/${mediaId}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
-    if (!r.ok) return null;
+    if (!r.ok) {
+      console.error("meta media lookup failed", mediaId, r.status, await r.text());
+      return null;
+    }
     const j = await r.json();
     return { url: j.url, mime: j.mime_type ?? "image/jpeg" };
-  } catch {
+  } catch (e) {
+    console.error("meta media lookup error", mediaId, e);
     return null;
   }
 }
@@ -74,14 +107,16 @@ Deno.serve(async (req) => {
       if (msg.type === "text") {
         body = msg.text?.body ?? "";
       } else if (msg.type === "image" || msg.type === "document" || msg.type === "video" || msg.type === "audio") {
-        const mediaId = msg[msg.type]?.id;
+        const media = msg[msg.type] ?? {};
+        const mediaId = media?.id;
         body = msg[msg.type]?.caption ?? "";
-        if (mediaId && META_TOKEN) {
-          const m = await fetchMediaUrl(mediaId, META_TOKEN);
+        if (META_TOKEN) {
+          const directUrl = typeof media?.url === "string" && media.url ? media.url : null;
+          const directMime = typeof media?.mime_type === "string" && media.mime_type ? media.mime_type : null;
+          const m = directUrl
+            ? { url: directUrl, mime: directMime ?? "image/jpeg" }
+            : (mediaId ? await fetchMediaUrl(mediaId, META_TOKEN) : null);
           if (m) {
-            // Twilio-inbound downloads media URLs with Twilio Basic Auth.
-            // Meta media URLs need a Bearer token, so download here and
-            // re-upload to a public URL the existing handler can ingest.
             try {
               const mr = await fetch(m.url, { headers: { Authorization: `Bearer ${META_TOKEN}` } });
               if (mr.ok) {
@@ -104,6 +139,8 @@ Deno.serve(async (req) => {
                   mediaUrls.push(publicUrl);
                   mediaTypes.push(m.mime);
                 }
+              } else {
+                console.error("meta media download failed", msg.type, mr.status, m.url);
               }
             } catch (e) {
               console.error("meta media download/upload failed", e);
@@ -121,25 +158,16 @@ Deno.serve(async (req) => {
         const lng = msg.location?.longitude;
         const name = msg.location?.name ?? "";
         const addr = msg.location?.address ?? "";
-        let postcode = "";
-        if (typeof lat === "number" && typeof lng === "number") {
-          try {
-            const r = await fetch(`https://api.postcodes.io/postcodes?lon=${lng}&lat=${lat}&limit=1`);
-            if (r.ok) {
-              const j = await r.json();
-              postcode = j?.result?.[0]?.postcode ?? "";
-            }
-          } catch (e) {
-            console.error("reverse geocode failed", e);
-          }
-        }
-        // Build a body the intake parser can read (its regex picks up the postcode).
+        const postcode = typeof lat === "number" && typeof lng === "number"
+          ? await reverseGeocodePostcode(lat, lng)
+          : "";
         const parts = [
           postcode ? `Location: ${postcode}` : "Location pin shared",
           name, addr,
           (typeof lat === "number" && typeof lng === "number") ? `(${lat.toFixed(5)}, ${lng.toFixed(5)})` : "",
         ].filter(Boolean);
         body = parts.join(" — ");
+        console.log("whatsapp location parsed", JSON.stringify({ lat, lng, postcode, body }));
       } else {
         body = `[${msg.type}]`;
       }

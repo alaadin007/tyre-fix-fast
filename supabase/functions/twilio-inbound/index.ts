@@ -17,6 +17,37 @@ function normPhone(p: string): string {
   return (p || "").replace(/^whatsapp:/, "").replace(/[^\d+]/g, "");
 }
 
+const COORD_RE = /\((-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\)/;
+
+async function reverseGeocodePostcode(lat: number, lng: number): Promise<string | null> {
+  try {
+    const nominatim = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
+      { headers: { "User-Agent": "tyre-fix-fast/1.0" } },
+    );
+    if (nominatim.ok) {
+      const j = await nominatim.json();
+      const pc = j?.address?.postcode;
+      if (typeof pc === "string" && pc.trim()) return pc.trim().toUpperCase();
+    }
+  } catch (e) {
+    console.error("nominatim reverse geocode failed", e);
+  }
+
+  try {
+    const r = await fetch(`https://api.postcodes.io/postcodes?lon=${lng}&lat=${lat}&limit=1`);
+    if (r.ok) {
+      const j = await r.json();
+      const pc = j?.result?.[0]?.postcode;
+      if (typeof pc === "string" && pc.trim()) return pc.trim().toUpperCase();
+    }
+  } catch (e) {
+    console.error("postcodes.io reverse geocode failed", e);
+  }
+
+  return null;
+}
+
 async function aiExtractQuote(text: string): Promise<{
   price_gbp: number | null;
   eta_minutes: number | null;
@@ -321,7 +352,18 @@ Deno.serve(async (req) => {
       if (mediaUrls.length > 0) {
         updates.photo_urls = [...(job.photo_urls ?? []), ...mediaUrls].slice(0, 12);
       }
-      const pc = extractPostcode(body);
+      let pc = extractPostcode(body);
+      if (!pc) {
+        const coords = body.match(COORD_RE);
+        if (coords) {
+          const lat = Number(coords[1]);
+          const lng = Number(coords[2]);
+          if (Number.isFinite(lat) && Number.isFinite(lng)) {
+            pc = await reverseGeocodePostcode(lat, lng);
+            if (pc) console.log("derived postcode from coords", JSON.stringify({ jobId: job.id, lat, lng, pc }));
+          }
+        }
+      }
       if (pc && !job.postcode) updates.postcode = pc;
       const it = guessIssueType(body);
       if (it && (!job.issue_type || job.issue_type === "unknown")) updates.issue_type = it;
@@ -474,7 +516,18 @@ Deno.serve(async (req) => {
     }
 
     // 4. Unknown sender (or stale closed job) → start intake automatically
-    const pc0 = extractPostcode(body);
+    let pc0 = extractPostcode(body);
+    if (!pc0) {
+      const coords = body.match(COORD_RE);
+      if (coords) {
+        const lat = Number(coords[1]);
+        const lng = Number(coords[2]);
+        if (Number.isFinite(lat) && Number.isFinite(lng)) {
+          pc0 = await reverseGeocodePostcode(lat, lng);
+          if (pc0) console.log("derived postcode from new intake coords", JSON.stringify({ from, lat, lng, pc0 }));
+        }
+      }
+    }
     const it0 = guessIssueType(body);
     const { data: newJob } = await supabase
       .from("jobs")
