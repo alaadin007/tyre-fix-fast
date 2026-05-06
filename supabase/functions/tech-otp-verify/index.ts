@@ -86,13 +86,15 @@ Deno.serve(async (req) => {
     const existing = list?.users?.find((u: any) => u.email === email);
     if (!existing) {
       // @ts-ignore
-      await supabase.auth.admin.createUser({
+      const { error: createErr } = await supabase.auth.admin.createUser({
         email,
-        phone,
         email_confirm: true,
-        phone_confirm: true,
         user_metadata: { phone, source: "whatsapp_otp" },
       });
+      if (createErr) {
+        console.error("createUser failed", createErr);
+        throw createErr;
+      }
     }
 
     // Generate a magic link the client can follow to establish a session.
