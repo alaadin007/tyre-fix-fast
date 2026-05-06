@@ -39,9 +39,29 @@ Deno.serve(async (req) => {
     }
     const { to, body, channel } = parsed.data;
 
-    const fromBase = channel === "whatsapp" ? FROM_WHATSAPP : FROM_SMS;
-    const From = channel === "whatsapp" ? `whatsapp:${fromBase}` : fromBase;
-    const To = channel === "whatsapp" ? `whatsapp:${to}` : to;
+    // WhatsApp goes through Meta Cloud API; SMS stays on Twilio.
+    if (channel === "whatsapp") {
+      const metaRes = await fetch(
+        `${Deno.env.get("SUPABASE_URL")}/functions/v1/whatsapp-meta-send`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+          },
+          body: JSON.stringify({ to, body }),
+        },
+      );
+      const metaData = await metaRes.json();
+      return new Response(JSON.stringify(metaData), {
+        status: metaRes.status,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const fromBase = FROM_SMS;
+    const From = fromBase;
+    const To = to;
 
     const tw = await fetch(`${GATEWAY_URL}/Messages.json`, {
       method: "POST",
