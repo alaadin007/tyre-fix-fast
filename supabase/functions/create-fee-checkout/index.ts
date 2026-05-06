@@ -108,11 +108,13 @@ Deno.serve(async (req) => {
       metadata: {
         job_id,
         kind: "platform_connection_fee",
+        fee_currency: fee.currency,
+        fee_amount: String(fee.amount),
         managed_payments: "true",
       },
       payment_intent_data: {
-        metadata: { job_id, kind: "platform_connection_fee" },
-        description: `FlatTyreNearMe platform fee — job ${job_id.slice(0, 8)}`,
+        metadata: { job_id, kind: "platform_connection_fee", fee_currency: fee.currency },
+        description: `Tyre Fly booking fee — job ${job_id.slice(0, 8)}`,
       },
     });
 
