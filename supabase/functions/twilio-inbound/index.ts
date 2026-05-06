@@ -575,6 +575,8 @@ Deno.serve(async (req) => {
       }
     }
     const it0 = guessIssueType(body);
+    const reg0 = extractReg(body);
+    const wheels0 = extractWheels(body);
     const { data: newJob } = await supabase
       .from("jobs")
       .insert({
@@ -584,6 +586,8 @@ Deno.serve(async (req) => {
         issue_type: it0 ?? "unknown",
         issue_description: body || null,
         photo_urls: mediaUrls,
+        vehicle_reg: reg0,
+        affected_wheels: wheels0,
         status: "intake_pending",
       })
       .select()
