@@ -3,6 +3,8 @@
 // - POST: inbound messages → reshape into Twilio-style form fields and forward
 //         to the existing twilio-inbound function so all routing logic is reused.
 
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -95,8 +97,10 @@ Deno.serve(async (req) => {
       return new Response("ok", { status: 200 });
     }
 
-    const TWILIO_INBOUND_URL = `${Deno.env.get("SUPABASE_URL")}/functions/v1/twilio-inbound`;
+    const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const TWILIO_INBOUND_URL = `${SUPABASE_URL}/functions/v1/twilio-inbound`;
+    const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
 
     for (const msg of messages) {
       const from = `+${String(msg.from).replace(/\D/g, "")}`;
@@ -123,21 +127,17 @@ Deno.serve(async (req) => {
                 const buf = new Uint8Array(await mr.arrayBuffer());
                 const ext = (m.mime.split("/")[1] || "jpg").split(";")[0];
                 const path = `meta-inbound/${Date.now()}-${crypto.randomUUID()}.${ext}`;
-                const upRes = await fetch(
-                  `${Deno.env.get("SUPABASE_URL")}/storage/v1/object/job-photos/${path}`,
-                  {
-                    method: "POST",
-                    headers: {
-                      Authorization: `Bearer ${SERVICE_KEY}`,
-                      "Content-Type": m.mime,
-                    },
-                    body: buf,
-                  },
-                );
-                if (upRes.ok) {
-                  const publicUrl = `${Deno.env.get("SUPABASE_URL")}/storage/v1/object/public/job-photos/${path}`;
+                const { error: upErr } = await supabase.storage
+                  .from("job-photos")
+                  .upload(path, buf, { contentType: m.mime, upsert: false });
+                if (!upErr) {
+                  const { data: pub } = supabase.storage.from("job-photos").getPublicUrl(path);
+                  const publicUrl = pub.publicUrl;
                   mediaUrls.push(publicUrl);
                   mediaTypes.push(m.mime);
+                  console.log("meta media stored", JSON.stringify({ type: msg.type, path, publicUrl }));
+                } else {
+                  console.error("meta media upload failed", msg.type, upErr);
                 }
               } else {
                 console.error("meta media download failed", msg.type, mr.status, m.url);
