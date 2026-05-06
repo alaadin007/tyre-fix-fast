@@ -562,6 +562,137 @@ Deno.serve(async (req) => {
       }
     }
 
+    // 1c. Technician onboarding via WhatsApp/SMS
+    // - existing row with approval_status='intake' → continue onboarding
+    // - no row + message matches "I want to join" → start onboarding
+    {
+      const { data: existingByPhone } = await supabase
+        .from("technicians")
+        .select("*")
+        .eq("phone", from)
+        .maybeSingle();
+
+      const wantsToJoin = !existingByPhone && TECH_JOIN_RE.test(body);
+      const inIntake = existingByPhone?.approval_status === "intake";
+
+      if (wantsToJoin || inIntake) {
+        // Coords (live location pin)
+        const coords = body.match(COORD_RE);
+        let pinLat: number | null = null, pinLng: number | null = null;
+        if (coords) {
+          const la = Number(coords[1]), ln = Number(coords[2]);
+          if (Number.isFinite(la) && Number.isFinite(ln)) { pinLat = la; pinLng = ln; }
+        }
+
+        // Get conversation history (last 20 messages with this number)
+        const { data: hist } = await supabase
+          .from("sms_messages")
+          .select("direction, body, created_at")
+          .or(`from_number.eq.${from},to_number.eq.${from}`)
+          .order("created_at", { ascending: false })
+          .limit(20);
+        const history = (hist ?? []).reverse().map((m: any) =>
+          `${m.direction === "inbound" ? "TECH" : "BOT"}: ${(m.body || "").slice(0, 200)}`
+        ).join("\n");
+
+        // Ensure a row exists
+        let row = existingByPhone;
+        if (!row) {
+          const { data: created, error: createErr } = await supabase
+            .from("technicians")
+            .insert({
+              name: "Pending applicant",
+              phone: from,
+              whatsapp: from,
+              approval_status: "intake",
+              active: false,
+            })
+            .select("*")
+            .single();
+          if (createErr) {
+            console.error("intake row create failed", createErr);
+            await sendReply(from, "Sorry — couldn't start your application. Please try again in a minute.", channel);
+            return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+          }
+          row = created;
+          // Welcome message on first contact
+          await sendReply(
+            from,
+            "👋 Welcome to Tyre Fly! I'll get you set up here on WhatsApp — no website needed.\n\n" +
+              "I'll need: your full name, the areas you cover (postcodes/ZIPs/cities), your vehicle, a 📍live location pin, equipment photo, and photos of your insurance, ID, and public liability docs.\n\n" +
+              "Let's start — what's your full name?",
+            channel,
+          );
+          // If first message was just the trigger phrase, stop here
+          if (body.length < 60 && !mediaUrls.length && !coords) {
+            return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+          }
+        }
+
+        // Move any uploaded media to technician buckets and let AI classify
+        const ai = await aiExtractTechProfile({
+          history,
+          latest: body,
+          hasMedia: mediaUrls.length > 0,
+          mediaCount: mediaUrls.length,
+          current: row,
+        });
+
+        const updates: Record<string, any> = { updated_at: new Date().toISOString() };
+        if (ai.name && (!row.name || row.name === "Pending applicant")) updates.name = ai.name;
+        if (ai.service_postcodes?.length) updates.service_postcodes = ai.service_postcodes;
+        if (ai.vehicle && !row.vehicle) updates.vehicle = ai.vehicle;
+        if (ai.travel_radius_miles && ai.travel_radius_miles > 0) updates.travel_radius_miles = ai.travel_radius_miles;
+        if (ai.weekly_schedule && Object.keys(ai.weekly_schedule).length) updates.weekly_schedule = ai.weekly_schedule;
+        if (pinLat !== null && pinLng !== null) {
+          updates.last_lat = pinLat;
+          updates.last_lng = pinLng;
+          updates.last_location_at = new Date().toISOString();
+        }
+        if (ai.availability_summary) updates.notes = ai.availability_summary;
+
+        // Apply media classifications by re-uploading to the right bucket if needed
+        if (mediaUrls.length && ai.media_classification?.length) {
+          const equipment: string[] = [...(row.equipment_photo_urls ?? [])];
+          for (let i = 0; i < mediaUrls.length; i++) {
+            const url = mediaUrls[i];
+            const kind = ai.media_classification[i] ?? "other";
+            if (kind === "equipment") {
+              equipment.push(url);
+            } else if (kind === "insurance" && !row.insurance_doc_url) {
+              updates.insurance_doc_url = url;
+            } else if (kind === "id" && !row.id_doc_url) {
+              updates.id_doc_url = url;
+            } else if (kind === "public_liability" && !row.public_liability_doc_url) {
+              updates.public_liability_doc_url = url;
+            } else {
+              equipment.push(url);
+            }
+          }
+          if (equipment.length) updates.equipment_photo_urls = equipment.slice(0, 8);
+        }
+
+        // Decide if we have everything
+        const merged = { ...row, ...updates };
+        const complete =
+          merged.name && merged.name !== "Pending applicant" &&
+          (merged.service_postcodes?.length ?? 0) > 0 &&
+          merged.vehicle &&
+          merged.last_lat !== null && merged.last_lng !== null &&
+          (merged.equipment_photo_urls?.length ?? 0) > 0 &&
+          merged.insurance_doc_url && merged.id_doc_url && merged.public_liability_doc_url;
+
+        if (complete || ai.ready_for_review) {
+          updates.approval_status = "pending"; // fires admin notification trigger
+        }
+
+        await supabase.from("technicians").update(updates).eq("id", row.id);
+
+        await sendReply(from, ai.reply, channel);
+        return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+      }
+    }
+
     // 2. Technician? → Parsing Agent
     const { data: techMatch } = await supabase
       .from("technicians")
