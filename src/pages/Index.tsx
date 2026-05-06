@@ -30,10 +30,12 @@ const Index = () => {
             <a href="/technician/login" className="hover:text-white">For technicians</a>
           </nav>
           <a
-            href="tel:08000000000"
+            href={WA_HREF}
+            target="_blank"
+            rel="noopener noreferrer"
             className="hidden sm:inline-flex items-center gap-1.5 rounded-full border border-white/15 px-3 py-1.5 text-xs text-white/80 hover:border-white/40 hover:text-white"
           >
-            <Phone className="h-3.5 w-3.5" /> 0800 000 0000
+            <Phone className="h-3.5 w-3.5" /> WhatsApp +44 7447 184489
           </a>
         </div>
       </header>
@@ -276,7 +278,7 @@ const Index = () => {
             <span>© Tyre Fly · UK-wide mobile tyre fitting</span>
           </div>
           <div className="flex items-center gap-4">
-            <a href="tel:08000000000" className="hover:text-white/70">0800 000 0000</a>
+            <a href={WA_HREF} target="_blank" rel="noopener noreferrer" className="hover:text-white/70">WhatsApp +44 7447 184489</a>
             <a href="/privacy" className="hover:text-white/70">Privacy</a>
             <a href="/terms" className="hover:text-white/70">Terms</a>
           </div>
