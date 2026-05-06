@@ -28,11 +28,21 @@ const Terms = () => {
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-white mb-2">2. The service</h2>
+            <h2 className="text-xl font-semibold text-white mb-2">2. The service<span className="text-white/40">*</span></h2>
             <p>
-              Tyre Fly arranges 24/7 mobile tyre repair and replacement, supplied by independent vetted
-              technicians. We act as the contracting party for the booking; the technician carries out the
-              physical work.
+              Tyre Fly operates an online marketplace that introduces customers to a nationwide network of
+              independent, vetted mobile tyre technicians. We facilitate the booking, payment of the booking
+              fee, and communication between you and the technician.
+            </p>
+            <p className="mt-2 text-white/70">
+              <span className="text-white/40">*</span> The contract for the actual repair, replacement or
+              fitting work is formed directly between you (the customer) and the independent technician who
+              attends. Tyre Fly is not a party to that contract and does not itself supply tyres or carry out
+              physical work. Any liabilities, warranties, claims or disputes arising from the work performed,
+              parts supplied, vehicle damage, delays or technician conduct are matters between you and the
+              technician. Each technician carries their own public liability insurance, which we verify on
+              onboarding. Tyre Fly's role and responsibilities as the introducer are limited as set out in
+              section 8.
             </p>
           </section>
 
@@ -85,13 +95,17 @@ const Terms = () => {
           <section>
             <h2 className="text-xl font-semibold text-white mb-2">8. Liability</h2>
             <p>
-              We and our technicians carry public liability insurance. To the extent permitted by law, our
-              total liability for any single job is limited to the price paid for that job, except for death,
-              personal injury caused by negligence, or any other liability that cannot be limited under UK law.
+              As a marketplace introducer, Tyre Fly's liability is limited to the booking fee paid to us for
+              the introduction. All technicians on the platform carry their own public liability insurance,
+              which we verify on onboarding. To the extent permitted by law, our total liability arising from
+              any single introduction is limited to the booking fee paid, except for death, personal injury
+              caused by our negligence, or any liability that cannot be limited under UK law.
             </p>
             <p className="mt-2">
-              We are not liable for pre-existing vehicle damage, consequential losses, or delays caused by
-              traffic, weather, or other events outside our reasonable control.
+              We are not liable for the workmanship, parts, conduct, timekeeping or any acts or omissions of
+              the independent technician, nor for pre-existing vehicle damage, consequential losses, or delays
+              caused by traffic, weather, or other events outside our reasonable control. Claims relating to
+              the work itself should be raised directly with the attending technician and their insurer.
             </p>
           </section>
 
