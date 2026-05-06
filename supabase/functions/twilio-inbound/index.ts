@@ -343,6 +343,31 @@ Deno.serve(async (req) => {
       if (/sidewall|bulge/.test(s)) return "sidewall damage";
       return null;
     };
+    // UK number plate (current + older formats), tolerant of optional space
+    const REG_RE = /\b([A-Z]{2}\d{2}\s?[A-Z]{3}|[A-Z]\d{1,3}\s?[A-Z]{3}|[A-Z]{3}\s?\d{1,3}[A-Z])\b/i;
+    const extractReg = (t: string) => {
+      const m = t.match(REG_RE);
+      if (!m) return null;
+      const raw = m[1].toUpperCase().replace(/\s+/g, "");
+      // Insert space for current format AB12CDE -> AB12 CDE
+      if (/^[A-Z]{2}\d{2}[A-Z]{3}$/.test(raw)) return `${raw.slice(0, 4)} ${raw.slice(4)}`;
+      return raw;
+    };
+    const extractWheels = (t: string): string[] => {
+      const s = t.toLowerCase();
+      const out = new Set<string>();
+      const has = (re: RegExp) => re.test(s);
+      // Direct corner mentions
+      if (has(/front[-\s]?left|fl\b|nearside front|front near.?side/)) out.add("front-left");
+      if (has(/front[-\s]?right|fr\b|offside front|front off.?side/)) out.add("front-right");
+      if (has(/(rear|back)[-\s]?left|rl\b|nearside rear|nearside back|rear near.?side/)) out.add("rear-left");
+      if (has(/(rear|back)[-\s]?right|rr\b|offside rear|offside back|rear off.?side/)) out.add("rear-right");
+      // "all four", "all 4"
+      if (has(/all\s*(four|4)\b/)) {
+        ["front-left", "front-right", "rear-left", "rear-right"].forEach((w) => out.add(w));
+      }
+      return Array.from(out);
+    };
 
     // 3a. If there's an in-flight intake (intake_pending), enrich it
     if (job && job.status === "intake_pending") {
