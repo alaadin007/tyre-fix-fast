@@ -88,7 +88,7 @@ export default function Confirmed() {
               <h1 className="text-xl font-bold">You're matched!</h1>
             </div>
             <p className="mt-2 text-sm text-muted-foreground">
-              Your £20 booking fee is paid. Here are your technician's details — message them on WhatsApp for ETA and updates.
+              Your booking fee is paid. Here are your technician's details — message them on WhatsApp for ETA and updates.
             </p>
 
             {tech ? (
