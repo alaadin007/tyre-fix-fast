@@ -88,7 +88,7 @@ export default function Confirmed() {
               <h1 className="text-xl font-bold">You're matched!</h1>
             </div>
             <p className="mt-2 text-sm text-muted-foreground">
-              Your £20 platform fee is paid. Here are your technician's details — they're already on their way to call you.
+              Your £20 booking fee is paid. Here are your technician's details — message them on WhatsApp for ETA and updates.
             </p>
 
             {tech ? (
@@ -99,16 +99,18 @@ export default function Confirmed() {
                   {tech.vehicle && <p className="text-xs text-muted-foreground">{tech.vehicle}</p>}
                 </div>
                 <a
+                  href={`https://wa.me/${(tech.whatsapp ?? tech.phone).replace(/[^0-9]/g, "")}?text=${encodeURIComponent("Hi, this is " + (job?.customer_name ?? "the customer") + " from Tyre Fly — what's your ETA?")}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 rounded-lg bg-[hsl(142_71%_38%)] px-4 py-3 text-sm font-semibold text-white hover:opacity-90"
+                >
+                  <Phone className="h-4 w-4" /> WhatsApp technician
+                </a>
+                <a
                   href={`tel:${tech.phone}`}
                   className="flex items-center justify-center gap-2 rounded-lg bg-[hsl(var(--primary))] px-4 py-3 text-sm font-semibold text-white hover:opacity-90"
                 >
                   <Phone className="h-4 w-4" /> Call {tech.phone}
-                </a>
-                <a
-                  href={`sms:${tech.phone}`}
-                  className="flex items-center justify-center gap-2 rounded-lg border bg-background px-4 py-2.5 text-sm font-medium hover:bg-muted"
-                >
-                  Text technician
                 </a>
               </div>
             ) : (
@@ -118,7 +120,7 @@ export default function Confirmed() {
             <div className="mt-6 rounded-lg border-l-4 border-[hsl(var(--accent))] bg-[hsl(var(--accent))]/5 p-3 text-xs">
               <p className="font-semibold">How payment for the job works</p>
               <p className="mt-1 text-muted-foreground">
-                The technician will quote and accept payment directly — cash, bank transfer, or their card reader. The £20 you just paid is only our platform fee.
+                The £20 booking fee is deducted from your final bill. The technician collects the remainder on-site and accepts card machine, payment link, bank transfer, or cash — whatever's easiest.
               </p>
             </div>
 
