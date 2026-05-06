@@ -456,9 +456,7 @@ Deno.serve(async (req) => {
         }
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
       }
-  }
-}
-
+    }
 
     // 2. Technician? → Parsing Agent
     const { data: techMatch } = await supabase
