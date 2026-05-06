@@ -1,7 +1,10 @@
 import { MessageSquare, Star, ShieldCheck, MapPin, Sparkles, Clock, PoundSterling, Wrench, Phone } from "lucide-react";
+import { Link } from "react-router-dom";
 import logo from "@/assets/tyrefly-logo.png";
 import heroTruck from "@/assets/tyrefly-hero-truck.jpg";
 import { WhatsAppChatCta } from "@/components/WhatsAppChatCta";
+import { Seo } from "@/components/Seo";
+import { AREAS } from "@/data/areas";
 
 import { SUPPORT_WHATSAPP, SUPPORT_WA_DISPLAY, waLink } from "@/lib/whatsapp";
 
@@ -9,6 +12,32 @@ const SMS_NUMBER = SUPPORT_WHATSAPP;
 const MSG_BODY = "Hi Tyre Fly — I need tyre help";
 const WA_HREF = waLink(SUPPORT_WHATSAPP, MSG_BODY);
 const SMS_HREF = `sms:${SMS_NUMBER}?&body=${encodeURIComponent(MSG_BODY)}`;
+
+const HOME_LD = [
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: "Tyre Fly",
+    url: "https://tyrefly.com/",
+    logo: "https://tyrefly.com/favicon.png",
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: "Tyre Fly",
+    url: "https://tyrefly.com/",
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: [
+      { "@type": "Question", name: "How fast can a mobile tyre fitter get to me?", acceptedAnswer: { "@type": "Answer", text: "Most UK jobs get a quote in under 60 seconds and a vetted technician on-site within 35–90 minutes, 24/7." } },
+      { "@type": "Question", name: "How much does Tyre Fly cost?", acceptedAnswer: { "@type": "Answer", text: "A £20 booking fee secures your slot and is deducted from your final bill. The technician collects the remainder on-site by card, link, transfer or cash." } },
+      { "@type": "Question", name: "Where in the UK do you operate?", acceptedAnswer: { "@type": "Answer", text: "Tyre Fly covers all major UK cities and motorways including London, Manchester, Birmingham, Leeds, Liverpool, Sheffield, Newcastle, Bristol, Edinburgh, Glasgow, Cardiff and Belfast — 24/7." } },
+      { "@type": "Question", name: "Do you fit tyres at night?", acceptedAnswer: { "@type": "Answer", text: "Yes — Tyre Fly operates 24 hours a day, 7 days a week including weekends and bank holidays." } },
+    ],
+  },
+];
 
 const Index = () => {
   return (
