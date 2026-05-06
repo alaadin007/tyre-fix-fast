@@ -278,16 +278,21 @@ const Index = () => {
 
       {/* ===== Footer ===== */}
       <footer className="border-t border-white/5">
-        <div className="mx-auto w-full max-w-6xl px-5 py-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-white/40">
-          <div className="flex items-center gap-2">
-            <img src={logo} alt="" width={20} height={20} className="h-5 w-5 object-contain opacity-70" />
-            <span>© Tyre Fly · UK-wide mobile tyre fitting</span>
+        <div className="mx-auto w-full max-w-6xl px-5 py-8 flex flex-col gap-4 text-xs text-white/40">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-2">
+              <img src={logo} alt="" width={20} height={20} className="h-5 w-5 object-contain opacity-70" />
+              <span>© Tyre Fly · UK-wide mobile tyre fitting</span>
+            </div>
+            <div className="flex items-center gap-4">
+              <a href={WA_HREF} target="_blank" rel="noopener noreferrer" className="hover:text-white/70">WhatsApp {SUPPORT_WA_DISPLAY}</a>
+              <a href="/privacy" className="hover:text-white/70">Privacy</a>
+              <a href="/terms" className="hover:text-white/70">Terms</a>
+            </div>
           </div>
-          <div className="flex items-center gap-4">
-            <a href={WA_HREF} target="_blank" rel="noopener noreferrer" className="hover:text-white/70">WhatsApp {SUPPORT_WA_DISPLAY}</a>
-            <a href="/privacy" className="hover:text-white/70">Privacy</a>
-            <a href="/terms" className="hover:text-white/70">Terms</a>
-          </div>
+          <p className="text-[10px] text-white/30 leading-relaxed">
+            *Tyre Fly is a marketplace connecting customers with independent vetted technicians across the UK. The work contract is between you and the attending technician. See <a href="/terms" className="underline hover:text-white/60">Terms</a>.
+          </p>
         </div>
       </footer>
     </main>
