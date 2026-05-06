@@ -74,6 +74,22 @@ export default function Console() {
   const { jobs, techs, setJobs } = useConsoleData(mode);
   const now = useTick(1000);
 
+  // Poll pending technician applications count (live mode only)
+  useEffect(() => {
+    if (mode !== "live") { setPendingCount(0); return; }
+    let cancelled = false;
+    const load = async () => {
+      const { count } = await supabase
+        .from("technicians")
+        .select("id", { count: "exact", head: true })
+        .eq("approval_status", "pending");
+      if (!cancelled) setPendingCount(count ?? 0);
+    };
+    load();
+    const id = setInterval(load, 15000);
+    return () => { cancelled = true; clearInterval(id); };
+  }, [mode, showPending]);
+
   const grouped = useMemo(() => {
     const g: Record<Lane, ConsoleJob[]> = { incoming: [], dispatched: [], in_progress: [], completed: [] };
     for (const j of jobs) g[laneFor(j.status)].push(j);
