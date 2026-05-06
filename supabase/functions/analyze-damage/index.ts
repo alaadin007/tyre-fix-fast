@@ -208,6 +208,12 @@ serve(async (req) => {
       damage_type: string;
       damage_summary: string;
       damage_confidence: string;
+      tyre_size?: string | null;
+      tyre_brand?: string | null;
+      tyre_type?: string | null;
+      tread_condition?: string | null;
+      wheel_type?: string | null;
+      tyre_details?: string | null;
     };
 
     const { error: updateError } = await supabase
@@ -216,6 +222,12 @@ serve(async (req) => {
         damage_type: parsed.damage_type,
         damage_summary: parsed.damage_summary,
         damage_confidence: parsed.damage_confidence,
+        tyre_size: parsed.tyre_size ?? null,
+        tyre_brand: parsed.tyre_brand ?? null,
+        tyre_type: parsed.tyre_type ?? null,
+        tread_condition: parsed.tread_condition ?? null,
+        wheel_type: parsed.wheel_type ?? null,
+        tyre_details: parsed.tyre_details ?? null,
         updated_at: new Date().toISOString(),
       })
       .eq("id", job_id);
