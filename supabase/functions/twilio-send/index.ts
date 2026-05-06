@@ -60,8 +60,8 @@ Deno.serve(async (req) => {
     }
 
     const fromBase = FROM_SMS;
-    const From = channel === "whatsapp" ? `whatsapp:${fromBase}` : fromBase;
-    const To = channel === "whatsapp" ? `whatsapp:${to}` : to;
+    const From = fromBase;
+    const To = to;
 
     const tw = await fetch(`${GATEWAY_URL}/Messages.json`, {
       method: "POST",
