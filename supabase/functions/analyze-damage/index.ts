@@ -143,7 +143,7 @@ serve(async (req) => {
                     vehicle_reg: {
                       type: ["string", "null"],
                       description:
-                        "UK vehicle registration plate if visible in any photo, formatted like 'AB12 CDE'. Null if not visible.",
+                        "Vehicle number plate text exactly as shown in any photo (uppercase). Any country format. Null if not visible.",
                     },
                     affected_wheels: {
                       type: "array",
