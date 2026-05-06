@@ -28,11 +28,21 @@ const Terms = () => {
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-white mb-2">2. The service</h2>
+            <h2 className="text-xl font-semibold text-white mb-2">2. The service<span className="text-white/40">*</span></h2>
             <p>
-              Tyre Fly arranges 24/7 mobile tyre repair and replacement, supplied by independent vetted
-              technicians. We act as the contracting party for the booking; the technician carries out the
-              physical work.
+              Tyre Fly operates an online marketplace that introduces customers to a nationwide network of
+              independent, vetted mobile tyre technicians. We facilitate the booking, payment of the booking
+              fee, and communication between you and the technician.
+            </p>
+            <p className="mt-2 text-white/70">
+              <span className="text-white/40">*</span> The contract for the actual repair, replacement or
+              fitting work is formed directly between you (the customer) and the independent technician who
+              attends. Tyre Fly is not a party to that contract and does not itself supply tyres or carry out
+              physical work. Any liabilities, warranties, claims or disputes arising from the work performed,
+              parts supplied, vehicle damage, delays or technician conduct are matters between you and the
+              technician. Each technician carries their own public liability insurance, which we verify on
+              onboarding. Tyre Fly's role and responsibilities as the introducer are limited as set out in
+              section 8.
             </p>
           </section>
 
