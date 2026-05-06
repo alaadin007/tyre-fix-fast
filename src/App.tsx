@@ -13,6 +13,7 @@ import TechnicianOnboarding from "./pages/TechnicianOnboarding.tsx";
 import TechnicianDashboard from "./pages/TechnicianDashboard.tsx";
 import Privacy from "./pages/Privacy.tsx";
 import Terms from "./pages/Terms.tsx";
+import Console from "./pages/Console.tsx";
 
 const queryClient = new QueryClient();
 
@@ -32,6 +33,7 @@ const App = () => (
           <Route path="/technician" element={<TechnicianDashboard />} />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/terms" element={<Terms />} />
+          <Route path="/console" element={<Console />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
