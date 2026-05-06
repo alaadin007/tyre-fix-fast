@@ -254,6 +254,30 @@ Deno.serve(async (req) => {
       });
     }
     const result = await dispatchOne(supabase, jobRow as Job, 1);
+
+    // Notify master admins on WhatsApp about this fresh job
+    try {
+      const j: any = jobRow;
+      const wheels = (j.affected_wheels && j.affected_wheels.length > 0) ? `\nWheels: ${j.affected_wheels.join(", ")}` : "";
+      const reg = j.vehicle_reg ? `\nReg: ${j.vehicle_reg}` : "";
+      const summary =
+        `🆕 New job ${String(j.id).slice(0, 6)}\n` +
+        `${j.customer_name} · ${j.customer_phone}\n` +
+        `${j.postcode} · ${j.issue_type}` +
+        reg + wheels +
+        (j.damage_summary ? `\n${j.damage_summary}` : "");
+      await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/notify-admins`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+        },
+        body: JSON.stringify({ body: summary, channel: "whatsapp" }),
+      });
+    } catch (e) {
+      console.error("admin notify failed", e);
+    }
+
     return new Response(JSON.stringify({ ok: true, ...result }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
