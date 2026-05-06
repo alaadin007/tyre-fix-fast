@@ -573,7 +573,44 @@ Deno.serve(async (req) => {
       .eq("customer_phone", from)
       .order("created_at", { ascending: false })
       .limit(1);
-    const job: any = customerJobs?.[0];
+    let job: any = customerJobs?.[0];
+
+    // If the customer has an existing job, decide whether this new message
+    // continues that job or is a brand-new request. Skip the classifier for
+    // obvious continuations (rating reply, quote acceptance, in-progress states).
+    if (job) {
+      const isRating = /^\s*[1-5]\b/.test(body);
+      const isAccept = /^\s*(yes|y|accept|ok|book it)\b/i.test(body);
+      const lockedStates = ["awaiting_payment", "accepted", "in_progress", "paid"];
+      const isLocked = lockedStates.includes(job.status);
+      if (!isRating && !isAccept && !isLocked) {
+        const relation = await aiClassifyJobContinuity({
+          body,
+          hasMedia: mediaUrls.length > 0,
+          job: {
+            id: job.id,
+            status: job.status,
+            issue_type: job.issue_type,
+            postcode: job.postcode,
+            created_at: job.created_at,
+            issue_description: job.issue_description,
+          },
+        });
+        if (relation === "new_job") {
+          await supabase.from("ops_alerts").insert({
+            level: "info",
+            title: "Customer started a new job",
+            body: `From ${from} (${channel}). Previous job ${job.id.slice(0, 6)} status=${job.status}. Message: "${body.slice(0, 120)}"`,
+            job_id: job.id,
+          });
+          // Mark stale open job as superseded so it doesn't keep absorbing replies
+          if (["intake_pending", "broadcasting", "awaiting_approval", "intake_complete", "pending"].includes(job.status)) {
+            await supabase.from("jobs").update({ status: "superseded" }).eq("id", job.id);
+          }
+          job = null; // fall through to section 4 (new intake)
+        }
+      }
+    }
 
     const INTAKE_TEMPLATE =
       "Hey 👋 Tyre Fly here. Send these (text, photos, or a voice note — whatever's easiest):\n\n" +
