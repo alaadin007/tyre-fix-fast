@@ -32,16 +32,16 @@ async function sendSms(to: string, body: string) {
 
 async function handleCheckoutCompleted(session: any) {
   const jobId = session?.metadata?.job_id;
+  const kind = session?.metadata?.kind ?? "platform_connection_fee";
   if (!jobId) {
     console.warn("checkout.session.completed without job_id metadata");
     return;
   }
   const supabase = getSupabase();
 
-  // Look up job + assigned tech
   const { data: job } = await supabase
     .from("jobs")
-    .select("id, customer_name, customer_phone, assigned_technician_id, platform_fee_status")
+    .select("id, customer_name, customer_phone, postcode, assigned_technician_id, platform_fee_status")
     .eq("id", jobId)
     .single();
   if (!job) {
@@ -53,43 +53,45 @@ async function handleCheckoutCompleted(session: any) {
     return;
   }
 
+  const isFullPayment = kind === "job_full_payment";
   await supabase.from("jobs").update({
     platform_fee_status: "paid",
     platform_fee_paid_at: new Date().toISOString(),
     stripe_payment_intent_id: session.payment_intent ?? null,
-    status: "confirmed",
+    status: isFullPayment ? "in_progress" : "confirmed",
   }).eq("id", jobId);
 
   // Look up tech
   let tech: { name?: string; phone?: string } | null = null;
-  if (job.assigned_technician_id) {
+  const techId = session?.metadata?.technician_id ?? job.assigned_technician_id;
+  if (techId) {
     const { data } = await supabase
       .from("technicians")
       .select("name, phone")
-      .eq("id", job.assigned_technician_id)
+      .eq("id", techId)
       .single();
     tech = data;
   }
 
-  // SMS the customer with tech's number
+  // SMS / WhatsApp the customer with tech's number
   if (job.customer_phone && tech?.phone) {
-    await sendSms(
-      job.customer_phone,
-      `FlatTyreNearMe: payment received. Your technician ${tech.name ?? ""} will call you shortly. Direct line: ${tech.phone}. They'll quote and accept cash or bank transfer on site.`,
-    );
+    const msg = isFullPayment
+      ? `Tyre Fly: payment received ✅ ${tech.name ?? "Your technician"} is on the way. Direct line: ${tech.phone}. They'll call you to confirm ETA.`
+      : `Tyre Fly: payment received. Your technician ${tech.name ?? ""} will call you shortly. Direct line: ${tech.phone}.`;
+    await sendSms(job.customer_phone, msg);
   }
-  // SMS the technician with the customer's number
+  // SMS / WhatsApp the technician with full job details
   if (tech?.phone && job.customer_phone) {
-    await sendSms(
-      tech.phone,
-      `FlatTyreNearMe: customer ${job.customer_name ?? ""} has paid the platform fee. Please call ${job.customer_phone} now to confirm ETA. Collect the job total directly from them.`,
-    );
+    const msg = isFullPayment
+      ? `Tyre Fly: 💷 PAID job ready.\nCustomer: ${job.customer_name ?? ""}\nPostcode: ${job.postcode ?? ""}\nCall: ${job.customer_phone}\nReply DONE when finished and we'll request a review.`
+      : `Tyre Fly: customer ${job.customer_name ?? ""} has paid the platform fee. Please call ${job.customer_phone} now to confirm ETA.`;
+    await sendSms(tech.phone, msg);
   }
 
   await supabase.from("ops_alerts").insert({
     level: "info",
-    title: "Platform fee paid",
-    body: `£15 received for job ${jobId.slice(0, 8)} — contact details exchanged.`,
+    title: isFullPayment ? "Customer paid in full" : "Platform fee paid",
+    body: `Job ${jobId.slice(0, 8)} — payment received, contact details exchanged.`,
     job_id: jobId,
   });
 }
