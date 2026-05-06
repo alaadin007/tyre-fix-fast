@@ -70,21 +70,33 @@ function scoreTech(t: Tech, outwards: string[]): { score: number; reason: string
   return { score, reason: reasons.join(" · ") };
 }
 
-async function sendSMS(supabase: any, tech: Tech, job: Job) {
+async function sendSMS(supabase: any, tech: Tech, job: any) {
   const url = `${Deno.env.get("SUPABASE_URL")}/functions/v1/twilio-send`;
-  const msg = `FlatTyreNearMe: New ${job.issue_type} job in ${job.postcode}. ${
-    job.damage_summary ? job.damage_summary.slice(0, 80) + ". " : ""
-  }Reply with PRICE & ETA (e.g. "70, 25 min") to bid. Job#${job.id.slice(0, 6)}`;
+  const wheelsTxt = (job.affected_wheels && job.affected_wheels.length > 0)
+    ? ` Wheel(s): ${job.affected_wheels.join(", ")}.`
+    : "";
+  const sizeTxt = job.tyre_size ? ` Size: ${job.tyre_size}.` : "";
+  const isBlowout = (job.issue_type || "").toLowerCase().includes("blow") ||
+    (job.damage_type || "").toLowerCase().includes("blow") ||
+    (job.damage_type || "").toLowerCase().includes("sidewall");
+
+  const blurb = job.damage_summary ? job.damage_summary.slice(0, 80) + ". " : "";
+  const ask = isBlowout
+    ? `Reply within 60s with: 1) free now? (Y/N), 2) ETA mins, 3) callout £, 4) replacement tyre? new/used + price (or none).`
+    : `Reply within 60s with: 1) free now? (Y/N), 2) ETA mins, 3) callout £ (extras separate if needed).`;
+
+  const msg = `Tyre Fly job: ${job.issue_type} in ${job.postcode}.${wheelsTxt}${sizeTxt} ${blurb}${ask} Also drop a 📍location pin so we know where you are. Job#${job.id.slice(0, 6)}`;
+
   const r = await fetch(url, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
     },
-    body: JSON.stringify({ to: tech.phone, body: msg, channel: "sms" }),
+    body: JSON.stringify({ to: tech.phone, body: msg, channel: "whatsapp" }),
   });
   const ok = r.ok;
-  if (!ok) console.error("SMS send failed for", tech.phone, await r.text());
+  if (!ok) console.error("WA send failed for", tech.phone, await r.text());
   return ok;
 }
 
