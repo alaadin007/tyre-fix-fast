@@ -278,7 +278,7 @@ const Index = () => {
             <span>© Tyre Fly · UK-wide mobile tyre fitting</span>
           </div>
           <div className="flex items-center gap-4">
-            <a href="tel:08000000000" className="hover:text-white/70">0800 000 0000</a>
+            <a href={WA_HREF} target="_blank" rel="noopener noreferrer" className="hover:text-white/70">WhatsApp +44 7447 184489</a>
             <a href="/privacy" className="hover:text-white/70">Privacy</a>
             <a href="/terms" className="hover:text-white/70">Terms</a>
           </div>
