@@ -62,7 +62,7 @@ Deno.serve(async (req) => {
 
     const { data: job, error: jobErr } = await supabase
       .from("jobs")
-      .select("id, customer_name, customer_email, platform_fee_status, stripe_checkout_url")
+      .select("id, customer_name, customer_email, customer_phone, platform_fee_status, stripe_checkout_url")
       .eq("id", job_id)
       .single();
     if (jobErr || !job) throw new Error(`Job not found: ${jobErr?.message}`);
@@ -82,11 +82,19 @@ Deno.serve(async (req) => {
       });
     }
 
+    const fee: FeeConfig | null = feeForPhone(job.customer_phone);
+    if (!fee) {
+      return new Response(JSON.stringify({
+        error: "unsupported_region",
+        message: "Tyre Fly is currently available in the UK, US/Canada, and Europe. Coming soon to your region!",
+      }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     // Always sandbox in preview; webhook handler also keys off ?env=sandbox
     const env = "sandbox" as const;
     const stripe = createStripeClient(env);
 
-    const priceId = await resolvePriceId(stripe);
+    const priceId = await resolvePriceId(stripe, fee.priceLookup);
     const baseOrigin = origin?.replace(/\/$/, "") ?? "https://flat-tyre-near-me.lovable.app";
 
     const session = await stripe.checkout.sessions.create({
