@@ -36,6 +36,8 @@ export default function Console() {
   );
   const [view, setView] = useState<"board" | "map">("board"); // mobile only
   const [openJobId, setOpenJobId] = useState<string | null>(null);
+  const [showPending, setShowPending] = useState(false);
+  const [pendingCount, setPendingCount] = useState(0);
   const [authChecked, setAuthChecked] = useState(false);
 
   useEffect(() => {
