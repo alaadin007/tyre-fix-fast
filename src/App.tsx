@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { HelmetProvider } from "react-helmet-async";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -14,6 +15,8 @@ import TechnicianDashboard from "./pages/TechnicianDashboard.tsx";
 import Privacy from "./pages/Privacy.tsx";
 import Terms from "./pages/Terms.tsx";
 import Console from "./pages/Console.tsx";
+import AreasIndex from "./pages/AreasIndex.tsx";
+import AreaPage from "./pages/AreaPage.tsx";
 
 const queryClient = new QueryClient();
 
