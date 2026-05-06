@@ -16,6 +16,7 @@ const DAMAGE_TYPES = [
   "worn-tread",
   "valve",
   "other",
+  "not-a-tyre",
 ] as const;
 
 serve(async (req) => {
