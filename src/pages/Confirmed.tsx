@@ -127,6 +127,10 @@ export default function Confirmed() {
             <Button asChild variant="outline" className="mt-6 w-full">
               <Link to={`/job/${jobId}`}>View job details</Link>
             </Button>
+
+            <p className="mt-4 text-[10px] leading-relaxed text-muted-foreground/70">
+              *Tyre Fly connects you with independent vetted technicians. The work contract is between you and the attending technician — see <Link to="/terms" className="underline">Terms</Link>.
+            </p>
           </div>
         )}
       </div>
