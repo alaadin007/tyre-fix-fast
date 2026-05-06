@@ -50,14 +50,17 @@ async function reverseGeocodePostcode(lat: number, lng: number): Promise<string 
 
 async function aiExtractQuote(text: string): Promise<{
   price_gbp: number | null;
+  callout_fee_gbp: number | null;
   eta_minutes: number | null;
   accepts: boolean;
+  tyre_included: boolean | null;
+  tyre_condition: "new" | "used" | null;
   notes: string;
   confidence: "high" | "medium" | "low";
 }> {
   const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
   if (!LOVABLE_API_KEY) {
-    return { price_gbp: null, eta_minutes: null, accepts: false, notes: "no api key", confidence: "low" };
+    return { price_gbp: null, callout_fee_gbp: null, eta_minutes: null, accepts: false, tyre_included: null, tyre_condition: null, notes: "no api key", confidence: "low" };
   }
   const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
@@ -71,7 +74,11 @@ async function aiExtractQuote(text: string): Promise<{
         {
           role: "system",
           content:
-            "You parse mobile-tyre technician SMS bids. Extract price in GBP and ETA in minutes from messy human text. Examples: 'ill do it for 70 mate, 20 mins away' → price 70, eta 20, accepts true. 'sorry busy' → accepts false.",
+            "You parse mobile-tyre technician WhatsApp/SMS bids. Extract: are they accepting the job (free now?), ETA in minutes, callout/labour fee in GBP, whether they include a replacement tyre, and if so whether it's new or used and its price. Examples:\n" +
+            "'Yes free now, 20 mins, £40 callout, no tyre' → accepts true, eta 20, callout 40, tyre_included false.\n" +
+            "'Y, 25, 50 callout + 80 for new tyre' → accepts true, eta 25, callout 50, tyre_included true, tyre_condition new, price 130.\n" +
+            "'on it, 15 min, £120 all in (used tyre included)' → accepts true, eta 15, callout 120, tyre_included true, tyre_condition used, price 120.\n" +
+            "'sorry busy' → accepts false.",
         },
         { role: "user", content: text },
       ],
@@ -84,9 +91,12 @@ async function aiExtractQuote(text: string): Promise<{
             parameters: {
               type: "object",
               properties: {
-                price_gbp: { type: ["number", "null"] },
+                price_gbp: { type: ["number", "null"], description: "Total price in GBP (callout + tyre if included)." },
+                callout_fee_gbp: { type: ["number", "null"], description: "Just the callout/labour portion." },
                 eta_minutes: { type: ["integer", "null"] },
-                accepts: { type: "boolean" },
+                accepts: { type: "boolean", description: "Is the technician free and willing right now?" },
+                tyre_included: { type: ["boolean", "null"], description: "Did they include a replacement tyre in the quote?" },
+                tyre_condition: { type: ["string", "null"], enum: ["new", "used", null] },
                 notes: { type: "string" },
                 confidence: { type: "string", enum: ["high", "medium", "low"] },
               },
@@ -101,21 +111,24 @@ async function aiExtractQuote(text: string): Promise<{
   });
   if (!r.ok) {
     console.error("AI parse failed", r.status, await r.text());
-    return { price_gbp: null, eta_minutes: null, accepts: false, notes: "ai error", confidence: "low" };
+    return { price_gbp: null, callout_fee_gbp: null, eta_minutes: null, accepts: false, tyre_included: null, tyre_condition: null, notes: "ai error", confidence: "low" };
   }
   const data = await r.json();
   try {
     const args = JSON.parse(data.choices[0].message.tool_calls[0].function.arguments);
     return {
-      price_gbp: args.price_gbp ?? null,
+      price_gbp: args.price_gbp ?? args.callout_fee_gbp ?? null,
+      callout_fee_gbp: args.callout_fee_gbp ?? null,
       eta_minutes: args.eta_minutes ?? null,
       accepts: !!args.accepts,
+      tyre_included: args.tyre_included ?? null,
+      tyre_condition: args.tyre_condition ?? null,
       notes: args.notes ?? "",
       confidence: args.confidence ?? "low",
     };
   } catch (e) {
     console.error("AI parse JSON error", e);
-    return { price_gbp: null, eta_minutes: null, accepts: false, notes: "parse failed", confidence: "low" };
+    return { price_gbp: null, callout_fee_gbp: null, eta_minutes: null, accepts: false, tyre_included: null, tyre_condition: null, notes: "parse failed", confidence: "low" };
   }
 }
 
@@ -259,6 +272,22 @@ Deno.serve(async (req) => {
     const tech = (techMatch ?? []).find((t: any) => normPhone(t.phone) === fromN);
 
     if (tech) {
+      // If they shared a location pin (the meta webhook converts pins to
+      // text containing "(lat, lng)"), capture it as their current location.
+      const techCoords = body.match(COORD_RE);
+      if (techCoords) {
+        const lat = Number(techCoords[1]);
+        const lng = Number(techCoords[2]);
+        if (Number.isFinite(lat) && Number.isFinite(lng)) {
+          await supabase.from("technicians").update({
+            last_lat: lat,
+            last_lng: lng,
+            last_location_at: new Date().toISOString(),
+          }).eq("id", tech.id);
+          console.log("tech location updated", JSON.stringify({ tech: tech.id, lat, lng }));
+        }
+      }
+
       // Find their most recent open allocation
       const { data: allocs } = await supabase
         .from("job_allocations")
@@ -270,7 +299,12 @@ Deno.serve(async (req) => {
       const alloc: any = allocs?.[0];
 
       if (!alloc?.job_id) {
-        await sendReply(from, "Thanks — no open job for you right now. We'll text when one matches.", channel);
+        // Pure location ping with no open job → just ack
+        if (techCoords && !body.replace(COORD_RE, "").trim()) {
+          await sendReply(from, "Got your location 📍 — saved. We'll match you to nearby jobs.", channel);
+        } else {
+          await sendReply(from, "Thanks — no open job for you right now. We'll text when one matches.", channel);
+        }
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
       }
 
@@ -288,25 +322,39 @@ Deno.serve(async (req) => {
       if (parsed.price_gbp == null || parsed.eta_minutes == null || parsed.confidence === "low") {
         await sendReply(
           from,
-          `Almost there — please reply with PRICE in £ and ETA in mins, e.g. "70, 25 min" for job ${alloc.job_id.slice(0, 6)}.`,
+          `Almost there — for job ${alloc.job_id.slice(0, 6)} please reply with: free now? (Y/N), ETA mins, callout £, and (if blowout) new/used tyre + price. Drop a 📍pin too.`,
           channel,
         );
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
       }
 
+      // Soft 60-second target — we still accept late quotes but flag them.
+      const allocCreated = new Date(alloc.created_at).getTime();
+      const elapsedSec = Math.round((Date.now() - allocCreated) / 1000);
+      const onTime = elapsedSec <= 60;
+
       await supabase.from("quotes").insert({
         job_id: alloc.job_id,
         technician_id: tech.id,
         price_gbp: parsed.price_gbp,
+        callout_fee_gbp: parsed.callout_fee_gbp,
         eta_minutes: parsed.eta_minutes,
+        tyre_included: parsed.tyre_included,
+        tyre_condition: parsed.tyre_condition,
+        quote_deadline: new Date(allocCreated + 60_000).toISOString(),
         raw_message: body,
         status: "pending",
         confidence: parsed.confidence,
       });
 
+      const tyreNote = parsed.tyre_included
+        ? ` (incl. ${parsed.tyre_condition ?? ""} tyre)`.replace("  ", " ")
+        : (parsed.tyre_included === false ? " (tyre NOT included)" : "");
+      const timeNote = onTime ? "⚡ within 60s" : `(${elapsedSec}s)`;
+
       await sendReply(
         from,
-        `Quote received: £${parsed.price_gbp}, ETA ${parsed.eta_minutes} min. We'll text when the customer chooses.`,
+        `Quote received ${timeNote}: £${parsed.price_gbp}, ETA ${parsed.eta_minutes} min${tyreNote}. We'll text when the customer chooses.`,
         channel,
       );
       return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
@@ -345,15 +393,27 @@ Deno.serve(async (req) => {
       if (/sidewall|bulge/.test(s)) return "sidewall damage";
       return null;
     };
-    // UK number plate (current + older formats), tolerant of optional space
-    const REG_RE = /\b([A-Z]{2}\d{2}\s?[A-Z]{3}|[A-Z]\d{1,3}\s?[A-Z]{3}|[A-Z]{3}\s?\d{1,3}[A-Z])\b/i;
-    const extractReg = (t: string) => {
-      const m = t.match(REG_RE);
-      if (!m) return null;
-      const raw = m[1].toUpperCase().replace(/\s+/g, "");
-      // Insert space for current format AB12CDE -> AB12 CDE
-      if (/^[A-Z]{2}\d{2}[A-Z]{3}$/.test(raw)) return `${raw.slice(0, 4)} ${raw.slice(4)}`;
-      return raw;
+    // Number plate (international) — accept letter+digit combos 4–10 chars.
+    // Avoid grabbing common words / postcodes by requiring at least 1 letter
+    // AND 1 digit, and skip if it matches a UK postcode.
+    const PLATE_HINT_RE = /\b(?:reg(?:istration)?|plate|number\s*plate|licen[cs]e\s*plate|tag)\s*[:\-]?\s*([A-Z0-9][A-Z0-9\s\-]{2,12}[A-Z0-9])\b/i;
+    const PLATE_LOOSE_RE = /\b([A-Z0-9]{2,4}[\s\-]?[A-Z0-9]{2,5})\b/g;
+    const extractReg = (t: string): string | null => {
+      const hinted = t.match(PLATE_HINT_RE);
+      if (hinted) {
+        return hinted[1].toUpperCase().trim().replace(/\s+/g, " ");
+      }
+      // Loose pass — only accept tokens that contain BOTH a letter and a digit
+      // and aren't a UK postcode.
+      const matches = t.toUpperCase().matchAll(PLATE_LOOSE_RE);
+      for (const m of matches) {
+        const raw = m[1].replace(/\s+/g, "");
+        if (!/[A-Z]/.test(raw) || !/\d/.test(raw)) continue;
+        if (POSTCODE_RE.test(raw)) continue;
+        if (raw.length < 4 || raw.length > 10) continue;
+        return m[1].toUpperCase().trim();
+      }
+      return null;
     };
     const extractWheels = (t: string): string[] => {
       const s = t.toLowerCase();

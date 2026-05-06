@@ -53,8 +53,8 @@ serve(async (req) => {
           `Customer description: ${issue_description ?? "(none)"}\n\n` +
           `Look at the attached photo(s) and extract everything useful. The photos may show different things — a damaged tyre, a wheel from a specific corner of the car, or the car's number plate. Multiple wheels may be affected.\n\n` +
           `1. Damage: classify type, write a 1–2 sentence summary, give a confidence level.\n` +
-          `2. Tyre details (per visible sidewall): size (e.g. 225/45R17 94Y), brand, tyre type (summer/winter/all-season/run-flat/performance), tread condition (new/good/worn/illegal — UK legal limit 1.6mm), wheel material (alloy/steel).\n` +
-          `3. Vehicle registration: if a UK number plate is visible in any photo, return it (uppercase, no spaces normalised, e.g. "AB12 CDE").\n` +
+          `2. Tyre details (per visible sidewall): size (e.g. 225/45R17 94Y), brand, tyre type (summer/winter/all-season/run-flat/performance), tread condition (new/good/worn/illegal — illegal ≈ below ~1.6mm), wheel material (alloy/steel).\n` +
+          `3. Vehicle registration / number plate: if ANY plate is visible in any photo, return the characters exactly as shown (uppercase). Plates may be from any country (UK, US, France, Germany etc.) — do NOT force UK formatting.\n` +
           `4. Affected wheels: which corner(s) of the car are damaged? Use any combination of "front-left", "front-right", "rear-left", "rear-right". Infer from photo angles, customer description, or visible context. If unclear, return an empty array.\n\n` +
           `Return null for anything not legible — do NOT guess. Use the record_damage_assessment tool.`,
       },
@@ -143,7 +143,7 @@ serve(async (req) => {
                     vehicle_reg: {
                       type: ["string", "null"],
                       description:
-                        "UK vehicle registration plate if visible in any photo, formatted like 'AB12 CDE'. Null if not visible.",
+                        "Vehicle number plate text exactly as shown in any photo (uppercase). Any country format. Null if not visible.",
                     },
                     affected_wheels: {
                       type: "array",
