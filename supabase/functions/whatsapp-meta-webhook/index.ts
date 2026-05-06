@@ -110,10 +110,11 @@ Deno.serve(async (req) => {
 
       if (msg.type === "text") {
         body = msg.text?.body ?? "";
-      } else if (msg.type === "image" || msg.type === "document" || msg.type === "video" || msg.type === "audio") {
-        const media = msg[msg.type] ?? {};
+      } else if (msg.type === "image" || msg.type === "document" || msg.type === "video" || msg.type === "audio" || msg.type === "voice") {
+        const kind = msg.type === "voice" ? "audio" : msg.type;
+        const media = msg[kind] ?? msg[msg.type] ?? {};
         const mediaId = media?.id;
-        body = msg[msg.type]?.caption ?? "";
+        body = (msg[kind]?.caption ?? msg[msg.type]?.caption) ?? "";
         if (META_TOKEN) {
           const directUrl = typeof media?.url === "string" && media.url ? media.url : null;
           const directMime = typeof media?.mime_type === "string" && media.mime_type ? media.mime_type : null;
@@ -125,19 +126,31 @@ Deno.serve(async (req) => {
               const mr = await fetch(m.url, { headers: { Authorization: `Bearer ${META_TOKEN}` } });
               if (mr.ok) {
                 const buf = new Uint8Array(await mr.arrayBuffer());
-                const ext = (m.mime.split("/")[1] || "jpg").split(";")[0];
-                const path = `meta-inbound/${Date.now()}-${crypto.randomUUID()}.${ext}`;
-                const { error: upErr } = await supabase.storage
-                  .from("job-photos")
-                  .upload(path, buf, { contentType: m.mime, upsert: false });
-                if (!upErr) {
-                  const { data: pub } = supabase.storage.from("job-photos").getPublicUrl(path);
-                  const publicUrl = pub.publicUrl;
-                  mediaUrls.push(publicUrl);
-                  mediaTypes.push(m.mime);
-                  console.log("meta media stored", JSON.stringify({ type: msg.type, path, publicUrl }));
+
+                // Voice note / audio → transcribe and inject as text body
+                if (kind === "audio" || msg.type === "voice" || (m.mime && m.mime.startsWith("audio/"))) {
+                  const transcript = await transcribeAudio(buf, m.mime);
+                  if (transcript) {
+                    body = body ? `${body}\n${transcript}` : transcript;
+                    console.log("voice transcribed", JSON.stringify({ chars: transcript.length }));
+                  } else {
+                    console.error("voice transcription returned empty");
+                  }
                 } else {
-                  console.error("meta media upload failed", msg.type, upErr);
+                  const ext = (m.mime.split("/")[1] || "jpg").split(";")[0];
+                  const path = `meta-inbound/${Date.now()}-${crypto.randomUUID()}.${ext}`;
+                  const { error: upErr } = await supabase.storage
+                    .from("job-photos")
+                    .upload(path, buf, { contentType: m.mime, upsert: false });
+                  if (!upErr) {
+                    const { data: pub } = supabase.storage.from("job-photos").getPublicUrl(path);
+                    const publicUrl = pub.publicUrl;
+                    mediaUrls.push(publicUrl);
+                    mediaTypes.push(m.mime);
+                    console.log("meta media stored", JSON.stringify({ type: msg.type, path, publicUrl }));
+                  } else {
+                    console.error("meta media upload failed", msg.type, upErr);
+                  }
                 }
               } else {
                 console.error("meta media download failed", msg.type, mr.status, m.url);
