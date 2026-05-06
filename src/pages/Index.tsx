@@ -90,7 +90,7 @@ const Index = () => {
               <WhatsAppChatCta
                 message="Hi Tyre Fly — I have a question before I book"
                 label="Questions first? Chat with us"
-                subLabel="Real humans on WhatsApp · reply in minutes"
+                subLabel="Typically reply in under 2 minutes"
               />
             </div>
 
