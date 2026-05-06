@@ -51,14 +51,14 @@ serve(async (req) => {
           `A customer reported a tyre issue.\n` +
           `Issue type selected: ${issue_type ?? "unspecified"}\n` +
           `Customer description: ${issue_description ?? "(none)"}\n\n` +
-          `Look at the attached photo(s) of the tyre/wheel and:\n` +
-          `1. Classify the damage (type, severity, confidence).\n` +
-          `2. Identify tyre details where visible: size markings (e.g. 225/45R17 94Y), brand/manufacturer, ` +
-          `tyre type (summer/winter/all-season/run-flat), tread condition (new/good/worn/illegal), ` +
-          `and wheel type (alloy/steel). If something is not legible in the photo, return null for that field — do not guess.\n` +
-          `Use the record_damage_assessment tool to return your answer.`,
+          `Look at the attached photo(s) and extract everything useful. The photos may show different things — a damaged tyre, a wheel from a specific corner of the car, or the car's number plate. Multiple wheels may be affected.\n\n` +
+          `1. Damage: classify type, write a 1–2 sentence summary, give a confidence level.\n` +
+          `2. Tyre details (per visible sidewall): size (e.g. 225/45R17 94Y), brand, tyre type (summer/winter/all-season/run-flat/performance), tread condition (new/good/worn/illegal — UK legal limit 1.6mm), wheel material (alloy/steel).\n` +
+          `3. Vehicle registration: if a UK number plate is visible in any photo, return it (uppercase, no spaces normalised, e.g. "AB12 CDE").\n` +
+          `4. Affected wheels: which corner(s) of the car are damaged? Use any combination of "front-left", "front-right", "rear-left", "rear-right". Infer from photo angles, customer description, or visible context. If unclear, return an empty array.\n\n` +
+          `Return null for anything not legible — do NOT guess. Use the record_damage_assessment tool.`,
       },
-      ...photo_urls.slice(0, 3).map((url: string) => ({
+      ...photo_urls.slice(0, 6).map((url: string) => ({
         type: "image_url",
         image_url: { url },
       })),
