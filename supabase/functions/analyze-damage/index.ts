@@ -140,6 +140,20 @@ serve(async (req) => {
                       description:
                         "Any other useful observations about the tyre/wheel (load index, speed rating, DOT date, locking nut, kerb damage on rim, etc.).",
                     },
+                    vehicle_reg: {
+                      type: ["string", "null"],
+                      description:
+                        "UK vehicle registration plate if visible in any photo, formatted like 'AB12 CDE'. Null if not visible.",
+                    },
+                    affected_wheels: {
+                      type: "array",
+                      items: {
+                        type: "string",
+                        enum: ["front-left", "front-right", "rear-left", "rear-right"],
+                      },
+                      description:
+                        "Which corner(s) of the car are affected. Empty array if unclear.",
+                    },
                   },
                   required: [
                     "damage_type",
