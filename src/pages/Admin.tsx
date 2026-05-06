@@ -204,8 +204,6 @@ export default function Admin() {
   const inProgress = jobs.filter((j) => ["accepted", "assigned", "en_route", "in_progress", "awaiting_payment", "confirmed"].includes(j.status));
   const done = jobs.filter((j) => ["completed", "done", "closed_pending_review", "closed", "no_response"].includes(j.status));
 
-  const liveLocation = getJobLiveLocation(job);
-
   return (
     <div className="min-h-screen bg-aurora">
       {/* Header */}
@@ -656,6 +654,8 @@ function IncomingInquiryCard({
     await triggerFeeCheckout(null);
     setBusy(false);
   };
+
+  const liveLocation = getJobLiveLocation(job);
 
   return (
     <div className="rounded-xl border border-[hsl(var(--accent))]/30 bg-[hsl(var(--accent))]/5 backdrop-blur transition hover:border-[hsl(var(--accent))]/50">
