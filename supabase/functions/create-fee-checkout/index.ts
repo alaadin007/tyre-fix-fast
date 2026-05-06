@@ -21,12 +21,12 @@ async function resolvePriceId(stripe: ReturnType<typeof createStripeClient>, loo
   let price = list.data[0];
   if (!price) {
     const search = await stripe.prices.search({
-      query: `metadata['lovable_external_id']:'${PRICE_LOOKUP}' AND active:'true'`,
+      query: `metadata['lovable_external_id']:'${lookup}' AND active:'true'`,
       limit: 1,
     });
     price = search.data[0];
   }
-  if (!price) throw new Error(`Price ${PRICE_LOOKUP} not found in Stripe`);
+  if (!price) throw new Error(`Price ${lookup} not found in Stripe`);
 
   // Managed Payments requires a tax_code on the product. Set one if missing.
   // txcd_20030000 = "Services - general" — appropriate for a platform/booking fee.
