@@ -727,7 +727,7 @@ Deno.serve(async (req) => {
           }
 
           const confirmMsg = payUrl
-            ? `Booked! £${cheapest.price_gbp}, ETA ${cheapest.eta_minutes} min. Pay the £15 deposit to confirm and we'll share your technician's number: ${payUrl}`
+            ? `Booked! £${cheapest.price_gbp}, ETA ${cheapest.eta_minutes} min. Pay the £15 deposit to confirm: ${payUrl}`
             : `Booked! £${cheapest.price_gbp}, ETA ${cheapest.eta_minutes} min. We'll text the payment link in a moment.`;
           // Send the deposit link on BOTH channels so the customer never misses it
           await sendReply(from, confirmMsg, "whatsapp");
