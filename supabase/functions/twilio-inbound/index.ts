@@ -345,15 +345,27 @@ Deno.serve(async (req) => {
       if (/sidewall|bulge/.test(s)) return "sidewall damage";
       return null;
     };
-    // UK number plate (current + older formats), tolerant of optional space
-    const REG_RE = /\b([A-Z]{2}\d{2}\s?[A-Z]{3}|[A-Z]\d{1,3}\s?[A-Z]{3}|[A-Z]{3}\s?\d{1,3}[A-Z])\b/i;
-    const extractReg = (t: string) => {
-      const m = t.match(REG_RE);
-      if (!m) return null;
-      const raw = m[1].toUpperCase().replace(/\s+/g, "");
-      // Insert space for current format AB12CDE -> AB12 CDE
-      if (/^[A-Z]{2}\d{2}[A-Z]{3}$/.test(raw)) return `${raw.slice(0, 4)} ${raw.slice(4)}`;
-      return raw;
+    // Number plate (international) — accept letter+digit combos 4–10 chars.
+    // Avoid grabbing common words / postcodes by requiring at least 1 letter
+    // AND 1 digit, and skip if it matches a UK postcode.
+    const PLATE_HINT_RE = /\b(?:reg(?:istration)?|plate|number\s*plate|licen[cs]e\s*plate|tag)\s*[:\-]?\s*([A-Z0-9][A-Z0-9\s\-]{2,12}[A-Z0-9])\b/i;
+    const PLATE_LOOSE_RE = /\b([A-Z0-9]{2,4}[\s\-]?[A-Z0-9]{2,5})\b/g;
+    const extractReg = (t: string): string | null => {
+      const hinted = t.match(PLATE_HINT_RE);
+      if (hinted) {
+        return hinted[1].toUpperCase().trim().replace(/\s+/g, " ");
+      }
+      // Loose pass — only accept tokens that contain BOTH a letter and a digit
+      // and aren't a UK postcode.
+      const matches = t.toUpperCase().matchAll(PLATE_LOOSE_RE);
+      for (const m of matches) {
+        const raw = m[1].replace(/\s+/g, "");
+        if (!/[A-Z]/.test(raw) || !/\d/.test(raw)) continue;
+        if (POSTCODE_RE.test(raw)) continue;
+        if (raw.length < 4 || raw.length > 10) continue;
+        return m[1].toUpperCase().trim();
+      }
+      return null;
     };
     const extractWheels = (t: string): string[] => {
       const s = t.toLowerCase();
