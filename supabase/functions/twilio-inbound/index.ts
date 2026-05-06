@@ -132,6 +132,84 @@ async function aiExtractQuote(text: string): Promise<{
   }
 }
 
+// Decide whether an inbound message from a known customer relates to their
+// existing open job, or is a brand new job request.
+async function aiClassifyJobContinuity(args: {
+  body: string;
+  hasMedia: boolean;
+  job: {
+    id: string;
+    status: string;
+    issue_type: string | null;
+    postcode: string | null;
+    created_at: string;
+    issue_description: string | null;
+  };
+}): Promise<"same_job" | "new_job"> {
+  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  // Heuristic: a fresh greeting with no media and no detail almost always = new job
+  const greetingOnly = /^(hi|hey|hello|yo|hiya)\b[\s!.,]*(tyre\s*fly)?[\s!.,-]*(i\s+need\s+(tyre\s+)?help|help|need\s+help)?\s*$/i
+    .test(args.body.trim());
+  if (greetingOnly && !args.hasMedia) return "new_job";
+  if (!LOVABLE_API_KEY) return "same_job"; // safe default
+  try {
+    const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: [
+          {
+            role: "system",
+            content:
+              "You decide if a UK mobile-tyre customer's new WhatsApp/SMS message is about their EXISTING open job or a BRAND NEW job. " +
+              "Return same_job if it adds info, asks status, sends a photo, or replies to a question. " +
+              "Return new_job if it's a fresh greeting like 'hi', 'I need tyre help', or describes a different vehicle/incident, or if the existing job is clearly already finished from the customer's perspective. When in doubt about a generic greeting with no specifics, prefer new_job.",
+          },
+          {
+            role: "user",
+            content:
+              `Existing job: status=${args.job.status}, issue=${args.job.issue_type ?? "?"}, postcode=${args.job.postcode ?? "?"}, opened=${args.job.created_at}.\n` +
+              `Existing description (truncated): ${(args.job.issue_description ?? "").slice(0, 300)}\n\n` +
+              `New inbound message: "${args.body}"\n` +
+              `Has photo/voice attached: ${args.hasMedia}`,
+          },
+        ],
+        tools: [{
+          type: "function",
+          function: {
+            name: "classify",
+            parameters: {
+              type: "object",
+              properties: {
+                relation: { type: "string", enum: ["same_job", "new_job"] },
+                reason: { type: "string" },
+              },
+              required: ["relation"],
+              additionalProperties: false,
+            },
+          },
+        }],
+        tool_choice: { type: "function", function: { name: "classify" } },
+      }),
+    });
+    if (!r.ok) {
+      console.error("aiClassifyJobContinuity failed", r.status);
+      return "same_job";
+    }
+    const j = await r.json();
+    const args2 = JSON.parse(j.choices[0].message.tool_calls[0].function.arguments);
+    console.log("job continuity classify", JSON.stringify(args2));
+    return args2.relation === "new_job" ? "new_job" : "same_job";
+  } catch (e) {
+    console.error("aiClassifyJobContinuity error", e);
+    return "same_job";
+  }
+}
+
 async function sendReply(to: string, body: string, channel: "sms" | "whatsapp") {
   const url = `${Deno.env.get("SUPABASE_URL")}/functions/v1/twilio-send`;
   await fetch(url, {
@@ -378,7 +456,8 @@ Deno.serve(async (req) => {
         }
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
       }
-    }
+  }
+}
 
 
     // 2. Technician? → Parsing Agent
@@ -494,7 +573,44 @@ Deno.serve(async (req) => {
       .eq("customer_phone", from)
       .order("created_at", { ascending: false })
       .limit(1);
-    const job: any = customerJobs?.[0];
+    let job: any = customerJobs?.[0];
+
+    // If the customer has an existing job, decide whether this new message
+    // continues that job or is a brand-new request. Skip the classifier for
+    // obvious continuations (rating reply, quote acceptance, in-progress states).
+    if (job) {
+      const isRating = /^\s*[1-5]\b/.test(body);
+      const isAccept = /^\s*(yes|y|accept|ok|book it)\b/i.test(body);
+      const lockedStates = ["awaiting_payment", "accepted", "in_progress", "paid"];
+      const isLocked = lockedStates.includes(job.status);
+      if (!isRating && !isAccept && !isLocked) {
+        const relation = await aiClassifyJobContinuity({
+          body,
+          hasMedia: mediaUrls.length > 0,
+          job: {
+            id: job.id,
+            status: job.status,
+            issue_type: job.issue_type,
+            postcode: job.postcode,
+            created_at: job.created_at,
+            issue_description: job.issue_description,
+          },
+        });
+        if (relation === "new_job") {
+          await supabase.from("ops_alerts").insert({
+            level: "info",
+            title: "Customer started a new job",
+            body: `From ${from} (${channel}). Previous job ${job.id.slice(0, 6)} status=${job.status}. Message: "${body.slice(0, 120)}"`,
+            job_id: job.id,
+          });
+          // Mark stale open job as superseded so it doesn't keep absorbing replies
+          if (["intake_pending", "broadcasting", "awaiting_approval", "intake_complete", "pending"].includes(job.status)) {
+            await supabase.from("jobs").update({ status: "superseded" }).eq("id", job.id);
+          }
+          job = null; // fall through to section 4 (new intake)
+        }
+      }
+    }
 
     const INTAKE_TEMPLATE =
       "Hey 👋 Tyre Fly here. Send these (text, photos, or a voice note — whatever's easiest):\n\n" +
