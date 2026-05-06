@@ -101,23 +101,23 @@ const Index = () => {
               One message — our local pro quotes you in under 60 seconds, comes to your kerb, and gets you rolling.
             </p>
 
-            <div className="mt-8 flex flex-col sm:flex-row gap-3 max-w-md">
+            <div className="mt-8 flex flex-row flex-wrap gap-3">
               <a
                 href={WA_HREF}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex flex-1 items-center justify-center gap-2 rounded-2xl px-5 text-base font-semibold transition-transform active:scale-[0.98]"
-                style={{ backgroundColor: "#25D366", color: "#0D0D0D", height: "58px" }}
+                className="inline-flex items-center justify-center gap-2.5 rounded-2xl px-7 text-base font-semibold shadow-lg transition-transform active:scale-[0.97] hover:scale-[1.02]"
+                style={{ backgroundColor: "#25D366", color: "#0D0D0D", height: "64px", boxShadow: "0 10px 30px -10px rgba(37,211,102,0.5)" }}
               >
-                <MessageSquare className="h-5 w-5" strokeWidth={2.5} />
+                <MessageSquare className="h-6 w-6" strokeWidth={2.5} />
                 WhatsApp us
               </a>
               <a
                 href={SMS_HREF}
-                className="inline-flex flex-1 items-center justify-center gap-2 rounded-2xl px-5 text-base font-semibold transition-transform active:scale-[0.98]"
-                style={{ backgroundColor: "#FF6B1A", color: "#0D0D0D", height: "58px" }}
+                className="inline-flex items-center justify-center gap-2.5 rounded-2xl px-7 text-base font-semibold shadow-lg transition-transform active:scale-[0.97] hover:scale-[1.02]"
+                style={{ backgroundColor: "#FF6B1A", color: "#0D0D0D", height: "64px", boxShadow: "0 10px 30px -10px rgba(255,107,26,0.5)" }}
               >
-                <MessageSquare className="h-5 w-5" strokeWidth={2.5} />
+                <MessageSquare className="h-6 w-6" strokeWidth={2.5} />
                 Text us
               </a>
             </div>
