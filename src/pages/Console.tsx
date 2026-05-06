@@ -173,6 +173,19 @@ export default function Console() {
           </span>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowPending(true)}
+            className="relative inline-flex items-center gap-1.5 rounded-md border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-foreground hover:bg-white/10"
+            title="Approve technician applications"
+          >
+            <UserCheck className="h-3.5 w-3.5" />
+            Technicians
+            {pendingCount > 0 && (
+              <span className="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1.5 text-[10px] font-bold text-black">
+                {pendingCount}
+              </span>
+            )}
+          </button>
           <div className="inline-flex overflow-hidden rounded-md border border-white/10 bg-white/5 text-xs">
             <button
               className={`px-3 py-1.5 ${mode === "demo" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
@@ -189,6 +202,30 @@ export default function Console() {
           </div>
         </div>
       </header>
+
+      {/* Pending technicians slide-over */}
+      {showPending && (
+        <div className="fixed inset-0 z-50 flex">
+          <div className="flex-1 bg-black/60" onClick={() => setShowPending(false)} />
+          <div className="flex h-full w-full max-w-2xl flex-col bg-card shadow-2xl">
+            <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
+              <div className="flex items-center gap-2">
+                <UserCheck className="h-4 w-4 text-amber-400" />
+                <h2 className="text-sm font-semibold">Pending technician applications</h2>
+                {pendingCount > 0 && (
+                  <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] font-bold text-amber-300">{pendingCount}</span>
+                )}
+              </div>
+              <button onClick={() => setShowPending(false)} className="rounded-md p-1.5 hover:bg-white/10">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4">
+              <PendingTechnicians />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Stat tiles */}
       <div className="grid grid-cols-2 gap-2 border-b border-white/10 bg-card/20 px-4 py-2 md:grid-cols-4">
