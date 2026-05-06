@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Map as MapIcon, LayoutList, X, Star, Search, Sparkles } from "lucide-react";
+import { Map as MapIcon, LayoutList, X, Star, Search, Sparkles, UserCheck, ChevronDown } from "lucide-react";
+import { PendingTechnicians } from "@/components/admin/PendingTechnicians";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
