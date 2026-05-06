@@ -1012,38 +1012,37 @@ Deno.serve(async (req) => {
         }
       }
 
-      // Acknowledge with what's still missing
-      const missing: string[] = [];
-      if (!haveName) missing.push("your name (e.g. \"My name is John\")");
-      if (!havePostcode) missing.push("postcode or a Maps location pin");
-      if (!haveDetails) missing.push("what happened (and a photo if possible)");
-      if (!finalReg) missing.push("car number plate (type it or send a photo of the plate)");
-      if (finalWheels.length === 0) missing.push("which wheel(s) — front-left, front-right, rear-left, rear-right (you can voice-note it)");
+      // Decide ONE next missing thing to ask for, in priority order.
+      // This avoids dumping a long checklist on the customer.
+      const fullText = `${finalDesc}`.toLowerCase();
+      const haveVehicleDesc =
+        /\b(audi|bmw|mercedes|merc|vw|volkswagen|ford|vauxhall|toyota|honda|nissan|hyundai|kia|peugeot|renault|citroen|fiat|seat|skoda|mini|land\s?rover|range\s?rover|jaguar|porsche|tesla|volvo|mazda|suzuki|dacia|mg|lexus|jeep|chevrolet|cadillac|gmc|ram|subaru|mitsubishi|chrysler|dodge)\b/.test(fullText) ||
+        /\b(black|white|silver|grey|gray|blue|red|green|yellow|orange|brown|beige|gold|bronze)\b.*\b(car|saloon|hatch|suv|estate|coupe|van|truck)\b/.test(fullText);
 
       let reply: string;
-      if (missing.length > 0) {
-        reply = `Thanks! Still need: ${missing.join("; ")}.`;
+      if (!haveName) {
+        reply = "What's your name? 🙂";
+      } else if (!havePostcode) {
+        reply = `Thanks ${(updates.customer_name ?? job.customer_name)}! 📍 Could you share your postcode/ZIP, or drop a Maps location pin?`;
+      } else if (finalPhotos.length === 0) {
+        reply = "Got it. Could you send a quick photo of the damaged tyre/wheel — sidewall + tread close-up if possible? 📸";
+      } else if (!finalReg) {
+        reply = "Thanks for the photo! What's the car's number plate? You can type it (e.g. AB12 CDE) or snap a photo of the plate.";
+      } else if (!haveVehicleDesc) {
+        reply = "Almost done — what's the car's make, model & colour? (e.g. \"Black BMW 3 Series\")";
+      } else if (finalWheels.length === 0) {
+        reply = "Which wheel is affected? Front-left, front-right, rear-left, or rear-right (multiple is fine — voice note works too).";
       } else if (!diagnosisOk) {
-        // We have the basics but not enough to brief the technician well.
-        // Ask the customer's own theory + a photo.
-        const probes: string[] = [];
-        if (finalPhotos.length === 0) {
-          probes.push("📸 A quick photo of the tyre helps a lot (damaged area + the tyre size on the sidewall, e.g. 225/45 R17).");
-        }
         if (!finalIssueType || finalIssueType === "unknown") {
-          probes.push("What do YOU think it is? Slow puncture, blowout, sidewall bulge, nail still in it, or locked wheel?");
+          reply = "Last thing — what do YOU think happened? Slow puncture, blowout, sidewall bulge, nail in it, or locked wheel?";
         } else {
-          probes.push(
-            `You mentioned ${finalIssueType}. A bit more would help the technician arrive prepared:\n` +
-            "• Did it happen suddenly or go down slowly?\n" +
-            "• Can you see anything stuck in it (nail/screw)?\n" +
-            "• Any bulge or split on the side wall?\n" +
-            "• Is the car drivable or stuck?",
-          );
+          reply =
+            `You mentioned ${finalIssueType}. Two quick things so the technician arrives prepared:\n` +
+            "• Did it happen suddenly or slowly?\n" +
+            "• Is the car drivable or stuck?";
         }
-        reply = `Thanks ${(updates.customer_name ?? job.customer_name) || ""}! Before we dispatch, two quick things:\n\n${probes.join("\n\n")}`;
       } else {
-        reply = "Got it — finding you a technician now. We'll text the moment one is matched.";
+        reply = "Got everything ✅ Finding you a technician now — we'll text the moment one is matched.";
       }
       await sendReply(from, reply, channel);
       return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
