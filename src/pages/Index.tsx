@@ -235,6 +235,31 @@ const Index = () => {
         </div>
       </section>
 
+      {/* ===== Service Areas ===== */}
+      <section id="areas" className="border-t border-white/5">
+        <div className="mx-auto w-full max-w-6xl px-5 py-16">
+          <div className="flex items-end justify-between flex-wrap gap-4">
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.2em] text-[#FF6B1A] font-semibold">Coverage</p>
+              <h2 className="mt-2 text-3xl sm:text-4xl font-bold tracking-tight">Mobile tyre fitters across the UK</h2>
+              <p className="mt-2 text-white/60 max-w-xl text-sm">From London to Glasgow — pick your area for local coverage and 24/7 dispatch.</p>
+            </div>
+            <Link to="/areas" className="text-sm text-[#FF6B1A] hover:underline">View all areas →</Link>
+          </div>
+          <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {AREAS.map((a) => (
+              <Link key={a.slug} to={`/areas/${a.slug}`}
+                    className="group rounded-xl border border-white/10 bg-white/[0.03] p-4 hover:border-[#FF6B1A]/40 transition">
+                <div className="flex items-center gap-2 text-white/50 text-[10px] uppercase tracking-wider">
+                  <MapPin className="h-3 w-3" /> {a.region}
+                </div>
+                <p className="mt-1.5 font-semibold group-hover:text-[#FF6B1A]">Mobile tyre fitter {a.name}</p>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ===== Reviews ===== */}
       <section id="reviews" className="border-t border-white/5 bg-white/[0.02]">
         <div className="mx-auto w-full max-w-6xl px-5 py-16">
