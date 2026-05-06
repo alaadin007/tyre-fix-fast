@@ -469,16 +469,42 @@ function JobCard({
     else toast.success("Refund issued");
   };
 
+  const cancel = async () => {
+    const reason = prompt("Cancel this job? Optional reason for the customer:", "");
+    if (reason === null) return;
+    await supabase.from("jobs" as any).update({ status: "cancelled" }).eq("id", job.id);
+    if (job.platform_fee_status === "paid") {
+      await supabase.functions.invoke("refund-fee", {
+        body: { job_id: job.id, reason: reason || "cancelled by ops" },
+      });
+    }
+    const msg = `Tyre Fly: your booking has been cancelled${reason ? ` — ${reason}` : ""}. ${job.platform_fee_status === "paid" ? "Your £15 deposit is being refunded." : ""} Reply if you'd like us to find another technician.`;
+    await supabase.functions.invoke("twilio-send", { body: { to: job.customer_phone, body: msg, channel: "whatsapp" } });
+    await supabase.functions.invoke("twilio-send", { body: { to: job.customer_phone, body: msg, channel: "sms" } });
+    toast.success("Job cancelled & customer notified");
+  };
+
+  const reassign = async () => {
+    if (!confirm("Re-open this job to dispatch and find a new technician?")) return;
+    // Reset to intake_complete so dispatch trigger re-runs
+    await supabase.from("jobs" as any).update({
+      status: "intake_complete",
+      assigned_technician_id: null,
+    }).eq("id", job.id);
+    // Mark previous quotes as lost so dispatcher gets fresh bids
+    await supabase.from("quotes" as any).update({ status: "lost" }).eq("job_id", job.id).in("status", ["accepted", "pending"]);
+    const msg = `Tyre Fly: we're reassigning your job to a new technician. We'll text you the new quote shortly.`;
+    await supabase.functions.invoke("twilio-send", { body: { to: job.customer_phone, body: msg, channel: "whatsapp" } });
+    await supabase.functions.invoke("twilio-send", { body: { to: job.customer_phone, body: msg, channel: "sms" } });
+    toast.success("Reassigning — dispatch agent re-running");
+  };
+
   const resendLink = async () => {
     if (!job.stripe_checkout_url) { toast.error("No payment link yet"); return; }
-    await supabase.functions.invoke("twilio-send", {
-      body: {
-        to: job.customer_phone,
-        body: `FlatTyreNearMe reminder: pay the £15 platform fee to confirm your tech: ${job.stripe_checkout_url}`,
-        channel: "sms",
-      },
-    });
-    toast.success("Payment link re-sent");
+    const body = `Tyre Fly reminder: pay the £15 platform fee to confirm your tech: ${job.stripe_checkout_url}`;
+    await supabase.functions.invoke("twilio-send", { body: { to: job.customer_phone, body, channel: "whatsapp" } });
+    await supabase.functions.invoke("twilio-send", { body: { to: job.customer_phone, body, channel: "sms" } });
+    toast.success("Payment link re-sent on WhatsApp + SMS");
   };
 
   return (
@@ -539,6 +565,16 @@ function JobCard({
         {tone === "progress" && fee === "paid" && onComplete && (
           <Button size="sm" variant="outline" className="h-7 flex-1 text-xs" onClick={onComplete}>
             Mark complete
+          </Button>
+        )}
+        {tone === "progress" && (
+          <Button size="sm" variant="outline" className="h-7 text-xs" onClick={reassign}>
+            Reassign
+          </Button>
+        )}
+        {tone === "progress" && (
+          <Button size="sm" variant="ghost" className="h-7 text-xs text-destructive hover:text-destructive" onClick={cancel}>
+            Cancel
           </Button>
         )}
         {tone === "progress" && fee === "paid" && (
