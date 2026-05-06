@@ -100,15 +100,22 @@ export default function TechnicianLogin() {
               </p>
               <div className="mt-1 flex gap-2">
                 <Select value={dial} onValueChange={setDial}>
-                  <SelectTrigger aria-label="Country code" className="w-[140px] shrink-0 bg-black/40 border-white/10">
+                  <SelectTrigger aria-label="Country code" className="w-[110px] shrink-0 bg-black/40 border-white/10">
                     <SelectValue placeholder="Country">
-                      {selectedCountry.flag} {selectedCountry.iso} +{selectedCountry.dial}
+                      <span className="inline-flex items-center gap-1.5">
+                        <span className="text-base leading-none">{selectedCountry.flag}</span>
+                        <span>+{selectedCountry.dial}</span>
+                      </span>
                     </SelectValue>
                   </SelectTrigger>
                   <SelectContent className="max-h-72 bg-popover text-popover-foreground border-border">
                     {COUNTRIES.map((c) => (
                       <SelectItem key={c.iso} value={c.dial}>
-                        {c.flag} {c.iso} +{c.dial}
+                        <span className="inline-flex items-center gap-2">
+                          <span className="text-base leading-none">{c.flag}</span>
+                          <span>+{c.dial}</span>
+                          <span className="text-white/50">{c.name}</span>
+                        </span>
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -118,7 +125,7 @@ export default function TechnicianLogin() {
                   inputMode="tel"
                   value={national}
                   onChange={(e) => setNational(e.target.value)}
-                  placeholder="07834 377316"
+                  placeholder="7834 377316"
                   className="flex-1 bg-black/40 border-white/10"
                 />
               </div>
