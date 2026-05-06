@@ -3,18 +3,17 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { z } from "https://esm.sh/zod@3.23.8";
 import { createStripeClient, corsHeaders } from "../_shared/stripe.ts";
-
-const PRICE_LOOKUP = "platform_fee_20_gbp";
+import { feeForPhone, type FeeConfig } from "../_shared/region-fee.ts";
 
 const BodySchema = z.object({
   job_id: z.string().uuid(),
   origin: z.string().url().optional(), // where to send the customer back after payment
 });
 
-async function resolvePriceId(stripe: ReturnType<typeof createStripeClient>) {
+async function resolvePriceId(stripe: ReturnType<typeof createStripeClient>, lookup: string) {
   // Look up by metadata.lovable_external_id (set automatically by batch_create_product)
   const list = await stripe.prices.list({
-    lookup_keys: [PRICE_LOOKUP],
+    lookup_keys: [lookup],
     active: true,
     limit: 1,
     expand: ["data.product"],
