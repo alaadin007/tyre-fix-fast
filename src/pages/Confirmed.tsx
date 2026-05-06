@@ -38,7 +38,7 @@ export default function Confirmed() {
       if (j.assigned_technician_id) {
         const { data: t } = await supabase
           .from("technicians")
-          .select("id, name, phone, vehicle, rating")
+          .select("id, name, phone, whatsapp, vehicle, rating")
           .eq("id", j.assigned_technician_id)
           .maybeSingle();
         if (!cancelled && t) setTech(t as Tech);
