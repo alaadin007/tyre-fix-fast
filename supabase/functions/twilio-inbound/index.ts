@@ -631,6 +631,36 @@ Deno.serve(async (req) => {
 
       await supabase.from("jobs").update(updates).eq("id", job.id);
 
+      // If new photos arrived, run vision analysis and bounce non-tyre photos back
+      if (mediaUrls.length > 0) {
+        try {
+          const ar = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/analyze-damage`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+            },
+            body: JSON.stringify({
+              job_id: job.id,
+              photo_urls: mediaUrls,
+              issue_description: finalDesc,
+              issue_type: finalIssueType,
+            }),
+          });
+          const aj = await ar.json();
+          if (aj?.damage_type === "not-a-tyre") {
+            await sendReply(
+              from,
+              aj.damage_summary || "That doesn't look like a tyre photo 🤔 Could you send a clear photo of the damaged tyre/wheel (and the sidewall if you can)?",
+              channel,
+            );
+            return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+          }
+        } catch (e) {
+          console.error("analyze-damage call failed", e);
+        }
+      }
+
       // Acknowledge with what's still missing
       const missing: string[] = [];
       if (!haveName) missing.push("your name (e.g. \"My name is John\")");

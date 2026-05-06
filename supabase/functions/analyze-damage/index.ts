@@ -16,6 +16,7 @@ const DAMAGE_TYPES = [
   "worn-tread",
   "valve",
   "other",
+  "not-a-tyre",
 ] as const;
 
 serve(async (req) => {
@@ -52,6 +53,7 @@ serve(async (req) => {
           `Issue type selected: ${issue_type ?? "unspecified"}\n` +
           `Customer description: ${issue_description ?? "(none)"}\n\n` +
           `Look at the attached photo(s) and extract everything useful. The photos may show different things — a damaged tyre, a wheel from a specific corner of the car, or the car's number plate. Multiple wheels may be affected.\n\n` +
+          `IMPORTANT: First decide whether each photo actually shows a tyre, wheel, or vehicle/number plate. If NONE of the photos show any of those (e.g. it's a selfie, a meme, food, a screenshot, a random object), set damage_type to "not-a-tyre", set damage_summary to a short polite message saying it doesn't look like a tyre photo and asking for one, and set damage_confidence to "high". Do NOT guess tyre details in that case.\n\n` +
           `1. Damage: classify type, write a 1–2 sentence summary, give a confidence level.\n` +
           `2. Tyre details (per visible sidewall): size (e.g. 225/45R17 94Y), brand, tyre type (summer/winter/all-season/run-flat/performance), tread condition (new/good/worn/illegal — illegal ≈ below ~1.6mm), wheel material (alloy/steel).\n` +
           `3. Vehicle registration / number plate: if ANY plate is visible in any photo, return the characters exactly as shown (uppercase). Plates may be from any country (UK, US, France, Germany etc.) — do NOT force UK formatting.\n` +
