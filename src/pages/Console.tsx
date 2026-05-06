@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Map as MapIcon, LayoutList, X, Radio, Star } from "lucide-react";
+import { Map as MapIcon, LayoutList, X, Star, Search, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import {
   useConsoleData,
