@@ -14,7 +14,7 @@ export const WhatsAppChatCta = ({
   message = DEFAULT_MSG,
   variant = "card",
   label = "Chat with us on WhatsApp",
-  subLabel = "Real humans · typically reply in under 2 mins",
+  subLabel = "Typically reply in under 2 minutes",
 }: Props) => {
   const href = waLink(SUPPORT_WHATSAPP, message);
 
