@@ -1044,6 +1044,9 @@ Deno.serve(async (req) => {
       } else {
         reply = "Got everything ✅ Finding you a technician now — we'll text the moment one is matched.";
       }
+      await sendReply(from, reply, channel);
+      return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+    }
 
     // 3b. Existing customer with a known job — handle review or quote acceptance
     if (job && ["closed_pending_review", "broadcasting", "awaiting_approval", "intake_complete", "pending"].includes(job.status)) {
