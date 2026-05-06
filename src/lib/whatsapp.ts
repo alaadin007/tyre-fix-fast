@@ -17,5 +17,5 @@ export function waLink(raw: string, message?: string): string {
   return message ? `${base}?text=${encodeURIComponent(message)}` : base;
 }
 
-export const SUPPORT_WHATSAPP = "+447447184489";
-export const SUPPORT_WA_DISPLAY = "+44 7447 184489";
+export const SUPPORT_WHATSAPP = "+447447199903";
+export const SUPPORT_WA_DISPLAY = "+44 7447 199903";
