@@ -120,6 +120,7 @@ async function dispatchOne(supabase: any, job: Job, phase: 1 | 2) {
   const dayKey = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"][now.getUTCDay()];
   const hhmm = `${String(now.getUTCHours()).padStart(2, "0")}:${String(now.getUTCMinutes()).padStart(2, "0")}`;
   const techs = ((techsRaw ?? []) as Tech[]).filter((t: any) => {
+    if (BROADCAST_TO_ALL) return true; // launch mode: ping every approved+active tech
     if (t.availability_now) {
       if (!t.available_until) return true;
       return new Date(t.available_until).getTime() > now.getTime();
