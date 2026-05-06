@@ -228,7 +228,18 @@ serve(async (req) => {
       tread_condition?: string | null;
       wheel_type?: string | null;
       tyre_details?: string | null;
+      vehicle_reg?: string | null;
+      affected_wheels?: string[];
     };
+
+    // Merge affected_wheels with anything already on the job (multi-photo support)
+    const { data: existing } = await supabase
+      .from("jobs")
+      .select("affected_wheels, vehicle_reg")
+      .eq("id", job_id)
+      .maybeSingle();
+    const prevWheels: string[] = (existing?.affected_wheels as string[]) ?? [];
+    const mergedWheels = Array.from(new Set([...prevWheels, ...(parsed.affected_wheels ?? [])]));
 
     const { error: updateError } = await supabase
       .from("jobs")
@@ -242,6 +253,8 @@ serve(async (req) => {
         tread_condition: parsed.tread_condition ?? null,
         wheel_type: parsed.wheel_type ?? null,
         tyre_details: parsed.tyre_details ?? null,
+        vehicle_reg: parsed.vehicle_reg ?? existing?.vehicle_reg ?? null,
+        affected_wheels: mergedWheels,
         updated_at: new Date().toISOString(),
       })
       .eq("id", job_id);
