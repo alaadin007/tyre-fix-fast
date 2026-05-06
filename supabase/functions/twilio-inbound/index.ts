@@ -311,7 +311,7 @@ Deno.serve(async (req) => {
       if (!alloc?.job_id) {
         // Pure location ping with no open job → just ack
         if (techCoords && !body.replace(COORD_RE, "").trim()) {
-          await sendReply(from, "Got your location 📍 — saved. We'll match you to nearby jobs.", channel);
+          await sendReply(from, "Got your live location 📍 — tracking for the next 8 hours. We'll match you to nearby jobs.", channel);
         } else {
           await sendReply(from, "Thanks — no open job for you right now. We'll text when one matches.", channel);
         }
