@@ -63,6 +63,7 @@ const Index = () => {
           <nav className="hidden md:flex items-center gap-6 text-sm text-white/70">
             <a href="#how" className="hover:text-white">How it works</a>
             <a href="#services" className="hover:text-white">Services</a>
+            <Link to="/areas" className="hover:text-white">Areas</Link>
             <a href="#reviews" className="hover:text-white">Reviews</a>
             <a href="/technician/login" className="hover:text-white">For technicians</a>
           </nav>
