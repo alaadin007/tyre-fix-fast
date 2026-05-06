@@ -846,13 +846,15 @@ Deno.serve(async (req) => {
     }
 
     const INTAKE_TEMPLATE =
-      "Hey 👋 Tyre Fly here. Send these (text, photos, or a voice note — whatever's easiest):\n\n" +
+      "Hey 👋 Tyre Fly here — so we can send the right kit and the nearest fitter, please share (text, photos or a voice note, whatever's easiest):\n\n" +
       "• Your name\n" +
-      "• Postcode or share a Maps pin 📍\n" +
-      "• What happened (puncture, flat, blowout, locked wheel?)\n" +
-      "• Photo of the damaged tyre (sidewall + tread)\n" +
-      "• Photo of your number plate (or just type the reg, e.g. AB12 CDE)\n" +
-      "• Which wheel? Front-left, front-right, rear-left, rear-right (multiple is fine)";
+      "• 📍 Live location pin (or postcode / ZIP)\n" +
+      "• Car make, model & colour (e.g. Black BMW 3 Series)\n" +
+      "• Number plate / reg (type it or snap the plate)\n" +
+      "• What you think happened (puncture, flat, blowout, locked wheel, sidewall bulge…?)\n" +
+      "• Photos of the damaged tyre — sidewall + tread close-up, and the wheel\n" +
+      "• Which wheel(s)? Front-left, front-right, rear-left, rear-right\n\n" +
+      "The more detail, the faster we can decide repair vs replacement and quote you accurately. 🛠️";
 
     // Helpers for parsing follow-up intake messages
     const POSTCODE_RE = /\b([A-Z]{1,2}\d[A-Z\d]?)\s*(\d[A-Z]{2})\b/i;
