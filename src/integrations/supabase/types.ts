@@ -239,37 +239,49 @@ export type Database = {
       }
       quotes: {
         Row: {
+          callout_fee_gbp: number | null
           confidence: string | null
           created_at: string
           eta_minutes: number | null
           id: string
           job_id: string | null
           price_gbp: number | null
+          quote_deadline: string | null
           raw_message: string | null
           status: string
           technician_id: string | null
+          tyre_condition: string | null
+          tyre_included: boolean | null
         }
         Insert: {
+          callout_fee_gbp?: number | null
           confidence?: string | null
           created_at?: string
           eta_minutes?: number | null
           id?: string
           job_id?: string | null
           price_gbp?: number | null
+          quote_deadline?: string | null
           raw_message?: string | null
           status?: string
           technician_id?: string | null
+          tyre_condition?: string | null
+          tyre_included?: boolean | null
         }
         Update: {
+          callout_fee_gbp?: number | null
           confidence?: string | null
           created_at?: string
           eta_minutes?: number | null
           id?: string
           job_id?: string | null
           price_gbp?: number | null
+          quote_deadline?: string | null
           raw_message?: string | null
           status?: string
           technician_id?: string | null
+          tyre_condition?: string | null
+          tyre_included?: boolean | null
         }
         Relationships: [
           {
@@ -416,6 +428,9 @@ export type Database = {
           id_doc_url: string | null
           insurance_doc_url: string | null
           jobs_completed: number
+          last_lat: number | null
+          last_lng: number | null
+          last_location_at: string | null
           name: string
           notes: string | null
           phone: string
@@ -444,6 +459,9 @@ export type Database = {
           id_doc_url?: string | null
           insurance_doc_url?: string | null
           jobs_completed?: number
+          last_lat?: number | null
+          last_lng?: number | null
+          last_location_at?: string | null
           name: string
           notes?: string | null
           phone: string
@@ -472,6 +490,9 @@ export type Database = {
           id_doc_url?: string | null
           insurance_doc_url?: string | null
           jobs_completed?: number
+          last_lat?: number | null
+          last_lng?: number | null
+          last_location_at?: string | null
           name?: string
           notes?: string | null
           phone?: string
