@@ -18,6 +18,7 @@ export default function TechnicianLogin() {
   const { session, loading } = useAuthSession();
   const [phone, setPhone] = useState("+44");
   const [code, setCode] = useState("");
+  const [channel, setChannel] = useState<"sms" | "whatsapp">("whatsapp");
   const [step, setStep] = useState<"phone" | "code">("phone");
   const [busy, setBusy] = useState(false);
 
@@ -32,19 +33,26 @@ export default function TechnicianLogin() {
       return;
     }
     setBusy(true);
-    const { error } = await supabase.auth.signInWithOtp({ phone: parsed.data });
+    const { error } = await supabase.auth.signInWithOtp({
+      phone: parsed.data,
+      options: { channel },
+    });
     setBusy(false);
     if (error) {
       toast.error(error.message);
       return;
     }
-    toast.success("Code sent — check your messages");
+    toast.success(
+      channel === "whatsapp"
+        ? "Code sent on WhatsApp — check your chats"
+        : "Code sent — check your messages",
+    );
     setStep("code");
   };
 
   const verify = async () => {
     if (!/^\d{4,8}$/.test(code)) {
-      toast.error("Enter the code from the SMS");
+      toast.error("Enter the code you received");
       return;
     }
     setBusy(true);
@@ -61,6 +69,7 @@ export default function TechnicianLogin() {
     nav("/technician", { replace: true });
   };
 
+
   return (
     <main className="min-h-screen bg-[#0B0B0E] text-white flex items-center justify-center px-4">
       <div className="w-full max-w-md rounded-2xl border border-white/10 bg-white/[0.03] p-6">
@@ -70,7 +79,7 @@ export default function TechnicianLogin() {
         </p>
 
         {step === "phone" ? (
-          <div className="mt-6 space-y-3">
+          <div className="mt-6 space-y-4">
             <div>
               <Label htmlFor="phone">Mobile number</Label>
               <Input
@@ -82,18 +91,45 @@ export default function TechnicianLogin() {
                 className="bg-black/40 border-white/10"
               />
             </div>
+            <div>
+              <Label className="mb-2 block">Receive code via</Label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setChannel("whatsapp")}
+                  className={`rounded-lg border px-3 py-2.5 text-sm font-medium transition ${
+                    channel === "whatsapp"
+                      ? "border-[#25D366] bg-[#25D366]/10 text-white"
+                      : "border-white/10 bg-black/40 text-white/60 hover:text-white"
+                  }`}
+                >
+                  WhatsApp
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setChannel("sms")}
+                  className={`rounded-lg border px-3 py-2.5 text-sm font-medium transition ${
+                    channel === "sms"
+                      ? "border-[#FF6B1A] bg-[#FF6B1A]/10 text-white"
+                      : "border-white/10 bg-black/40 text-white/60 hover:text-white"
+                  }`}
+                >
+                  SMS
+                </button>
+              </div>
+            </div>
             <Button
               onClick={sendCode}
               disabled={busy}
               className="w-full bg-[#FF6B1A] hover:bg-[#FF6B1A]/90"
             >
-              {busy ? "Sending…" : "Send code"}
+              {busy ? "Sending…" : `Send code via ${channel === "whatsapp" ? "WhatsApp" : "SMS"}`}
             </Button>
           </div>
         ) : (
           <div className="mt-6 space-y-3">
             <div>
-              <Label htmlFor="code">SMS code</Label>
+              <Label htmlFor="code">{channel === "whatsapp" ? "WhatsApp" : "SMS"} code</Label>
               <Input
                 id="code"
                 inputMode="numeric"
