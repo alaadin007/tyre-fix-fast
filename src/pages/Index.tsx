@@ -30,10 +30,12 @@ const Index = () => {
             <a href="/technician/login" className="hover:text-white">For technicians</a>
           </nav>
           <a
-            href="tel:08000000000"
+            href={WA_HREF}
+            target="_blank"
+            rel="noopener noreferrer"
             className="hidden sm:inline-flex items-center gap-1.5 rounded-full border border-white/15 px-3 py-1.5 text-xs text-white/80 hover:border-white/40 hover:text-white"
           >
-            <Phone className="h-3.5 w-3.5" /> 0800 000 0000
+            <Phone className="h-3.5 w-3.5" /> WhatsApp +44 7447 184489
           </a>
         </div>
       </header>
