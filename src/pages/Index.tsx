@@ -1,6 +1,7 @@
 import { MessageSquare, Star, ShieldCheck, MapPin, Sparkles, Clock, PoundSterling, Wrench, Phone } from "lucide-react";
 import logo from "@/assets/tyrefly-logo.png";
 import heroTruck from "@/assets/tyrefly-hero-truck.jpg";
+import { WhatsAppChatCta } from "@/components/WhatsAppChatCta";
 
 const WHATSAPP_NUMBER = "447447184489";
 const SMS_NUMBER = "+447447184489";
@@ -80,6 +81,14 @@ const Index = () => {
                 <MessageSquare className="h-5 w-5" strokeWidth={2.5} />
                 Text us
               </a>
+            </div>
+
+            <div className="mt-4 max-w-md">
+              <WhatsAppChatCta
+                message="Hi Tyre Fly — I have a question before I book"
+                label="Questions first? Chat with us"
+                subLabel="Real humans on WhatsApp · reply in minutes"
+              />
             </div>
 
             <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-white/60">

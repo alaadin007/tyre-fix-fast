@@ -3,6 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import { Loader2, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
+import { WhatsAppChatCta } from "@/components/WhatsAppChatCta";
 
 type Job = {
   id: string;
@@ -180,6 +181,14 @@ const JobStatus = () => {
               <dd className="font-mono text-xs">{job.id.slice(0, 8)}</dd>
             </div>
           </dl>
+        </div>
+
+        <div className="mt-6">
+          <WhatsAppChatCta
+            message={`Hi Tyre Fly — I have a question about my job ${job.id.slice(0, 8)}`}
+            label="Need a hand while you wait?"
+            subLabel="Chat with our support team on WhatsApp"
+          />
         </div>
 
         <p className="mt-6 text-center text-xs text-muted-foreground">
