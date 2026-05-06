@@ -3,10 +3,11 @@ import logo from "@/assets/tyrefly-logo.png";
 import heroTruck from "@/assets/tyrefly-hero-truck.jpg";
 import { WhatsAppChatCta } from "@/components/WhatsAppChatCta";
 
-const WHATSAPP_NUMBER = "447447184489";
-const SMS_NUMBER = "+447447184489";
+import { SUPPORT_WHATSAPP, SUPPORT_WA_DISPLAY, waLink } from "@/lib/whatsapp";
+
+const SMS_NUMBER = SUPPORT_WHATSAPP;
 const MSG_BODY = "Hi Tyre Fly — I need tyre help";
-const WA_HREF = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(MSG_BODY)}`;
+const WA_HREF = waLink(SUPPORT_WHATSAPP, MSG_BODY);
 const SMS_HREF = `sms:${SMS_NUMBER}?&body=${encodeURIComponent(MSG_BODY)}`;
 
 const Index = () => {
@@ -36,7 +37,7 @@ const Index = () => {
             rel="noopener noreferrer"
             className="hidden sm:inline-flex items-center gap-1.5 rounded-full border border-white/15 px-3 py-1.5 text-xs text-white/80 hover:border-white/40 hover:text-white"
           >
-            <Phone className="h-3.5 w-3.5" /> WhatsApp +44 7447 184489
+            <Phone className="h-3.5 w-3.5" /> WhatsApp {SUPPORT_WA_DISPLAY}
           </a>
         </div>
       </header>
@@ -287,7 +288,7 @@ const Index = () => {
             <span>© Tyre Fly · UK-wide mobile tyre fitting</span>
           </div>
           <div className="flex items-center gap-4">
-            <a href={WA_HREF} target="_blank" rel="noopener noreferrer" className="hover:text-white/70">WhatsApp +44 7447 184489</a>
+            <a href={WA_HREF} target="_blank" rel="noopener noreferrer" className="hover:text-white/70">WhatsApp {SUPPORT_WA_DISPLAY}</a>
             <a href="/privacy" className="hover:text-white/70">Privacy</a>
             <a href="/terms" className="hover:text-white/70">Terms</a>
           </div>

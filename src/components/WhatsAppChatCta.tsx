@@ -1,6 +1,6 @@
 import { MessageSquare } from "lucide-react";
+import { SUPPORT_WHATSAPP, waLink } from "@/lib/whatsapp";
 
-const WHATSAPP_NUMBER = "447447184489";
 const DEFAULT_MSG = "Hi Tyre Fly — I need a hand";
 
 type Props = {
@@ -16,7 +16,7 @@ export const WhatsAppChatCta = ({
   label = "Chat with us on WhatsApp",
   subLabel = "Real humans · typically reply in under 2 mins",
 }: Props) => {
-  const href = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
+  const href = waLink(SUPPORT_WHATSAPP, message);
 
   if (variant === "floating") {
     return (
