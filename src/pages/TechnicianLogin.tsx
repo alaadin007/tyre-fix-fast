@@ -59,7 +59,7 @@ export default function TechnicianLogin() {
     const { error } = await supabase.auth.verifyOtp({
       phone: phoneSchema.parse(phone),
       token: code,
-      type: channel === "whatsapp" ? "whatsapp" : "sms",
+      type: "sms",
     });
     setBusy(false);
     if (error) {
