@@ -5,3 +5,12 @@ verify_jwt = false
 
 [functions.whatsapp-meta-webhook]
 verify_jwt = false
+
+[functions.manual-dispatch]
+verify_jwt = false
+
+[functions.create-fee-checkout]
+verify_jwt = false
+
+[functions.payments-webhook]
+verify_jwt = false
