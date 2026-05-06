@@ -272,6 +272,22 @@ Deno.serve(async (req) => {
     const tech = (techMatch ?? []).find((t: any) => normPhone(t.phone) === fromN);
 
     if (tech) {
+      // If they shared a location pin (the meta webhook converts pins to
+      // text containing "(lat, lng)"), capture it as their current location.
+      const techCoords = body.match(COORD_RE);
+      if (techCoords) {
+        const lat = Number(techCoords[1]);
+        const lng = Number(techCoords[2]);
+        if (Number.isFinite(lat) && Number.isFinite(lng)) {
+          await supabase.from("technicians").update({
+            last_lat: lat,
+            last_lng: lng,
+            last_location_at: new Date().toISOString(),
+          }).eq("id", tech.id);
+          console.log("tech location updated", JSON.stringify({ tech: tech.id, lat, lng }));
+        }
+      }
+
       // Find their most recent open allocation
       const { data: allocs } = await supabase
         .from("job_allocations")
@@ -283,7 +299,12 @@ Deno.serve(async (req) => {
       const alloc: any = allocs?.[0];
 
       if (!alloc?.job_id) {
-        await sendReply(from, "Thanks — no open job for you right now. We'll text when one matches.", channel);
+        // Pure location ping with no open job → just ack
+        if (techCoords && !body.replace(COORD_RE, "").trim()) {
+          await sendReply(from, "Got your location 📍 — saved. We'll match you to nearby jobs.", channel);
+        } else {
+          await sendReply(from, "Thanks — no open job for you right now. We'll text when one matches.", channel);
+        }
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
       }
 
@@ -301,25 +322,39 @@ Deno.serve(async (req) => {
       if (parsed.price_gbp == null || parsed.eta_minutes == null || parsed.confidence === "low") {
         await sendReply(
           from,
-          `Almost there — please reply with PRICE in £ and ETA in mins, e.g. "70, 25 min" for job ${alloc.job_id.slice(0, 6)}.`,
+          `Almost there — for job ${alloc.job_id.slice(0, 6)} please reply with: free now? (Y/N), ETA mins, callout £, and (if blowout) new/used tyre + price. Drop a 📍pin too.`,
           channel,
         );
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
       }
 
+      // Soft 60-second target — we still accept late quotes but flag them.
+      const allocCreated = new Date(alloc.created_at).getTime();
+      const elapsedSec = Math.round((Date.now() - allocCreated) / 1000);
+      const onTime = elapsedSec <= 60;
+
       await supabase.from("quotes").insert({
         job_id: alloc.job_id,
         technician_id: tech.id,
         price_gbp: parsed.price_gbp,
+        callout_fee_gbp: parsed.callout_fee_gbp,
         eta_minutes: parsed.eta_minutes,
+        tyre_included: parsed.tyre_included,
+        tyre_condition: parsed.tyre_condition,
+        quote_deadline: new Date(allocCreated + 60_000).toISOString(),
         raw_message: body,
         status: "pending",
         confidence: parsed.confidence,
       });
 
+      const tyreNote = parsed.tyre_included
+        ? ` (incl. ${parsed.tyre_condition ?? ""} tyre)`.replace("  ", " ")
+        : (parsed.tyre_included === false ? " (tyre NOT included)" : "");
+      const timeNote = onTime ? "⚡ within 60s" : `(${elapsedSec}s)`;
+
       await sendReply(
         from,
-        `Quote received: £${parsed.price_gbp}, ETA ${parsed.eta_minutes} min. We'll text when the customer chooses.`,
+        `Quote received ${timeNote}: £${parsed.price_gbp}, ETA ${parsed.eta_minutes} min${tyreNote}. We'll text when the customer chooses.`,
         channel,
       );
       return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
