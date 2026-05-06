@@ -210,6 +210,110 @@ async function aiClassifyJobContinuity(args: {
   }
 }
 
+// Detect intent to join as a technician
+const TECH_JOIN_RE = /\b(become|join|sign[\s-]?up|apply|onboard)\b.*\b(tech|fitter|tyre|tire)\b|\b(i'?m|i am)\s+a\s+(mobile\s+)?(tyre|tire)\s+(fitter|technician|guy)\b|\bi\s+fit\s+(tyres|tires)\b|\bwant\s+to\s+(join|work)\b|^join$|^apply$|tyre\s*fly\s+technician/i;
+
+async function aiExtractTechProfile(args: {
+  history: string;
+  latest: string;
+  hasMedia: boolean;
+  mediaCount: number;
+  current: any;
+}): Promise<{
+  name: string | null;
+  service_postcodes: string[] | null;
+  vehicle: string | null;
+  travel_radius_miles: number | null;
+  weekly_schedule: Record<string, string> | null;
+  availability_summary: string | null;
+  media_classification: Array<"insurance" | "id" | "public_liability" | "equipment" | "other"> | null;
+  reply: string;
+  ready_for_review: boolean;
+}> {
+  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  if (!LOVABLE_API_KEY) {
+    return {
+      name: null, service_postcodes: null, vehicle: null, travel_radius_miles: null,
+      weekly_schedule: null, availability_summary: null, media_classification: null,
+      reply: "Thanks — we'll be in touch.", ready_for_review: false,
+    };
+  }
+  const sys =
+    "You are Tyre Fly's onboarding agent. You're chatting with a mobile-tyre technician applying to join. " +
+    "Be warm, brief, one short message at a time. Collect: full name, service area (UK postcodes like W5/SW1A, or US ZIPs like 90210, or Canadian postcodes, or city names — accept whatever they give, do NOT reformat), vehicle (make/model/year), travel radius (accept km — convert to miles, 1 km = 0.621 miles, round to nearest int), weekly availability (free text → JSON like {mon:'9-6', tue:'9-6', sat:'off'}), live location pin (📍), equipment photo, insurance doc photo, ID doc photo, public liability doc photo. " +
+    "Look at conversation history to know what's already collected. Ask for the NEXT missing item only. When everything is collected, set ready_for_review=true and reply confirming review. " +
+    "If the latest message has media, classify EACH attachment as one of insurance|id|public_liability|equipment|other based on context (what they were last asked for, or what they say). Return one entry per attachment in media_classification array, in order.";
+  const user =
+    `Conversation so far:\n${args.history}\n\n` +
+    `Already collected: name=${args.current.name ?? "?"}, ` +
+    `service_postcodes=${JSON.stringify(args.current.service_postcodes ?? [])}, ` +
+    `vehicle=${args.current.vehicle ?? "?"}, ` +
+    `travel_radius_miles=${args.current.travel_radius_miles ?? "?"}, ` +
+    `weekly_schedule=${JSON.stringify(args.current.weekly_schedule ?? {})}, ` +
+    `live_location=${args.current.last_lat ? "yes" : "no"}, ` +
+    `equipment_photos=${(args.current.equipment_photo_urls ?? []).length}, ` +
+    `insurance_doc=${args.current.insurance_doc_url ? "yes" : "no"}, ` +
+    `id_doc=${args.current.id_doc_url ? "yes" : "no"}, ` +
+    `public_liability_doc=${args.current.public_liability_doc_url ? "yes" : "no"}\n\n` +
+    `Latest message: "${args.latest}"\nAttachments on this message: ${args.mediaCount}`;
+  try {
+    const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "google/gemini-3-flash-preview",
+        messages: [{ role: "system", content: sys }, { role: "user", content: user }],
+        tools: [{
+          type: "function",
+          function: {
+            name: "update_profile",
+            parameters: {
+              type: "object",
+              properties: {
+                name: { type: ["string", "null"] },
+                service_postcodes: { type: ["array", "null"], items: { type: "string" } },
+                vehicle: { type: ["string", "null"] },
+                travel_radius_miles: { type: ["integer", "null"] },
+                weekly_schedule: { type: ["object", "null"], additionalProperties: { type: "string" } },
+                availability_summary: { type: ["string", "null"] },
+                media_classification: {
+                  type: ["array", "null"],
+                  items: { type: "string", enum: ["insurance", "id", "public_liability", "equipment", "other"] },
+                },
+                reply: { type: "string", description: "What to send back to the technician now (one short message)." },
+                ready_for_review: { type: "boolean" },
+              },
+              required: ["reply", "ready_for_review"],
+              additionalProperties: false,
+            },
+          },
+        }],
+        tool_choice: { type: "function", function: { name: "update_profile" } },
+      }),
+    });
+    if (!r.ok) {
+      console.error("aiExtractTechProfile failed", r.status, await r.text());
+      return { name: null, service_postcodes: null, vehicle: null, travel_radius_miles: null, weekly_schedule: null, availability_summary: null, media_classification: null, reply: "Got it — what's next?", ready_for_review: false };
+    }
+    const j = await r.json();
+    const a = JSON.parse(j.choices[0].message.tool_calls[0].function.arguments);
+    return {
+      name: a.name ?? null,
+      service_postcodes: a.service_postcodes ?? null,
+      vehicle: a.vehicle ?? null,
+      travel_radius_miles: a.travel_radius_miles ?? null,
+      weekly_schedule: a.weekly_schedule ?? null,
+      availability_summary: a.availability_summary ?? null,
+      media_classification: a.media_classification ?? null,
+      reply: a.reply ?? "Thanks!",
+      ready_for_review: !!a.ready_for_review,
+    };
+  } catch (e) {
+    console.error("aiExtractTechProfile error", e);
+    return { name: null, service_postcodes: null, vehicle: null, travel_radius_miles: null, weekly_schedule: null, availability_summary: null, media_classification: null, reply: "Got it — what's next?", ready_for_review: false };
+  }
+}
+
 async function sendReply(to: string, body: string, channel: "sms" | "whatsapp") {
   const url = `${Deno.env.get("SUPABASE_URL")}/functions/v1/twilio-send`;
   await fetch(url, {
@@ -454,6 +558,137 @@ Deno.serve(async (req) => {
             channel,
           );
         }
+        return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+      }
+    }
+
+    // 1c. Technician onboarding via WhatsApp/SMS
+    // - existing row with approval_status='intake' → continue onboarding
+    // - no row + message matches "I want to join" → start onboarding
+    {
+      const { data: existingByPhone } = await supabase
+        .from("technicians")
+        .select("*")
+        .eq("phone", from)
+        .maybeSingle();
+
+      const wantsToJoin = !existingByPhone && TECH_JOIN_RE.test(body);
+      const inIntake = existingByPhone?.approval_status === "intake";
+
+      if (wantsToJoin || inIntake) {
+        // Coords (live location pin)
+        const coords = body.match(COORD_RE);
+        let pinLat: number | null = null, pinLng: number | null = null;
+        if (coords) {
+          const la = Number(coords[1]), ln = Number(coords[2]);
+          if (Number.isFinite(la) && Number.isFinite(ln)) { pinLat = la; pinLng = ln; }
+        }
+
+        // Get conversation history (last 20 messages with this number)
+        const { data: hist } = await supabase
+          .from("sms_messages")
+          .select("direction, body, created_at")
+          .or(`from_number.eq.${from},to_number.eq.${from}`)
+          .order("created_at", { ascending: false })
+          .limit(20);
+        const history = (hist ?? []).reverse().map((m: any) =>
+          `${m.direction === "inbound" ? "TECH" : "BOT"}: ${(m.body || "").slice(0, 200)}`
+        ).join("\n");
+
+        // Ensure a row exists
+        let row = existingByPhone;
+        if (!row) {
+          const { data: created, error: createErr } = await supabase
+            .from("technicians")
+            .insert({
+              name: "Pending applicant",
+              phone: from,
+              whatsapp: from,
+              approval_status: "intake",
+              active: false,
+            })
+            .select("*")
+            .single();
+          if (createErr) {
+            console.error("intake row create failed", createErr);
+            await sendReply(from, "Sorry — couldn't start your application. Please try again in a minute.", channel);
+            return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+          }
+          row = created;
+          // Welcome message on first contact
+          await sendReply(
+            from,
+            "👋 Welcome to Tyre Fly! I'll get you set up here on WhatsApp — no website needed.\n\n" +
+              "I'll need: your full name, the areas you cover (postcodes/ZIPs/cities), your vehicle, a 📍live location pin, equipment photo, and photos of your insurance, ID, and public liability docs.\n\n" +
+              "Let's start — what's your full name?",
+            channel,
+          );
+          // If first message was just the trigger phrase, stop here
+          if (body.length < 60 && !mediaUrls.length && !coords) {
+            return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+          }
+        }
+
+        // Move any uploaded media to technician buckets and let AI classify
+        const ai = await aiExtractTechProfile({
+          history,
+          latest: body,
+          hasMedia: mediaUrls.length > 0,
+          mediaCount: mediaUrls.length,
+          current: row,
+        });
+
+        const updates: Record<string, any> = { updated_at: new Date().toISOString() };
+        if (ai.name && (!row.name || row.name === "Pending applicant")) updates.name = ai.name;
+        if (ai.service_postcodes?.length) updates.service_postcodes = ai.service_postcodes;
+        if (ai.vehicle && !row.vehicle) updates.vehicle = ai.vehicle;
+        if (ai.travel_radius_miles && ai.travel_radius_miles > 0) updates.travel_radius_miles = ai.travel_radius_miles;
+        if (ai.weekly_schedule && Object.keys(ai.weekly_schedule).length) updates.weekly_schedule = ai.weekly_schedule;
+        if (pinLat !== null && pinLng !== null) {
+          updates.last_lat = pinLat;
+          updates.last_lng = pinLng;
+          updates.last_location_at = new Date().toISOString();
+        }
+        if (ai.availability_summary) updates.notes = ai.availability_summary;
+
+        // Apply media classifications by re-uploading to the right bucket if needed
+        if (mediaUrls.length && ai.media_classification?.length) {
+          const equipment: string[] = [...(row.equipment_photo_urls ?? [])];
+          for (let i = 0; i < mediaUrls.length; i++) {
+            const url = mediaUrls[i];
+            const kind = ai.media_classification[i] ?? "other";
+            if (kind === "equipment") {
+              equipment.push(url);
+            } else if (kind === "insurance" && !row.insurance_doc_url) {
+              updates.insurance_doc_url = url;
+            } else if (kind === "id" && !row.id_doc_url) {
+              updates.id_doc_url = url;
+            } else if (kind === "public_liability" && !row.public_liability_doc_url) {
+              updates.public_liability_doc_url = url;
+            } else {
+              equipment.push(url);
+            }
+          }
+          if (equipment.length) updates.equipment_photo_urls = equipment.slice(0, 8);
+        }
+
+        // Decide if we have everything
+        const merged = { ...row, ...updates };
+        const complete =
+          merged.name && merged.name !== "Pending applicant" &&
+          (merged.service_postcodes?.length ?? 0) > 0 &&
+          merged.vehicle &&
+          merged.last_lat !== null && merged.last_lng !== null &&
+          (merged.equipment_photo_urls?.length ?? 0) > 0 &&
+          merged.insurance_doc_url && merged.id_doc_url && merged.public_liability_doc_url;
+
+        if (complete || ai.ready_for_review) {
+          updates.approval_status = "pending"; // fires admin notification trigger
+        }
+
+        await supabase.from("technicians").update(updates).eq("id", row.id);
+
+        await sendReply(from, ai.reply, channel);
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
       }
     }

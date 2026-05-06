@@ -126,6 +126,22 @@ export default function TechnicianLogin() {
             >
               {busy ? "Sending…" : "Send code via WhatsApp"}
             </Button>
+
+            <div className="relative my-4 flex items-center">
+              <div className="flex-1 border-t border-white/10" />
+              <span className="px-3 text-xs uppercase tracking-wider text-white/40">or</span>
+              <div className="flex-1 border-t border-white/10" />
+            </div>
+
+            <a
+              href={`https://wa.me/447447199903?text=${encodeURIComponent("I want to join Tyre Fly as a technician")}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block w-full rounded-md border border-white/15 bg-white/5 px-4 py-3 text-center text-sm text-white/90 hover:bg-white/10 transition-colors"
+            >
+              💬 Get onboarded by chat on WhatsApp →
+              <span className="block text-xs text-white/50 mt-1">No website needed — our AI walks you through it</span>
+            </a>
           </div>
         ) : (
           <div className="mt-6 space-y-3">

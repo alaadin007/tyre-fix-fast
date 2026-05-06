@@ -1,79 +1,55 @@
-# Technician Portal
+# WhatsApp AI technician onboarding
 
-## What you'll get
+Lets a new technician join entirely over WhatsApp. The website OTP flow stays as the alternative path.
 
-A `/technician` area where technicians sign in with their phone (SMS code), build a profile, upload equipment photos + insurance/ID docs, and set their availability. New signups land in a queue you approve from `/admin` before they go live in dispatch.
+## How it works (user-facing)
 
-## User flow
+1. New tech texts the Tyre Fly WhatsApp number something like *"I want to join as a technician"* (or scans a QR/click-to-chat link from the website that pre-fills that phrase).
+2. The AI replies with one welcoming message asking for everything it needs, then guides them step-by-step, accepting text, voice notes, and photos.
+3. Required fields (international-friendly):
+   - Full name
+   - Service area — UK postcodes (W5, W12) **or** US ZIPs (90210) **or** city names. Stored in `service_postcodes` as-is.
+   - Vehicle (make/model/year)
+   - Equipment photo(s) — uploaded to `technician-photos` bucket
+   - Compliance docs — Insurance, ID, Public Liability — uploaded to `technician-docs` bucket (private)
+   - Live location pin (sets `last_lat`/`last_lng`)
+   - Travel radius (miles or km — AI normalises to miles)
+   - Weekly availability (free text → JSON)
+4. When all required fields are present, status flips to `pending` (existing trigger already pings admins to APPROVE).
+5. After APPROVE, the tech receives the existing "🎉 You're approved" WhatsApp.
 
-```text
-/technician/login    → enter phone → SMS code → signed in
-/technician/onboarding → first-time only: name, contact, area, skills, vehicle
-/technician           → dashboard:
-                          - Big "Available now" toggle (+ until time)
-                          - Weekly schedule editor
-                          - Profile + contact (phone/WhatsApp/email)
-                          - Service postcodes + travel radius (miles)
-                          - Equipment photos
-                          - Documents (insurance, ID, public liability)
-                          - Approval status banner
-/admin (existing)    → new "Pending technicians" section → Approve / Reject
-```
+The existing OTP login still works for techs who prefer the website or who already have an approved account.
 
-## Database changes
+## Backend changes
 
-Extend `technicians`:
-- `user_id uuid` (links to auth.users for phone-OTP login)
-- `whatsapp text`, `travel_radius_miles int`
-- `skills text[]` (puncture, blowout, locked-wheel, run-flat, alloy)
-- `equipment_photo_urls text[]`
-- `availability_now bool`, `available_until timestamptz`
-- `weekly_schedule jsonb` (e.g. `{"mon":{"start":"08:00","end":"18:00"},...}`)
-- `approval_status text` ('pending' | 'approved' | 'rejected'), `approved_at`, `rejected_reason`
-- `insurance_doc_url`, `id_doc_url`, `public_liability_doc_url`
+### `supabase/functions/twilio-inbound/index.ts`
+Add a new section between section 1 (master) and section 2 (existing technician), and update section 4 (unknown sender):
 
-New `user_roles` table + `has_role()` security-definer function (admin role) — required so RLS can lock down approval and admin views without recursion.
+- **New trigger detection**: if `body` matches `/become|join|sign[\s-]?up|apply|i.?m a (mobile )?(tyre|tire) (fitter|technician)|work for|i fit tyres|i'?m a fitter/i` AND no existing technician row → start tech onboarding instead of customer intake.
+- **New helper `aiExtractTechProfile(history, latest, mediaUrls, currentRow)`**: calls `google/gemini-3-flash-preview` via the AI Gateway with a tool-call schema returning `{ name, service_postcodes[], vehicle, travel_radius_miles, weekly_schedule, availability_summary, missing_fields[] }`. Sends recent `sms_messages` for that number as conversation context.
+- **Doc/photo classification**: when the latest message has media, ask the AI to classify each as `insurance | id | public_liability | equipment | other` and assign to the correct column on `technicians`.
+- **State row**: a `technicians` row with `approval_status='intake'` (new value) is created on first trigger. Each subsequent message updates it. When `missing_fields` is empty the row flips to `approval_status='pending'`, which fires the existing `trigger_notify_new_tech_application` trigger.
 
-Tighten RLS:
-- Technicians can read/update **only their own row** (matched by `user_id`)
-- Admins (via `has_role`) can read/update all + approve
-- Public/anon: no longer reads PII from technicians (current "anyone can view" is too open)
-- Storage buckets: `technician-photos` (public), `technician-docs` (private, owner + admin only)
+### Existing tables — no schema change needed
+All target columns already exist: `name`, `phone`, `service_postcodes[]`, `vehicle`, `equipment_photo_urls[]`, `insurance_doc_url`, `id_doc_url`, `public_liability_doc_url`, `last_lat`, `last_lng`, `travel_radius_miles`, `weekly_schedule`, `notes`, `approval_status`. Only the value `'intake'` is added by application code (column is plain `text`).
 
-Dispatch agent updated to filter on `approval_status='approved' AND active=true AND (availability_now OR within weekly_schedule)` and feed `skills`, `travel_radius_miles`, `equipment_photo_urls` into the AI matching prompt.
+## Frontend changes
 
-## Auth setup
+### `src/pages/TechnicianLogin.tsx`
+Add a small alternative link below the Send-code button:
 
-Enable **Phone provider** in Lovable Cloud auth using Twilio (already connected). On first sign-in, if no `technicians` row exists for `user_id`, redirect to onboarding.
+> *Prefer WhatsApp? Get onboarded by chat →*
 
-## Admin approval
+It opens `https://wa.me/<TF_NUMBER>?text=I%20want%20to%20join%20as%20a%20Tyre%20Fly%20technician`. Number comes from `src/lib/whatsapp.ts` (already exists).
 
-Adds a "Pending Technicians" panel to `/admin` showing each pending tech's profile, photos, and docs with Approve / Reject buttons. Approving sets `approval_status='approved'`, `active=true`, and sends them an SMS via the existing Twilio function.
+## Internationalisation note
+The AI prompt explicitly tells the model: "Service areas can be UK postcodes (e.g. W5, SW1A), US ZIPs (90210), Canadian postcodes (M5V 2T6), or city/borough names. Store whatever the technician gives you, do not reformat." Same for travel radius — accept km, convert to miles.
 
-## Files
+## Out of scope for this change
+- No edits to `dispatch-agent` (matching logic already reads `service_postcodes` as text — works for ZIPs too, but matching by ZIP/city accuracy is a follow-up).
+- No new admin UI — existing PENDING/APPROVE/REJECT WhatsApp commands cover review.
 
-New:
-- `src/pages/TechnicianLogin.tsx`
-- `src/pages/TechnicianOnboarding.tsx`
-- `src/pages/TechnicianDashboard.tsx`
-- `src/components/technician/AvailabilityCard.tsx`
-- `src/components/technician/WeeklyScheduleEditor.tsx`
-- `src/components/technician/ProfileForm.tsx`
-- `src/components/technician/PhotosUploader.tsx`
-- `src/components/technician/DocumentsUploader.tsx`
-- `src/components/admin/PendingTechnicians.tsx`
-- `supabase/functions/notify-technician-approved/index.ts`
-
-Edited:
-- `src/App.tsx` (routes)
-- `src/pages/Index.tsx` (small "Technicians: sign in" link in footer)
-- `src/pages/Admin.tsx` (pending-approval panel)
-- `supabase/functions/dispatch-agent/index.ts` (richer matching filters)
-
-## Out of scope (flag for later)
-
-- Background-check integration
-- Stripe Connect payouts to technicians
-- Native app contact-picker import (still web-only)
-
-After you approve, I'll run the migration first, then build the UI and edge function.
+## Risks / things to verify after build
+- Twilio media authentication for docs (already handled by existing media-download block).
+- Ensure private `technician-docs` bucket policy allows service-role uploads (it does — uploads happen with the service-role client).
+- AI might mis-classify equipment vs insurance photos; we'll trust it and let the admin reject if wrong.
