@@ -53,6 +53,8 @@ type Job = {
   stripe_checkout_url?: string | null;
   assigned_technician_id?: string | null;
 };
+
+const getJobLiveLocation = (job: Job) => extractLocation(job.issue_description ?? "");
 type Quote = {
   id: string; job_id: string | null; technician_id: string | null;
   price_gbp: number | null; eta_minutes: number | null;
@@ -201,6 +203,8 @@ export default function Admin() {
   const incoming = jobs.filter((j) => ["pending", "new", "intake_pending", "intake_complete", "awaiting_approval", "broadcasting"].includes(j.status));
   const inProgress = jobs.filter((j) => ["accepted", "assigned", "en_route", "in_progress", "awaiting_payment", "confirmed"].includes(j.status));
   const done = jobs.filter((j) => ["completed", "done", "closed_pending_review", "closed", "no_response"].includes(j.status));
+
+  const liveLocation = getJobLiveLocation(job);
 
   return (
     <div className="min-h-screen bg-aurora">
@@ -728,6 +732,16 @@ function IncomingInquiryCard({
             >
               <Navigation className="h-3 w-3" />Map · {job.postcode}
             </a>
+            {liveLocation && (
+              <a
+                href={liveLocation.url}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1 rounded-md border bg-white px-2 py-1 hover:bg-muted"
+              >
+                <MapPin className="h-3 w-3" />Live pin
+              </a>
+            )}
           </div>
 
           {/* Description / damage */}
