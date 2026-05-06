@@ -60,7 +60,7 @@ async function aiExtractQuote(text: string): Promise<{
 }> {
   const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
   if (!LOVABLE_API_KEY) {
-    return { price_gbp: null, eta_minutes: null, accepts: false, notes: "no api key", confidence: "low" };
+    return { price_gbp: null, callout_fee_gbp: null, eta_minutes: null, accepts: false, tyre_included: null, tyre_condition: null, notes: "no api key", confidence: "low" };
   }
   const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
