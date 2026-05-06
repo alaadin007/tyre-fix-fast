@@ -71,7 +71,7 @@ async function transcribeAudio(buf: Uint8Array, mime: string): Promise<string> {
     binary += String.fromCharCode(...buf.subarray(i, i + chunk));
   }
   const b64 = btoa(binary);
-  const dataUrl = `data:${mime || "audio/ogg"};base64,${b64}`;
+  const fmt = (mime || "audio/ogg").split("/")[1]?.split(";")[0] || "ogg";
 
   try {
     const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -92,7 +92,7 @@ async function transcribeAudio(buf: Uint8Array, mime: string): Promise<string> {
             role: "user",
             content: [
               { type: "text", text: "Transcribe this voice note." },
-              { type: "image_url", image_url: { url: dataUrl } },
+              { type: "input_audio", input_audio: { data: b64, format: fmt } },
             ],
           },
         ],
