@@ -116,6 +116,30 @@ Deno.serve(async (req) => {
         body = msg.interactive?.button_reply?.title
           ?? msg.interactive?.list_reply?.title
           ?? "";
+      } else if (msg.type === "location") {
+        const lat = msg.location?.latitude;
+        const lng = msg.location?.longitude;
+        const name = msg.location?.name ?? "";
+        const addr = msg.location?.address ?? "";
+        let postcode = "";
+        if (typeof lat === "number" && typeof lng === "number") {
+          try {
+            const r = await fetch(`https://api.postcodes.io/postcodes?lon=${lng}&lat=${lat}&limit=1`);
+            if (r.ok) {
+              const j = await r.json();
+              postcode = j?.result?.[0]?.postcode ?? "";
+            }
+          } catch (e) {
+            console.error("reverse geocode failed", e);
+          }
+        }
+        // Build a body the intake parser can read (its regex picks up the postcode).
+        const parts = [
+          postcode ? `Location: ${postcode}` : "Location pin shared",
+          name, addr,
+          (typeof lat === "number" && typeof lng === "number") ? `(${lat.toFixed(5)}, ${lng.toFixed(5)})` : "",
+        ].filter(Boolean);
+        body = parts.join(" — ");
       } else {
         body = `[${msg.type}]`;
       }
