@@ -455,13 +455,13 @@ function JobCard({
   const fee = job.platform_fee_status ?? "pending";
   const feeBadge =
     fee === "paid"
-      ? { cls: "bg-[hsl(var(--success))]/15 text-[hsl(var(--success))]", label: "Fee £15 paid" }
+      ? { cls: "bg-[hsl(var(--success))]/15 text-[hsl(var(--success))]", label: "Fee £20 paid" }
       : fee === "refunded"
       ? { cls: "bg-destructive/15 text-destructive", label: "Refunded" }
-      : { cls: "bg-amber-500/15 text-amber-700", label: "Awaiting £15" };
+      : { cls: "bg-amber-500/15 text-amber-700", label: "Awaiting £20" };
 
   const refund = async () => {
-    if (!confirm("Refund the customer's £15 (no-show)?")) return;
+    if (!confirm("Refund the customer's £20 (no-show)?")) return;
     const { error } = await supabase.functions.invoke("refund-fee", {
       body: { job_id: job.id, reason: "no-show" },
     });
@@ -478,7 +478,7 @@ function JobCard({
         body: { job_id: job.id, reason: reason || "cancelled by ops" },
       });
     }
-    const msg = `Tyre Fly: your booking has been cancelled${reason ? ` — ${reason}` : ""}. ${job.platform_fee_status === "paid" ? "Your £15 deposit is being refunded." : ""} Reply if you'd like us to find another technician.`;
+    const msg = `Tyre Fly: your booking has been cancelled${reason ? ` — ${reason}` : ""}. ${job.platform_fee_status === "paid" ? "Your £20 deposit is being refunded." : ""} Reply if you'd like us to find another technician.`;
     await supabase.functions.invoke("twilio-send", { body: { to: job.customer_phone, body: msg, channel: "whatsapp" } });
     await supabase.functions.invoke("twilio-send", { body: { to: job.customer_phone, body: msg, channel: "sms" } });
     toast.success("Job cancelled & customer notified");
@@ -501,7 +501,7 @@ function JobCard({
 
   const resendLink = async () => {
     if (!job.stripe_checkout_url) { toast.error("No payment link yet"); return; }
-    const body = `Tyre Fly reminder: pay the £15 platform fee to confirm your tech: ${job.stripe_checkout_url}`;
+    const body = `Tyre Fly reminder: pay the £20 platform fee to confirm your tech: ${job.stripe_checkout_url}`;
     await supabase.functions.invoke("twilio-send", { body: { to: job.customer_phone, body, channel: "whatsapp" } });
     await supabase.functions.invoke("twilio-send", { body: { to: job.customer_phone, body, channel: "sms" } });
     toast.success("Payment link re-sent on WhatsApp + SMS");
@@ -659,7 +659,7 @@ function IncomingInquiryCard({
   }, [job.postcode, job.id, techs, liveQuotes]);
 
   const triggerFeeCheckout = async (assignedTech: Technician | null) => {
-    // 1. Create Stripe Checkout session for the £15 fee
+    // 1. Create Stripe Checkout session for the £20 fee
     const { data, error } = await supabase.functions.invoke("create-fee-checkout", {
       body: { job_id: job.id, origin: window.location.origin },
     });
@@ -669,7 +669,7 @@ function IncomingInquiryCard({
     }
     // 2. SMS the customer the link
     const techName = assignedTech?.name ?? "your technician";
-    const smsBody = `FlatTyreNearMe: ${techName} is matched for your tyre job. Pay the £15 platform fee to confirm and get their direct number: ${data.url}`;
+    const smsBody = `FlatTyreNearMe: ${techName} is matched for your tyre job. Pay the £20 platform fee to confirm and get their direct number: ${data.url}`;
     await supabase.functions.invoke("twilio-send", {
       body: { to: job.customer_phone, body: smsBody, channel: "sms" },
     });

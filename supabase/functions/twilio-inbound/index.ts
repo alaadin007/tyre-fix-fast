@@ -1089,7 +1089,7 @@ Deno.serve(async (req) => {
             assigned_technician_id: cheapest.technician_id,
           }).eq("id", job.id);
 
-          // Mint the Stripe checkout link for the £15 deposit and SMS it now
+          // Mint the Stripe checkout link for the £20 deposit and SMS it now
           let payUrl: string | null = null;
           try {
             const r = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/create-fee-checkout`, {
@@ -1107,7 +1107,7 @@ Deno.serve(async (req) => {
           }
 
           const confirmMsg = payUrl
-            ? `Booked! £${cheapest.price_gbp}, ETA ${cheapest.eta_minutes} min. Pay the £15 deposit to confirm: ${payUrl}`
+            ? `Booked! £${cheapest.price_gbp}, ETA ${cheapest.eta_minutes} min. Pay the £20 deposit to confirm: ${payUrl}`
             : `Booked! £${cheapest.price_gbp}, ETA ${cheapest.eta_minutes} min. We'll text the payment link in a moment.`;
           // Send the deposit link on BOTH channels so the customer never misses it
           await sendReply(from, confirmMsg, "whatsapp");

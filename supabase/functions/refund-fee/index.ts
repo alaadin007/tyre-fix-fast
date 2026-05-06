@@ -1,4 +1,4 @@
-// Admin-triggered refund of the £15 platform fee (e.g. tech no-show).
+// Admin-triggered refund of the £20 platform fee (e.g. tech no-show).
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { z } from "https://esm.sh/zod@3.23.8";
 import { createStripeClient, corsHeaders } from "../_shared/stripe.ts";
@@ -54,7 +54,7 @@ Deno.serve(async (req) => {
     await supabase.from("ops_alerts").insert({
       level: "warning",
       title: "Platform fee refunded",
-      body: `£15 refunded for job ${job_id.slice(0, 8)} — reason: ${reason ?? "no-show"}`,
+      body: `£20 refunded for job ${job_id.slice(0, 8)} — reason: ${reason ?? "no-show"}`,
       job_id,
     });
 
@@ -68,7 +68,7 @@ Deno.serve(async (req) => {
         },
         body: JSON.stringify({
           to: job.customer_phone,
-          body: "FlatTyreNearMe: sorry — your technician couldn't attend. Your £15 has been refunded. Reply HELP and we'll find you another tech.",
+          body: "FlatTyreNearMe: sorry — your technician couldn't attend. Your £20 has been refunded. Reply HELP and we'll find you another tech.",
           channel: "sms",
         }),
       });

@@ -182,7 +182,7 @@ const Index = () => {
           <div className="grid gap-4">
             {[
               { icon: Clock, title: "Under 60s quote", body: "Our AI dispatcher polls live technicians and surfaces the fastest, cheapest match." },
-              { icon: PoundSterling, title: "Transparent pricing", body: "Fixed quote up front. Pay only the £15 deposit to confirm — the rest direct to your technician." },
+              { icon: PoundSterling, title: "Transparent pricing", body: "Fixed quote up front. Pay only the £20 deposit to confirm — the rest direct to your technician." },
               { icon: ShieldCheck, title: "Vetted & insured", body: "Every fitter is approved by our team. Public liability + ID verified before they get a job." },
             ].map((b) => (
               <div key={b.title} className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">

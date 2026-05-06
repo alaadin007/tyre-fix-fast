@@ -104,7 +104,7 @@ async function dispatchOne(supabase: any, job: Job, phase: 1 | 2) {
   // NOTE: We always auto-SMS the shortlisted technicians to collect quotes in
   // parallel. The admin approval gate is on the CUSTOMER side — quotes land
   // as `pending` and the admin clicks Approve to forward the chosen quote
-  // (and trigger the £15 payment link) to the customer.
+  // (and trigger the £20 payment link) to the customer.
 
   // Find matching techs: must be active, approved, and currently available
   // (either "available now" toggle, or within today's weekly schedule).

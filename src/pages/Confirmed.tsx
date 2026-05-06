@@ -88,7 +88,7 @@ export default function Confirmed() {
               <h1 className="text-xl font-bold">You're matched!</h1>
             </div>
             <p className="mt-2 text-sm text-muted-foreground">
-              Your £15 platform fee is paid. Here are your technician's details — they're already on their way to call you.
+              Your £20 platform fee is paid. Here are your technician's details — they're already on their way to call you.
             </p>
 
             {tech ? (
@@ -118,7 +118,7 @@ export default function Confirmed() {
             <div className="mt-6 rounded-lg border-l-4 border-[hsl(var(--accent))] bg-[hsl(var(--accent))]/5 p-3 text-xs">
               <p className="font-semibold">How payment for the job works</p>
               <p className="mt-1 text-muted-foreground">
-                The technician will quote and accept payment directly — cash, bank transfer, or their card reader. The £15 you just paid is only our platform fee.
+                The technician will quote and accept payment directly — cash, bank transfer, or their card reader. The £20 you just paid is only our platform fee.
               </p>
             </div>
 
