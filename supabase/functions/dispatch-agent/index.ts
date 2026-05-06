@@ -12,6 +12,7 @@ const corsHeaders = {
 };
 
 const PHASE_DEADLINES_MIN = [8, 8]; // phase1 -> 8 min, phase2 -> +8 min
+const QUOTE_TARGET_SECONDS = 60; // soft target — we ask techs to reply within 60s
 const PHASE1_TIER_SIZE = 3;  // AI auto-contacts the top 3 techs in parallel for quotes
 const PHASE2_TIER_SIZE = 6;  // widen to 6 nearby techs if no quotes after phase 1
 const HARD_CAP_PER_JOB = 50;
