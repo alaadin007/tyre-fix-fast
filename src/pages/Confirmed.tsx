@@ -88,7 +88,7 @@ export default function Confirmed() {
               <h1 className="text-xl font-bold">You're matched!</h1>
             </div>
             <p className="mt-2 text-sm text-muted-foreground">
-              Your £20 booking fee is paid. Here are your technician's details — message them on WhatsApp for ETA and updates.
+              Your booking fee is paid. Here are your technician's details — message them on WhatsApp for ETA and updates.
             </p>
 
             {tech ? (
@@ -120,7 +120,7 @@ export default function Confirmed() {
             <div className="mt-6 rounded-lg border-l-4 border-[hsl(var(--accent))] bg-[hsl(var(--accent))]/5 p-3 text-xs">
               <p className="font-semibold">How payment for the job works</p>
               <p className="mt-1 text-muted-foreground">
-                The £20 booking fee is deducted from your final bill. The technician collects the remainder on-site and accepts card machine, payment link, bank transfer, or cash — whatever's easiest.
+                The booking fee is deducted from your final bill. The technician collects the remainder on-site and accepts card machine, payment link, bank transfer, or cash — whatever's easiest.
               </p>
             </div>
 

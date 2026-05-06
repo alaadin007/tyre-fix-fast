@@ -5,6 +5,7 @@
 // 4. Anything else → log only (Co-Pilot can review)
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { feeForPhone } from "../_shared/region-fee.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -1106,9 +1107,13 @@ Deno.serve(async (req) => {
             console.error("create-fee-checkout failed", e);
           }
 
+          const fee = feeForPhone(from);
+          const feeAmt = fee?.amount ?? 20;
+          const feeDisp = fee?.display ?? `£20`;
+          const sym = fee?.symbol ?? "£";
           const confirmMsg = payUrl
-            ? `Booked! £${cheapest.price_gbp} total, ETA ${cheapest.eta_minutes} min. Pay the £20 booking fee to confirm (deducted from final bill): ${payUrl}. Remaining £${Math.max(0, Number(cheapest.price_gbp) - 20)} paid to technician on-site by card, link, transfer or cash.`
-            : `Booked! £${cheapest.price_gbp} total, ETA ${cheapest.eta_minutes} min. We'll text the £20 booking fee link shortly (deducted from final bill).`;
+            ? `Booked! ${sym}${cheapest.price_gbp} total, ETA ${cheapest.eta_minutes} min. Pay the ${feeDisp} booking fee to confirm (deducted from final bill): ${payUrl}. Remaining ${sym}${Math.max(0, Number(cheapest.price_gbp) - feeAmt)} paid to technician on-site by card, link, transfer or cash.`
+            : `Booked! ${sym}${cheapest.price_gbp} total, ETA ${cheapest.eta_minutes} min. We'll text the ${feeDisp} booking fee link shortly (deducted from final bill).`;
           // Send the deposit link on BOTH channels so the customer never misses it
           await sendReply(from, confirmMsg, "whatsapp");
           await sendReply(from, confirmMsg, "sms");

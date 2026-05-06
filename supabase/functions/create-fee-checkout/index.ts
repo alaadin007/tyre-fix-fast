@@ -3,18 +3,17 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { z } from "https://esm.sh/zod@3.23.8";
 import { createStripeClient, corsHeaders } from "../_shared/stripe.ts";
-
-const PRICE_LOOKUP = "platform_fee_20_gbp";
+import { feeForPhone, type FeeConfig } from "../_shared/region-fee.ts";
 
 const BodySchema = z.object({
   job_id: z.string().uuid(),
   origin: z.string().url().optional(), // where to send the customer back after payment
 });
 
-async function resolvePriceId(stripe: ReturnType<typeof createStripeClient>) {
+async function resolvePriceId(stripe: ReturnType<typeof createStripeClient>, lookup: string) {
   // Look up by metadata.lovable_external_id (set automatically by batch_create_product)
   const list = await stripe.prices.list({
-    lookup_keys: [PRICE_LOOKUP],
+    lookup_keys: [lookup],
     active: true,
     limit: 1,
     expand: ["data.product"],
@@ -22,12 +21,12 @@ async function resolvePriceId(stripe: ReturnType<typeof createStripeClient>) {
   let price = list.data[0];
   if (!price) {
     const search = await stripe.prices.search({
-      query: `metadata['lovable_external_id']:'${PRICE_LOOKUP}' AND active:'true'`,
+      query: `metadata['lovable_external_id']:'${lookup}' AND active:'true'`,
       limit: 1,
     });
     price = search.data[0];
   }
-  if (!price) throw new Error(`Price ${PRICE_LOOKUP} not found in Stripe`);
+  if (!price) throw new Error(`Price ${lookup} not found in Stripe`);
 
   // Managed Payments requires a tax_code on the product. Set one if missing.
   // txcd_20030000 = "Services - general" — appropriate for a platform/booking fee.
@@ -63,7 +62,7 @@ Deno.serve(async (req) => {
 
     const { data: job, error: jobErr } = await supabase
       .from("jobs")
-      .select("id, customer_name, customer_email, platform_fee_status, stripe_checkout_url")
+      .select("id, customer_name, customer_email, customer_phone, platform_fee_status, stripe_checkout_url")
       .eq("id", job_id)
       .single();
     if (jobErr || !job) throw new Error(`Job not found: ${jobErr?.message}`);
@@ -83,11 +82,19 @@ Deno.serve(async (req) => {
       });
     }
 
+    const fee: FeeConfig | null = feeForPhone(job.customer_phone);
+    if (!fee) {
+      return new Response(JSON.stringify({
+        error: "unsupported_region",
+        message: "Tyre Fly is currently available in the UK, US/Canada, and Europe. Coming soon to your region!",
+      }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     // Always sandbox in preview; webhook handler also keys off ?env=sandbox
     const env = "sandbox" as const;
     const stripe = createStripeClient(env);
 
-    const priceId = await resolvePriceId(stripe);
+    const priceId = await resolvePriceId(stripe, fee.priceLookup);
     const baseOrigin = origin?.replace(/\/$/, "") ?? "https://flat-tyre-near-me.lovable.app";
 
     const session = await stripe.checkout.sessions.create({
@@ -101,11 +108,13 @@ Deno.serve(async (req) => {
       metadata: {
         job_id,
         kind: "platform_connection_fee",
+        fee_currency: fee.currency,
+        fee_amount: String(fee.amount),
         managed_payments: "true",
       },
       payment_intent_data: {
-        metadata: { job_id, kind: "platform_connection_fee" },
-        description: `FlatTyreNearMe platform fee — job ${job_id.slice(0, 8)}`,
+        metadata: { job_id, kind: "platform_connection_fee", fee_currency: fee.currency },
+        description: `Tyre Fly booking fee — job ${job_id.slice(0, 8)}`,
       },
     });
 
