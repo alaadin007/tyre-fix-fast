@@ -11,11 +11,14 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-const PHASE_DEADLINES_MIN = [8, 8]; // phase1 -> 8 min, phase2 -> +8 min
+const PHASE_DEADLINES_MIN = [15, 15]; // broadcast window
 const QUOTE_TARGET_SECONDS = 60; // soft target — we ask techs to reply within 60s
-const PHASE1_TIER_SIZE = 3;  // AI auto-contacts the top 3 techs in parallel for quotes
-const PHASE2_TIER_SIZE = 6;  // widen to 6 nearby techs if no quotes after phase 1
-const HARD_CAP_PER_JOB = 50;
+// Launch mode: broadcast to ALL approved+active technicians regardless of postcode.
+// We'll narrow this back to a tiered/proximity dispatch once we have enough coverage.
+const BROADCAST_TO_ALL = true;
+const PHASE1_TIER_SIZE = 999;
+const PHASE2_TIER_SIZE = 999;
+const HARD_CAP_PER_JOB = 500;
 
 type Tech = {
   id: string;
@@ -117,6 +120,7 @@ async function dispatchOne(supabase: any, job: Job, phase: 1 | 2) {
   const dayKey = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"][now.getUTCDay()];
   const hhmm = `${String(now.getUTCHours()).padStart(2, "0")}:${String(now.getUTCMinutes()).padStart(2, "0")}`;
   const techs = ((techsRaw ?? []) as Tech[]).filter((t: any) => {
+    if (BROADCAST_TO_ALL) return true; // launch mode: ping every approved+active tech
     if (t.availability_now) {
       if (!t.available_until) return true;
       return new Date(t.available_until).getTime() > now.getTime();
