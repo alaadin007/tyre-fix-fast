@@ -1059,9 +1059,18 @@ function ConversationThread({ thread }: { thread: Thread }) {
                   </a>
                 )}
                 {m.media_urls?.length > 0 && (
-                  <div className="mt-1 flex flex-wrap gap-1.5">
+                  <div className="mt-2 flex flex-wrap gap-2">
                     {m.media_urls.map((u, i) => (
-                      <a key={i} href={u} target="_blank" rel="noreferrer" className={`text-[11px] underline ${inbound ? "text-[hsl(var(--accent))]" : "text-white/90"}`}>📎 photo {i + 1}</a>
+                      <a
+                        key={i}
+                        href={u}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="block h-16 w-16 overflow-hidden rounded-md border border-border bg-white/70"
+                        title={`Photo ${i + 1}`}
+                      >
+                        <img src={u} alt={`Photo ${i + 1}`} className="h-full w-full object-cover" loading="lazy" />
+                      </a>
                     ))}
                   </div>
                 )}
