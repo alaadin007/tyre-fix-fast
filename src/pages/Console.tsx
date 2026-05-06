@@ -271,85 +271,236 @@ export default function Console() {
 
       {/* Dispatch modal */}
       {openJob && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
-          onClick={() => setOpenJobId(null)}
+        <DispatchModal
+          job={openJob}
+          allTechs={techs}
+          onClose={() => setOpenJobId(null)}
+          onDispatch={handleManualDispatch}
+        />
+      )}
+    </div>
+  );
+}
+
+// ---------- Dispatch modal (manual quote + tech pick) ----------
+type DispatchModalProps = {
+  job: ConsoleJob;
+  allTechs: ReturnType<typeof useConsoleData>["techs"];
+  onClose: () => void;
+  onDispatch: (job: ConsoleJob, techId: string, priceGbp: number, etaMin: number, notes?: string) => void;
+};
+
+function DispatchModal({ job, allTechs, onClose, onDispatch }: DispatchModalProps) {
+  const suggested = nearestTechs(job, allTechs, 3);
+  const [techId, setTechId] = useState<string>(suggested[0]?.tech.id ?? "");
+  const [search, setSearch] = useState("");
+  const [price, setPrice] = useState<string>("85");
+  const [eta, setEta] = useState<string>(String(suggested[0]?.etaMin ?? 30));
+  const [notes, setNotes] = useState("");
+
+  const filteredTechs = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return [];
+    return allTechs
+      .filter((t) =>
+        t.name.toLowerCase().includes(q) ||
+        (t.vehicle ?? "").toLowerCase().includes(q),
+      )
+      .slice(0, 6);
+  }, [search, allTechs]);
+
+  const selectedTech = allTechs.find((t) => t.id === techId);
+
+  const submit = () => {
+    const p = Number(price);
+    const e = Number(eta);
+    if (!techId) return toast.error("Pick a technician");
+    if (!Number.isFinite(p) || p < 1) return toast.error("Enter a valid price");
+    if (!Number.isFinite(e) || e < 1) return toast.error("Enter a valid ETA");
+    onDispatch(job, techId, p, e, notes || undefined);
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+      onClick={onClose}
+    >
+      <div
+        className="relative max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-2xl border border-white/10 bg-card p-6 shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button
+          onClick={onClose}
+          className="absolute right-4 top-4 rounded-full p-1 text-muted-foreground hover:bg-white/10 hover:text-foreground"
+          aria-label="Close"
         >
-          <div
-            className="relative max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-2xl border border-white/10 bg-card p-6 shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              onClick={() => setOpenJobId(null)}
-              className="absolute right-4 top-4 rounded-full p-1 text-muted-foreground hover:bg-white/10 hover:text-foreground"
-              aria-label="Close"
-            >
-              <X className="h-5 w-5" />
-            </button>
+          <X className="h-5 w-5" />
+        </button>
 
-            <div className="mb-1 text-xs uppercase tracking-wider text-muted-foreground">
-              {openJob.status.replace(/_/g, " ")}
-            </div>
-            <h2 className="text-2xl font-bold">{openJob.postcode}</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {openJob.customer_name} · {openJob.customer_phone}
-            </p>
-            <p className="mt-3 text-sm capitalize">{openJob.issue_type}</p>
-            {openJob.issue_description && (
-              <p className="mt-1 text-sm text-muted-foreground">{openJob.issue_description}</p>
-            )}
+        <div className="mb-1 text-xs uppercase tracking-wider text-muted-foreground">
+          {job.status.replace(/_/g, " ")}
+        </div>
+        <h2 className="text-2xl font-bold">{job.postcode}</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          {job.customer_name} · {job.customer_phone}
+        </p>
+        <p className="mt-3 text-sm capitalize">{job.issue_type}</p>
+        {job.issue_description && (
+          <p className="mt-1 text-sm text-muted-foreground">{job.issue_description}</p>
+        )}
+        {job.vehicle_reg && (
+          <p className="mt-1 text-xs font-mono uppercase tracking-wider text-foreground/80">
+            Reg: {job.vehicle_reg}
+          </p>
+        )}
 
-            {openJob.photo_urls && openJob.photo_urls.length > 0 && (
-              <div className="mt-3 flex gap-2 overflow-x-auto">
-                {openJob.photo_urls.map((u, i) => (
-                  <img key={i} src={u} alt="" className="h-20 w-20 rounded-md object-cover" />
-                ))}
-              </div>
-            )}
+        {job.photo_urls && job.photo_urls.length > 0 && (
+          <div className="mt-3 flex gap-2 overflow-x-auto">
+            {job.photo_urls.map((u, i) => (
+              <img key={i} src={u} alt="" className="h-20 w-20 rounded-md object-cover" />
+            ))}
+          </div>
+        )}
 
-            <div className="mt-5 rounded-lg border border-white/10 bg-white/[0.03] p-3 text-xs">
-              <div className="mb-1 font-semibold uppercase tracking-wider text-muted-foreground">WhatsApp broadcast preview</div>
-              <pre className="whitespace-pre-wrap font-sans text-foreground/90">
-{`🚨 New job in ${openJob.postcode}
-Issue: ${openJob.issue_type}
-Reply with ETA + £ if available.`}
-              </pre>
-            </div>
-
-            <div className="mt-5">
-              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Nearest available technicians
-              </h3>
-              <div className="space-y-2">
-                {nearestTechs(openJob, techs, 3).map(({ tech, distanceKm, etaMin }) => (
-                  <div
-                    key={tech.id}
-                    className="flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/[0.04] p-3"
-                  >
-                    <div>
-                      <div className="font-semibold">{tech.name}</div>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-                        {(tech.rating ?? 5).toFixed(1)} · {distanceKm.toFixed(1)} km · ETA {etaMin}m
-                      </div>
-                    </div>
-                    <Button
-                      size="sm"
-                      className="bg-primary text-primary-foreground hover:bg-primary/90"
-                      onClick={() => handleDispatch(openJob, tech.id)}
-                    >
-                      Dispatch
-                    </Button>
+        {/* AI suggestions */}
+        <div className="mt-5">
+          <h3 className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <Sparkles className="h-3 w-3 text-primary" /> AI suggestions
+          </h3>
+          <div className="space-y-2">
+            {suggested.map(({ tech, distanceKm, etaMin }) => (
+              <button
+                key={tech.id}
+                onClick={() => { setTechId(tech.id); setEta(String(etaMin)); }}
+                className={`flex w-full items-center justify-between gap-3 rounded-lg border p-3 text-left transition ${
+                  techId === tech.id
+                    ? "border-primary bg-primary/10"
+                    : "border-white/10 bg-white/[0.04] hover:border-primary/40"
+                }`}
+              >
+                <div>
+                  <div className="font-semibold">{tech.name}</div>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                    {(tech.rating ?? 5).toFixed(1)} · {distanceKm.toFixed(1)} km · ETA {etaMin}m
+                    {tech.vehicle ? ` · ${tech.vehicle}` : ""}
                   </div>
-                ))}
-                {nearestTechs(openJob, techs, 3).length === 0 && (
-                  <p className="text-xs text-muted-foreground">No technicians with a recent location.</p>
+                </div>
+                {techId === tech.id && (
+                  <span className="rounded-full bg-primary px-2 py-0.5 text-[10px] font-semibold uppercase text-primary-foreground">
+                    Selected
+                  </span>
                 )}
-              </div>
-            </div>
+              </button>
+            ))}
+            {suggested.length === 0 && (
+              <p className="text-xs text-muted-foreground">No technicians with a recent location.</p>
+            )}
           </div>
         </div>
-      )}
+
+        {/* Manual tech search */}
+        <div className="mt-4">
+          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Or pick another technician
+          </h3>
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search by name or vehicle…"
+              className="pl-9"
+            />
+          </div>
+          {filteredTechs.length > 0 && (
+            <div className="mt-2 space-y-1 rounded-lg border border-white/10 bg-white/[0.03] p-1">
+              {filteredTechs.map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => { setTechId(t.id); setSearch(""); }}
+                  className={`flex w-full items-center justify-between rounded px-3 py-2 text-left text-sm hover:bg-white/[0.06] ${
+                    techId === t.id ? "bg-primary/10 text-primary" : ""
+                  }`}
+                >
+                  <span>{t.name}</span>
+                  <span className="text-xs text-muted-foreground">{t.vehicle ?? ""}</span>
+                </button>
+              ))}
+            </div>
+          )}
+          {selectedTech && (
+            <p className="mt-2 text-xs text-muted-foreground">
+              Selected: <span className="font-semibold text-foreground">{selectedTech.name}</span>
+              {selectedTech.vehicle ? ` · ${selectedTech.vehicle}` : ""}
+            </p>
+          )}
+        </div>
+
+        {/* Quote */}
+        <div className="mt-5 grid grid-cols-2 gap-3">
+          <div>
+            <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Price (£)
+            </label>
+            <Input
+              type="number"
+              inputMode="decimal"
+              value={price}
+              onChange={(e) => setPrice(e.target.value)}
+              placeholder="85"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              ETA (mins)
+            </label>
+            <Input
+              type="number"
+              inputMode="numeric"
+              value={eta}
+              onChange={(e) => setEta(e.target.value)}
+              placeholder="30"
+            />
+          </div>
+        </div>
+
+        <div className="mt-3">
+          <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Notes (optional)
+          </label>
+          <Input
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="e.g. tech bringing 225/45 R17 mid-range"
+          />
+        </div>
+
+        <div className="mt-5 rounded-lg border border-white/10 bg-white/[0.03] p-3 text-xs">
+          <div className="mb-1 font-semibold uppercase tracking-wider text-muted-foreground">
+            Customer will receive on WhatsApp
+          </div>
+          <pre className="whitespace-pre-wrap font-sans text-foreground/90">
+{`Hi ${job.customer_name ?? ""} 👋 Tyre Fly here.
+We've got ${selectedTech?.name ?? "a technician"} ready for you in ${job.postcode}.
+• Quote: £${Number(price || 0).toFixed(2)}
+• ETA: ~${eta} mins from payment
+
+Tap to pay (Apple Pay / Google Pay / card) → [secure link]`}
+          </pre>
+        </div>
+
+        <div className="mt-5 flex gap-2">
+          <Button variant="outline" className="flex-1" onClick={onClose}>Cancel</Button>
+          <Button
+            className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90"
+            onClick={submit}
+            disabled={!techId}
+          >
+            Send pay link
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }
