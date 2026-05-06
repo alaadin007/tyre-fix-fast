@@ -94,15 +94,33 @@ export default function TechnicianLogin() {
           <div className="mt-6 space-y-4">
             <div>
               <Label htmlFor="phone">Mobile number</Label>
-              <Input
-                id="phone"
-                inputMode="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="+447700900123"
-                className="bg-black/40 border-white/10"
-              />
+              <div className="mt-1 flex gap-2">
+                <Select value={dial} onValueChange={setDial}>
+                  <SelectTrigger className="w-[130px] bg-black/40 border-white/10">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-72">
+                    {COUNTRIES.map((c) => (
+                      <SelectItem key={c.iso} value={c.dial}>
+                        {c.flag} {c.iso} +{c.dial}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Input
+                  id="phone"
+                  inputMode="tel"
+                  value={national}
+                  onChange={(e) => setNational(e.target.value)}
+                  placeholder="07834 377316"
+                  className="flex-1 bg-black/40 border-white/10"
+                />
+              </div>
+              <p className="mt-1 text-xs text-white/40">
+                We'll send to +{dial} {national || "…"}
+              </p>
             </div>
+
             <Button
               onClick={sendCode}
               disabled={busy}
