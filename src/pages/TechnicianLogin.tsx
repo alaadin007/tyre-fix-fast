@@ -18,7 +18,7 @@ export default function TechnicianLogin() {
   const { session, loading } = useAuthSession();
   const [phone, setPhone] = useState("+44");
   const [code, setCode] = useState("");
-  const [channel, setChannel] = useState<"sms" | "whatsapp">("whatsapp");
+  const channel = "whatsapp" as const;
   const [step, setStep] = useState<"phone" | "code">("phone");
   const [busy, setBusy] = useState(false);
 
@@ -91,45 +91,18 @@ export default function TechnicianLogin() {
                 className="bg-black/40 border-white/10"
               />
             </div>
-            <div>
-              <Label className="mb-2 block">Receive code via</Label>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setChannel("whatsapp")}
-                  className={`rounded-lg border px-3 py-2.5 text-sm font-medium transition ${
-                    channel === "whatsapp"
-                      ? "border-[#25D366] bg-[#25D366]/10 text-white"
-                      : "border-white/10 bg-black/40 text-white/60 hover:text-white"
-                  }`}
-                >
-                  WhatsApp
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setChannel("sms")}
-                  className={`rounded-lg border px-3 py-2.5 text-sm font-medium transition ${
-                    channel === "sms"
-                      ? "border-[#FF6B1A] bg-[#FF6B1A]/10 text-white"
-                      : "border-white/10 bg-black/40 text-white/60 hover:text-white"
-                  }`}
-                >
-                  SMS
-                </button>
-              </div>
-            </div>
             <Button
               onClick={sendCode}
               disabled={busy}
-              className="w-full bg-[#FF6B1A] hover:bg-[#FF6B1A]/90"
+              className="w-full bg-[#25D366] hover:bg-[#25D366]/90 text-white"
             >
-              {busy ? "Sending…" : `Send code via ${channel === "whatsapp" ? "WhatsApp" : "SMS"}`}
+              {busy ? "Sending…" : "Send code via WhatsApp"}
             </Button>
           </div>
         ) : (
           <div className="mt-6 space-y-3">
             <div>
-              <Label htmlFor="code">{channel === "whatsapp" ? "WhatsApp" : "SMS"} code</Label>
+              <Label htmlFor="code">WhatsApp code</Label>
               <Input
                 id="code"
                 inputMode="numeric"
