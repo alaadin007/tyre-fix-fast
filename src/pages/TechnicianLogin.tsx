@@ -5,18 +5,27 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuthSession } from "@/hooks/useTechnicianAuth";
+import { COUNTRIES, buildE164 } from "@/lib/countryCodes";
 
 const phoneSchema = z
   .string()
   .trim()
-  .regex(/^\+?[1-9]\d{7,14}$/, "Use international format, e.g. +447700900123");
+  .regex(/^\+[1-9]\d{6,14}$/, "Enter a valid mobile number");
 
 export default function TechnicianLogin() {
   const nav = useNavigate();
   const { session, loading } = useAuthSession();
-  const [phone, setPhone] = useState("+44");
+  const [dial, setDial] = useState("44"); // default UK
+  const [national, setNational] = useState("");
   const [code, setCode] = useState("");
   const channel = "whatsapp" as const;
   const [step, setStep] = useState<"phone" | "code">("phone");
@@ -26,7 +35,10 @@ export default function TechnicianLogin() {
     if (session && !loading) nav("/technician", { replace: true });
   }, [session, loading, nav]);
 
+  const fullPhone = () => buildE164(dial, national);
+
   const sendCode = async () => {
+    const phone = fullPhone();
     const parsed = phoneSchema.safeParse(phone);
     if (!parsed.success) {
       toast.error(parsed.error.issues[0].message);
@@ -57,7 +69,7 @@ export default function TechnicianLogin() {
     }
     setBusy(true);
     const { error } = await supabase.auth.verifyOtp({
-      phone: phoneSchema.parse(phone),
+      phone: fullPhone(),
       token: code,
       type: "sms",
     });
