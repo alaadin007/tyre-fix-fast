@@ -2,3 +2,6 @@ project_id = "ctxtvezeeijkjjuzodvi"
 
 [functions.twilio-inbound]
 verify_jwt = false
+
+[functions.whatsapp-meta-webhook]
+verify_jwt = false
