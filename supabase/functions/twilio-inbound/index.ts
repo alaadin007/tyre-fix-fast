@@ -322,11 +322,13 @@ Deno.serve(async (req) => {
     const job: any = customerJobs?.[0];
 
     const INTAKE_TEMPLATE =
-      "Hey 👋 Tyre Fly here. What happened and where are you?\n\n" +
-      "• Name\n" +
-      "• Postcode / Maps pin\n" +
-      "• Issue (puncture, flat, blowout, locked wheel?)\n" +
-      "• Photo of the tyre + sidewall size (e.g. 225/45 R17)";
+      "Hey 👋 Tyre Fly here. Send these (text, photos, or a voice note — whatever's easiest):\n\n" +
+      "• Your name\n" +
+      "• Postcode or share a Maps pin 📍\n" +
+      "• What happened (puncture, flat, blowout, locked wheel?)\n" +
+      "• Photo of the damaged tyre (sidewall + tread)\n" +
+      "• Photo of your number plate (or just type the reg, e.g. AB12 CDE)\n" +
+      "• Which wheel? Front-left, front-right, rear-left, rear-right (multiple is fine)";
 
     // Helpers for parsing follow-up intake messages
     const POSTCODE_RE = /\b([A-Z]{1,2}\d[A-Z\d]?)\s*(\d[A-Z]{2})\b/i;
