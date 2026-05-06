@@ -279,12 +279,22 @@ Deno.serve(async (req) => {
         const lat = Number(techCoords[1]);
         const lng = Number(techCoords[2]);
         if (Number.isFinite(lat) && Number.isFinite(lng)) {
+          const now = new Date();
+          const expires = new Date(now.getTime() + 8 * 60 * 60 * 1000); // 8 hours
           await supabase.from("technicians").update({
             last_lat: lat,
             last_lng: lng,
-            last_location_at: new Date().toISOString(),
+            last_location_at: now.toISOString(),
+            live_location_until: expires.toISOString(),
           }).eq("id", tech.id);
-          console.log("tech location updated", JSON.stringify({ tech: tech.id, lat, lng }));
+          await supabase.from("technician_locations").insert({
+            technician_id: tech.id,
+            lat,
+            lng,
+            source: channel === "whatsapp" ? "whatsapp" : "sms",
+            expires_at: expires.toISOString(),
+          });
+          console.log("tech location updated", JSON.stringify({ tech: tech.id, lat, lng, expires: expires.toISOString() }));
         }
       }
 
