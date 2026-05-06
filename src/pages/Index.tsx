@@ -1,7 +1,10 @@
 import { MessageSquare, Star, ShieldCheck, MapPin, Sparkles, Clock, PoundSterling, Wrench, Phone } from "lucide-react";
+import { Link } from "react-router-dom";
 import logo from "@/assets/tyrefly-logo.png";
 import heroTruck from "@/assets/tyrefly-hero-truck.jpg";
 import { WhatsAppChatCta } from "@/components/WhatsAppChatCta";
+import { Seo } from "@/components/Seo";
+import { AREAS } from "@/data/areas";
 
 import { SUPPORT_WHATSAPP, SUPPORT_WA_DISPLAY, waLink } from "@/lib/whatsapp";
 
@@ -10,12 +13,44 @@ const MSG_BODY = "Hi Tyre Fly — I need tyre help";
 const WA_HREF = waLink(SUPPORT_WHATSAPP, MSG_BODY);
 const SMS_HREF = `sms:${SMS_NUMBER}?&body=${encodeURIComponent(MSG_BODY)}`;
 
+const HOME_LD = [
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: "Tyre Fly",
+    url: "https://tyrefly.com/",
+    logo: "https://tyrefly.com/favicon.png",
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: "Tyre Fly",
+    url: "https://tyrefly.com/",
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: [
+      { "@type": "Question", name: "How fast can a mobile tyre fitter get to me?", acceptedAnswer: { "@type": "Answer", text: "Most UK jobs get a quote in under 60 seconds and a vetted technician on-site within 35–90 minutes, 24/7." } },
+      { "@type": "Question", name: "How much does Tyre Fly cost?", acceptedAnswer: { "@type": "Answer", text: "A £20 booking fee secures your slot and is deducted from your final bill. The technician collects the remainder on-site by card, link, transfer or cash." } },
+      { "@type": "Question", name: "Where in the UK do you operate?", acceptedAnswer: { "@type": "Answer", text: "Tyre Fly covers all major UK cities and motorways including London, Manchester, Birmingham, Leeds, Liverpool, Sheffield, Newcastle, Bristol, Edinburgh, Glasgow, Cardiff and Belfast — 24/7." } },
+      { "@type": "Question", name: "Do you fit tyres at night?", acceptedAnswer: { "@type": "Answer", text: "Yes — Tyre Fly operates 24 hours a day, 7 days a week including weekends and bank holidays." } },
+    ],
+  },
+];
+
 const Index = () => {
   return (
     <main
       className="min-h-screen w-full overflow-x-hidden text-white"
       style={{ backgroundColor: "#0D0D0D", fontFamily: "Inter, system-ui, -apple-system, sans-serif" }}
     >
+      <Seo
+        title="Mobile Tyre Fitter UK — 24/7 Call-Out via WhatsApp | Tyre Fly"
+        description="Flat tyre? WhatsApp Tyre Fly and a vetted local mobile tyre fitter quotes in 60 seconds and is at your kerb fast. 24/7 across the UK — London, Manchester, Birmingham & nationwide."
+        canonical="/"
+        jsonLd={HOME_LD}
+      />
       {/* ===== Top nav ===== */}
       <header className="w-full border-b border-white/5">
         <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-5 py-4">
@@ -28,6 +63,7 @@ const Index = () => {
           <nav className="hidden md:flex items-center gap-6 text-sm text-white/70">
             <a href="#how" className="hover:text-white">How it works</a>
             <a href="#services" className="hover:text-white">Services</a>
+            <Link to="/areas" className="hover:text-white">Areas</Link>
             <a href="#reviews" className="hover:text-white">Reviews</a>
             <a href="/technician/login" className="hover:text-white">For technicians</a>
           </nav>
@@ -194,6 +230,31 @@ const Index = () => {
                 </div>
                 <p className="mt-2 text-sm text-white/60 leading-relaxed">{b.body}</p>
               </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ===== Service Areas ===== */}
+      <section id="areas" className="border-t border-white/5">
+        <div className="mx-auto w-full max-w-6xl px-5 py-16">
+          <div className="flex items-end justify-between flex-wrap gap-4">
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.2em] text-[#FF6B1A] font-semibold">Coverage</p>
+              <h2 className="mt-2 text-3xl sm:text-4xl font-bold tracking-tight">Mobile tyre fitters across the UK</h2>
+              <p className="mt-2 text-white/60 max-w-xl text-sm">From London to Glasgow — pick your area for local coverage and 24/7 dispatch.</p>
+            </div>
+            <Link to="/areas" className="text-sm text-[#FF6B1A] hover:underline">View all areas →</Link>
+          </div>
+          <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {AREAS.map((a) => (
+              <Link key={a.slug} to={`/areas/${a.slug}`}
+                    className="group rounded-xl border border-white/10 bg-white/[0.03] p-4 hover:border-[#FF6B1A]/40 transition">
+                <div className="flex items-center gap-2 text-white/50 text-[10px] uppercase tracking-wider">
+                  <MapPin className="h-3 w-3" /> {a.region}
+                </div>
+                <p className="mt-1.5 font-semibold group-hover:text-[#FF6B1A]">Mobile tyre fitter {a.name}</p>
+              </Link>
             ))}
           </div>
         </div>
