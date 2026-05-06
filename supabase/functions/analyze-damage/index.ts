@@ -51,14 +51,14 @@ serve(async (req) => {
           `A customer reported a tyre issue.\n` +
           `Issue type selected: ${issue_type ?? "unspecified"}\n` +
           `Customer description: ${issue_description ?? "(none)"}\n\n` +
-          `Look at the attached photo(s) of the tyre/wheel and:\n` +
-          `1. Classify the damage (type, severity, confidence).\n` +
-          `2. Identify tyre details where visible: size markings (e.g. 225/45R17 94Y), brand/manufacturer, ` +
-          `tyre type (summer/winter/all-season/run-flat), tread condition (new/good/worn/illegal), ` +
-          `and wheel type (alloy/steel). If something is not legible in the photo, return null for that field — do not guess.\n` +
-          `Use the record_damage_assessment tool to return your answer.`,
+          `Look at the attached photo(s) and extract everything useful. The photos may show different things — a damaged tyre, a wheel from a specific corner of the car, or the car's number plate. Multiple wheels may be affected.\n\n` +
+          `1. Damage: classify type, write a 1–2 sentence summary, give a confidence level.\n` +
+          `2. Tyre details (per visible sidewall): size (e.g. 225/45R17 94Y), brand, tyre type (summer/winter/all-season/run-flat/performance), tread condition (new/good/worn/illegal — UK legal limit 1.6mm), wheel material (alloy/steel).\n` +
+          `3. Vehicle registration: if a UK number plate is visible in any photo, return it (uppercase, no spaces normalised, e.g. "AB12 CDE").\n` +
+          `4. Affected wheels: which corner(s) of the car are damaged? Use any combination of "front-left", "front-right", "rear-left", "rear-right". Infer from photo angles, customer description, or visible context. If unclear, return an empty array.\n\n` +
+          `Return null for anything not legible — do NOT guess. Use the record_damage_assessment tool.`,
       },
-      ...photo_urls.slice(0, 3).map((url: string) => ({
+      ...photo_urls.slice(0, 6).map((url: string) => ({
         type: "image_url",
         image_url: { url },
       })),
@@ -140,6 +140,20 @@ serve(async (req) => {
                       description:
                         "Any other useful observations about the tyre/wheel (load index, speed rating, DOT date, locking nut, kerb damage on rim, etc.).",
                     },
+                    vehicle_reg: {
+                      type: ["string", "null"],
+                      description:
+                        "UK vehicle registration plate if visible in any photo, formatted like 'AB12 CDE'. Null if not visible.",
+                    },
+                    affected_wheels: {
+                      type: "array",
+                      items: {
+                        type: "string",
+                        enum: ["front-left", "front-right", "rear-left", "rear-right"],
+                      },
+                      description:
+                        "Which corner(s) of the car are affected. Empty array if unclear.",
+                    },
                   },
                   required: [
                     "damage_type",
@@ -214,7 +228,18 @@ serve(async (req) => {
       tread_condition?: string | null;
       wheel_type?: string | null;
       tyre_details?: string | null;
+      vehicle_reg?: string | null;
+      affected_wheels?: string[];
     };
+
+    // Merge affected_wheels with anything already on the job (multi-photo support)
+    const { data: existing } = await supabase
+      .from("jobs")
+      .select("affected_wheels, vehicle_reg")
+      .eq("id", job_id)
+      .maybeSingle();
+    const prevWheels: string[] = (existing?.affected_wheels as string[]) ?? [];
+    const mergedWheels = Array.from(new Set([...prevWheels, ...(parsed.affected_wheels ?? [])]));
 
     const { error: updateError } = await supabase
       .from("jobs")
@@ -228,6 +253,8 @@ serve(async (req) => {
         tread_condition: parsed.tread_condition ?? null,
         wheel_type: parsed.wheel_type ?? null,
         tyre_details: parsed.tyre_details ?? null,
+        vehicle_reg: parsed.vehicle_reg ?? existing?.vehicle_reg ?? null,
+        affected_wheels: mergedWheels,
         updated_at: new Date().toISOString(),
       })
       .eq("id", job_id);

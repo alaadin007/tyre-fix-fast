@@ -81,6 +81,7 @@ export type Database = {
       }
       jobs: {
         Row: {
+          affected_wheels: string[]
           assigned_technician_id: string | null
           broadcast_count: number
           created_at: string
@@ -115,9 +116,11 @@ export type Database = {
           tyre_size: string | null
           tyre_type: string | null
           updated_at: string
+          vehicle_reg: string | null
           wheel_type: string | null
         }
         Insert: {
+          affected_wheels?: string[]
           assigned_technician_id?: string | null
           broadcast_count?: number
           created_at?: string
@@ -152,9 +155,11 @@ export type Database = {
           tyre_size?: string | null
           tyre_type?: string | null
           updated_at?: string
+          vehicle_reg?: string | null
           wheel_type?: string | null
         }
         Update: {
+          affected_wheels?: string[]
           assigned_technician_id?: string | null
           broadcast_count?: number
           created_at?: string
@@ -189,6 +194,7 @@ export type Database = {
           tyre_size?: string | null
           tyre_type?: string | null
           updated_at?: string
+          vehicle_reg?: string | null
           wheel_type?: string | null
         }
         Relationships: []

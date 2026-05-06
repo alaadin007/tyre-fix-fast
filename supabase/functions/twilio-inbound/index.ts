@@ -322,11 +322,13 @@ Deno.serve(async (req) => {
     const job: any = customerJobs?.[0];
 
     const INTAKE_TEMPLATE =
-      "Hey 👋 Tyre Fly here. What happened and where are you?\n\n" +
-      "• Name\n" +
-      "• Postcode / Maps pin\n" +
-      "• Issue (puncture, flat, blowout, locked wheel?)\n" +
-      "• Photo of the tyre + sidewall size (e.g. 225/45 R17)";
+      "Hey 👋 Tyre Fly here. Send these (text, photos, or a voice note — whatever's easiest):\n\n" +
+      "• Your name\n" +
+      "• Postcode or share a Maps pin 📍\n" +
+      "• What happened (puncture, flat, blowout, locked wheel?)\n" +
+      "• Photo of the damaged tyre (sidewall + tread)\n" +
+      "• Photo of your number plate (or just type the reg, e.g. AB12 CDE)\n" +
+      "• Which wheel? Front-left, front-right, rear-left, rear-right (multiple is fine)";
 
     // Helpers for parsing follow-up intake messages
     const POSTCODE_RE = /\b([A-Z]{1,2}\d[A-Z\d]?)\s*(\d[A-Z]{2})\b/i;
@@ -342,6 +344,31 @@ Deno.serve(async (req) => {
       if (/punct|nail|screw/.test(s)) return "puncture";
       if (/sidewall|bulge/.test(s)) return "sidewall damage";
       return null;
+    };
+    // UK number plate (current + older formats), tolerant of optional space
+    const REG_RE = /\b([A-Z]{2}\d{2}\s?[A-Z]{3}|[A-Z]\d{1,3}\s?[A-Z]{3}|[A-Z]{3}\s?\d{1,3}[A-Z])\b/i;
+    const extractReg = (t: string) => {
+      const m = t.match(REG_RE);
+      if (!m) return null;
+      const raw = m[1].toUpperCase().replace(/\s+/g, "");
+      // Insert space for current format AB12CDE -> AB12 CDE
+      if (/^[A-Z]{2}\d{2}[A-Z]{3}$/.test(raw)) return `${raw.slice(0, 4)} ${raw.slice(4)}`;
+      return raw;
+    };
+    const extractWheels = (t: string): string[] => {
+      const s = t.toLowerCase();
+      const out = new Set<string>();
+      const has = (re: RegExp) => re.test(s);
+      // Direct corner mentions
+      if (has(/front[-\s]?left|fl\b|nearside front|front near.?side/)) out.add("front-left");
+      if (has(/front[-\s]?right|fr\b|offside front|front off.?side/)) out.add("front-right");
+      if (has(/(rear|back)[-\s]?left|rl\b|nearside rear|nearside back|rear near.?side/)) out.add("rear-left");
+      if (has(/(rear|back)[-\s]?right|rr\b|offside rear|offside back|rear off.?side/)) out.add("rear-right");
+      // "all four", "all 4"
+      if (has(/all\s*(four|4)\b/)) {
+        ["front-left", "front-right", "rear-left", "rear-right"].forEach((w) => out.add(w));
+      }
+      return Array.from(out);
     };
 
     // 3a. If there's an in-flight intake (intake_pending), enrich it
@@ -383,16 +410,26 @@ Deno.serve(async (req) => {
         }
       }
 
+      // Vehicle reg from text (photo extraction happens in analyze-damage)
+      const reg = extractReg(body);
+      if (reg && !job.vehicle_reg) updates.vehicle_reg = reg;
+
+      // Affected wheels — merge with existing
+      const wheelsFromText = extractWheels(body);
+      if (wheelsFromText.length > 0) {
+        const merged = Array.from(new Set([...(job.affected_wheels ?? []), ...wheelsFromText]));
+        updates.affected_wheels = merged;
+      }
+
       const haveName = (updates.customer_name ?? job.customer_name) && (updates.customer_name ?? job.customer_name) !== "Customer";
       const havePostcode = !!(updates.postcode ?? job.postcode);
       const finalDesc: string = updates.issue_description ?? job.issue_description ?? "";
       const finalPhotos: string[] = updates.photo_urls ?? job.photo_urls ?? [];
       const haveDetails = finalDesc.length > 5 || finalPhotos.length > 0;
+      const finalReg: string | null = updates.vehicle_reg ?? job.vehicle_reg ?? null;
+      const finalWheels: string[] = updates.affected_wheels ?? job.affected_wheels ?? [];
 
       // Diagnostic depth: do we actually understand the problem?
-      // We need EITHER a photo OR a description that mentions a specific
-      // failure mode (puncture/blowout/sidewall/etc.) AND some extra context
-      // (nail, slow, driving, when it happened, etc.).
       const finalIssueType = updates.issue_type ?? job.issue_type;
       const lowerDesc = finalDesc.toLowerCase();
       const hasContext =
@@ -400,17 +437,20 @@ Deno.serve(async (req) => {
         lowerDesc.length > 60;
       const diagnosisOk = finalPhotos.length > 0 || (finalIssueType && finalIssueType !== "unknown" && hasContext);
 
-      if (haveName && havePostcode && haveDetails && diagnosisOk) {
+      // Reg + at least one wheel position are now required before dispatch
+      if (haveName && havePostcode && haveDetails && diagnosisOk && finalReg && finalWheels.length > 0) {
         updates.status = "intake_complete"; // fires dispatch trigger
       }
 
       await supabase.from("jobs").update(updates).eq("id", job.id);
 
       // Acknowledge with what's still missing
-    const missing: string[] = [];
+      const missing: string[] = [];
       if (!haveName) missing.push("your name (e.g. \"My name is John\")");
       if (!havePostcode) missing.push("postcode or a Maps location pin");
       if (!haveDetails) missing.push("what happened (and a photo if possible)");
+      if (!finalReg) missing.push("car number plate (type it or send a photo of the plate)");
+      if (finalWheels.length === 0) missing.push("which wheel(s) — front-left, front-right, rear-left, rear-right (you can voice-note it)");
 
       let reply: string;
       if (missing.length > 0) {
@@ -535,6 +575,8 @@ Deno.serve(async (req) => {
       }
     }
     const it0 = guessIssueType(body);
+    const reg0 = extractReg(body);
+    const wheels0 = extractWheels(body);
     const { data: newJob } = await supabase
       .from("jobs")
       .insert({
@@ -544,6 +586,8 @@ Deno.serve(async (req) => {
         issue_type: it0 ?? "unknown",
         issue_description: body || null,
         photo_urls: mediaUrls,
+        vehicle_reg: reg0,
+        affected_wheels: wheels0,
         status: "intake_pending",
       })
       .select()

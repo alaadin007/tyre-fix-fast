@@ -58,6 +58,59 @@ async function fetchMediaUrl(mediaId: string, token: string): Promise<{ url: str
   }
 }
 
+async function transcribeAudio(buf: Uint8Array, mime: string): Promise<string> {
+  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  if (!LOVABLE_API_KEY) {
+    console.error("LOVABLE_API_KEY missing — cannot transcribe");
+    return "";
+  }
+  // Encode to base64
+  let binary = "";
+  const chunk = 0x8000;
+  for (let i = 0; i < buf.length; i += chunk) {
+    binary += String.fromCharCode(...buf.subarray(i, i + chunk));
+  }
+  const b64 = btoa(binary);
+  const fmt = (mime || "audio/ogg").split("/")[1]?.split(";")[0] || "ogg";
+
+  try {
+    const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: [
+          {
+            role: "system",
+            content:
+              "You transcribe customer voice notes for a UK mobile-tyre service. Return the spoken words verbatim in English. If the speaker mentions a UK number plate, tyre size, or which wheel (front-left, front-right, rear-left, rear-right), include those. No commentary, just the transcript.",
+          },
+          {
+            role: "user",
+            content: [
+              { type: "text", text: "Transcribe this voice note." },
+              { type: "input_audio", input_audio: { data: b64, format: fmt } },
+            ],
+          },
+        ],
+      }),
+    });
+    if (!r.ok) {
+      console.error("transcription failed", r.status, await r.text());
+      return "";
+    }
+    const j = await r.json();
+    const text = j?.choices?.[0]?.message?.content ?? "";
+    return typeof text === "string" ? text.trim() : "";
+  } catch (e) {
+    console.error("transcription error", e);
+    return "";
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
@@ -110,10 +163,11 @@ Deno.serve(async (req) => {
 
       if (msg.type === "text") {
         body = msg.text?.body ?? "";
-      } else if (msg.type === "image" || msg.type === "document" || msg.type === "video" || msg.type === "audio") {
-        const media = msg[msg.type] ?? {};
+      } else if (msg.type === "image" || msg.type === "document" || msg.type === "video" || msg.type === "audio" || msg.type === "voice") {
+        const kind = msg.type === "voice" ? "audio" : msg.type;
+        const media = msg[kind] ?? msg[msg.type] ?? {};
         const mediaId = media?.id;
-        body = msg[msg.type]?.caption ?? "";
+        body = (msg[kind]?.caption ?? msg[msg.type]?.caption) ?? "";
         if (META_TOKEN) {
           const directUrl = typeof media?.url === "string" && media.url ? media.url : null;
           const directMime = typeof media?.mime_type === "string" && media.mime_type ? media.mime_type : null;
@@ -125,19 +179,31 @@ Deno.serve(async (req) => {
               const mr = await fetch(m.url, { headers: { Authorization: `Bearer ${META_TOKEN}` } });
               if (mr.ok) {
                 const buf = new Uint8Array(await mr.arrayBuffer());
-                const ext = (m.mime.split("/")[1] || "jpg").split(";")[0];
-                const path = `meta-inbound/${Date.now()}-${crypto.randomUUID()}.${ext}`;
-                const { error: upErr } = await supabase.storage
-                  .from("job-photos")
-                  .upload(path, buf, { contentType: m.mime, upsert: false });
-                if (!upErr) {
-                  const { data: pub } = supabase.storage.from("job-photos").getPublicUrl(path);
-                  const publicUrl = pub.publicUrl;
-                  mediaUrls.push(publicUrl);
-                  mediaTypes.push(m.mime);
-                  console.log("meta media stored", JSON.stringify({ type: msg.type, path, publicUrl }));
+
+                // Voice note / audio → transcribe and inject as text body
+                if (kind === "audio" || msg.type === "voice" || (m.mime && m.mime.startsWith("audio/"))) {
+                  const transcript = await transcribeAudio(buf, m.mime);
+                  if (transcript) {
+                    body = body ? `${body}\n${transcript}` : transcript;
+                    console.log("voice transcribed", JSON.stringify({ chars: transcript.length }));
+                  } else {
+                    console.error("voice transcription returned empty");
+                  }
                 } else {
-                  console.error("meta media upload failed", msg.type, upErr);
+                  const ext = (m.mime.split("/")[1] || "jpg").split(";")[0];
+                  const path = `meta-inbound/${Date.now()}-${crypto.randomUUID()}.${ext}`;
+                  const { error: upErr } = await supabase.storage
+                    .from("job-photos")
+                    .upload(path, buf, { contentType: m.mime, upsert: false });
+                  if (!upErr) {
+                    const { data: pub } = supabase.storage.from("job-photos").getPublicUrl(path);
+                    const publicUrl = pub.publicUrl;
+                    mediaUrls.push(publicUrl);
+                    mediaTypes.push(m.mime);
+                    console.log("meta media stored", JSON.stringify({ type: msg.type, path, publicUrl }));
+                  } else {
+                    console.error("meta media upload failed", msg.type, upErr);
+                  }
                 }
               } else {
                 console.error("meta media download failed", msg.type, mr.status, m.url);
