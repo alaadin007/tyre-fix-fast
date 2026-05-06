@@ -1,10 +1,10 @@
-// Creates a Stripe Checkout Session for the £15 platform connection fee.
+// Creates a Stripe Checkout Session for the £20 platform connection fee.
 // Returns the hosted Checkout URL — we SMS that URL to the customer.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { z } from "https://esm.sh/zod@3.23.8";
 import { createStripeClient, corsHeaders } from "../_shared/stripe.ts";
 
-const PRICE_LOOKUP = "platform_fee_15_gbp";
+const PRICE_LOOKUP = "platform_fee_20_gbp";
 
 const BodySchema = z.object({
   job_id: z.string().uuid(),
@@ -93,7 +93,7 @@ Deno.serve(async (req) => {
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       line_items: [{ price: priceId, quantity: 1 }],
-      // UK platform fee — full Stripe compliance handling on the £15
+      // UK platform fee — full Stripe compliance handling on the £20
       managed_payments: { enabled: true },
       success_url: `${baseOrigin}/confirmed?job=${job_id}`,
       cancel_url: `${baseOrigin}/?canceled=1`,
