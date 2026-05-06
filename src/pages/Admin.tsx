@@ -760,7 +760,7 @@ function IncomingInquiryCard({
               <MessageSquare className="h-3 w-3" />Text
             </a>
             <a
-              href={`https://wa.me/${job.customer_phone.replace(/\D/g, "")}`}
+              href={`https://wa.me/${(job.customer_phone || "").replace(/^\+|^00/, "").replace(/\D/g, "").replace(/^0/, "44")}`}
               target="_blank" rel="noreferrer"
               className="inline-flex items-center gap-1 rounded-md border bg-white px-2 py-1 hover:bg-muted"
             >
