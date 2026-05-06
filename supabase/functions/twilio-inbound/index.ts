@@ -407,14 +407,14 @@ Deno.serve(async (req) => {
       await supabase.from("jobs").update(updates).eq("id", job.id);
 
       // Acknowledge with what's still missing
-      const missing: string[] = [];
-      if (!haveName) missing.push("your name");
-      if (!havePostcode) missing.push("postcode/location");
+    const missing: string[] = [];
+      if (!haveName) missing.push("your name (e.g. \"My name is John\")");
+      if (!havePostcode) missing.push("postcode or a Maps location pin");
       if (!haveDetails) missing.push("what happened (and a photo if possible)");
 
       let reply: string;
       if (missing.length > 0) {
-        reply = `Thanks! Still need: ${missing.join(", ")}.`;
+        reply = `Thanks! Still need: ${missing.join("; ")}.`;
       } else if (!diagnosisOk) {
         // We have the basics but not enough to brief the technician well.
         // Ask the customer's own theory + a photo.
