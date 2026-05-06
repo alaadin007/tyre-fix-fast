@@ -71,7 +71,11 @@ async function aiExtractQuote(text: string): Promise<{
         {
           role: "system",
           content:
-            "You parse mobile-tyre technician SMS bids. Extract price in GBP and ETA in minutes from messy human text. Examples: 'ill do it for 70 mate, 20 mins away' → price 70, eta 20, accepts true. 'sorry busy' → accepts false.",
+            "You parse mobile-tyre technician WhatsApp/SMS bids. Extract: are they accepting the job (free now?), ETA in minutes, callout/labour fee in GBP, whether they include a replacement tyre, and if so whether it's new or used and its price. Examples:\n" +
+            "'Yes free now, 20 mins, £40 callout, no tyre' → accepts true, eta 20, callout 40, tyre_included false.\n" +
+            "'Y, 25, 50 callout + 80 for new tyre' → accepts true, eta 25, callout 50, tyre_included true, tyre_condition new, price 130.\n" +
+            "'on it, 15 min, £120 all in (used tyre included)' → accepts true, eta 15, callout 120, tyre_included true, tyre_condition used, price 120.\n" +
+            "'sorry busy' → accepts false.",
         },
         { role: "user", content: text },
       ],
@@ -84,9 +88,12 @@ async function aiExtractQuote(text: string): Promise<{
             parameters: {
               type: "object",
               properties: {
-                price_gbp: { type: ["number", "null"] },
+                price_gbp: { type: ["number", "null"], description: "Total price in GBP (callout + tyre if included)." },
+                callout_fee_gbp: { type: ["number", "null"], description: "Just the callout/labour portion." },
                 eta_minutes: { type: ["integer", "null"] },
-                accepts: { type: "boolean" },
+                accepts: { type: "boolean", description: "Is the technician free and willing right now?" },
+                tyre_included: { type: ["boolean", "null"], description: "Did they include a replacement tyre in the quote?" },
+                tyre_condition: { type: ["string", "null"], enum: ["new", "used", null] },
                 notes: { type: "string" },
                 confidence: { type: "string", enum: ["high", "medium", "low"] },
               },
