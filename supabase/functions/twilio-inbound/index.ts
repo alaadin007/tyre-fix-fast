@@ -111,21 +111,24 @@ async function aiExtractQuote(text: string): Promise<{
   });
   if (!r.ok) {
     console.error("AI parse failed", r.status, await r.text());
-    return { price_gbp: null, eta_minutes: null, accepts: false, notes: "ai error", confidence: "low" };
+    return { price_gbp: null, callout_fee_gbp: null, eta_minutes: null, accepts: false, tyre_included: null, tyre_condition: null, notes: "ai error", confidence: "low" };
   }
   const data = await r.json();
   try {
     const args = JSON.parse(data.choices[0].message.tool_calls[0].function.arguments);
     return {
-      price_gbp: args.price_gbp ?? null,
+      price_gbp: args.price_gbp ?? args.callout_fee_gbp ?? null,
+      callout_fee_gbp: args.callout_fee_gbp ?? null,
       eta_minutes: args.eta_minutes ?? null,
       accepts: !!args.accepts,
+      tyre_included: args.tyre_included ?? null,
+      tyre_condition: args.tyre_condition ?? null,
       notes: args.notes ?? "",
       confidence: args.confidence ?? "low",
     };
   } catch (e) {
     console.error("AI parse JSON error", e);
-    return { price_gbp: null, eta_minutes: null, accepts: false, notes: "parse failed", confidence: "low" };
+    return { price_gbp: null, callout_fee_gbp: null, eta_minutes: null, accepts: false, tyre_included: null, tyre_condition: null, notes: "parse failed", confidence: "low" };
   }
 }
 
