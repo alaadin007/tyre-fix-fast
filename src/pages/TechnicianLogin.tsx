@@ -45,40 +45,38 @@ export default function TechnicianLogin() {
       return;
     }
     setBusy(true);
-    const { error } = await supabase.auth.signInWithOtp({
-      phone: parsed.data,
-      options: { channel },
+    const { data, error } = await supabase.functions.invoke("tech-otp-send", {
+      body: { phone: parsed.data },
     });
     setBusy(false);
-    if (error) {
-      toast.error(error.message);
+    if (error || (data as any)?.error) {
+      toast.error((data as any)?.error || error?.message || "Couldn't send code");
       return;
     }
-    toast.success(
-      channel === "whatsapp"
-        ? "Code sent on WhatsApp — check your chats"
-        : "Code sent — check your messages",
-    );
+    toast.success("Code sent on WhatsApp — check your chats");
     setStep("code");
   };
 
   const verify = async () => {
-    if (!/^\d{4,8}$/.test(code)) {
-      toast.error("Enter the code you received");
+    if (!/^\d{6}$/.test(code)) {
+      toast.error("Enter the 6-digit code");
       return;
     }
     setBusy(true);
-    const { error } = await supabase.auth.verifyOtp({
-      phone: fullPhone(),
-      token: code,
-      type: "sms",
+    const { data, error } = await supabase.functions.invoke("tech-otp-verify", {
+      body: {
+        phone: fullPhone(),
+        code,
+        redirect_to: `${window.location.origin}/technician`,
+      },
     });
-    setBusy(false);
-    if (error) {
-      toast.error(error.message);
+    if (error || (data as any)?.error || !(data as any)?.action_link) {
+      setBusy(false);
+      toast.error((data as any)?.error || error?.message || "Verification failed");
       return;
     }
-    nav("/technician", { replace: true });
+    // Follow the magic link to establish session, then land on /technician.
+    window.location.href = (data as any).action_link;
   };
 
 
