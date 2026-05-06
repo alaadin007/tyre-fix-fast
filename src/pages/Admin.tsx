@@ -27,6 +27,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { AdminAIChat } from "@/components/admin/AdminAIChat";
 import { PendingTechnicians } from "@/components/admin/PendingTechnicians";
+import TechnicianLiveMap from "@/components/admin/TechnicianLiveMap";
 
 type Technician = {
   id: string; name: string; phone: string; email: string | null;
