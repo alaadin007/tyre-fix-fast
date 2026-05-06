@@ -30,6 +30,7 @@ export default function TechnicianLogin() {
   const channel = "whatsapp" as const;
   const [step, setStep] = useState<"phone" | "code">("phone");
   const [busy, setBusy] = useState(false);
+  const selectedCountry = COUNTRIES.find((country) => country.dial === dial) ?? COUNTRIES[0];
 
   useEffect(() => {
     if (session && !loading) nav("/technician", { replace: true });
@@ -53,7 +54,9 @@ export default function TechnicianLogin() {
       toast.error((data as any)?.error || error?.message || "Couldn't send code");
       return;
     }
-    toast.success("Code sent on WhatsApp — check your chats");
+    toast.success((data as any)?.channel === "sms_fallback"
+      ? "WhatsApp wasn’t available for this number, so we sent the code by text instead"
+      : "Code sent on WhatsApp — check your chats");
     setStep("code");
   };
 
@@ -85,19 +88,24 @@ export default function TechnicianLogin() {
       <div className="w-full max-w-md rounded-2xl border border-white/10 bg-white/[0.03] p-6">
         <h1 className="text-2xl font-semibold">Technician sign in</h1>
         <p className="mt-1 text-sm text-white/60">
-          Sign in with your work phone — we'll text you a one-time code.
+          Sign in with your work phone. We’ll send a one-time code on WhatsApp, or by text if WhatsApp isn’t available.
         </p>
 
         {step === "phone" ? (
           <div className="mt-6 space-y-4">
             <div>
               <Label htmlFor="phone">Mobile number</Label>
+              <p className="mt-1 text-xs text-white/50">
+                Country / region: {selectedCountry.flag} {selectedCountry.name} (+{dial})
+              </p>
               <div className="mt-1 flex gap-2">
                 <Select value={dial} onValueChange={setDial}>
-                  <SelectTrigger className="w-[130px] bg-black/40 border-white/10">
-                    <SelectValue />
+                  <SelectTrigger aria-label="Country code" className="w-[140px] shrink-0 bg-black/40 border-white/10">
+                    <SelectValue placeholder="Country">
+                      {selectedCountry.flag} {selectedCountry.iso} +{selectedCountry.dial}
+                    </SelectValue>
                   </SelectTrigger>
-                  <SelectContent className="max-h-72">
+                  <SelectContent className="max-h-72 bg-popover text-popover-foreground border-border">
                     {COUNTRIES.map((c) => (
                       <SelectItem key={c.iso} value={c.dial}>
                         {c.flag} {c.iso} +{c.dial}
