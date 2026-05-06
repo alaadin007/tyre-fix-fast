@@ -408,16 +408,26 @@ Deno.serve(async (req) => {
         }
       }
 
+      // Vehicle reg from text (photo extraction happens in analyze-damage)
+      const reg = extractReg(body);
+      if (reg && !job.vehicle_reg) updates.vehicle_reg = reg;
+
+      // Affected wheels — merge with existing
+      const wheelsFromText = extractWheels(body);
+      if (wheelsFromText.length > 0) {
+        const merged = Array.from(new Set([...(job.affected_wheels ?? []), ...wheelsFromText]));
+        updates.affected_wheels = merged;
+      }
+
       const haveName = (updates.customer_name ?? job.customer_name) && (updates.customer_name ?? job.customer_name) !== "Customer";
       const havePostcode = !!(updates.postcode ?? job.postcode);
       const finalDesc: string = updates.issue_description ?? job.issue_description ?? "";
       const finalPhotos: string[] = updates.photo_urls ?? job.photo_urls ?? [];
       const haveDetails = finalDesc.length > 5 || finalPhotos.length > 0;
+      const finalReg: string | null = updates.vehicle_reg ?? job.vehicle_reg ?? null;
+      const finalWheels: string[] = updates.affected_wheels ?? job.affected_wheels ?? [];
 
       // Diagnostic depth: do we actually understand the problem?
-      // We need EITHER a photo OR a description that mentions a specific
-      // failure mode (puncture/blowout/sidewall/etc.) AND some extra context
-      // (nail, slow, driving, when it happened, etc.).
       const finalIssueType = updates.issue_type ?? job.issue_type;
       const lowerDesc = finalDesc.toLowerCase();
       const hasContext =
@@ -425,17 +435,20 @@ Deno.serve(async (req) => {
         lowerDesc.length > 60;
       const diagnosisOk = finalPhotos.length > 0 || (finalIssueType && finalIssueType !== "unknown" && hasContext);
 
-      if (haveName && havePostcode && haveDetails && diagnosisOk) {
+      // Reg + at least one wheel position are now required before dispatch
+      if (haveName && havePostcode && haveDetails && diagnosisOk && finalReg && finalWheels.length > 0) {
         updates.status = "intake_complete"; // fires dispatch trigger
       }
 
       await supabase.from("jobs").update(updates).eq("id", job.id);
 
       // Acknowledge with what's still missing
-    const missing: string[] = [];
+      const missing: string[] = [];
       if (!haveName) missing.push("your name (e.g. \"My name is John\")");
       if (!havePostcode) missing.push("postcode or a Maps location pin");
       if (!haveDetails) missing.push("what happened (and a photo if possible)");
+      if (!finalReg) missing.push("car number plate (type it or send a photo of the plate)");
+      if (finalWheels.length === 0) missing.push("which wheel(s) — front-left, front-right, rear-left, rear-right (you can voice-note it)");
 
       let reply: string;
       if (missing.length > 0) {
