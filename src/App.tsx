@@ -13,6 +13,7 @@ import TechnicianOnboarding from "./pages/TechnicianOnboarding.tsx";
 import TechnicianDashboard from "./pages/TechnicianDashboard.tsx";
 import Privacy from "./pages/Privacy.tsx";
 import Terms from "./pages/Terms.tsx";
+import Console from "./pages/Console.tsx";
 
 const queryClient = new QueryClient();
 
