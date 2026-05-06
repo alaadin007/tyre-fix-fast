@@ -21,6 +21,31 @@ const BodySchema = z.object({
   channel: z.enum(["sms", "whatsapp"]).default("sms"),
 });
 
+async function sendViaTwilio(args: {
+  to: string;
+  body: string;
+  channel: "sms" | "whatsapp";
+  lovableApiKey: string;
+  twilioApiKey: string;
+}) {
+  const fromBase = args.channel === "whatsapp" ? FROM_WHATSAPP : FROM_SMS;
+  const To = args.channel === "whatsapp" ? `whatsapp:${args.to}` : args.to;
+  const From = args.channel === "whatsapp" ? `whatsapp:${fromBase}` : fromBase;
+
+  const tw = await fetch(`${GATEWAY_URL}/Messages.json`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${args.lovableApiKey}`,
+      "X-Connection-Api-Key": args.twilioApiKey,
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: new URLSearchParams({ To, From, Body: args.body }),
+  });
+
+  const data = await tw.json();
+  return { ok: tw.ok, status: tw.status, data, fromBase };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -39,7 +64,7 @@ Deno.serve(async (req) => {
     }
     const { to, body, channel } = parsed.data;
 
-    // WhatsApp goes through Meta Cloud API; SMS stays on Twilio.
+    // Prefer Meta for WhatsApp, but fall back to Twilio WhatsApp if Meta rejects the send.
     if (channel === "whatsapp") {
       const metaRes = await fetch(
         `${Deno.env.get("SUPABASE_URL")}/functions/v1/whatsapp-meta-send`,
@@ -53,31 +78,69 @@ Deno.serve(async (req) => {
         },
       );
       const metaData = await metaRes.json();
-      return new Response(JSON.stringify(metaData), {
-        status: metaRes.status,
+
+      if (metaRes.ok) {
+        return new Response(JSON.stringify({ ...metaData, channel: "whatsapp", provider: "meta" }), {
+          status: metaRes.status,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      console.error("meta whatsapp send failed, falling back to twilio", metaRes.status, metaData);
+
+      const twilioWa = await sendViaTwilio({
+        to,
+        body,
+        channel: "whatsapp",
+        lovableApiKey: LOVABLE_API_KEY,
+        twilioApiKey: TWILIO_API_KEY,
+      });
+
+      if (!twilioWa.ok) {
+        console.error("twilio whatsapp fallback failed", twilioWa.status, twilioWa.data);
+        return new Response(
+          JSON.stringify({
+            error: metaData?.error ?? twilioWa.data?.message ?? "WhatsApp send failed",
+            provider: "meta_and_twilio",
+            status: twilioWa.status,
+          }),
+          { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+
+      const supabase = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+      );
+      await supabase.from("sms_messages").insert({
+        direction: "outbound",
+        channel,
+        from_number: twilioWa.fromBase,
+        to_number: to,
+        body,
+        twilio_sid: twilioWa.data?.sid ?? null,
+        num_media: 0,
+        media_urls: [],
+        status: twilioWa.data?.status ?? "queued",
+      });
+
+      return new Response(JSON.stringify({ ok: true, sid: twilioWa.data?.sid, channel: "whatsapp", provider: "twilio" }), {
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const fromBase = FROM_SMS;
-    const From = fromBase;
-    const To = to;
-
-    const tw = await fetch(`${GATEWAY_URL}/Messages.json`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "X-Connection-Api-Key": TWILIO_API_KEY,
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: new URLSearchParams({ To, From, Body: body }),
+    const twilioSms = await sendViaTwilio({
+      to,
+      body,
+      channel,
+      lovableApiKey: LOVABLE_API_KEY,
+      twilioApiKey: TWILIO_API_KEY,
     });
-
-    const data = await tw.json();
-    if (!tw.ok) {
-      console.error("twilio send failed", tw.status, data);
+    if (!twilioSms.ok) {
+      console.error("twilio send failed", twilioSms.status, twilioSms.data);
       return new Response(
-        JSON.stringify({ error: data?.message ?? "Twilio send failed", status: tw.status }),
+        JSON.stringify({ error: twilioSms.data?.message ?? "Twilio send failed", status: twilioSms.status }),
         { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
@@ -90,16 +153,16 @@ Deno.serve(async (req) => {
     await supabase.from("sms_messages").insert({
       direction: "outbound",
       channel,
-      from_number: fromBase,
+      from_number: twilioSms.fromBase,
       to_number: to,
       body,
-      twilio_sid: data?.sid ?? null,
+      twilio_sid: twilioSms.data?.sid ?? null,
       num_media: 0,
       media_urls: [],
-      status: data?.status ?? "queued",
+      status: twilioSms.data?.status ?? "queued",
     });
 
-    return new Response(JSON.stringify({ ok: true, sid: data?.sid }), {
+    return new Response(JSON.stringify({ ok: true, sid: twilioSms.data?.sid, channel: "sms", provider: "twilio" }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

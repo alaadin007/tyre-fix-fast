@@ -73,15 +73,37 @@ Deno.serve(async (req) => {
         body: `Your Tyre Fly sign-in code is ${code}. It expires in 10 minutes.`,
       }),
     });
+    const sendData = await sendRes.json().catch(() => ({}));
     if (!sendRes.ok) {
-      const t = await sendRes.text();
-      console.error("twilio-send failed", sendRes.status, t);
-      return new Response(JSON.stringify({ error: "Couldn't send WhatsApp code" }), {
-        status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      console.error("twilio-send failed", sendRes.status, sendData);
+
+      const smsRes = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/twilio-send`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+        },
+        body: JSON.stringify({
+          to: phone,
+          channel: "sms",
+          body: `Your Tyre Fly sign-in code is ${code}. It expires in 10 minutes.`,
+        }),
+      });
+      const smsData = await smsRes.json().catch(() => ({}));
+
+      if (!smsRes.ok) {
+        console.error("sms fallback failed", smsRes.status, smsData);
+        return new Response(JSON.stringify({ error: "Couldn't send sign-in code" }), {
+          status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      return new Response(JSON.stringify({ ok: true, channel: "sms_fallback" }), {
+        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    return new Response(JSON.stringify({ ok: true }), {
+    return new Response(JSON.stringify({ ok: true, channel: sendData?.channel ?? "whatsapp" }), {
       status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
