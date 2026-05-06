@@ -90,21 +90,40 @@ export default function Console() {
     { label: "Revenue today", value: mode === "demo" ? "£340" : "—" },
   ];
 
-  const handleDispatch = async (job: ConsoleJob, techId: string) => {
+  const handleManualDispatch = async (
+    job: ConsoleJob,
+    techId: string,
+    priceGbp: number,
+    etaMin: number,
+    notes?: string,
+  ) => {
     if (mode === "demo") {
       setJobs((prev) =>
-        prev.map((j) => (j.id === job.id ? { ...j, status: "broadcasting" } : j)),
+        prev.map((j) => (j.id === job.id ? { ...j, status: "awaiting_payment" } : j)),
       );
       setOpenJobId(null);
+      toast.success(`Demo: dispatched to tech, customer would get pay link for £${priceGbp}.`);
       return;
     }
-    await supabase.from("job_allocations").insert({
-      job_id: job.id,
-      technician_id: techId,
-      status: "proposed",
-    });
-    await supabase.from("jobs").update({ status: "broadcasting" }).eq("id", job.id);
-    setOpenJobId(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("manual-dispatch", {
+        body: {
+          job_id: job.id,
+          technician_id: techId,
+          price_gbp: priceGbp,
+          eta_minutes: etaMin,
+          notes,
+          origin: window.location.origin,
+        },
+      });
+      if (error) throw error;
+      toast.success("Dispatched ✅ Customer sent quote + pay link.");
+      console.log("manual-dispatch result", data);
+      setOpenJobId(null);
+    } catch (e: any) {
+      console.error(e);
+      toast.error(`Dispatch failed: ${e.message ?? e}`);
+    }
   };
 
   if (!authChecked) {
