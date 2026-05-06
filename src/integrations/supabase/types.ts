@@ -109,7 +109,13 @@ export type Database = {
           stripe_checkout_url: string | null
           stripe_payment_intent_id: string | null
           stripe_session_id: string | null
+          tread_condition: string | null
+          tyre_brand: string | null
+          tyre_details: string | null
+          tyre_size: string | null
+          tyre_type: string | null
           updated_at: string
+          wheel_type: string | null
         }
         Insert: {
           assigned_technician_id?: string | null
@@ -140,7 +146,13 @@ export type Database = {
           stripe_checkout_url?: string | null
           stripe_payment_intent_id?: string | null
           stripe_session_id?: string | null
+          tread_condition?: string | null
+          tyre_brand?: string | null
+          tyre_details?: string | null
+          tyre_size?: string | null
+          tyre_type?: string | null
           updated_at?: string
+          wheel_type?: string | null
         }
         Update: {
           assigned_technician_id?: string | null
@@ -171,7 +183,13 @@ export type Database = {
           stripe_checkout_url?: string | null
           stripe_payment_intent_id?: string | null
           stripe_session_id?: string | null
+          tread_condition?: string | null
+          tyre_brand?: string | null
+          tyre_details?: string | null
+          tyre_size?: string | null
+          tyre_type?: string | null
           updated_at?: string
+          wheel_type?: string | null
         }
         Relationships: []
       }
