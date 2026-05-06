@@ -45,6 +45,12 @@ const Index = () => {
       className="min-h-screen w-full overflow-x-hidden text-white"
       style={{ backgroundColor: "#0D0D0D", fontFamily: "Inter, system-ui, -apple-system, sans-serif" }}
     >
+      <Seo
+        title="Mobile Tyre Fitter UK — 24/7 Call-Out via WhatsApp | Tyre Fly"
+        description="Flat tyre? WhatsApp Tyre Fly and a vetted local mobile tyre fitter quotes in 60 seconds and is at your kerb fast. 24/7 across the UK — London, Manchester, Birmingham & nationwide."
+        canonical="/"
+        jsonLd={HOME_LD}
+      />
       {/* ===== Top nav ===== */}
       <header className="w-full border-b border-white/5">
         <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-5 py-4">
