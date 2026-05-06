@@ -21,28 +21,32 @@ import AreaPage from "./pages/AreaPage.tsx";
 const queryClient = new QueryClient();
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/job/:id" element={<JobStatus />} />
-          <Route path="/admin" element={<Admin />} />
-          <Route path="/confirmed" element={<Confirmed />} />
-          <Route path="/technician/login" element={<TechnicianLogin />} />
-          <Route path="/technician/onboarding" element={<TechnicianOnboarding />} />
-          <Route path="/technician" element={<TechnicianDashboard />} />
-          <Route path="/privacy" element={<Privacy />} />
-          <Route path="/terms" element={<Terms />} />
-          <Route path="/console" element={<Console />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
+  <HelmetProvider>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/areas" element={<AreasIndex />} />
+            <Route path="/areas/:slug" element={<AreaPage />} />
+            <Route path="/job/:id" element={<JobStatus />} />
+            <Route path="/admin" element={<Admin />} />
+            <Route path="/confirmed" element={<Confirmed />} />
+            <Route path="/technician/login" element={<TechnicianLogin />} />
+            <Route path="/technician/onboarding" element={<TechnicianOnboarding />} />
+            <Route path="/technician" element={<TechnicianDashboard />} />
+            <Route path="/privacy" element={<Privacy />} />
+            <Route path="/terms" element={<Terms />} />
+            <Route path="/console" element={<Console />} />
+            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
+  </HelmetProvider>
 );
 
 export default App;
