@@ -68,6 +68,8 @@ const Index = () => {
             <div className="mt-8 flex flex-col sm:flex-row gap-3 max-w-md">
               <a
                 href={WA_HREF}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="inline-flex flex-1 items-center justify-center gap-2 rounded-2xl px-5 text-base font-semibold transition-transform active:scale-[0.98]"
                 style={{ backgroundColor: "#25D366", color: "#0D0D0D", height: "58px" }}
               >
@@ -247,6 +249,8 @@ const Index = () => {
         <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center max-w-md mx-auto">
           <a
             href={WA_HREF}
+            target="_blank"
+            rel="noopener noreferrer"
             className="inline-flex flex-1 items-center justify-center gap-2 rounded-2xl px-5 text-base font-semibold transition-transform active:scale-[0.98]"
             style={{ backgroundColor: "#25D366", color: "#0D0D0D", height: "58px" }}
           >
