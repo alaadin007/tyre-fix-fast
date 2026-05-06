@@ -354,6 +354,10 @@ export default function Admin() {
         </div>
 
         <div className="mt-6">
+          <TechnicianLiveMap />
+        </div>
+
+        <div className="mt-6">
           <PendingTechnicians />
         </div>
       </main>
