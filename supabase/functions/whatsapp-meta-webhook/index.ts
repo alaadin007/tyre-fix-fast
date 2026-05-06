@@ -58,6 +58,59 @@ async function fetchMediaUrl(mediaId: string, token: string): Promise<{ url: str
   }
 }
 
+async function transcribeAudio(buf: Uint8Array, mime: string): Promise<string> {
+  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  if (!LOVABLE_API_KEY) {
+    console.error("LOVABLE_API_KEY missing — cannot transcribe");
+    return "";
+  }
+  // Encode to base64
+  let binary = "";
+  const chunk = 0x8000;
+  for (let i = 0; i < buf.length; i += chunk) {
+    binary += String.fromCharCode(...buf.subarray(i, i + chunk));
+  }
+  const b64 = btoa(binary);
+  const dataUrl = `data:${mime || "audio/ogg"};base64,${b64}`;
+
+  try {
+    const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: [
+          {
+            role: "system",
+            content:
+              "You transcribe customer voice notes for a UK mobile-tyre service. Return the spoken words verbatim in English. If the speaker mentions a UK number plate, tyre size, or which wheel (front-left, front-right, rear-left, rear-right), include those. No commentary, just the transcript.",
+          },
+          {
+            role: "user",
+            content: [
+              { type: "text", text: "Transcribe this voice note." },
+              { type: "image_url", image_url: { url: dataUrl } },
+            ],
+          },
+        ],
+      }),
+    });
+    if (!r.ok) {
+      console.error("transcription failed", r.status, await r.text());
+      return "";
+    }
+    const j = await r.json();
+    const text = j?.choices?.[0]?.message?.content ?? "";
+    return typeof text === "string" ? text.trim() : "";
+  } catch (e) {
+    console.error("transcription error", e);
+    return "";
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
