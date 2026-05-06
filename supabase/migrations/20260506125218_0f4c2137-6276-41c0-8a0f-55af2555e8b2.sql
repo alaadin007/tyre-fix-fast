@@ -1,0 +1,1 @@
+TRUNCATE TABLE public.quotes, public.job_allocations, public.ops_alerts, public.scheduled_tasks, public.reviews, public.sms_messages, public.jobs RESTART IDENTITY;
