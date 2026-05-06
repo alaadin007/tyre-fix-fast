@@ -51,7 +51,11 @@ serve(async (req) => {
           `A customer reported a tyre issue.\n` +
           `Issue type selected: ${issue_type ?? "unspecified"}\n` +
           `Customer description: ${issue_description ?? "(none)"}\n\n` +
-          `Look at the attached photo(s) of the tyre/wheel and classify the damage. ` +
+          `Look at the attached photo(s) of the tyre/wheel and:\n` +
+          `1. Classify the damage (type, severity, confidence).\n` +
+          `2. Identify tyre details where visible: size markings (e.g. 225/45R17 94Y), brand/manufacturer, ` +
+          `tyre type (summer/winter/all-season/run-flat), tread condition (new/good/worn/illegal), ` +
+          `and wheel type (alloy/steel). If something is not legible in the photo, return null for that field — do not guess.\n` +
           `Use the record_damage_assessment tool to return your answer.`,
       },
       ...photo_urls.slice(0, 3).map((url: string) => ({
