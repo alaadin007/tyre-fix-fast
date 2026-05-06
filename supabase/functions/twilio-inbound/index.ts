@@ -367,13 +367,19 @@ Deno.serve(async (req) => {
       if (pc && !job.postcode) updates.postcode = pc;
       const it = guessIssueType(body);
       if (it && (!job.issue_type || job.issue_type === "unknown")) updates.issue_type = it;
-      // Naive name capture: first non-postcode/issue line if name still placeholder
+      // Name capture: explicit phrases first, then naive line scan
       if (!job.customer_name || job.customer_name === "Customer") {
-        const firstLine = body.split(/\n|,|\./).map((s) => s.trim()).find((s) =>
-          s && s.length < 40 && !POSTCODE_RE.test(s) && !/punct|flat|blow|lock|tyre|tire|nail/i.test(s),
-        );
-        if (firstLine && /^[A-Za-z][A-Za-z .'-]{1,38}$/.test(firstLine)) {
-          updates.customer_name = firstLine;
+        const explicit =
+          body.match(/\b(?:my name is|i am|i'm|im|this is|name[:\-])\s+([A-Za-z][A-Za-z .'-]{1,38})/i);
+        if (explicit) {
+          updates.customer_name = explicit[1].trim().replace(/\s+/g, " ");
+        } else {
+          const firstLine = body.split(/\n|,|\./).map((s) => s.trim()).find((s) =>
+            s && s.length < 40 && !POSTCODE_RE.test(s) && !/punct|flat|blow|lock|tyre|tire|nail|hi|hello|hey|thanks|location|pin/i.test(s),
+          );
+          if (firstLine && /^[A-Za-z][A-Za-z .'-]{1,38}$/.test(firstLine) && firstLine.split(/\s+/).length <= 4) {
+            updates.customer_name = firstLine;
+          }
         }
       }
 
