@@ -86,14 +86,6 @@ const Index = () => {
               </a>
             </div>
 
-            <div className="mt-4 max-w-md">
-              <WhatsAppChatCta
-                message="Hi Tyre Fly — I have a question before I book"
-                label="Questions first? Chat with us"
-                subLabel="Typically reply in under 2 minutes"
-              />
-            </div>
-
             <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-white/60">
               <span className="inline-flex items-center gap-1.5">
                 <Star className="h-3.5 w-3.5" style={{ color: "#FF6B1A" }} fill="#FF6B1A" /> 4.9 rated · 1,200+ jobs
