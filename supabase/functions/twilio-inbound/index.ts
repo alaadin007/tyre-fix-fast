@@ -50,8 +50,11 @@ async function reverseGeocodePostcode(lat: number, lng: number): Promise<string 
 
 async function aiExtractQuote(text: string): Promise<{
   price_gbp: number | null;
+  callout_fee_gbp: number | null;
   eta_minutes: number | null;
   accepts: boolean;
+  tyre_included: boolean | null;
+  tyre_condition: "new" | "used" | null;
   notes: string;
   confidence: "high" | "medium" | "low";
 }> {
