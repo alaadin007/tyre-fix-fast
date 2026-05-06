@@ -18,6 +18,7 @@ export default function TechnicianLogin() {
   const { session, loading } = useAuthSession();
   const [phone, setPhone] = useState("+44");
   const [code, setCode] = useState("");
+  const [channel, setChannel] = useState<"sms" | "whatsapp">("whatsapp");
   const [step, setStep] = useState<"phone" | "code">("phone");
   const [busy, setBusy] = useState(false);
 
@@ -32,26 +33,33 @@ export default function TechnicianLogin() {
       return;
     }
     setBusy(true);
-    const { error } = await supabase.auth.signInWithOtp({ phone: parsed.data });
+    const { error } = await supabase.auth.signInWithOtp({
+      phone: parsed.data,
+      options: { channel },
+    });
     setBusy(false);
     if (error) {
       toast.error(error.message);
       return;
     }
-    toast.success("Code sent — check your messages");
+    toast.success(
+      channel === "whatsapp"
+        ? "Code sent on WhatsApp — check your chats"
+        : "Code sent — check your messages",
+    );
     setStep("code");
   };
 
   const verify = async () => {
     if (!/^\d{4,8}$/.test(code)) {
-      toast.error("Enter the code from the SMS");
+      toast.error("Enter the code you received");
       return;
     }
     setBusy(true);
     const { error } = await supabase.auth.verifyOtp({
       phone: phoneSchema.parse(phone),
       token: code,
-      type: "sms",
+      type: channel === "whatsapp" ? "whatsapp" : "sms",
     });
     setBusy(false);
     if (error) {
@@ -60,6 +68,7 @@ export default function TechnicianLogin() {
     }
     nav("/technician", { replace: true });
   };
+
 
   return (
     <main className="min-h-screen bg-[#0B0B0E] text-white flex items-center justify-center px-4">
