@@ -208,6 +208,7 @@ async function aiClassifyJobContinuity(args: {
     console.error("aiClassifyJobContinuity error", e);
     return "same_job";
   }
+}
 
 async function sendReply(to: string, body: string, channel: "sms" | "whatsapp") {
   const url = `${Deno.env.get("SUPABASE_URL")}/functions/v1/twilio-send`;
