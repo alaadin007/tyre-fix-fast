@@ -17,16 +17,30 @@ async function resolvePriceId(stripe: ReturnType<typeof createStripeClient>) {
     lookup_keys: [PRICE_LOOKUP],
     active: true,
     limit: 1,
+    expand: ["data.product"],
   });
-  if (list.data[0]) return list.data[0].id;
+  let price = list.data[0];
+  if (!price) {
+    const search = await stripe.prices.search({
+      query: `metadata['lovable_external_id']:'${PRICE_LOOKUP}' AND active:'true'`,
+      limit: 1,
+    });
+    price = search.data[0];
+  }
+  if (!price) throw new Error(`Price ${PRICE_LOOKUP} not found in Stripe`);
 
-  // Fallback: search by metadata
-  const search = await stripe.prices.search({
-    query: `metadata['lovable_external_id']:'${PRICE_LOOKUP}' AND active:'true'`,
-    limit: 1,
-  });
-  if (search.data[0]) return search.data[0].id;
-  throw new Error(`Price ${PRICE_LOOKUP} not found in Stripe`);
+  // Managed Payments requires a tax_code on the product. Set one if missing.
+  // txcd_20030000 = "Services - general" — appropriate for a platform/booking fee.
+  const productId = typeof price.product === "string" ? price.product : price.product?.id;
+  const productObj = typeof price.product === "object" ? price.product as any : null;
+  if (productId && (!productObj || !productObj.tax_code)) {
+    try {
+      await stripe.products.update(productId, { tax_code: "txcd_20030000" });
+    } catch (e) {
+      console.error("failed to set tax_code on product", productId, e);
+    }
+  }
+  return price.id;
 }
 
 Deno.serve(async (req) => {
