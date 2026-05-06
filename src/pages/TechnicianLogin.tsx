@@ -79,7 +79,7 @@ export default function TechnicianLogin() {
         </p>
 
         {step === "phone" ? (
-          <div className="mt-6 space-y-3">
+          <div className="mt-6 space-y-4">
             <div>
               <Label htmlFor="phone">Mobile number</Label>
               <Input
@@ -91,18 +91,45 @@ export default function TechnicianLogin() {
                 className="bg-black/40 border-white/10"
               />
             </div>
+            <div>
+              <Label className="mb-2 block">Receive code via</Label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setChannel("whatsapp")}
+                  className={`rounded-lg border px-3 py-2.5 text-sm font-medium transition ${
+                    channel === "whatsapp"
+                      ? "border-[#25D366] bg-[#25D366]/10 text-white"
+                      : "border-white/10 bg-black/40 text-white/60 hover:text-white"
+                  }`}
+                >
+                  WhatsApp
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setChannel("sms")}
+                  className={`rounded-lg border px-3 py-2.5 text-sm font-medium transition ${
+                    channel === "sms"
+                      ? "border-[#FF6B1A] bg-[#FF6B1A]/10 text-white"
+                      : "border-white/10 bg-black/40 text-white/60 hover:text-white"
+                  }`}
+                >
+                  SMS
+                </button>
+              </div>
+            </div>
             <Button
               onClick={sendCode}
               disabled={busy}
               className="w-full bg-[#FF6B1A] hover:bg-[#FF6B1A]/90"
             >
-              {busy ? "Sending…" : "Send code"}
+              {busy ? "Sending…" : `Send code via ${channel === "whatsapp" ? "WhatsApp" : "SMS"}`}
             </Button>
           </div>
         ) : (
           <div className="mt-6 space-y-3">
             <div>
-              <Label htmlFor="code">SMS code</Label>
+              <Label htmlFor="code">{channel === "whatsapp" ? "WhatsApp" : "SMS"} code</Label>
               <Input
                 id="code"
                 inputMode="numeric"
