@@ -1,200 +1,287 @@
-import { MessageSquare, Star, ShieldCheck, MapPin } from "lucide-react";
+import { MessageSquare, Star, ShieldCheck, MapPin, Sparkles, Clock, PoundSterling, Wrench, Phone } from "lucide-react";
 import logo from "@/assets/tyrefly-logo.png";
+import heroTruck from "@/assets/tyrefly-hero-truck.jpg";
 
+const WHATSAPP_NUMBER = "447447184489";
 const SMS_NUMBER = "+447447184489";
-const SMS_BODY = encodeURIComponent("Hi Tyre Fly — I need tyre help");
-// iOS uses &body=, Android uses ?body= — sms:?&body= works on both modern OSes
-const SMS_HREF = `sms:${SMS_NUMBER}?&body=${SMS_BODY}`;
+const MSG_BODY = "Hi Tyre Fly — I need tyre help";
+const WA_HREF = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(MSG_BODY)}`;
+const SMS_HREF = `sms:${SMS_NUMBER}?&body=${encodeURIComponent(MSG_BODY)}`;
 
 const Index = () => {
   return (
     <main
-      className="min-h-[100dvh] w-full max-w-full overflow-x-hidden flex flex-col items-center px-6 pt-5 pb-8 text-white"
+      className="min-h-screen w-full overflow-x-hidden text-white"
       style={{ backgroundColor: "#0D0D0D", fontFamily: "Inter, system-ui, -apple-system, sans-serif" }}
     >
-      {/* Header */}
-      <header className="w-full max-w-md mx-auto flex items-center justify-between">
-        <a href="/" className="flex items-center gap-2.5" aria-label="Tyre Fly home">
-          <img
-            src={logo}
-            alt="Tyre Fly logo"
-            width={36}
-            height={36}
-            className="h-9 w-9 object-contain"
-          />
-          <span className="text-[20px] font-bold tracking-tight leading-none">
-            Tyre <span style={{ color: "#FF6B1A" }}>Fly</span>
-          </span>
-        </a>
-
-        <div
-          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[11px] font-medium"
-          style={{ backgroundColor: "rgba(255,107,26,0.12)", border: "1px solid rgba(255,107,26,0.35)" }}
-        >
-          <span className="relative flex h-1.5 w-1.5">
-            <span
-              className="absolute inline-flex h-full w-full rounded-full opacity-75 animate-ping"
-              style={{ backgroundColor: "#FF6B1A" }}
-            />
-            <span className="relative inline-flex rounded-full h-1.5 w-1.5" style={{ backgroundColor: "#FF6B1A" }} />
-          </span>
-          <span style={{ color: "#FF6B1A" }}>Live</span>
-          <span className="text-white/70">· UK-wide</span>
+      {/* ===== Top nav ===== */}
+      <header className="w-full border-b border-white/5">
+        <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-5 py-4">
+          <a href="/" className="flex items-center gap-2.5" aria-label="Tyre Fly home">
+            <img src={logo} alt="Tyre Fly logo" width={36} height={36} className="h-9 w-9 object-contain" />
+            <span className="text-[20px] font-bold tracking-tight">
+              Tyre <span style={{ color: "#FF6B1A" }}>Fly</span>
+            </span>
+          </a>
+          <nav className="hidden md:flex items-center gap-6 text-sm text-white/70">
+            <a href="#how" className="hover:text-white">How it works</a>
+            <a href="#services" className="hover:text-white">Services</a>
+            <a href="#reviews" className="hover:text-white">Reviews</a>
+            <a href="/technician/login" className="hover:text-white">For technicians</a>
+          </nav>
+          <a
+            href="tel:08000000000"
+            className="hidden sm:inline-flex items-center gap-1.5 rounded-full border border-white/15 px-3 py-1.5 text-xs text-white/80 hover:border-white/40 hover:text-white"
+          >
+            <Phone className="h-3.5 w-3.5" /> 0800 000 0000
+          </a>
         </div>
       </header>
 
-      {/* Centre block */}
-      <section className="flex-1 w-full flex flex-col items-center justify-center text-center max-w-md mx-auto pt-10 sm:pt-6">
-        <h1 className="text-[56px] sm:text-7xl font-bold leading-[0.95] tracking-tight">
-          Flat tyre?
-        </h1>
-        <p
-          className="mt-3 text-[40px] sm:text-5xl font-bold leading-[0.95] tracking-tight"
-          style={{ color: "#FF6B1A" }}
-        >
-          Text us. We fly to you.
-        </p>
-
-        <p className="mt-8 text-base sm:text-lg text-white/60 leading-relaxed max-w-xs">
-          One text. A local pro quotes you in under 60 seconds.
-        </p>
-        <p className="mt-2 text-sm text-white/40">24/7 · No hold music · UK-wide</p>
-
-        {/* Services strip */}
-        <div className="mt-6 w-full max-w-xs">
-          <div className="flex flex-wrap items-center justify-center gap-1.5 text-[11px] text-white/55">
-            <span className="px-2.5 py-1 rounded-full border border-white/10 bg-white/[0.03]">Punctures</span>
-            <span className="px-2.5 py-1 rounded-full border border-white/10 bg-white/[0.03]">Tyre changes</span>
-            <span className="px-2.5 py-1 rounded-full border border-white/10 bg-white/[0.03]">Blowouts</span>
-            <span className="px-2.5 py-1 rounded-full border border-white/10 bg-white/[0.03]">Locked wheels</span>
-            <span className="px-2.5 py-1 rounded-full border border-white/10 bg-white/[0.03]">Seasonal swaps</span>
-          </div>
-          <p className="mt-2 text-[11px] text-white/35">
-            Get in touch for all — emergency or routine.
-          </p>
-        </div>
-
-        {/* Primary CTA */}
-        <a
-          href={SMS_HREF}
-          className="mt-10 w-full inline-flex items-center justify-center gap-3 rounded-2xl text-lg font-semibold transition-transform active:scale-[0.98]"
-          style={{
-            backgroundColor: "#FF6B1A",
-            color: "#0D0D0D",
-            height: "60px",
-            boxShadow: "0 0 0 0 rgba(255,107,26,0.7)",
-            animation: "ftnm-pulse 2s infinite",
-          }}
-          aria-label="Text Tyre Fly to get help now"
-        >
-          <MessageSquare className="h-5 w-5" strokeWidth={2.5} />
-          Text us — get help now
-        </a>
-
-        {/* Trust badges */}
-        <div className="mt-6 flex items-center justify-center gap-4 text-xs text-white/60">
-          <span className="inline-flex items-center gap-1.5">
-            <Star className="h-3.5 w-3.5" style={{ color: "#FF6B1A" }} fill="#FF6B1A" />
-            4.9 rated
-          </span>
-          <span className="text-white/20">·</span>
-          <span className="inline-flex items-center gap-1.5">
-            <ShieldCheck className="h-3.5 w-3.5" />
-            Fully insured
-          </span>
-          <span className="text-white/20">·</span>
-          <span className="inline-flex items-center gap-1.5">
-            <MapPin className="h-3.5 w-3.5" />
-            UK-wide
-          </span>
-        </div>
-
-        {/* Testimonials */}
-        <div className="mt-10 w-full">
-          <div className="flex items-center justify-center gap-2 mb-4">
-            <div className="flex items-center gap-0.5">
-              {[0, 1, 2, 3, 4].map((i) => (
-                <Star key={i} className="h-4 w-4" style={{ color: "#FF6B1A" }} fill="#FF6B1A" />
-              ))}
+      {/* ===== Hero ===== */}
+      <section className="relative w-full">
+        <div className="mx-auto grid w-full max-w-6xl items-center gap-10 px-5 py-12 md:grid-cols-2 md:py-20">
+          {/* Left: copy */}
+          <div>
+            <div
+              className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium"
+              style={{ backgroundColor: "rgba(255,107,26,0.10)", borderColor: "rgba(255,107,26,0.35)", color: "#FF6B1A" }}
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              WhatsApp AI · live UK-wide
             </div>
-            <span className="text-xs text-white/60">4.9 · 1,200+ jobs</span>
+
+            <h1 className="mt-5 text-5xl sm:text-6xl md:text-7xl font-bold leading-[0.95] tracking-tight">
+              Flat tyre?<br />
+              <span style={{ color: "#FF6B1A" }}>We fly to you.</span>
+            </h1>
+
+            <p className="mt-6 text-lg text-white/70 leading-relaxed max-w-lg">
+              <span className="text-white font-medium">WhatsApp AI</span> matches you with your nearest mobile tyre technician in seconds.
+              One message — our local pro quotes you in under 60 seconds, comes to your kerb, and gets you rolling.
+            </p>
+
+            <div className="mt-8 flex flex-col sm:flex-row gap-3 max-w-md">
+              <a
+                href={WA_HREF}
+                className="inline-flex flex-1 items-center justify-center gap-2 rounded-2xl px-5 text-base font-semibold transition-transform active:scale-[0.98]"
+                style={{ backgroundColor: "#25D366", color: "#0D0D0D", height: "58px" }}
+              >
+                <MessageSquare className="h-5 w-5" strokeWidth={2.5} />
+                WhatsApp us
+              </a>
+              <a
+                href={SMS_HREF}
+                className="inline-flex flex-1 items-center justify-center gap-2 rounded-2xl px-5 text-base font-semibold transition-transform active:scale-[0.98]"
+                style={{ backgroundColor: "#FF6B1A", color: "#0D0D0D", height: "58px" }}
+              >
+                <MessageSquare className="h-5 w-5" strokeWidth={2.5} />
+                Text us
+              </a>
+            </div>
+
+            <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-white/60">
+              <span className="inline-flex items-center gap-1.5">
+                <Star className="h-3.5 w-3.5" style={{ color: "#FF6B1A" }} fill="#FF6B1A" /> 4.9 rated · 1,200+ jobs
+              </span>
+              <span className="inline-flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5" /> Fully insured</span>
+              <span className="inline-flex items-center gap-1.5"><Clock className="h-3.5 w-3.5" /> 24/7 response</span>
+            </div>
           </div>
 
-          <div className="space-y-2.5">
+          {/* Right: truck image */}
+          <div className="relative">
+            <div className="absolute -inset-6 rounded-[2rem] blur-2xl opacity-40" style={{ backgroundColor: "#FF6B1A" }} />
+            <img
+              src={heroTruck}
+              alt="Tyre Fly mobile fitting van with a technician changing a tyre at the kerbside"
+              width={1536}
+              height={1024}
+              className="relative w-full rounded-2xl border border-white/10 object-cover shadow-2xl"
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* ===== How it works ===== */}
+      <section id="how" className="border-y border-white/5 bg-white/[0.02]">
+        <div className="mx-auto w-full max-w-6xl px-5 py-16">
+          <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-center">How Tyre Fly works</h2>
+          <p className="mt-3 text-center text-white/60 max-w-xl mx-auto">
+            No app. No call centre. Just WhatsApp and a real technician.
+          </p>
+
+          <div className="mt-12 grid gap-6 md:grid-cols-3">
             {[
               {
-                quote: "Texted at 11pm on the M25. Fitter arrived in 38 mins. Lifesaver.",
-                name: "Sarah K.",
-                meta: "London",
+                step: "01",
+                title: "Message us",
+                body: "WhatsApp or SMS your postcode and a photo of the damage. Our AI gets the basics in seconds.",
+                icon: MessageSquare,
               },
               {
-                quote: "No app, no faff. One message and sorted in the morning.",
-                name: "James R.",
-                meta: "Manchester",
+                step: "02",
+                title: "AI matches your nearest pro",
+                body: "We instantly ping verified mobile fitters near you. Our local pro quotes you in under 60 seconds.",
+                icon: Sparkles,
               },
               {
-                quote: "Cheaper than the AA and twice as fast. Will use again.",
-                name: "Priya M.",
-                meta: "Birmingham",
+                step: "03",
+                title: "Pay, confirmed, fitted",
+                body: "Tap the deposit link sent on WhatsApp + SMS. Job is booked, your technician is on the way.",
+                icon: Wrench,
               },
-            ].map((t, i) => (
-              <div
-                key={i}
-                className="text-left rounded-xl px-4 py-3 border border-white/10 bg-white/[0.03]"
-              >
-                <div className="flex items-center gap-0.5 mb-1.5">
-                  {[0, 1, 2, 3, 4].map((s) => (
-                    <Star key={s} className="h-3 w-3" style={{ color: "#FF6B1A" }} fill="#FF6B1A" />
-                  ))}
+            ].map((s) => (
+              <div key={s.step} className="rounded-2xl border border-white/10 bg-white/[0.03] p-6">
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl font-bold" style={{ color: "#FF6B1A" }}>{s.step}</span>
+                  <s.icon className="h-5 w-5 text-white/60" />
                 </div>
-                <p className="text-[13px] text-white/80 leading-snug">"{t.quote}"</p>
-                <p className="mt-1.5 text-[11px] text-white/40">
-                  {t.name} · {t.meta}
-                </p>
+                <h3 className="mt-4 text-xl font-semibold">{s.title}</h3>
+                <p className="mt-2 text-sm text-white/60 leading-relaxed">{s.body}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Technician CTA */}
-      <section className="w-full px-4 pb-4">
+      {/* ===== Services ===== */}
+      <section id="services" className="mx-auto w-full max-w-6xl px-5 py-16">
+        <div className="grid gap-10 md:grid-cols-2 items-center">
+          <div>
+            <h2 className="text-3xl sm:text-4xl font-bold tracking-tight">
+              Whatever the wheel needs.
+            </h2>
+            <p className="mt-3 text-white/60 leading-relaxed max-w-md">
+              From a 2am motorway blowout to a Saturday morning tyre swap — every job comes to you.
+            </p>
+            <div className="mt-6 grid grid-cols-2 gap-2 max-w-md">
+              {[
+                "Punctures",
+                "Blowouts",
+                "Tyre changes",
+                "Locked wheels",
+                "Run-flats",
+                "Seasonal swaps",
+                "Wheel balancing",
+                "Valves & TPMS",
+              ].map((s) => (
+                <div key={s} className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-sm">
+                  <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: "#FF6B1A" }} />
+                  {s}
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="grid gap-4">
+            {[
+              { icon: Clock, title: "Under 60s quote", body: "Our AI dispatcher polls live technicians and surfaces the fastest, cheapest match." },
+              { icon: PoundSterling, title: "Transparent pricing", body: "Fixed quote up front. Pay only the £15 deposit to confirm — the rest direct to your technician." },
+              { icon: ShieldCheck, title: "Vetted & insured", body: "Every fitter is approved by our team. Public liability + ID verified before they get a job." },
+            ].map((b) => (
+              <div key={b.title} className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl" style={{ backgroundColor: "rgba(255,107,26,0.15)" }}>
+                    <b.icon className="h-5 w-5" style={{ color: "#FF6B1A" }} />
+                  </div>
+                  <h3 className="text-lg font-semibold">{b.title}</h3>
+                </div>
+                <p className="mt-2 text-sm text-white/60 leading-relaxed">{b.body}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ===== Reviews ===== */}
+      <section id="reviews" className="border-t border-white/5 bg-white/[0.02]">
+        <div className="mx-auto w-full max-w-6xl px-5 py-16">
+          <div className="flex items-center justify-center gap-2 mb-8">
+            <div className="flex items-center gap-0.5">
+              {[0, 1, 2, 3, 4].map((i) => (
+                <Star key={i} className="h-5 w-5" style={{ color: "#FF6B1A" }} fill="#FF6B1A" />
+              ))}
+            </div>
+            <span className="text-sm text-white/70">4.9 · 1,200+ jobs</span>
+          </div>
+          <div className="grid gap-4 md:grid-cols-3">
+            {[
+              { quote: "Texted at 11pm on the M25. Fitter arrived in 38 mins. Lifesaver.", name: "Sarah K.", meta: "London" },
+              { quote: "No app, no faff. One WhatsApp message and sorted in the morning.", name: "James R.", meta: "Manchester" },
+              { quote: "Cheaper than the AA and twice as fast. Will use again.", name: "Priya M.", meta: "Birmingham" },
+            ].map((t, i) => (
+              <div key={i} className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+                <div className="flex items-center gap-0.5 mb-3">
+                  {[0, 1, 2, 3, 4].map((s) => (
+                    <Star key={s} className="h-3.5 w-3.5" style={{ color: "#FF6B1A" }} fill="#FF6B1A" />
+                  ))}
+                </div>
+                <p className="text-sm text-white/85 leading-relaxed">"{t.quote}"</p>
+                <p className="mt-3 text-xs text-white/50">{t.name} · {t.meta}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ===== Final CTA ===== */}
+      <section className="mx-auto w-full max-w-4xl px-5 py-20 text-center">
+        <h2 className="text-4xl sm:text-5xl font-bold tracking-tight">
+          Tyre giving up? <span style={{ color: "#FF6B1A" }}>Send the message.</span>
+        </h2>
+        <p className="mt-4 text-white/60 max-w-md mx-auto">
+          UK-wide · 24/7 · A real local technician at your kerb.
+        </p>
+        <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center max-w-md mx-auto">
+          <a
+            href={WA_HREF}
+            className="inline-flex flex-1 items-center justify-center gap-2 rounded-2xl px-5 text-base font-semibold transition-transform active:scale-[0.98]"
+            style={{ backgroundColor: "#25D366", color: "#0D0D0D", height: "58px" }}
+          >
+            <MessageSquare className="h-5 w-5" strokeWidth={2.5} /> WhatsApp us
+          </a>
+          <a
+            href={SMS_HREF}
+            className="inline-flex flex-1 items-center justify-center gap-2 rounded-2xl px-5 text-base font-semibold transition-transform active:scale-[0.98]"
+            style={{ backgroundColor: "#FF6B1A", color: "#0D0D0D", height: "58px" }}
+          >
+            <MessageSquare className="h-5 w-5" strokeWidth={2.5} /> Text us
+          </a>
+        </div>
+      </section>
+
+      {/* ===== Technician CTA ===== */}
+      <section className="px-5 pb-12">
         <a
           href="/technician/login"
-          className="block w-full max-w-md mx-auto rounded-2xl border border-[#FF6B1A]/40 bg-gradient-to-br from-[#FF6B1A]/15 to-[#FF6B1A]/5 px-5 py-5 text-center hover:border-[#FF6B1A] hover:from-[#FF6B1A]/25 transition-all"
+          className="block w-full max-w-3xl mx-auto rounded-2xl border border-[#FF6B1A]/40 bg-gradient-to-br from-[#FF6B1A]/15 to-[#FF6B1A]/5 px-6 py-6 text-center hover:border-[#FF6B1A] hover:from-[#FF6B1A]/25 transition-all"
         >
           <p className="text-[11px] uppercase tracking-[0.2em] text-[#FF6B1A] font-semibold">
             Mobile tyre technician?
           </p>
-          <p className="mt-2 text-lg font-semibold text-white">
-            Sign in or join the network
+          <p className="mt-2 text-xl font-semibold text-white">
+            Get jobs near you · paid direct
           </p>
-          <p className="mt-1 text-xs text-white/60">
-            Get jobs near you · paid direct · verify with SMS or WhatsApp
+          <p className="mt-1 text-sm text-white/60">
+            Sign in or join the network — verify with WhatsApp
           </p>
         </a>
       </section>
 
-      {/* Bottom call fallback */}
-      <footer className="w-full text-center pb-2 space-y-1">
-        <a href="tel:08000000000" className="block text-xs text-white/40 hover:text-white/70 transition-colors">
-          Or call 0800 000 0000
-        </a>
-        <div className="flex items-center justify-center gap-3 text-xs text-white/30 pt-1">
-          <a href="/privacy" className="hover:text-white/60 transition-colors">Privacy</a>
-          <span>·</span>
-          <a href="/terms" className="hover:text-white/60 transition-colors">Terms</a>
+      {/* ===== Footer ===== */}
+      <footer className="border-t border-white/5">
+        <div className="mx-auto w-full max-w-6xl px-5 py-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-white/40">
+          <div className="flex items-center gap-2">
+            <img src={logo} alt="" width={20} height={20} className="h-5 w-5 object-contain opacity-70" />
+            <span>© Tyre Fly · UK-wide mobile tyre fitting</span>
+          </div>
+          <div className="flex items-center gap-4">
+            <a href="tel:08000000000" className="hover:text-white/70">0800 000 0000</a>
+            <a href="/privacy" className="hover:text-white/70">Privacy</a>
+            <a href="/terms" className="hover:text-white/70">Terms</a>
+          </div>
         </div>
       </footer>
-
-      {/* Pulse keyframes */}
-      <style>{`
-        @keyframes ftnm-pulse {
-          0%   { box-shadow: 0 0 0 0   rgba(255,107,26,0.55); }
-          70%  { box-shadow: 0 0 0 22px rgba(255,107,26,0);   }
-          100% { box-shadow: 0 0 0 0   rgba(255,107,26,0);    }
-        }
-      `}</style>
     </main>
   );
 };
