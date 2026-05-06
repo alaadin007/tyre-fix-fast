@@ -232,37 +232,154 @@ Deno.serve(async (req) => {
     const masterNumbers: string[] = ((masterSetting?.value as any)?.numbers ?? []).map((n: string) => normPhone(n));
     const isMaster = masterNumbers.includes(fromN);
 
-    if (isMaster && /^\s*add\s+tech/i.test(body)) {
-      // Format: ADD TECH: Name | +447... | W5,W12 | Vehicle (opt) | Notes (opt)
-      const payload = body.replace(/^\s*add\s+tech\s*[:\-]?\s*/i, "");
-      const parts = payload.split("|").map((s) => s.trim());
-      const [name, phone, postcodes, vehicle, notes] = parts;
-      if (!name || !phone || !postcodes) {
+    if (isMaster) {
+      const trimmed = body.trim();
+
+      // HELP
+      if (/^\s*help\s*$/i.test(trimmed)) {
         await sendReply(
           from,
-          "Format: ADD TECH: Name | +447... | W5,W12 | Vehicle (opt) | Notes (opt)",
+          "Admin commands:\n" +
+          "• ADD TECH: Name | +447... | W5,W12 | Vehicle | Notes | lat,lng or postcode\n" +
+          "• PENDING — list applicants awaiting approval\n" +
+          "• APPROVE <id-or-phone>\n" +
+          "• REJECT <id-or-phone> [reason]\n" +
+          "• JOBS — list 5 latest jobs",
           channel,
         );
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
       }
-      const pcs = postcodes.split(",").map((p) => p.trim().toUpperCase()).filter(Boolean);
-      const { error: insErr } = await supabase.from("technicians").insert({
-        name,
-        phone: phone.trim(),
-        service_postcodes: pcs,
-        vehicle: vehicle || null,
-        notes: notes || null,
-        active: true,
-        approval_status: "approved",
-        approved_at: new Date().toISOString(),
-      });
-      if (insErr) {
-        await sendReply(from, `Couldn't add: ${insErr.message}`, channel);
-      } else {
-        await sendReply(from, `✅ Added ${name} (${pcs.join(", ")}) — live in dispatch.`, channel);
+
+      // PENDING list
+      if (/^\s*pending\s*$/i.test(trimmed)) {
+        const { data: pend } = await supabase
+          .from("technicians")
+          .select("id,name,phone,service_postcodes,created_at")
+          .eq("approval_status", "pending")
+          .order("created_at", { ascending: false })
+          .limit(10);
+        if (!pend || pend.length === 0) {
+          await sendReply(from, "No pending technician applications.", channel);
+        } else {
+          const lines = pend.map((t: any) =>
+            `• ${t.id.slice(0, 6)} — ${t.name} ${t.phone} (${(t.service_postcodes ?? []).join(",") || "no postcodes"})`,
+          ).join("\n");
+          await sendReply(from, `Pending applications:\n${lines}\n\nReply: APPROVE <id> or REJECT <id> reason`, channel);
+        }
+        return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
       }
-      return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+
+      // JOBS recent
+      if (/^\s*jobs\s*$/i.test(trimmed)) {
+        const { data: js } = await supabase
+          .from("jobs")
+          .select("id,customer_name,postcode,issue_type,status,created_at")
+          .order("created_at", { ascending: false })
+          .limit(5);
+        if (!js || js.length === 0) {
+          await sendReply(from, "No jobs yet.", channel);
+        } else {
+          const lines = js.map((j: any) =>
+            `• ${j.id.slice(0, 6)} ${j.customer_name} ${j.postcode} ${j.issue_type} [${j.status}]`,
+          ).join("\n");
+          await sendReply(from, `Latest jobs:\n${lines}`, channel);
+        }
+        return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+      }
+
+      // APPROVE / REJECT
+      const apMatch = trimmed.match(/^\s*(approve|reject)\s+(\S+)\s*(.*)$/i);
+      if (apMatch) {
+        const action = apMatch[1].toLowerCase();
+        const idOrPhone = apMatch[2];
+        const reason = apMatch[3]?.trim() || null;
+        let q = supabase.from("technicians").select("id,name,phone,approval_status");
+        if (idOrPhone.startsWith("+")) q = q.eq("phone", idOrPhone);
+        else q = q.ilike("id", `${idOrPhone}%`);
+        const { data: matches } = await q.limit(2);
+        if (!matches || matches.length === 0) {
+          await sendReply(from, `No technician found for "${idOrPhone}". Try PENDING.`, channel);
+        } else if (matches.length > 1) {
+          await sendReply(from, `Multiple matches — use a longer id prefix.`, channel);
+        } else {
+          const t: any = matches[0];
+          if (action === "approve") {
+            await supabase.from("technicians").update({
+              approval_status: "approved",
+              approved_at: new Date().toISOString(),
+              active: true,
+            }).eq("id", t.id);
+            await sendReply(from, `✅ Approved ${t.name} (${t.phone}). They're live for dispatch.`, channel);
+            // Tell the technician
+            try {
+              await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/twilio-send`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}` },
+                body: JSON.stringify({ to: t.phone, body: `🎉 You're approved on Tyre Fly. We'll text you jobs near you.`, channel: "whatsapp" }),
+              });
+            } catch (_) {}
+          } else {
+            await supabase.from("technicians").update({
+              approval_status: "rejected",
+              active: false,
+              rejected_reason: reason,
+            }).eq("id", t.id);
+            await sendReply(from, `❌ Rejected ${t.name}${reason ? ` (${reason})` : ""}.`, channel);
+          }
+        }
+        return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+      }
+
+      // ADD TECH
+      if (/^\s*add\s+tech/i.test(trimmed)) {
+        // Format: ADD TECH: Name | +447... | W5,W12 | Vehicle | Notes | lat,lng or postcode
+        const payload = trimmed.replace(/^\s*add\s+tech\s*[:\-]?\s*/i, "");
+        const parts = payload.split("|").map((s) => s.trim());
+        const [name, phone, postcodes, vehicle, notes, location] = parts;
+        if (!name || !phone || !postcodes) {
+          await sendReply(
+            from,
+            "Format: ADD TECH: Name | +447... | W5,W12 | Vehicle | Notes | lat,lng",
+            channel,
+          );
+          return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+        }
+        const pcs = postcodes.split(",").map((p) => p.trim().toUpperCase()).filter(Boolean);
+        let lat: number | null = null;
+        let lng: number | null = null;
+        if (location) {
+          const m = location.match(/(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)/);
+          if (m) { lat = Number(m[1]); lng = Number(m[2]); }
+        }
+        const insertData: any = {
+          name,
+          phone: phone.trim(),
+          service_postcodes: pcs,
+          vehicle: vehicle || null,
+          notes: notes || null,
+          active: true,
+          approval_status: "approved",
+          approved_at: new Date().toISOString(),
+        };
+        if (lat !== null && lng !== null) {
+          insertData.last_lat = lat;
+          insertData.last_lng = lng;
+          insertData.last_location_at = new Date().toISOString();
+        }
+        const { error: insErr } = await supabase.from("technicians").insert(insertData);
+        if (insErr) {
+          await sendReply(from, `Couldn't add: ${insErr.message}`, channel);
+        } else {
+          await sendReply(
+            from,
+            `✅ Added ${name} (${pcs.join(", ")})${lat !== null ? ` 📍${lat.toFixed(3)},${lng!.toFixed(3)}` : ""} — live in dispatch.`,
+            channel,
+          );
+        }
+        return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+      }
     }
+
 
     // 2. Technician? → Parsing Agent
     const { data: techMatch } = await supabase
