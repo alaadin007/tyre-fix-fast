@@ -108,6 +108,38 @@ serve(async (req) => {
                       description:
                         "How confident you are based on the photo quality and clarity of the damage.",
                     },
+                    tyre_size: {
+                      type: ["string", "null"],
+                      description:
+                        "Tyre size marking if legible, e.g. '225/45R17 94Y'. Null if not visible.",
+                    },
+                    tyre_brand: {
+                      type: ["string", "null"],
+                      description:
+                        "Brand/manufacturer if legible (e.g. Michelin, Continental, Pirelli). Null if unclear.",
+                    },
+                    tyre_type: {
+                      type: ["string", "null"],
+                      enum: ["summer", "winter", "all-season", "run-flat", "performance", null],
+                      description:
+                        "Best guess of tyre category from tread pattern and markings. Null if unclear.",
+                    },
+                    tread_condition: {
+                      type: ["string", "null"],
+                      enum: ["new", "good", "worn", "illegal", null],
+                      description:
+                        "Visual tread depth assessment. 'illegal' = below 1.6mm UK legal limit. Null if not visible.",
+                    },
+                    wheel_type: {
+                      type: ["string", "null"],
+                      enum: ["alloy", "steel", null],
+                      description: "Wheel material if visible. Null if unclear.",
+                    },
+                    tyre_details: {
+                      type: ["string", "null"],
+                      description:
+                        "Any other useful observations about the tyre/wheel (load index, speed rating, DOT date, locking nut, kerb damage on rim, etc.).",
+                    },
                   },
                   required: [
                     "damage_type",
