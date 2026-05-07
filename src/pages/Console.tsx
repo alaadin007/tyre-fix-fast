@@ -39,10 +39,6 @@ export default function Console() {
   const [pendingCount, setPendingCount] = useState(0);
   const [authChecked, setAuthChecked] = useState(false);
 
-  useEffect(() => {
-    localStorage.setItem("console.mode", mode);
-  }, [mode]);
-
   // Auth gate — always require sign-in, plus admin role for live data
   useEffect(() => {
     let cancelled = false;
