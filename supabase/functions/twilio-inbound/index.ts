@@ -625,8 +625,16 @@ Deno.serve(async (req) => {
         .maybeSingle();
 
       const joinPhrase = TECH_JOIN_RE.test(body);
+      const customerHelp = CUSTOMER_HELP_RE.test(body);
       const inIntake = existingByPhone?.approval_status === "intake";
       const status = existingByPhone?.approval_status;
+
+      // If they're mid-onboarding or already a tech but this message is clearly
+      // a customer asking for tyre help (and not a join/registration phrase, not
+      // a media or location upload), fall through to the customer intake flow.
+      if (existingByPhone && customerHelp && !joinPhrase && mediaUrls.length === 0 && !COORD_RE.test(body)) {
+        // skip the onboarding block entirely
+      } else
 
       // If they explicitly say they want to join but already have a row,
       // route them based on current status instead of dropping into the
