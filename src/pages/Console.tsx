@@ -98,10 +98,10 @@ export default function Console() {
   const jobsToday = jobs.filter((j) => new Date(j.created_at) >= todayStart).length;
   const onDuty = techs.filter((t) => t.active && t.last_lat != null).length || techs.length;
   const stats = [
-    { label: "Jobs today", value: mode === "demo" ? "6" : String(jobsToday) },
+    { label: "Jobs today", value: String(jobsToday) },
     { label: "Avg response", value: "8 min" },
     { label: "On duty", value: String(onDuty) },
-    { label: "Revenue today", value: mode === "demo" ? "£340" : "—" },
+    { label: "Revenue today", value: "—" },
   ];
 
   const handleManualDispatch = async (
