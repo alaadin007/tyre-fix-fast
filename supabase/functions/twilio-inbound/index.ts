@@ -260,6 +260,11 @@ async function aiClassifyJobContinuity(args: {
 // fall through into the customer tyre-help flow.
 const TECH_JOIN_RE = /\b(become|join|sign(?:ing)?[\s-]?up|apply|onboard|register|registration)\b.*\b(tech(?:nician)?|fitter|tyre\s*fly|work(?:ing)?\s+with\s+tyre\s*fly)\b|\b(sign(?:ing)?[\s-]?up|apply(?:ing)?|register(?:ing)?|registration)\b.*\b(as\s+a\s+)?technician\b|\b(i'?d\s+like\s+to|i\s+want\s+to|want\s+to)\s+(sign(?:ing)?[\s-]?up|apply|register|join)\b.*\b(as\s+a\s+)?technician\b|\b(i'?m|i am)\s+a\s+(mobile\s+)?(tyre|tire)\s+(fitter|technician|guy)\b|\bi\s+fit\s+(tyres|tires)\b|\bwant\s+to\s+(join|work)\b|^join$|^apply$/i;
 
+// Detect when a message is a CUSTOMER asking for tyre service (not a tech onboarding message).
+// Used so that someone already in the technicians table (even mid-onboarding or approved)
+// can still book a tyre repair as a customer when their message is clearly customer intent.
+const CUSTOMER_HELP_RE = /\b(need|want|require|book|get|after|looking\s+for)\b.*\b(tyre|tire|wheel|puncture|blowout|fitting|replace(?:ment)?|change|repair|help)\b|\bpuncture\b|\bblowout\b|\bflat\s+(tyre|tire)\b|\bneed\s+(a\s+)?(new\s+)?(tyre|tire)\b|\bcar\s+(broke|won'?t\s+start|stuck)\b|\bmy\s+(car|van|tyre|tire|wheel)\b/i;
+
 async function aiExtractTechProfile(args: {
   history: string;
   latest: string;
@@ -620,8 +625,16 @@ Deno.serve(async (req) => {
         .maybeSingle();
 
       const joinPhrase = TECH_JOIN_RE.test(body);
+      const customerHelp = CUSTOMER_HELP_RE.test(body);
       const inIntake = existingByPhone?.approval_status === "intake";
       const status = existingByPhone?.approval_status;
+
+      // If they're mid-onboarding or already a tech but this message is clearly
+      // a customer asking for tyre help (and not a join/registration phrase, not
+      // a media or location upload), fall through to the customer intake flow.
+      if (existingByPhone && customerHelp && !joinPhrase && mediaUrls.length === 0 && !COORD_RE.test(body)) {
+        // skip the onboarding block entirely
+      } else
 
       // If they explicitly say they want to join but already have a row,
       // route them based on current status instead of dropping into the
@@ -822,11 +835,14 @@ Deno.serve(async (req) => {
     }
 
     // 2. Technician? → Parsing Agent
+    // Skip if the message is clearly a customer asking for tyre help (e.g. "I need tyre help"),
+    // so a technician using the same number can also book a job.
+    const customerHelpForTech = CUSTOMER_HELP_RE.test(body);
     const { data: techMatch } = await supabase
       .from("technicians")
       .select("*")
       .eq("active", true);
-    const tech = (techMatch ?? []).find((t: any) => normPhone(t.phone) === fromN);
+    const tech = customerHelpForTech ? null : (techMatch ?? []).find((t: any) => normPhone(t.phone) === fromN);
 
     if (tech) {
       // If they shared a location pin (the meta webhook converts pins to
