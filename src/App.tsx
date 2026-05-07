@@ -6,7 +6,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import Index from "./pages/Index.tsx";
 import JobStatus from "./pages/JobStatus.tsx";
-import Admin from "./pages/Admin.tsx";
+// Admin page replaced by Console
 import Confirmed from "./pages/Confirmed.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import TechnicianLogin from "./pages/TechnicianLogin.tsx";
@@ -32,7 +32,7 @@ const App = () => (
             <Route path="/areas" element={<AreasIndex />} />
             <Route path="/areas/:slug" element={<AreaPage />} />
             <Route path="/job/:id" element={<JobStatus />} />
-            <Route path="/admin" element={<Admin />} />
+            <Route path="/admin" element={<Console />} />
             <Route path="/confirmed" element={<Confirmed />} />
             <Route path="/technician/login" element={<TechnicianLogin />} />
             <Route path="/technician/onboarding" element={<TechnicianOnboarding />} />
