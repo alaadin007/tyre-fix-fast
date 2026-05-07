@@ -17,7 +17,6 @@ import {
   type Lane,
 } from "@/hooks/useConsoleData";
 import { useTick } from "@/hooks/useTick";
-import ConsoleMap from "@/components/console/ConsoleMap";
 
 function fmtTimer(ms: number): { txt: string; cls: string } {
   const total = Math.max(0, Math.floor(ms / 1000));
