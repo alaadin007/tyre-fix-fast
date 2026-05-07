@@ -414,6 +414,63 @@ export type Database = {
         }
         Relationships: []
       }
+      tech_onboarding_logs: {
+        Row: {
+          ai_extracted: Json | null
+          channel: string | null
+          created_at: string
+          detected_intent: string | null
+          direction: string
+          has_media: boolean
+          id: string
+          inbound_body: string | null
+          media_count: number
+          next_status: string | null
+          notes: string | null
+          phone: string
+          prior_status: string | null
+          reply_sent: string | null
+          route_taken: string
+          technician_id: string | null
+        }
+        Insert: {
+          ai_extracted?: Json | null
+          channel?: string | null
+          created_at?: string
+          detected_intent?: string | null
+          direction?: string
+          has_media?: boolean
+          id?: string
+          inbound_body?: string | null
+          media_count?: number
+          next_status?: string | null
+          notes?: string | null
+          phone: string
+          prior_status?: string | null
+          reply_sent?: string | null
+          route_taken: string
+          technician_id?: string | null
+        }
+        Update: {
+          ai_extracted?: Json | null
+          channel?: string | null
+          created_at?: string
+          detected_intent?: string | null
+          direction?: string
+          has_media?: boolean
+          id?: string
+          inbound_body?: string | null
+          media_count?: number
+          next_status?: string | null
+          notes?: string | null
+          phone?: string
+          prior_status?: string | null
+          reply_sent?: string | null
+          route_taken?: string
+          technician_id?: string | null
+        }
+        Relationships: []
+      }
       tech_otp_codes: {
         Row: {
           attempts: number
