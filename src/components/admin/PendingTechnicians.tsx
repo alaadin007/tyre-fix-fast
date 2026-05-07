@@ -14,7 +14,10 @@ import {
   Wrench,
   MessageSquare,
   AlertCircle,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
+import { TechConversation } from "./TechConversation";
 
 type PendingTech = {
   id: string;
@@ -74,6 +77,7 @@ export function PendingTechnicians() {
   const [requestFor, setRequestFor] = useState<string | null>(null);
   const [requestMsg, setRequestMsg] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
+  const [openConv, setOpenConv] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -480,6 +484,32 @@ export function PendingTechnicians() {
                     </Button>
                   </div>
                 )}
+
+                {/* Conversation thread */}
+                <div className="mt-3 border-t border-border/60 pt-2">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setOpenConv(openConv === t.id ? null : t.id)
+                    }
+                    className="flex w-full items-center justify-between text-xs font-medium text-muted-foreground hover:text-foreground"
+                  >
+                    <span className="flex items-center gap-1.5">
+                      <MessageSquare className="h-3 w-3" />
+                      WhatsApp & SMS conversation
+                    </span>
+                    {openConv === t.id ? (
+                      <ChevronUp className="h-3 w-3" />
+                    ) : (
+                      <ChevronDown className="h-3 w-3" />
+                    )}
+                  </button>
+                  {openConv === t.id && (
+                    <div className="mt-2">
+                      <TechConversation phone={t.phone} />
+                    </div>
+                  )}
+                </div>
               </article>
             );
           })}
