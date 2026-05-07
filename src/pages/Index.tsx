@@ -299,20 +299,20 @@ const Index = () => {
         <p className="mt-4 text-white/60 max-w-md mx-auto">
           UK-wide · 24/7 · A real local technician at your kerb.
         </p>
-        <div className="mt-8 flex flex-row flex-wrap gap-3 justify-center">
+        <div className="mt-8 grid grid-cols-2 gap-3 max-w-md mx-auto">
           <a
             href={WA_HREF}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center justify-center gap-2.5 rounded-2xl px-7 text-base font-semibold shadow-lg transition-transform active:scale-[0.97] hover:scale-[1.02]"
-            style={{ backgroundColor: "#25D366", color: "#0D0D0D", height: "64px", boxShadow: "0 10px 30px -10px rgba(37,211,102,0.5)" }}
+            className="inline-flex flex-col items-center justify-center gap-1.5 rounded-2xl px-4 py-5 text-base font-semibold shadow-lg transition-transform active:scale-[0.97] hover:scale-[1.02]"
+            style={{ backgroundColor: "#25D366", color: "#0D0D0D", minHeight: "88px", boxShadow: "0 10px 30px -10px rgba(37,211,102,0.5)" }}
           >
             <MessageSquare className="h-6 w-6" strokeWidth={2.5} /> WhatsApp us
           </a>
           <a
             href={SMS_HREF}
-            className="inline-flex items-center justify-center gap-2.5 rounded-2xl px-7 text-base font-semibold shadow-lg transition-transform active:scale-[0.97] hover:scale-[1.02]"
-            style={{ backgroundColor: "#FF6B1A", color: "#0D0D0D", height: "64px", boxShadow: "0 10px 30px -10px rgba(255,107,26,0.5)" }}
+            className="inline-flex flex-col items-center justify-center gap-1.5 rounded-2xl px-4 py-5 text-base font-semibold shadow-lg transition-transform active:scale-[0.97] hover:scale-[1.02]"
+            style={{ backgroundColor: "#FF6B1A", color: "#0D0D0D", minHeight: "88px", boxShadow: "0 10px 30px -10px rgba(255,107,26,0.5)" }}
           >
             <MessageSquare className="h-6 w-6" strokeWidth={2.5} /> Text us
           </a>
