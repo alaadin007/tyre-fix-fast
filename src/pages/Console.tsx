@@ -55,7 +55,7 @@ export default function Console() {
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        if (!cancelled) navigate("/technician/login");
+        if (!cancelled) navigate("/admin");
         return;
       }
       const { data: roles } = await supabase
@@ -64,7 +64,7 @@ export default function Console() {
         .eq("user_id", user.id);
       const isAdmin = (roles ?? []).some((r: any) => r.role === "admin");
       if (!isAdmin) {
-        if (!cancelled) navigate("/");
+        if (!cancelled) navigate("/admin");
         return;
       }
       if (!cancelled) setAuthChecked(true);
