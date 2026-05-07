@@ -35,7 +35,7 @@ export default function Console() {
   const [mode, setMode] = useState<ConsoleMode>(() =>
     (localStorage.getItem("console.mode") as ConsoleMode) || "demo",
   );
-  const [view, setView] = useState<"board" | "map">("board"); // mobile only
+  const [tab, setTab] = useState<"new" | "in_progress" | "completed">("new");
   const [openJobId, setOpenJobId] = useState<string | null>(null);
   const [showPending, setShowPending] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
