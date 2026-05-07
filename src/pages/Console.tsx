@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { X, Star, Search, Sparkles, UserCheck, UserPlus } from "lucide-react";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { X, Star, Search, Sparkles, UserCheck, UserPlus, Phone, MapPin, Camera } from "lucide-react";
 import { PendingTechnicians } from "@/components/admin/PendingTechnicians";
+import { JobConversation } from "@/components/console/JobConversation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
@@ -10,7 +10,6 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   useConsoleData,
   laneFor,
-  LANES,
   nearestTechs,
   type ConsoleJob,
   type ConsoleMode,
