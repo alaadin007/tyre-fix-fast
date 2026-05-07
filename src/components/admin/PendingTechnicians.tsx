@@ -14,7 +14,10 @@ import {
   Wrench,
   MessageSquare,
   AlertCircle,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
+import { TechConversation } from "./TechConversation";
 
 type PendingTech = {
   id: string;
