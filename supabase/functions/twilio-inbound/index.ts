@@ -20,6 +20,48 @@ function normPhone(p: string): string {
 
 const COORD_RE = /\((-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\)/;
 
+// Logs a single technician-onboarding routing decision for later debugging.
+// Best-effort: any failure is swallowed so we never break the webhook.
+async function logOnboarding(
+  supabase: any,
+  entry: {
+    technician_id?: string | null;
+    phone: string;
+    channel?: string | null;
+    inbound_body?: string | null;
+    has_media?: boolean;
+    media_count?: number;
+    detected_intent?: string | null;
+    prior_status?: string | null;
+    next_status?: string | null;
+    route_taken: string;
+    ai_extracted?: unknown;
+    reply_sent?: string | null;
+    notes?: string | null;
+  },
+) {
+  try {
+    await supabase.from("tech_onboarding_logs").insert({
+      technician_id: entry.technician_id ?? null,
+      phone: entry.phone,
+      channel: entry.channel ?? null,
+      direction: "inbound",
+      inbound_body: (entry.inbound_body ?? "").slice(0, 2000),
+      has_media: !!entry.has_media,
+      media_count: entry.media_count ?? 0,
+      detected_intent: entry.detected_intent ?? null,
+      prior_status: entry.prior_status ?? null,
+      next_status: entry.next_status ?? null,
+      route_taken: entry.route_taken,
+      ai_extracted: entry.ai_extracted ?? null,
+      reply_sent: (entry.reply_sent ?? "").slice(0, 2000) || null,
+      notes: entry.notes ?? null,
+    });
+  } catch (e) {
+    console.error("logOnboarding failed", e);
+  }
+}
+
 async function reverseGeocodePostcode(lat: number, lng: number): Promise<string | null> {
   try {
     const nominatim = await fetch(
