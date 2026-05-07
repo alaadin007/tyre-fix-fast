@@ -31,9 +31,7 @@ function fmtTimer(ms: number): { txt: string; cls: string } {
 
 export default function Console() {
   const navigate = useNavigate();
-  const [mode, setMode] = useState<ConsoleMode>(() =>
-    (localStorage.getItem("console.mode") as ConsoleMode) || "demo",
-  );
+  const mode: ConsoleMode = "live";
   const [tab, setTab] = useState<"new" | "in_progress" | "completed">("new");
   const [openJobId, setOpenJobId] = useState<string | null>(null);
   const [showPending, setShowPending] = useState(false);
