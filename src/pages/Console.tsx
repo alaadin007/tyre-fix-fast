@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { X, Star, Search, Sparkles, UserCheck, UserPlus } from "lucide-react";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { X, Star, Search, Sparkles, UserCheck, UserPlus, Phone, MapPin, Camera } from "lucide-react";
 import { PendingTechnicians } from "@/components/admin/PendingTechnicians";
+import { JobConversation } from "@/components/console/JobConversation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
@@ -10,7 +10,6 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   useConsoleData,
   laneFor,
-  LANES,
   nearestTechs,
   type ConsoleJob,
   type ConsoleMode,
@@ -32,7 +31,7 @@ function fmtTimer(ms: number): { txt: string; cls: string } {
 export default function Console() {
   const navigate = useNavigate();
   const mode: ConsoleMode = "live";
-  const [tab, setTab] = useState<"new" | "in_progress" | "completed">("new");
+  const [tab, setTab] = useState<"all" | "new" | "in_progress" | "completed">("all");
   const [openJobId, setOpenJobId] = useState<string | null>(null);
   const [showPending, setShowPending] = useState(false);
   const [showAddTech, setShowAddTech] = useState(false);
@@ -218,68 +217,115 @@ export default function Console() {
         ))}
       </div>
 
-      {/* Tabs */}
-      <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)} className="flex flex-1 flex-col overflow-hidden">
-        <TabsList className="mx-4 mt-3 grid w-auto grid-cols-3">
-          <TabsTrigger value="new">New ({grouped.incoming.length})</TabsTrigger>
-          <TabsTrigger value="in_progress">In progress ({grouped.dispatched.length + grouped.in_progress.length})</TabsTrigger>
-          <TabsTrigger value="completed">Completed ({grouped.completed.length})</TabsTrigger>
-        </TabsList>
-
-        {([
-          { key: "new", items: grouped.incoming, showDispatch: true },
-          { key: "in_progress", items: [...grouped.dispatched, ...grouped.in_progress], showDispatch: false },
-          { key: "completed", items: grouped.completed, showDispatch: false },
-        ] as const).map(({ key, items, showDispatch }) => (
-          <TabsContent key={key} value={key} className="mt-0 flex-1 overflow-y-auto p-3">
-            {items.length === 0 && (
-              <p className="px-1 py-6 text-center text-sm text-muted-foreground">No jobs.</p>
-            )}
-            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-              {items.map((job) => {
-                const elapsed = now - new Date(job.created_at).getTime();
-                const t = fmtTimer(elapsed);
-                const top = nearestTechs(job, techs, 1)[0];
-                return (
-                  <button
-                    key={job.id}
-                    onClick={() => setOpenJobId(job.id)}
-                    className="group rounded-xl border border-white/10 bg-white/[0.04] p-3 text-left transition hover:border-primary/40 hover:bg-white/[0.06]"
-                  >
-                    <div className="flex items-baseline justify-between">
-                      <div className="text-lg font-bold tracking-tight">{job.postcode || "—"}</div>
-                      <div className={`font-mono text-sm tabular-nums ${t.cls}`}>{t.txt}</div>
-                    </div>
-                    <div className="mt-1 inline-flex items-center rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[11px] capitalize text-muted-foreground">
-                      {job.issue_type || "tyre job"}
-                    </div>
-                    <div className="mt-1 text-[11px] uppercase tracking-wider text-muted-foreground">
-                      {job.status.replace(/_/g, " ")}
-                    </div>
-                    {top && (
-                      <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
-                        <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-                        {(top.tech.rating ?? 5).toFixed(1)} · {top.tech.name} · ETA {top.etaMin}m
-                      </div>
-                    )}
-                    {showDispatch && (
-                      <div className="mt-3">
-                        <Button
-                          size="sm"
-                          className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
-                          onClick={(e) => { e.stopPropagation(); setOpenJobId(job.id); }}
-                        >
-                          Dispatch
-                        </Button>
-                      </div>
-                    )}
-                  </button>
-                );
-              })}
+      {/* Filter chips */}
+      {(() => {
+        const filters: { key: typeof tab; label: string; count: number }[] = [
+          { key: "all", label: "All", count: jobs.length },
+          { key: "new", label: "New", count: grouped.incoming.length },
+          { key: "in_progress", label: "In progress", count: grouped.dispatched.length + grouped.in_progress.length },
+          { key: "completed", label: "Completed", count: grouped.completed.length },
+        ];
+        const visible =
+          tab === "all" ? jobs
+          : tab === "new" ? grouped.incoming
+          : tab === "in_progress" ? [...grouped.dispatched, ...grouped.in_progress]
+          : grouped.completed;
+        return (
+          <>
+            <div className="flex flex-wrap items-center gap-1.5 border-b border-white/10 px-4 py-2">
+              {filters.map((f) => (
+                <button
+                  key={f.key}
+                  onClick={() => setTab(f.key)}
+                  className={`rounded-full px-3 py-1 text-xs transition ${
+                    tab === f.key
+                      ? "bg-primary text-primary-foreground"
+                      : "border border-white/10 bg-white/[0.04] text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {f.label} <span className="opacity-70">({f.count})</span>
+                </button>
+              ))}
             </div>
-          </TabsContent>
-        ))}
-      </Tabs>
+            <div className="flex-1 overflow-y-auto p-3">
+              {visible.length === 0 && (
+                <p className="px-1 py-6 text-center text-sm text-muted-foreground">No jobs.</p>
+              )}
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                {visible.map((job) => {
+                  const elapsed = now - new Date(job.created_at).getTime();
+                  const t = fmtTimer(elapsed);
+                  const top = nearestTechs(job, techs, 1)[0];
+                  const lane = laneFor(job.status);
+                  const laneColor =
+                    lane === "incoming" ? "bg-sky-400/15 text-sky-300 border-sky-400/30"
+                    : lane === "dispatched" ? "bg-primary/15 text-primary border-primary/30"
+                    : lane === "in_progress" ? "bg-emerald-400/15 text-emerald-300 border-emerald-400/30"
+                    : "bg-white/5 text-muted-foreground border-white/10";
+                  return (
+                    <button
+                      key={job.id}
+                      onClick={() => setOpenJobId(job.id)}
+                      className="group rounded-xl border border-white/10 bg-white/[0.04] p-3 text-left transition hover:border-primary/40 hover:bg-white/[0.06]"
+                    >
+                      <div className="flex items-baseline justify-between gap-2">
+                        <div className="text-lg font-bold tracking-tight truncate">{job.postcode || "(no postcode)"}</div>
+                        <div className={`font-mono text-sm tabular-nums ${t.cls}`}>{t.txt}</div>
+                      </div>
+                      <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <span className="font-medium text-foreground/90">{job.customer_name}</span>
+                        <span>·</span>
+                        <Phone className="h-3 w-3" />
+                        <span>{job.customer_phone}</span>
+                      </div>
+                      {job.vehicle_reg && (
+                        <div className="mt-1 inline-block rounded bg-amber-400/10 px-1.5 py-0.5 font-mono text-[11px] uppercase tracking-wider text-amber-300">
+                          {job.vehicle_reg}
+                        </div>
+                      )}
+                      <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                        <span className={`rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-wider ${laneColor}`}>
+                          {job.status.replace(/_/g, " ")}
+                        </span>
+                        <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] capitalize text-muted-foreground">
+                          {job.issue_type || "tyre job"}
+                        </span>
+                        {job.photo_urls && job.photo_urls.length > 0 && (
+                          <span className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-muted-foreground">
+                            <Camera className="h-2.5 w-2.5" /> {job.photo_urls.length}
+                          </span>
+                        )}
+                      </div>
+                      {job.issue_description && (
+                        <p className="mt-2 line-clamp-2 text-xs text-muted-foreground">
+                          {job.issue_description}
+                        </p>
+                      )}
+                      {top && (
+                        <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+                          <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                          {(top.tech.rating ?? 5).toFixed(1)} · {top.tech.name} · ETA {top.etaMin}m
+                        </div>
+                      )}
+                      {lane === "incoming" && (
+                        <div className="mt-3">
+                          <Button
+                            size="sm"
+                            className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
+                            onClick={(e) => { e.stopPropagation(); setOpenJobId(job.id); }}
+                          >
+                            Open & Dispatch
+                          </Button>
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </>
+        );
+      })()}
 
       {/* Dispatch modal */}
       {openJob && (
@@ -477,10 +523,54 @@ function DispatchModal({ job, allTechs, onClose, onDispatch }: DispatchModalProp
         {job.photo_urls && job.photo_urls.length > 0 && (
           <div className="mt-3 flex gap-2 overflow-x-auto">
             {job.photo_urls.map((u, i) => (
-              <img key={i} src={u} alt="" className="h-20 w-20 rounded-md object-cover" />
+              <a key={i} href={u} target="_blank" rel="noreferrer">
+                <img src={u} alt="" className="h-20 w-20 rounded-md object-cover" />
+              </a>
             ))}
           </div>
         )}
+
+        {/* Intake details grid */}
+        <div className="mt-4 grid grid-cols-2 gap-2 rounded-lg border border-white/10 bg-white/[0.03] p-3 text-xs">
+          {([
+            ["Reg", job.vehicle_reg],
+            ["Tyre size", (job as any).tyre_size],
+            ["Tyre brand", (job as any).tyre_brand],
+            ["Tyre type", (job as any).tyre_type],
+            ["Wheel type", (job as any).wheel_type],
+            ["Tread", (job as any).tread_condition],
+            ["Damage", (job as any).damage_type],
+            ["Severity", (job as any).severity],
+            ["Affected", ((job as any).affected_wheels ?? []).join(", ")],
+            ["Coords", job.lat != null && job.lng != null ? `${job.lat.toFixed(5)}, ${job.lng.toFixed(5)}` : null],
+          ] as [string, any][]).filter(([, v]) => v).map(([k, v]) => (
+            <div key={k}>
+              <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{k}</div>
+              <div className="font-medium text-foreground/90 break-words">{String(v)}</div>
+            </div>
+          ))}
+          {(job as any).damage_summary && (
+            <div className="col-span-2">
+              <div className="text-[10px] uppercase tracking-wider text-muted-foreground">AI summary</div>
+              <div className="text-foreground/90">{(job as any).damage_summary}</div>
+            </div>
+          )}
+          {job.lat != null && job.lng != null && (
+            <a
+              href={`https://maps.google.com/?q=${job.lat},${job.lng}`}
+              target="_blank"
+              rel="noreferrer"
+              className="col-span-2 inline-flex items-center gap-1 text-primary hover:underline"
+            >
+              <MapPin className="h-3 w-3" /> Open in Maps
+            </a>
+          )}
+        </div>
+
+        {/* Conversation thread */}
+        <div className="mt-4">
+          <JobConversation jobId={job.id} customerPhone={job.customer_phone} />
+        </div>
 
         {/* AI suggestions */}
         <div className="mt-5">

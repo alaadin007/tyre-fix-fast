@@ -14,6 +14,17 @@ export type ConsoleJob = {
   lng: number | null;
   photo_urls?: string[];
   vehicle_reg?: string | null;
+  tyre_size?: string | null;
+  tyre_brand?: string | null;
+  tyre_type?: string | null;
+  wheel_type?: string | null;
+  tread_condition?: string | null;
+  tyre_details?: string | null;
+  damage_type?: string | null;
+  damage_summary?: string | null;
+  affected_wheels?: string[] | null;
+  region?: string | null;
+  severity?: string | null;
 };
 
 export type ConsoleTech = {
@@ -55,9 +66,9 @@ export function useConsoleData(_mode?: ConsoleMode) {
       const [{ data: js }, { data: ts }] = await Promise.all([
         supabase
           .from("jobs")
-          .select("id,postcode,customer_name,customer_phone,issue_type,issue_description,status,created_at,lat,lng,photo_urls,vehicle_reg")
+          .select("id,postcode,customer_name,customer_phone,issue_type,issue_description,status,created_at,lat,lng,photo_urls,vehicle_reg,tyre_size,tyre_brand,tyre_type,wheel_type,tread_condition,tyre_details,damage_type,damage_summary,affected_wheels,region,severity")
           .order("created_at", { ascending: false })
-          .limit(50),
+          .limit(100),
         supabase
           .from("technicians")
           .select("id,name,rating,vehicle,last_lat,last_lng,active")
