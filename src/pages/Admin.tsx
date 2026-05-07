@@ -27,6 +27,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { AdminAIChat } from "@/components/admin/AdminAIChat";
 import { PendingTechnicians } from "@/components/admin/PendingTechnicians";
+import { OnboardingLogs } from "@/components/admin/OnboardingLogs";
 import TechnicianLiveMap from "@/components/admin/TechnicianLiveMap";
 
 type Technician = {
@@ -360,6 +361,10 @@ export default function Admin() {
 
         <div className="mt-6">
           <PendingTechnicians />
+        </div>
+
+        <div className="mt-6">
+          <OnboardingLogs />
         </div>
       </main>
 

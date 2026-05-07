@@ -20,6 +20,48 @@ function normPhone(p: string): string {
 
 const COORD_RE = /\((-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\)/;
 
+// Logs a single technician-onboarding routing decision for later debugging.
+// Best-effort: any failure is swallowed so we never break the webhook.
+async function logOnboarding(
+  supabase: any,
+  entry: {
+    technician_id?: string | null;
+    phone: string;
+    channel?: string | null;
+    inbound_body?: string | null;
+    has_media?: boolean;
+    media_count?: number;
+    detected_intent?: string | null;
+    prior_status?: string | null;
+    next_status?: string | null;
+    route_taken: string;
+    ai_extracted?: unknown;
+    reply_sent?: string | null;
+    notes?: string | null;
+  },
+) {
+  try {
+    await supabase.from("tech_onboarding_logs").insert({
+      technician_id: entry.technician_id ?? null,
+      phone: entry.phone,
+      channel: entry.channel ?? null,
+      direction: "inbound",
+      inbound_body: (entry.inbound_body ?? "").slice(0, 2000),
+      has_media: !!entry.has_media,
+      media_count: entry.media_count ?? 0,
+      detected_intent: entry.detected_intent ?? null,
+      prior_status: entry.prior_status ?? null,
+      next_status: entry.next_status ?? null,
+      route_taken: entry.route_taken,
+      ai_extracted: entry.ai_extracted ?? null,
+      reply_sent: (entry.reply_sent ?? "").slice(0, 2000) || null,
+      notes: entry.notes ?? null,
+    });
+  } catch (e) {
+    console.error("logOnboarding failed", e);
+  }
+}
+
 async function reverseGeocodePostcode(lat: number, lng: number): Promise<string | null> {
   try {
     const nominatim = await fetch(
@@ -581,17 +623,38 @@ Deno.serve(async (req) => {
       // route them based on current status instead of dropping into the
       // customer intake flow.
       if (joinPhrase && existingByPhone && status && status !== "intake") {
+        let reply = "";
+        let route = "";
+        let nextStatus: string | null = status;
         if (status === "approved") {
-          await sendReply(from, "You're already approved as a Tyre Fly technician ✅ Send 📍your live location to start receiving jobs.", channel);
+          reply = "You're already approved as a Tyre Fly technician ✅ Send 📍your live location to start receiving jobs.";
+          route = "join_phrase_already_approved";
         } else if (status === "pending") {
-          await sendReply(from, "Your application is in review — we'll message you here as soon as it's approved. Need to update something? Just tell me what to change.", channel);
+          reply = "Your application is in review — we'll message you here as soon as it's approved. Need to update something? Just tell me what to change.";
+          route = "join_phrase_pending_review";
         } else if (status === "rejected") {
-          await sendReply(from, "Your previous application wasn't approved. If anything's changed (new docs, new area), reply with the update and we'll re-review.", channel);
+          reply = "Your previous application wasn't approved. If anything's changed (new docs, new area), reply with the update and we'll re-review.";
+          route = "join_phrase_previously_rejected";
         } else {
-          // Unknown status — restart intake
           await supabase.from("technicians").update({ approval_status: "intake" }).eq("id", existingByPhone.id);
-          await sendReply(from, "Let's pick up your application — what's your full name?", channel);
+          reply = "Let's pick up your application — what's your full name?";
+          route = "join_phrase_unknown_status_restart";
+          nextStatus = "intake";
         }
+        await sendReply(from, reply, channel);
+        await logOnboarding(supabase, {
+          technician_id: existingByPhone.id,
+          phone: from,
+          channel,
+          inbound_body: body,
+          has_media: mediaUrls.length > 0,
+          media_count: mediaUrls.length,
+          detected_intent: "join_request",
+          prior_status: status,
+          next_status: nextStatus,
+          route_taken: route,
+          reply_sent: reply,
+        });
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
       }
 
@@ -647,6 +710,19 @@ Deno.serve(async (req) => {
           );
           // If first message was just the trigger phrase, stop here
           if (body.length < 60 && !mediaUrls.length && !coords) {
+            await logOnboarding(supabase, {
+              technician_id: row.id,
+              phone: from,
+              channel,
+              inbound_body: body,
+              has_media: mediaUrls.length > 0,
+              media_count: mediaUrls.length,
+              detected_intent: "join_request",
+              prior_status: null,
+              next_status: "intake",
+              route_taken: "intake_started_welcome_only",
+              reply_sent: "welcome",
+            });
             return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
           }
         }
@@ -711,6 +787,32 @@ Deno.serve(async (req) => {
         await supabase.from("technicians").update(updates).eq("id", row.id);
 
         await sendReply(from, ai.reply, channel);
+        await logOnboarding(supabase, {
+          technician_id: row.id,
+          phone: from,
+          channel,
+          inbound_body: body,
+          has_media: mediaUrls.length > 0,
+          media_count: mediaUrls.length,
+          detected_intent: existingByPhone ? "intake_continue" : "intake_start",
+          prior_status: row.approval_status ?? null,
+          next_status: updates.approval_status ?? row.approval_status ?? "intake",
+          route_taken: updates.approval_status === "pending"
+            ? "intake_complete_submitted_for_review"
+            : "intake_in_progress",
+          ai_extracted: {
+            name: ai.name,
+            service_postcodes: ai.service_postcodes,
+            vehicle: ai.vehicle,
+            travel_radius_miles: ai.travel_radius_miles,
+            weekly_schedule: ai.weekly_schedule ? Object.keys(ai.weekly_schedule) : null,
+            availability_summary: ai.availability_summary,
+            media_classification: ai.media_classification,
+            ready_for_review: ai.ready_for_review,
+            pin: pinLat !== null ? { lat: pinLat, lng: pinLng } : null,
+          },
+          reply_sent: ai.reply,
+        });
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
       }
     }
