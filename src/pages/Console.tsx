@@ -31,19 +31,13 @@ function fmtTimer(ms: number): { txt: string; cls: string } {
 
 export default function Console() {
   const navigate = useNavigate();
-  const [mode, setMode] = useState<ConsoleMode>(() =>
-    (localStorage.getItem("console.mode") as ConsoleMode) || "demo",
-  );
+  const mode: ConsoleMode = "live";
   const [tab, setTab] = useState<"new" | "in_progress" | "completed">("new");
   const [openJobId, setOpenJobId] = useState<string | null>(null);
   const [showPending, setShowPending] = useState(false);
   const [showAddTech, setShowAddTech] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
   const [authChecked, setAuthChecked] = useState(false);
-
-  useEffect(() => {
-    localStorage.setItem("console.mode", mode);
-  }, [mode]);
 
   // Auth gate — always require sign-in, plus admin role for live data
   useEffect(() => {
@@ -54,17 +48,15 @@ export default function Console() {
         if (!cancelled) navigate("/admin/login", { replace: true });
         return;
       }
-      if (mode === "live") {
-        const { data: roles } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", user.id);
-        const isAdmin = (roles ?? []).some((r: any) => r.role === "admin");
-        if (!isAdmin) {
-          toast.error("Admin role required for live data");
-          if (!cancelled) setMode("demo");
-          return;
-        }
+      const { data: roles } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id);
+      const isAdmin = (roles ?? []).some((r: any) => r.role === "admin");
+      if (!isAdmin) {
+        toast.error("Admin role required");
+        if (!cancelled) navigate("/admin/login", { replace: true });
+        return;
       }
       if (!cancelled) setAuthChecked(true);
     })();
@@ -106,10 +98,10 @@ export default function Console() {
   const jobsToday = jobs.filter((j) => new Date(j.created_at) >= todayStart).length;
   const onDuty = techs.filter((t) => t.active && t.last_lat != null).length || techs.length;
   const stats = [
-    { label: "Jobs today", value: mode === "demo" ? "6" : String(jobsToday) },
+    { label: "Jobs today", value: String(jobsToday) },
     { label: "Avg response", value: "8 min" },
     { label: "On duty", value: String(onDuty) },
-    { label: "Revenue today", value: mode === "demo" ? "£340" : "—" },
+    { label: "Revenue today", value: "—" },
   ];
 
   const handleManualDispatch = async (
@@ -119,14 +111,6 @@ export default function Console() {
     etaMin: number,
     notes?: string,
   ) => {
-    if (mode === "demo") {
-      setJobs((prev) =>
-        prev.map((j) => (j.id === job.id ? { ...j, status: "awaiting_payment" } : j)),
-      );
-      setOpenJobId(null);
-      toast.success(`Demo: dispatched to tech, customer would get pay link for £${priceGbp}.`);
-      return;
-    }
     try {
       const { data, error } = await supabase.functions.invoke("manual-dispatch", {
         body: {
@@ -197,20 +181,6 @@ export default function Console() {
               </span>
             )}
           </button>
-          <div className="inline-flex overflow-hidden rounded-md border border-white/10 bg-white/5 text-xs">
-            <button
-              className={`px-3 py-1.5 ${mode === "demo" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
-              onClick={() => setMode("demo")}
-            >
-              Demo
-            </button>
-            <button
-              className={`px-3 py-1.5 ${mode === "live" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
-              onClick={() => setMode("live")}
-            >
-              Live data
-            </button>
-          </div>
         </div>
       </header>
 
