@@ -523,10 +523,54 @@ function DispatchModal({ job, allTechs, onClose, onDispatch }: DispatchModalProp
         {job.photo_urls && job.photo_urls.length > 0 && (
           <div className="mt-3 flex gap-2 overflow-x-auto">
             {job.photo_urls.map((u, i) => (
-              <img key={i} src={u} alt="" className="h-20 w-20 rounded-md object-cover" />
+              <a key={i} href={u} target="_blank" rel="noreferrer">
+                <img src={u} alt="" className="h-20 w-20 rounded-md object-cover" />
+              </a>
             ))}
           </div>
         )}
+
+        {/* Intake details grid */}
+        <div className="mt-4 grid grid-cols-2 gap-2 rounded-lg border border-white/10 bg-white/[0.03] p-3 text-xs">
+          {([
+            ["Reg", job.vehicle_reg],
+            ["Tyre size", (job as any).tyre_size],
+            ["Tyre brand", (job as any).tyre_brand],
+            ["Tyre type", (job as any).tyre_type],
+            ["Wheel type", (job as any).wheel_type],
+            ["Tread", (job as any).tread_condition],
+            ["Damage", (job as any).damage_type],
+            ["Severity", (job as any).severity],
+            ["Affected", ((job as any).affected_wheels ?? []).join(", ")],
+            ["Coords", job.lat != null && job.lng != null ? `${job.lat.toFixed(5)}, ${job.lng.toFixed(5)}` : null],
+          ] as [string, any][]).filter(([, v]) => v).map(([k, v]) => (
+            <div key={k}>
+              <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{k}</div>
+              <div className="font-medium text-foreground/90 break-words">{String(v)}</div>
+            </div>
+          ))}
+          {(job as any).damage_summary && (
+            <div className="col-span-2">
+              <div className="text-[10px] uppercase tracking-wider text-muted-foreground">AI summary</div>
+              <div className="text-foreground/90">{(job as any).damage_summary}</div>
+            </div>
+          )}
+          {job.lat != null && job.lng != null && (
+            <a
+              href={`https://maps.google.com/?q=${job.lat},${job.lng}`}
+              target="_blank"
+              rel="noreferrer"
+              className="col-span-2 inline-flex items-center gap-1 text-primary hover:underline"
+            >
+              <MapPin className="h-3 w-3" /> Open in Maps
+            </a>
+          )}
+        </div>
+
+        {/* Conversation thread */}
+        <div className="mt-4">
+          <JobConversation jobId={job.id} customerPhone={job.customer_phone} />
+        </div>
 
         {/* AI suggestions */}
         <div className="mt-5">
