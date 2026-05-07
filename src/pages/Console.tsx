@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { X, Star, Search, Sparkles, UserCheck } from "lucide-react";
+import { X, Star, Search, Sparkles, UserCheck, UserPlus } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { PendingTechnicians } from "@/components/admin/PendingTechnicians";
 import { Button } from "@/components/ui/button";
