@@ -623,17 +623,38 @@ Deno.serve(async (req) => {
       // route them based on current status instead of dropping into the
       // customer intake flow.
       if (joinPhrase && existingByPhone && status && status !== "intake") {
+        let reply = "";
+        let route = "";
+        let nextStatus: string | null = status;
         if (status === "approved") {
-          await sendReply(from, "You're already approved as a Tyre Fly technician ✅ Send 📍your live location to start receiving jobs.", channel);
+          reply = "You're already approved as a Tyre Fly technician ✅ Send 📍your live location to start receiving jobs.";
+          route = "join_phrase_already_approved";
         } else if (status === "pending") {
-          await sendReply(from, "Your application is in review — we'll message you here as soon as it's approved. Need to update something? Just tell me what to change.", channel);
+          reply = "Your application is in review — we'll message you here as soon as it's approved. Need to update something? Just tell me what to change.";
+          route = "join_phrase_pending_review";
         } else if (status === "rejected") {
-          await sendReply(from, "Your previous application wasn't approved. If anything's changed (new docs, new area), reply with the update and we'll re-review.", channel);
+          reply = "Your previous application wasn't approved. If anything's changed (new docs, new area), reply with the update and we'll re-review.";
+          route = "join_phrase_previously_rejected";
         } else {
-          // Unknown status — restart intake
           await supabase.from("technicians").update({ approval_status: "intake" }).eq("id", existingByPhone.id);
-          await sendReply(from, "Let's pick up your application — what's your full name?", channel);
+          reply = "Let's pick up your application — what's your full name?";
+          route = "join_phrase_unknown_status_restart";
+          nextStatus = "intake";
         }
+        await sendReply(from, reply, channel);
+        await logOnboarding(supabase, {
+          technician_id: existingByPhone.id,
+          phone: from,
+          channel,
+          inbound_body: body,
+          has_media: mediaUrls.length > 0,
+          media_count: mediaUrls.length,
+          detected_intent: "join_request",
+          prior_status: status,
+          next_status: nextStatus,
+          route_taken: route,
+          reply_sent: reply,
+        });
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
       }
 
