@@ -573,8 +573,29 @@ Deno.serve(async (req) => {
         .eq("phone", from)
         .maybeSingle();
 
-      const wantsToJoin = !existingByPhone && TECH_JOIN_RE.test(body);
+      const joinPhrase = TECH_JOIN_RE.test(body);
       const inIntake = existingByPhone?.approval_status === "intake";
+      const status = existingByPhone?.approval_status;
+
+      // If they explicitly say they want to join but already have a row,
+      // route them based on current status instead of dropping into the
+      // customer intake flow.
+      if (joinPhrase && existingByPhone && status && status !== "intake") {
+        if (status === "approved") {
+          await sendReply(from, "You're already approved as a Tyre Fly technician ✅ Send 📍your live location to start receiving jobs.", channel);
+        } else if (status === "pending") {
+          await sendReply(from, "Your application is in review — we'll message you here as soon as it's approved. Need to update something? Just tell me what to change.", channel);
+        } else if (status === "rejected") {
+          await sendReply(from, "Your previous application wasn't approved. If anything's changed (new docs, new area), reply with the update and we'll re-review.", channel);
+        } else {
+          // Unknown status — restart intake
+          await supabase.from("technicians").update({ approval_status: "intake" }).eq("id", existingByPhone.id);
+          await sendReply(from, "Let's pick up your application — what's your full name?", channel);
+        }
+        return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+      }
+
+      const wantsToJoin = !existingByPhone && joinPhrase;
 
       if (wantsToJoin || inIntake) {
         // Coords (live location pin)
