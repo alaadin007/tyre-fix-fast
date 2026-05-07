@@ -318,6 +318,114 @@ export default function Console() {
           onDispatch={handleManualDispatch}
         />
       )}
+
+      {showAddTech && (
+        <AddTechnicianModal onClose={() => setShowAddTech(false)} />
+      )}
+    </div>
+  );
+}
+
+// ---------- Add technician modal (manual, skips onboarding) ----------
+function AddTechnicianModal({ onClose }: { onClose: () => void }) {
+  const [form, setForm] = useState({
+    name: "", phone: "", whatsapp: "", email: "", vehicle: "",
+    service_postcodes: "", travel_radius_miles: "15", notes: "",
+  });
+  const [saving, setSaving] = useState(false);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.name.trim()) return toast.error("Name required");
+    if (!form.phone.trim()) return toast.error("Phone required");
+    setSaving(true);
+    const postcodes = form.service_postcodes
+      .split(",").map((p) => p.trim().toUpperCase()).filter(Boolean);
+    const radius = parseInt(form.travel_radius_miles, 10);
+    const { error } = await supabase.from("technicians").insert({
+      name: form.name.trim(),
+      phone: form.phone.trim(),
+      whatsapp: form.whatsapp.trim() || form.phone.trim(),
+      email: form.email.trim() || null,
+      vehicle: form.vehicle.trim() || null,
+      service_postcodes: postcodes,
+      travel_radius_miles: Number.isFinite(radius) ? radius : 15,
+      notes: form.notes.trim() || null,
+      active: true,
+      approval_status: "approved",
+      approved_at: new Date().toISOString(),
+    });
+    setSaving(false);
+    if (error) return toast.error(error.message);
+    toast.success("Technician added & approved");
+    onClose();
+  };
+
+  const fld = (k: keyof typeof form) => ({
+    value: form[k],
+    onChange: (e: React.ChangeEvent<HTMLInputElement>) =>
+      setForm((f) => ({ ...f, [k]: e.target.value })),
+  });
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={onClose}>
+      <form
+        onSubmit={submit}
+        onClick={(e) => e.stopPropagation()}
+        className="relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-white/10 bg-card p-6 shadow-2xl"
+      >
+        <button type="button" onClick={onClose} className="absolute right-4 top-4 rounded-full p-1 text-muted-foreground hover:bg-white/10 hover:text-foreground" aria-label="Close">
+          <X className="h-5 w-5" />
+        </button>
+        <h2 className="text-xl font-bold">Add technician</h2>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Manual entry — bypasses onboarding, documents, and approval flow. Marked active & approved immediately.
+        </p>
+
+        <div className="mt-4 grid gap-3">
+          <div>
+            <label className="text-xs text-muted-foreground">Name *</label>
+            <Input {...fld("name")} placeholder="Jane Doe" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs text-muted-foreground">Phone *</label>
+              <Input {...fld("phone")} placeholder="+447700900000" />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground">WhatsApp</label>
+              <Input {...fld("whatsapp")} placeholder="defaults to phone" />
+            </div>
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground">Email</label>
+            <Input {...fld("email")} type="email" placeholder="jane@example.com" />
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground">Vehicle</label>
+            <Input {...fld("vehicle")} placeholder="Ford Transit" />
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground">Service postcodes (comma-separated)</label>
+            <Input {...fld("service_postcodes")} placeholder="W5, SW1, E14" />
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground">Travel radius (miles)</label>
+            <Input {...fld("travel_radius_miles")} type="number" min={1} />
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground">Notes</label>
+            <Input {...fld("notes")} placeholder="Internal notes" />
+          </div>
+        </div>
+
+        <div className="mt-5 flex justify-end gap-2">
+          <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
+          <Button type="submit" disabled={saving} className="bg-primary text-primary-foreground hover:bg-primary/90">
+            {saving ? "Adding…" : "Add technician"}
+          </Button>
+        </div>
+      </form>
     </div>
   );
 }
