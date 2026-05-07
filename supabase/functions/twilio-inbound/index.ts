@@ -253,8 +253,12 @@ async function aiClassifyJobContinuity(args: {
   }
 }
 
-// Detect intent to join as a technician
-const TECH_JOIN_RE = /\b(become|join|sign[\s-]?up|apply|onboard)\b.*\b(tech|fitter|tyre|tire)\b|\b(i'?m|i am)\s+a\s+(mobile\s+)?(tyre|tire)\s+(fitter|technician|guy)\b|\bi\s+fit\s+(tyres|tires)\b|\bwant\s+to\s+(join|work)\b|^join$|^apply$|tyre\s*fly\s+technician/i;
+// Detect intent to join as a technician.
+// Keep this deliberately broad so phrases like
+// "I'd like to sign up as a technician" or
+// "please guide me through the registration" don't
+// fall through into the customer tyre-help flow.
+const TECH_JOIN_RE = /\b(become|join|sign(?:ing)?[\s-]?up|apply|onboard|register|registration)\b.*\b(tech(?:nician)?|fitter|tyre\s*fly|work(?:ing)?\s+with\s+tyre\s*fly)\b|\b(sign(?:ing)?[\s-]?up|apply(?:ing)?|register(?:ing)?|registration)\b.*\b(as\s+a\s+)?technician\b|\b(i'?d\s+like\s+to|i\s+want\s+to|want\s+to)\s+(sign(?:ing)?[\s-]?up|apply|register|join)\b.*\b(as\s+a\s+)?technician\b|\b(i'?m|i am)\s+a\s+(mobile\s+)?(tyre|tire)\s+(fitter|technician|guy)\b|\bi\s+fit\s+(tyres|tires)\b|\bwant\s+to\s+(join|work)\b|^join$|^apply$/i;
 
 async function aiExtractTechProfile(args: {
   history: string;
