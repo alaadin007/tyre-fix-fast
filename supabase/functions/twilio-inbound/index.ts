@@ -260,6 +260,11 @@ async function aiClassifyJobContinuity(args: {
 // fall through into the customer tyre-help flow.
 const TECH_JOIN_RE = /\b(become|join|sign(?:ing)?[\s-]?up|apply|onboard|register|registration)\b.*\b(tech(?:nician)?|fitter|tyre\s*fly|work(?:ing)?\s+with\s+tyre\s*fly)\b|\b(sign(?:ing)?[\s-]?up|apply(?:ing)?|register(?:ing)?|registration)\b.*\b(as\s+a\s+)?technician\b|\b(i'?d\s+like\s+to|i\s+want\s+to|want\s+to)\s+(sign(?:ing)?[\s-]?up|apply|register|join)\b.*\b(as\s+a\s+)?technician\b|\b(i'?m|i am)\s+a\s+(mobile\s+)?(tyre|tire)\s+(fitter|technician|guy)\b|\bi\s+fit\s+(tyres|tires)\b|\bwant\s+to\s+(join|work)\b|^join$|^apply$/i;
 
+// Detect when a message is a CUSTOMER asking for tyre service (not a tech onboarding message).
+// Used so that someone already in the technicians table (even mid-onboarding or approved)
+// can still book a tyre repair as a customer when their message is clearly customer intent.
+const CUSTOMER_HELP_RE = /\b(need|want|require|book|get|after|looking\s+for)\b.*\b(tyre|tire|wheel|puncture|blowout|fitting|replace(?:ment)?|change|repair|help)\b|\bpuncture\b|\bblowout\b|\bflat\s+(tyre|tire)\b|\bneed\s+(a\s+)?(new\s+)?(tyre|tire)\b|\bcar\s+(broke|won'?t\s+start|stuck)\b|\bmy\s+(car|van|tyre|tire|wheel)\b/i;
+
 async function aiExtractTechProfile(args: {
   history: string;
   latest: string;
