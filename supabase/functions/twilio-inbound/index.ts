@@ -710,6 +710,19 @@ Deno.serve(async (req) => {
           );
           // If first message was just the trigger phrase, stop here
           if (body.length < 60 && !mediaUrls.length && !coords) {
+            await logOnboarding(supabase, {
+              technician_id: row.id,
+              phone: from,
+              channel,
+              inbound_body: body,
+              has_media: mediaUrls.length > 0,
+              media_count: mediaUrls.length,
+              detected_intent: "join_request",
+              prior_status: null,
+              next_status: "intake",
+              route_taken: "intake_started_welcome_only",
+              reply_sent: "welcome",
+            });
             return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
           }
         }
