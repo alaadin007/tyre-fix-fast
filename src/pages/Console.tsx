@@ -111,14 +111,6 @@ export default function Console() {
     etaMin: number,
     notes?: string,
   ) => {
-    if (mode === "demo") {
-      setJobs((prev) =>
-        prev.map((j) => (j.id === job.id ? { ...j, status: "awaiting_payment" } : j)),
-      );
-      setOpenJobId(null);
-      toast.success(`Demo: dispatched to tech, customer would get pay link for £${priceGbp}.`);
-      return;
-    }
     try {
       const { data, error } = await supabase.functions.invoke("manual-dispatch", {
         body: {
