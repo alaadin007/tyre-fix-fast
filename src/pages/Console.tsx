@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Map as MapIcon, LayoutList, X, Star, Search, Sparkles, UserCheck, ChevronDown } from "lucide-react";
+import { X, Star, Search, Sparkles, UserCheck } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { PendingTechnicians } from "@/components/admin/PendingTechnicians";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,7 +17,6 @@ import {
   type Lane,
 } from "@/hooks/useConsoleData";
 import { useTick } from "@/hooks/useTick";
-import ConsoleMap from "@/components/console/ConsoleMap";
 
 function fmtTimer(ms: number): { txt: string; cls: string } {
   const total = Math.max(0, Math.floor(ms / 1000));
@@ -34,7 +34,7 @@ export default function Console() {
   const [mode, setMode] = useState<ConsoleMode>(() =>
     (localStorage.getItem("console.mode") as ConsoleMode) || "demo",
   );
-  const [view, setView] = useState<"board" | "map">("board"); // mobile only
+  const [tab, setTab] = useState<"new" | "in_progress" | "completed">("new");
   const [openJobId, setOpenJobId] = useState<string | null>(null);
   const [showPending, setShowPending] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
@@ -54,7 +54,7 @@ export default function Console() {
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        if (!cancelled) navigate("/technician/login");
+        if (!cancelled) navigate("/admin");
         return;
       }
       const { data: roles } = await supabase
@@ -63,7 +63,7 @@ export default function Console() {
         .eq("user_id", user.id);
       const isAdmin = (roles ?? []).some((r: any) => r.role === "admin");
       if (!isAdmin) {
-        if (!cancelled) navigate("/");
+        if (!cancelled) navigate("/admin");
         return;
       }
       if (!cancelled) setAuthChecked(true);
@@ -227,103 +227,78 @@ export default function Console() {
         </div>
       )}
 
-      {/* Stat tiles */}
-      <div className="grid grid-cols-2 gap-2 border-b border-white/10 bg-card/20 px-4 py-2 md:grid-cols-4">
+      {/* Compact stat strip */}
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-white/10 bg-card/20 px-4 py-2 text-xs">
         {stats.map((s) => (
-          <div key={s.label} className="rounded-lg border border-white/5 bg-white/[0.03] px-3 py-2">
-            <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{s.label}</div>
-            <div className="text-lg font-semibold">{s.value}</div>
+          <div key={s.label} className="flex items-baseline gap-1.5">
+            <span className="text-muted-foreground">{s.label}:</span>
+            <span className="font-semibold text-foreground">{s.value}</span>
           </div>
         ))}
       </div>
 
-      {/* Main split */}
-      <div className="relative flex flex-1 overflow-hidden">
-        {/* Board */}
-        <aside
-          className={`flex h-full w-full flex-col overflow-y-auto border-white/10 md:w-2/5 md:border-r ${
-            view === "map" ? "hidden md:flex" : "flex"
-          }`}
-        >
-          {LANES.map((lane) => {
-            const items = grouped[lane.key];
-            return (
-              <section key={lane.key} className="border-b border-white/5">
-                <header className="sticky top-0 z-10 flex items-center justify-between bg-card/80 px-4 py-2 backdrop-blur">
-                  <div className="flex items-center gap-2">
-                    <span className={`h-2 w-2 rounded-full ${lane.dot}`} />
-                    <h2 className="text-xs font-semibold uppercase tracking-wider">{lane.label}</h2>
-                  </div>
-                  <span className="text-xs text-muted-foreground">{items.length}</span>
-                </header>
-                <div className="flex flex-col gap-2 p-3">
-                  {items.length === 0 && (
-                    <p className="px-1 text-xs text-muted-foreground">No jobs.</p>
-                  )}
-                  {items.map((job) => {
-                    const elapsed = now - new Date(job.created_at).getTime();
-                    const t = fmtTimer(elapsed);
-                    const top = nearestTechs(job, techs, 1)[0];
-                    return (
-                      <button
-                        key={job.id}
-                        onClick={() => setOpenJobId(job.id)}
-                        className="group rounded-xl border border-white/10 bg-white/[0.04] p-3 text-left transition hover:border-primary/40 hover:bg-white/[0.06]"
-                      >
-                        <div className="flex items-baseline justify-between">
-                          <div className="text-lg font-bold tracking-tight">{job.postcode || "—"}</div>
-                          <div className={`font-mono text-sm tabular-nums ${t.cls}`}>{t.txt}</div>
-                        </div>
-                        <div className="mt-1 inline-flex items-center rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[11px] capitalize text-muted-foreground">
-                          {job.issue_type || "tyre job"}
-                        </div>
-                        {top && (
-                          <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
-                            <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-                            {(top.tech.rating ?? 5).toFixed(1)} · {top.tech.name} · ETA {top.etaMin}m
-                          </div>
-                        )}
-                        {lane.key === "incoming" && (
-                          <div className="mt-3">
-                            <Button
-                              size="sm"
-                              className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
-                              onClick={(e) => { e.stopPropagation(); setOpenJobId(job.id); }}
-                            >
-                              Dispatch
-                            </Button>
-                          </div>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              </section>
-            );
-          })}
-        </aside>
+      {/* Tabs */}
+      <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)} className="flex flex-1 flex-col overflow-hidden">
+        <TabsList className="mx-4 mt-3 grid w-auto grid-cols-3">
+          <TabsTrigger value="new">New ({grouped.incoming.length})</TabsTrigger>
+          <TabsTrigger value="in_progress">In progress ({grouped.dispatched.length + grouped.in_progress.length})</TabsTrigger>
+          <TabsTrigger value="completed">Completed ({grouped.completed.length})</TabsTrigger>
+        </TabsList>
 
-        {/* Map */}
-        <main className={`relative h-full flex-1 ${view === "board" ? "hidden md:block" : "block"}`}>
-          <ConsoleMap jobs={jobs} techs={techs} onJobClick={setOpenJobId} />
-        </main>
-      </div>
-
-      {/* Mobile tab bar */}
-      <nav className="grid grid-cols-2 border-t border-white/10 bg-card md:hidden">
-        <button
-          onClick={() => setView("board")}
-          className={`flex items-center justify-center gap-2 py-3 text-sm ${view === "board" ? "text-primary" : "text-muted-foreground"}`}
-        >
-          <LayoutList className="h-4 w-4" /> Board
-        </button>
-        <button
-          onClick={() => setView("map")}
-          className={`flex items-center justify-center gap-2 py-3 text-sm ${view === "map" ? "text-primary" : "text-muted-foreground"}`}
-        >
-          <MapIcon className="h-4 w-4" /> Map
-        </button>
-      </nav>
+        {([
+          { key: "new", items: grouped.incoming, showDispatch: true },
+          { key: "in_progress", items: [...grouped.dispatched, ...grouped.in_progress], showDispatch: false },
+          { key: "completed", items: grouped.completed, showDispatch: false },
+        ] as const).map(({ key, items, showDispatch }) => (
+          <TabsContent key={key} value={key} className="mt-0 flex-1 overflow-y-auto p-3">
+            {items.length === 0 && (
+              <p className="px-1 py-6 text-center text-sm text-muted-foreground">No jobs.</p>
+            )}
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              {items.map((job) => {
+                const elapsed = now - new Date(job.created_at).getTime();
+                const t = fmtTimer(elapsed);
+                const top = nearestTechs(job, techs, 1)[0];
+                return (
+                  <button
+                    key={job.id}
+                    onClick={() => setOpenJobId(job.id)}
+                    className="group rounded-xl border border-white/10 bg-white/[0.04] p-3 text-left transition hover:border-primary/40 hover:bg-white/[0.06]"
+                  >
+                    <div className="flex items-baseline justify-between">
+                      <div className="text-lg font-bold tracking-tight">{job.postcode || "—"}</div>
+                      <div className={`font-mono text-sm tabular-nums ${t.cls}`}>{t.txt}</div>
+                    </div>
+                    <div className="mt-1 inline-flex items-center rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[11px] capitalize text-muted-foreground">
+                      {job.issue_type || "tyre job"}
+                    </div>
+                    <div className="mt-1 text-[11px] uppercase tracking-wider text-muted-foreground">
+                      {job.status.replace(/_/g, " ")}
+                    </div>
+                    {top && (
+                      <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+                        <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                        {(top.tech.rating ?? 5).toFixed(1)} · {top.tech.name} · ETA {top.etaMin}m
+                      </div>
+                    )}
+                    {showDispatch && (
+                      <div className="mt-3">
+                        <Button
+                          size="sm"
+                          className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
+                          onClick={(e) => { e.stopPropagation(); setOpenJobId(job.id); }}
+                        >
+                          Dispatch
+                        </Button>
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </TabsContent>
+        ))}
+      </Tabs>
 
       {/* Dispatch modal */}
       {openJob && (
