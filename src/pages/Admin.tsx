@@ -362,6 +362,10 @@ export default function Admin() {
         <div className="mt-6">
           <PendingTechnicians />
         </div>
+
+        <div className="mt-6">
+          <OnboardingLogs />
+        </div>
       </main>
 
       {/* Floating AI Co-pilot */}
