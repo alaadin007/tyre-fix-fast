@@ -48,17 +48,15 @@ export default function Console() {
         if (!cancelled) navigate("/admin/login", { replace: true });
         return;
       }
-      if (mode === "live") {
-        const { data: roles } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", user.id);
-        const isAdmin = (roles ?? []).some((r: any) => r.role === "admin");
-        if (!isAdmin) {
-          toast.error("Admin role required for live data");
-          if (!cancelled) setMode("demo");
-          return;
-        }
+      const { data: roles } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id);
+      const isAdmin = (roles ?? []).some((r: any) => r.role === "admin");
+      if (!isAdmin) {
+        toast.error("Admin role required");
+        if (!cancelled) navigate("/admin/login", { replace: true });
+        return;
       }
       if (!cancelled) setAuthChecked(true);
     })();
