@@ -77,6 +77,7 @@ export function PendingTechnicians() {
   const [requestFor, setRequestFor] = useState<string | null>(null);
   const [requestMsg, setRequestMsg] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
+  const [openConv, setOpenConv] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
