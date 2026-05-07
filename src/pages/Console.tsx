@@ -37,6 +37,7 @@ export default function Console() {
   const [tab, setTab] = useState<"new" | "in_progress" | "completed">("new");
   const [openJobId, setOpenJobId] = useState<string | null>(null);
   const [showPending, setShowPending] = useState(false);
+  const [showAddTech, setShowAddTech] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
   const [authChecked, setAuthChecked] = useState(false);
 
