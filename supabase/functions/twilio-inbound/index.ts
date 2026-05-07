@@ -835,11 +835,14 @@ Deno.serve(async (req) => {
     }
 
     // 2. Technician? → Parsing Agent
+    // Skip if the message is clearly a customer asking for tyre help (e.g. "I need tyre help"),
+    // so a technician using the same number can also book a job.
+    const customerHelpForTech = CUSTOMER_HELP_RE.test(body);
     const { data: techMatch } = await supabase
       .from("technicians")
       .select("*")
       .eq("active", true);
-    const tech = (techMatch ?? []).find((t: any) => normPhone(t.phone) === fromN);
+    const tech = customerHelpForTech ? null : (techMatch ?? []).find((t: any) => normPhone(t.phone) === fromN);
 
     if (tech) {
       // If they shared a location pin (the meta webhook converts pins to
