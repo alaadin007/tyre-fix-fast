@@ -787,6 +787,32 @@ Deno.serve(async (req) => {
         await supabase.from("technicians").update(updates).eq("id", row.id);
 
         await sendReply(from, ai.reply, channel);
+        await logOnboarding(supabase, {
+          technician_id: row.id,
+          phone: from,
+          channel,
+          inbound_body: body,
+          has_media: mediaUrls.length > 0,
+          media_count: mediaUrls.length,
+          detected_intent: existingByPhone ? "intake_continue" : "intake_start",
+          prior_status: row.approval_status ?? null,
+          next_status: updates.approval_status ?? row.approval_status ?? "intake",
+          route_taken: updates.approval_status === "pending"
+            ? "intake_complete_submitted_for_review"
+            : "intake_in_progress",
+          ai_extracted: {
+            name: ai.name,
+            service_postcodes: ai.service_postcodes,
+            vehicle: ai.vehicle,
+            travel_radius_miles: ai.travel_radius_miles,
+            weekly_schedule: ai.weekly_schedule ? Object.keys(ai.weekly_schedule) : null,
+            availability_summary: ai.availability_summary,
+            media_classification: ai.media_classification,
+            ready_for_review: ai.ready_for_review,
+            pin: pinLat !== null ? { lat: pinLat, lng: pinLng } : null,
+          },
+          reply_sent: ai.reply,
+        });
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
       }
     }
