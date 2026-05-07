@@ -181,20 +181,6 @@ export default function Console() {
               </span>
             )}
           </button>
-          <div className="inline-flex overflow-hidden rounded-md border border-white/10 bg-white/5 text-xs">
-            <button
-              className={`px-3 py-1.5 ${mode === "demo" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
-              onClick={() => setMode("demo")}
-            >
-              Demo
-            </button>
-            <button
-              className={`px-3 py-1.5 ${mode === "live" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
-              onClick={() => setMode("live")}
-            >
-              Live data
-            </button>
-          </div>
         </div>
       </header>
 
