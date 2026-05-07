@@ -56,8 +56,8 @@ export default function AdminLogin() {
   };
 
   return (
-    <div className="grid min-h-screen place-items-center bg-background px-4 text-foreground">
-      <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-card p-6 shadow-2xl">
+    <div className="grid min-h-screen place-items-center bg-hero px-4 text-foreground">
+      <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-card/70 p-6 shadow-2xl backdrop-blur">
         <h1 className="text-xl font-bold">Operations Console</h1>
         <p className="mt-1 text-xs text-muted-foreground">
           {mode === "login" ? "Sign in to continue" : "Create an admin account"}
