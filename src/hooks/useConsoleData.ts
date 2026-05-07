@@ -79,7 +79,7 @@ export function useConsoleData(_mode?: ConsoleMode) {
       supabase.removeChannel(ch);
       clearInterval(t);
     };
-  }, [mode]);
+  }, []);
 
   return { jobs, techs, setJobs };
 }
