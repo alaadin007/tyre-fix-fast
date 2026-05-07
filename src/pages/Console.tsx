@@ -175,6 +175,14 @@ export default function Console() {
         </div>
         <div className="flex items-center gap-2">
           <button
+            onClick={() => setShowAddTech(true)}
+            className="inline-flex items-center gap-1.5 rounded-md border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-foreground hover:bg-white/10"
+            title="Manually add a technician (skips onboarding)"
+          >
+            <UserPlus className="h-3.5 w-3.5" />
+            Add tech
+          </button>
+          <button
             onClick={() => setShowPending(true)}
             className="relative inline-flex items-center gap-1.5 rounded-md border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-foreground hover:bg-white/10"
             title="Approve technician applications"
