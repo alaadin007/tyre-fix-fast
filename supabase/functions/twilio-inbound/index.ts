@@ -1114,10 +1114,12 @@ Deno.serve(async (req) => {
       // Diagnostic depth: do we actually understand the problem?
       const finalIssueType = updates.issue_type ?? job.issue_type;
       const lowerDesc = finalDesc.toLowerCase();
+      const saidUnknown = /\b(no idea|not sure|don'?t know|dont know|dunno|unsure|no clue)\b/i.test(lowerDesc);
       const hasContext =
         /(nail|screw|slow|fast|sudden|drove|driving|park|kerb|pothole|bulge|split|crack|flat overnight|lost.*key|valve|leak)/i.test(lowerDesc) ||
-        lowerDesc.length > 60;
-      const diagnosisOk = finalPhotos.length > 0 || (finalIssueType && finalIssueType !== "unknown" && hasContext);
+        lowerDesc.length > 60 ||
+        saidUnknown;
+      const diagnosisOk = finalPhotos.length > 0 || (finalIssueType && finalIssueType !== "unknown" && hasContext) || (saidUnknown && finalPhotos.length > 0);
 
       // Reg + at least one wheel position are now required before dispatch
       if (haveName && havePostcode && haveDetails && diagnosisOk && finalReg && finalWheels.length > 0) {
