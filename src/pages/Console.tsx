@@ -784,6 +784,16 @@ function AllTechniciansPanel({ onClose }: { onClose: () => void }) {
     else toast.success(`${t.name} ${!t.active ? "activated" : "deactivated"}`);
   };
 
+  const deleteTech = async (t: TechRow) => {
+    if (!confirm(`Delete ${t.name} (${t.phone})? This cannot be undone.`)) return;
+    const { error } = await supabase.from("technicians").delete().eq("id", t.id);
+    if (error) toast.error(error.message);
+    else {
+      toast.success(`${t.name} deleted`);
+      setTechs((prev) => prev.filter((x) => x.id !== t.id));
+    }
+  };
+
   const filtered = techs.filter((t) => {
     if (!q.trim()) return true;
     const s = q.toLowerCase();
