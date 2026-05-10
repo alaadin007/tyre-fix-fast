@@ -477,6 +477,56 @@ function DispatchModal({ job, allTechs, onClose, onDispatch }: DispatchModalProp
   const [price, setPrice] = useState<string>("85");
   const [eta, setEta] = useState<string>(String(suggested[0]?.etaMin ?? 30));
   const [notes, setNotes] = useState("");
+  const [showSpecific, setShowSpecific] = useState(false);
+  const [selectedTechIds, setSelectedTechIds] = useState<Set<string>>(new Set());
+  const [broadcasting, setBroadcasting] = useState<null | "all" | "specific">(null);
+
+  // Job is "complete" — required fields gathered before broadcasting
+  const wheels = ((job as any).affected_wheels ?? []) as string[];
+  const isComplete =
+    !!job.customer_name && job.customer_name !== "Customer" &&
+    !!job.customer_phone &&
+    !!job.postcode &&
+    !!job.issue_type && job.issue_type !== "unknown" &&
+    !!job.vehicle_reg &&
+    wheels.length > 0 &&
+    (job.photo_urls?.length ?? 0) > 0;
+
+  const missing: string[] = [];
+  if (!job.customer_name || job.customer_name === "Customer") missing.push("name");
+  if (!job.customer_phone) missing.push("phone");
+  if (!job.postcode) missing.push("postcode");
+  if (!job.issue_type || job.issue_type === "unknown") missing.push("issue type");
+  if (!job.vehicle_reg) missing.push("reg");
+  if (wheels.length === 0) missing.push("affected wheel");
+  if ((job.photo_urls?.length ?? 0) === 0) missing.push("photo");
+
+  const eligibleTechs = allTechs.filter((t: any) => t.active && (t.approval_status ?? "approved") === "approved");
+
+  const broadcast = async (mode: "all" | "specific") => {
+    if (mode === "specific" && selectedTechIds.size === 0) {
+      toast.error("Pick at least one technician");
+      return;
+    }
+    setBroadcasting(mode);
+    try {
+      const { data, error } = await supabase.functions.invoke("broadcast-job", {
+        body: {
+          job_id: job.id,
+          mode,
+          technician_ids: mode === "specific" ? Array.from(selectedTechIds) : undefined,
+        },
+      });
+      if (error) throw error;
+      toast.success(`Sent to ${data?.sent ?? 0} technician(s) on WhatsApp ✅`);
+      setShowSpecific(false);
+      setSelectedTechIds(new Set());
+    } catch (e: any) {
+      toast.error(`Broadcast failed: ${e.message ?? e}`);
+    } finally {
+      setBroadcasting(null);
+    }
+  };
 
   const filteredTechs = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -578,6 +628,106 @@ function DispatchModal({ job, allTechs, onClose, onDispatch }: DispatchModalProp
             >
               <MapPin className="h-3 w-3" /> Open in Maps
             </a>
+          )}
+        </div>
+
+        {/* Broadcast panel — only when intake is complete */}
+        <div className="mt-5 rounded-lg border border-white/10 bg-white/[0.03] p-3">
+          <div className="mb-2 flex items-center justify-between">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Broadcast to technicians
+            </h3>
+            <span
+              className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
+                isComplete
+                  ? "bg-emerald-500/15 text-emerald-300 border border-emerald-400/30"
+                  : "bg-amber-500/15 text-amber-300 border border-amber-400/30"
+              }`}
+            >
+              {isComplete ? "Job complete" : "Job incomplete"}
+            </span>
+          </div>
+
+          {!isComplete && (
+            <p className="text-xs text-amber-300/80">
+              Still missing: {missing.join(", ")}. Buttons unlock once all details are in.
+            </p>
+          )}
+
+          {isComplete && (
+            <div className="space-y-2">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <Button
+                  className="bg-emerald-500 text-emerald-950 hover:bg-emerald-400"
+                  disabled={broadcasting !== null}
+                  onClick={() => broadcast("all")}
+                >
+                  {broadcasting === "all"
+                    ? "Sending…"
+                    : `📣 Send to all technicians (${eligibleTechs.length})`}
+                </Button>
+                <Button
+                  variant="outline"
+                  className="border-emerald-400/40 text-emerald-300 hover:bg-emerald-500/10"
+                  disabled={broadcasting !== null}
+                  onClick={() => setShowSpecific((v) => !v)}
+                >
+                  🎯 Send to specific technicians
+                </Button>
+              </div>
+
+              {showSpecific && (
+                <div className="rounded-md border border-white/10 bg-white/[0.04] p-2">
+                  <div className="mb-2 text-[10px] uppercase tracking-wider text-muted-foreground">
+                    Pick from registered technicians ({eligibleTechs.length} eligible)
+                  </div>
+                  <div className="max-h-48 space-y-1 overflow-y-auto">
+                    {eligibleTechs.map((t: any) => {
+                      const checked = selectedTechIds.has(t.id);
+                      return (
+                        <label
+                          key={t.id}
+                          className={`flex cursor-pointer items-center justify-between gap-2 rounded px-2 py-1.5 text-sm hover:bg-white/[0.05] ${
+                            checked ? "bg-primary/10" : ""
+                          }`}
+                        >
+                          <span className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => {
+                                setSelectedTechIds((s) => {
+                                  const n = new Set(s);
+                                  if (n.has(t.id)) n.delete(t.id);
+                                  else n.add(t.id);
+                                  return n;
+                                });
+                              }}
+                            />
+                            <span className="font-medium">{t.name}</span>
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            {t.vehicle ?? ""}{t.phone ? ` · ${t.phone}` : ""}
+                          </span>
+                        </label>
+                      );
+                    })}
+                    {eligibleTechs.length === 0 && (
+                      <p className="text-xs text-muted-foreground">No active approved technicians.</p>
+                    )}
+                  </div>
+                  <Button
+                    className="mt-2 w-full bg-emerald-500 text-emerald-950 hover:bg-emerald-400"
+                    disabled={broadcasting !== null || selectedTechIds.size === 0}
+                    onClick={() => broadcast("specific")}
+                  >
+                    {broadcasting === "specific"
+                      ? "Sending…"
+                      : `Send WhatsApp to ${selectedTechIds.size} selected`}
+                  </Button>
+                </div>
+              )}
+            </div>
           )}
         </div>
 
