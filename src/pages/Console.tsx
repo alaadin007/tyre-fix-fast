@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { X, Star, Search, Sparkles, UserCheck, UserPlus, Users, Phone, MapPin, Camera } from "lucide-react";
+import { X, Star, Search, Sparkles, UserCheck, UserPlus, Users, Phone, MapPin, Camera, Trash2 } from "lucide-react";
 import { PendingTechnicians } from "@/components/admin/PendingTechnicians";
 import { JobConversation } from "@/components/console/JobConversation";
 import { Button } from "@/components/ui/button";
@@ -784,6 +784,16 @@ function AllTechniciansPanel({ onClose }: { onClose: () => void }) {
     else toast.success(`${t.name} ${!t.active ? "activated" : "deactivated"}`);
   };
 
+  const deleteTech = async (t: TechRow) => {
+    if (!confirm(`Delete ${t.name} (${t.phone})? This cannot be undone.`)) return;
+    const { error } = await supabase.from("technicians").delete().eq("id", t.id);
+    if (error) toast.error(error.message);
+    else {
+      toast.success(`${t.name} deleted`);
+      setTechs((prev) => prev.filter((x) => x.id !== t.id));
+    }
+  };
+
   const filtered = techs.filter((t) => {
     if (!q.trim()) return true;
     const s = q.toLowerCase();
@@ -910,14 +920,24 @@ function AllTechniciansPanel({ onClose }: { onClose: () => void }) {
                     <span className={`text-[11px] ${t.active ? "text-emerald-300" : "text-muted-foreground"}`}>
                       {t.active ? "● Active" : "○ Inactive"}
                     </span>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => toggleActive(t)}
-                      className="h-7 text-[11px]"
-                    >
-                      {t.active ? "Deactivate" : "Activate"}
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => toggleActive(t)}
+                        className="h-7 text-[11px]"
+                      >
+                        {t.active ? "Deactivate" : "Activate"}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => deleteTech(t)}
+                        className="h-7 border-red-400/30 text-[11px] text-red-300 hover:bg-red-500/10 hover:text-red-200"
+                      >
+                        <Trash2 className="h-3 w-3" /> Delete
+                      </Button>
+                    </div>
                   </div>
                 </div>
               );
