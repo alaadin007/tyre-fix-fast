@@ -63,6 +63,13 @@ async function sendViaTwilio(args: {
   return { ok: tw.ok, status: tw.status, data, fromBase };
 }
 
+function formatProviderError(data: any, fallback: string) {
+  return {
+    code: data?.code ?? null,
+    error: data?.message ?? data?.error ?? fallback,
+  };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -116,12 +123,17 @@ Deno.serve(async (req) => {
       });
 
       if (!twilioWa.ok) {
+        const twilioErr = formatProviderError(twilioWa.data, "WhatsApp send failed");
         console.error("twilio whatsapp fallback failed", twilioWa.status, twilioWa.data);
         return new Response(
           JSON.stringify({
-            error: metaData?.error ?? twilioWa.data?.message ?? "WhatsApp send failed",
+            error: metaData?.error ?? twilioErr.error,
+            code: twilioErr.code,
             provider: "meta_and_twilio",
             status: twilioWa.status,
+            from_number: twilioWa.fromBase,
+            to_number: normalizePhone(to),
+            channel,
           }),
           { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
@@ -158,9 +170,18 @@ Deno.serve(async (req) => {
       twilioApiKey: TWILIO_API_KEY,
     });
     if (!twilioSms.ok) {
+      const twilioErr = formatProviderError(twilioSms.data, "Twilio send failed");
       console.error("twilio send failed", twilioSms.status, twilioSms.data);
       return new Response(
-        JSON.stringify({ error: twilioSms.data?.message ?? "Twilio send failed", status: twilioSms.status }),
+        JSON.stringify({
+          error: twilioErr.error,
+          code: twilioErr.code,
+          status: twilioSms.status,
+          from_number: twilioSms.fromBase,
+          to_number: normalizePhone(to),
+          channel,
+          provider: "twilio",
+        }),
         { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
