@@ -19,18 +19,35 @@ const BodySchema = z.object({
   to: z.string().trim().min(7).max(20),
   body: z.string().trim().min(1).max(1600),
   channel: z.enum(["sms", "whatsapp"]).default("sms"),
+  media_urls: z.array(z.string().url()).max(10).optional(),
+  provider_preference: z.enum(["auto", "twilio", "meta"]).optional().default("auto"),
 });
+
+function normalizePhone(raw: string): string {
+  let cleaned = (raw || "").replace(/^whatsapp:/i, "").replace(/[^\d+]/g, "");
+  if (!cleaned) return "";
+  if (cleaned.startsWith("00")) cleaned = `+${cleaned.slice(2)}`;
+  if (!cleaned.startsWith("+")) {
+    cleaned = cleaned.startsWith("0") ? `+44${cleaned.slice(1)}` : `+${cleaned}`;
+  }
+  return cleaned;
+}
 
 async function sendViaTwilio(args: {
   to: string;
   body: string;
   channel: "sms" | "whatsapp";
+  mediaUrls?: string[];
   lovableApiKey: string;
   twilioApiKey: string;
 }) {
   const fromBase = args.channel === "whatsapp" ? FROM_WHATSAPP : FROM_SMS;
-  const To = args.channel === "whatsapp" ? `whatsapp:${args.to}` : args.to;
-  const From = args.channel === "whatsapp" ? `whatsapp:${fromBase}` : fromBase;
+  const toNormalized = normalizePhone(args.to);
+  const fromNormalized = normalizePhone(fromBase);
+  const To = args.channel === "whatsapp" ? `whatsapp:${toNormalized}` : toNormalized;
+  const From = args.channel === "whatsapp" ? `whatsapp:${fromNormalized}` : fromNormalized;
+  const form = new URLSearchParams({ To, From, Body: args.body });
+  for (const mediaUrl of args.mediaUrls ?? []) form.append("MediaUrl", mediaUrl);
 
   const tw = await fetch(`${GATEWAY_URL}/Messages.json`, {
     method: "POST",
@@ -39,7 +56,7 @@ async function sendViaTwilio(args: {
       "X-Connection-Api-Key": args.twilioApiKey,
       "Content-Type": "application/x-www-form-urlencoded",
     },
-    body: new URLSearchParams({ To, From, Body: args.body }),
+    body: form,
   });
 
   const data = await tw.json();
@@ -62,10 +79,11 @@ Deno.serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
-    const { to, body, channel } = parsed.data;
+    const { to, body, channel, media_urls, provider_preference } = parsed.data;
 
-    // Prefer Meta for WhatsApp, but fall back to Twilio WhatsApp if Meta rejects the send.
-    if (channel === "whatsapp") {
+    // For technician broadcast we can force direct Twilio WhatsApp delivery instead of
+    // treating Meta's accepted-but-undelivered response as success.
+    if (channel === "whatsapp" && provider_preference !== "twilio") {
       const metaRes = await fetch(
         `${Deno.env.get("SUPABASE_URL")}/functions/v1/whatsapp-meta-send`,
         {
@@ -74,7 +92,7 @@ Deno.serve(async (req) => {
             "Content-Type": "application/json",
             Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
           },
-          body: JSON.stringify({ to, body }),
+          body: JSON.stringify({ to, body, media_urls }),
         },
       );
       const metaData = await metaRes.json();
@@ -92,6 +110,7 @@ Deno.serve(async (req) => {
         to,
         body,
         channel: "whatsapp",
+        mediaUrls: media_urls,
         lovableApiKey: LOVABLE_API_KEY,
         twilioApiKey: TWILIO_API_KEY,
       });
@@ -116,11 +135,11 @@ Deno.serve(async (req) => {
         direction: "outbound",
         channel,
         from_number: twilioWa.fromBase,
-        to_number: to,
+        to_number: normalizePhone(to),
         body,
         twilio_sid: twilioWa.data?.sid ?? null,
-        num_media: 0,
-        media_urls: [],
+        num_media: media_urls?.length ?? 0,
+        media_urls: media_urls ?? [],
         status: twilioWa.data?.status ?? "queued",
       });
 
@@ -134,6 +153,7 @@ Deno.serve(async (req) => {
       to,
       body,
       channel,
+      mediaUrls: media_urls,
       lovableApiKey: LOVABLE_API_KEY,
       twilioApiKey: TWILIO_API_KEY,
     });
@@ -154,11 +174,11 @@ Deno.serve(async (req) => {
       direction: "outbound",
       channel,
       from_number: twilioSms.fromBase,
-      to_number: to,
+      to_number: normalizePhone(to),
       body,
       twilio_sid: twilioSms.data?.sid ?? null,
-      num_media: 0,
-      media_urls: [],
+      num_media: media_urls?.length ?? 0,
+      media_urls: media_urls ?? [],
       status: twilioSms.data?.status ?? "queued",
     });
 
