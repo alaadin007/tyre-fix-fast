@@ -1081,11 +1081,22 @@ Deno.serve(async (req) => {
       const s = t.toLowerCase();
       const out = new Set<string>();
       const has = (re: RegExp) => re.test(s);
+      const addFrontPair = () => {
+        out.add("front-left");
+        out.add("front-right");
+      };
+      const addRearPair = () => {
+        out.add("rear-left");
+        out.add("rear-right");
+      };
       // Direct corner mentions
       if (has(/front[-\s]?left|fl\b|nearside front|front near.?side/)) out.add("front-left");
       if (has(/front[-\s]?right|fr\b|offside front|front off.?side/)) out.add("front-right");
       if (has(/(rear|back)[-\s]?left|rl\b|nearside rear|nearside back|rear near.?side/)) out.add("rear-left");
       if (has(/(rear|back)[-\s]?right|rr\b|offside rear|offside back|rear off.?side/)) out.add("rear-right");
+      // Pairs like "both front tyres", "2 rear tyres", "both front ones"
+      if (has(/\b(?:both|two|2)\s+front(?:\s+(?:tyres?|tires?|wheels?|ones?))?\b|\bfront\s+(?:both|two|2)(?:\s+(?:tyres?|tires?|wheels?|ones?))?\b|\bboth\s+front\s+ones?\b/)) addFrontPair();
+      if (has(/\b(?:both|two|2)\s+(?:rear|back)(?:\s+(?:tyres?|tires?|wheels?|ones?))?\b|\b(?:rear|back)\s+(?:both|two|2)(?:\s+(?:tyres?|tires?|wheels?|ones?))?\b|\bboth\s+(?:rear|back)\s+ones?\b/)) addRearPair();
       // "all four", "all 4"
       if (has(/all\s*(four|4)\b/)) {
         ["front-left", "front-right", "rear-left", "rear-right"].forEach((w) => out.add(w));
@@ -1281,19 +1292,13 @@ Deno.serve(async (req) => {
         ask =
           "Got it ✅\n\n" +
           "*Step 4 of 4 — Photos of the tyre(s)* 📸\n" +
-          "First: *how many tyres* have a problem, and *which ones*?\n" +
-          "Reply with the positions: front-left, front-right, rear-left, rear-right (or \"all four\").";
+          "Please send the *tyre photo(s)* now and tell me *which tyres are affected* in the same reply.\n" +
+          "You can say: front-left, front-right, rear-left, rear-right, \"both front\", \"both rear\", or \"all four\".";
       }
       else if (statedCount && statedCount > tyreCount) {
         ask =
           `You mentioned ${statedCount} tyres but I've only got ${tyreCount} position(s) so far (${finalWheels.join(", ")}).\n` +
           "Could you list the *other position(s)*? front-left / front-right / rear-left / rear-right.";
-      }
-      else if (tyreCount > 1 && !/\b(same|different|all the same|each|both)\b/i.test(lowerDesc)) {
-        ask =
-          `Got *${tyreCount} tyres* affected (${finalWheels.join(", ")}).\n` +
-          "Quick check: is it the *same problem on all of them*, or *different issues* per tyre?\n" +
-          "If different, tell me what's wrong with each one.";
       }
       else if (!photosOkForCount) {
         const remaining = Math.max(1, tyreCount - photoCount);
@@ -1511,7 +1516,7 @@ Deno.serve(async (req) => {
       ask0 =
         "Got it ✅\n\n" +
         "*Step 4 of 4 — Photos of the tyre(s)* 📸\n" +
-        "How many tyres are affected, and which ones? (front-left / front-right / rear-left / rear-right, or \"all four\").";
+        "Please send the *tyre photo(s)* now and tell me *which tyres are affected* in the same reply (front-left / front-right / rear-left / rear-right, or \"both front\", \"both rear\", \"all four\").";
     } else if (!photosOkForCount0) {
       const remaining = Math.max(1, tyreCount0 - photoCount0);
       ask0 =
