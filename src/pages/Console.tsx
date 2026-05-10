@@ -519,11 +519,24 @@ function DispatchModal({ job, allTechs, onClose, onDispatch }: DispatchModalProp
         },
       });
       if (error) throw error;
-      toast.success(`Sent to ${data?.sent ?? 0} technician(s) on WhatsApp ✅`);
+      const sent = data?.sent ?? 0;
+      const total = data?.total ?? sent;
+      const failures = Array.isArray(data?.failures) ? data.failures.filter(Boolean) : [];
+      if (sent > 0) {
+        toast.success(
+          failures.length > 0
+            ? `Sent to ${sent}/${total} technician(s). Some numbers failed — check alerts for details.`
+            : `Sent to ${sent} technician(s) ✅`,
+        );
+      } else {
+        throw new Error(data?.error ?? "No technician messages were delivered");
+      }
       setShowSpecific(false);
       setSelectedTechIds(new Set());
     } catch (e: any) {
-      toast.error(`Broadcast failed: ${e.message ?? e}`);
+      const raw = e?.message ?? String(e);
+      const cleaned = raw.replace(/^Edge Function returned a non-2xx status code:?\s*/i, "");
+      toast.error(`Broadcast failed: ${cleaned}`);
     } finally {
       setBroadcasting(null);
     }
