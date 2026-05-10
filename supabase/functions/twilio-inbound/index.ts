@@ -1234,6 +1234,7 @@ Deno.serve(async (req) => {
         }
       }
 
+      let ask: string;
       // ----- STEP 1: location -----
       if (!step1Done) {
         ask =
