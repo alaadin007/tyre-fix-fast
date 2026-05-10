@@ -18,9 +18,8 @@ const BodySchema = z.object({
   technician_ids: z.array(z.string().uuid()).optional(),
 });
 
-async function sendMsg(to: string, body: string, media_urls?: string[]) {
+async function sendWhatsApp(to: string, body: string, media_urls?: string[]) {
   try {
-    // Prefer Meta direct so we can attach images; fall back to twilio-send for text-only.
     if (media_urls && media_urls.length > 0) {
       const r = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/whatsapp-meta-send`, {
         method: "POST",
@@ -31,7 +30,7 @@ async function sendMsg(to: string, body: string, media_urls?: string[]) {
         body: JSON.stringify({ to, body, media_urls }),
       });
       if (r.ok) return true;
-      console.error("meta send w/ media failed, falling back to text", await r.text());
+      console.error("meta send w/ media failed", await r.text());
     }
     const r2 = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/twilio-send`, {
       method: "POST",
@@ -43,7 +42,24 @@ async function sendMsg(to: string, body: string, media_urls?: string[]) {
     });
     return r2.ok;
   } catch (e) {
-    console.error("sendMsg failed:", e);
+    console.error("sendWhatsApp failed:", e);
+    return false;
+  }
+}
+
+async function sendSMS(to: string, body: string) {
+  try {
+    const r = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/twilio-send`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${Deno.env.get("SUPABASE_ANON_KEY")}`,
+      },
+      body: JSON.stringify({ to, body: body.slice(0, 1500), channel: "sms" }),
+    });
+    return r.ok;
+  } catch (e) {
+    console.error("sendSMS failed:", e);
     return false;
   }
 }
