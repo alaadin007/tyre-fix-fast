@@ -631,6 +631,106 @@ function DispatchModal({ job, allTechs, onClose, onDispatch }: DispatchModalProp
           )}
         </div>
 
+        {/* Broadcast panel — only when intake is complete */}
+        <div className="mt-5 rounded-lg border border-white/10 bg-white/[0.03] p-3">
+          <div className="mb-2 flex items-center justify-between">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Broadcast to technicians
+            </h3>
+            <span
+              className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
+                isComplete
+                  ? "bg-emerald-500/15 text-emerald-300 border border-emerald-400/30"
+                  : "bg-amber-500/15 text-amber-300 border border-amber-400/30"
+              }`}
+            >
+              {isComplete ? "Job complete" : "Job incomplete"}
+            </span>
+          </div>
+
+          {!isComplete && (
+            <p className="text-xs text-amber-300/80">
+              Still missing: {missing.join(", ")}. Buttons unlock once all details are in.
+            </p>
+          )}
+
+          {isComplete && (
+            <div className="space-y-2">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <Button
+                  className="bg-emerald-500 text-emerald-950 hover:bg-emerald-400"
+                  disabled={broadcasting !== null}
+                  onClick={() => broadcast("all")}
+                >
+                  {broadcasting === "all"
+                    ? "Sending…"
+                    : `📣 Send to all technicians (${eligibleTechs.length})`}
+                </Button>
+                <Button
+                  variant="outline"
+                  className="border-emerald-400/40 text-emerald-300 hover:bg-emerald-500/10"
+                  disabled={broadcasting !== null}
+                  onClick={() => setShowSpecific((v) => !v)}
+                >
+                  🎯 Send to specific technicians
+                </Button>
+              </div>
+
+              {showSpecific && (
+                <div className="rounded-md border border-white/10 bg-white/[0.04] p-2">
+                  <div className="mb-2 text-[10px] uppercase tracking-wider text-muted-foreground">
+                    Pick from registered technicians ({eligibleTechs.length} eligible)
+                  </div>
+                  <div className="max-h-48 space-y-1 overflow-y-auto">
+                    {eligibleTechs.map((t: any) => {
+                      const checked = selectedTechIds.has(t.id);
+                      return (
+                        <label
+                          key={t.id}
+                          className={`flex cursor-pointer items-center justify-between gap-2 rounded px-2 py-1.5 text-sm hover:bg-white/[0.05] ${
+                            checked ? "bg-primary/10" : ""
+                          }`}
+                        >
+                          <span className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => {
+                                setSelectedTechIds((s) => {
+                                  const n = new Set(s);
+                                  if (n.has(t.id)) n.delete(t.id);
+                                  else n.add(t.id);
+                                  return n;
+                                });
+                              }}
+                            />
+                            <span className="font-medium">{t.name}</span>
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            {t.vehicle ?? ""}{t.phone ? ` · ${t.phone}` : ""}
+                          </span>
+                        </label>
+                      );
+                    })}
+                    {eligibleTechs.length === 0 && (
+                      <p className="text-xs text-muted-foreground">No active approved technicians.</p>
+                    )}
+                  </div>
+                  <Button
+                    className="mt-2 w-full bg-emerald-500 text-emerald-950 hover:bg-emerald-400"
+                    disabled={broadcasting !== null || selectedTechIds.size === 0}
+                    onClick={() => broadcast("specific")}
+                  >
+                    {broadcasting === "specific"
+                      ? "Sending…"
+                      : `Send WhatsApp to ${selectedTechIds.size} selected`}
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
         {/* Conversation thread */}
         <div className="mt-4">
           <JobConversation jobId={job.id} customerPhone={job.customer_phone} />
