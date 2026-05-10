@@ -920,14 +920,24 @@ function AllTechniciansPanel({ onClose }: { onClose: () => void }) {
                     <span className={`text-[11px] ${t.active ? "text-emerald-300" : "text-muted-foreground"}`}>
                       {t.active ? "● Active" : "○ Inactive"}
                     </span>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => toggleActive(t)}
-                      className="h-7 text-[11px]"
-                    >
-                      {t.active ? "Deactivate" : "Activate"}
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => toggleActive(t)}
+                        className="h-7 text-[11px]"
+                      >
+                        {t.active ? "Deactivate" : "Activate"}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => deleteTech(t)}
+                        className="h-7 border-red-400/30 text-[11px] text-red-300 hover:bg-red-500/10 hover:text-red-200"
+                      >
+                        <Trash2 className="h-3 w-3" /> Delete
+                      </Button>
+                    </div>
                   </div>
                 </div>
               );
