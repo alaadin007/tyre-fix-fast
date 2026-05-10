@@ -1164,10 +1164,12 @@ Deno.serve(async (req) => {
       const lowerDesc = finalDesc.toLowerCase();
       const saidUnknown = /\b(no idea|not sure|don'?t know|dont know|dunno|unsure|no clue)\b/i.test(lowerDesc);
       const hasContext =
-        /(nail|screw|slow|fast|sudden|drove|driving|park|kerb|pothole|bulge|split|crack|flat overnight|lost.*key|valve|leak|hit|burst)/i.test(lowerDesc) ||
-        lowerDesc.length > 40 ||
+        /(nail|screw|slow|fast|sudden|drove|driving|park|kerb|curb|pothole|bulge|split|crack|flat|puncture|blowout|burst|leak|valve|hit|damage|tear|tore|cut|deflat|pressure)/i.test(lowerDesc) ||
         saidUnknown;
-      const haveWhatHappened = (finalIssueType && finalIssueType !== "unknown") || hasContext;
+      // Only count step 2 as done if the customer actually described the incident
+      // (keywords or "not sure"). A long message containing only name/location/plate
+      // must NOT satisfy step 2.
+      const haveWhatHappened = hasContext;
 
       // Step 3 readiness — need wheel positions AND at least one photo per affected tyre
       const tyreCount = finalWheels.length;
