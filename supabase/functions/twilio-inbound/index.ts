@@ -1101,6 +1101,14 @@ Deno.serve(async (req) => {
           }
         }
       }
+      // Fallback: if still no postcode but the text looks like a street address, forward-geocode it.
+      if (!pc && ADDRESS_HINT_RE.test(body)) {
+        const geo = await geocodeAddressToPostcode(body);
+        if (geo.postcode) {
+          pc = geo.postcode;
+          console.log("derived postcode from address text", JSON.stringify({ jobId: job.id, address: body.slice(0, 80), pc }));
+        }
+      }
       if (pc && !job.postcode) updates.postcode = pc;
       const it = guessIssueType(body);
       if (it && (!job.issue_type || job.issue_type === "unknown")) updates.issue_type = it;
