@@ -20,26 +20,15 @@ const BodySchema = z.object({
 
 async function sendWhatsApp(to: string, body: string, media_urls?: string[]) {
   try {
-    if (media_urls && media_urls.length > 0) {
-      const r = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/whatsapp-meta-send`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
-        },
-        body: JSON.stringify({ to, body, media_urls }),
-      });
-      if (r.ok) return true;
-      console.error("meta send w/ media failed", await r.text());
-    }
     const r2 = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/twilio-send`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${Deno.env.get("SUPABASE_ANON_KEY")}`,
       },
-      body: JSON.stringify({ to, body, channel: "whatsapp" }),
+      body: JSON.stringify({ to, body, channel: "whatsapp", media_urls, provider_preference: "twilio" }),
     });
+    if (!r2.ok) console.error("twilio whatsapp send failed", await r2.text());
     return r2.ok;
   } catch (e) {
     console.error("sendWhatsApp failed:", e);
@@ -133,16 +122,13 @@ Deno.serve(async (req) => {
       const to = t.phone || t.whatsapp;
       if (!to) continue;
       const waOk = await sendWhatsApp(to, msg, photos);
-      // Always send an SMS too — guarantees delivery even if WhatsApp drops the
-      // message (e.g. recipient is outside the 24-hr customer-service window
-      // and there's no approved Meta template).
       const smsBody =
         `🛞 Tyre Fly job ${job.id.slice(0, 6)} · ${job.postcode}\n` +
         `${job.issue_type ?? "tyre"}${job.tyre_size ? ` · ${job.tyre_size}` : ""} · ${wheels}` +
         (job.vehicle_reg ? ` · ${job.vehicle_reg}` : "") +
         (job.lat != null && job.lng != null ? `\nMap: https://maps.google.com/?q=${job.lat},${job.lng}` : "") +
-        `\nReply on WhatsApp with your location + price £ + ETA mins.`;
-      const smsOk = await sendSMS(to, smsBody);
+        `\nIf WhatsApp doesn’t load, reply to this SMS with your postcode + price £ + ETA mins.`;
+      const smsOk = waOk ? false : await sendSMS(to, smsBody);
       const ok = waOk || smsOk;
       if (ok) sent++;
       allocations.push({
@@ -151,7 +137,7 @@ Deno.serve(async (req) => {
         status: ok ? "broadcast" : "send_failed",
         ai_reasoning:
           (mode === "all" ? "manual broadcast (all)" : "manual broadcast (specific)") +
-          ` · wa=${waOk ? "ok" : "fail"} sms=${smsOk ? "ok" : "fail"}`,
+          ` · to=${to} wa=${waOk ? "ok" : "fail"} sms=${smsOk ? "ok" : "skip/fail"}`,
       });
     }
 
