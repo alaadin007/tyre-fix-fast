@@ -1188,12 +1188,17 @@ Deno.serve(async (req) => {
       const photoCount = finalPhotos.length;
       const photosOkForCount = tyreCount > 0 && photoCount >= tyreCount;
 
-      // Step gates
-      const step1Done = haveName && havePostcode && !!finalReg;
-      const step2Done = step1Done && haveWhatHappened;
-      const step3Done = step2Done && tyreCount > 0 && photosOkForCount;
+      // Step gates (4 steps now)
+      // Step 1: Location only
+      // Step 2: Number plate + full name
+      // Step 3: What happened
+      // Step 4: Photos
+      const step1Done = havePostcode;
+      const step2Done = step1Done && haveName && !!finalReg;
+      const step3Done = step2Done && haveWhatHappened;
+      const step4Done = step3Done && tyreCount > 0 && photosOkForCount;
 
-      if (step1Done && step2Done && step3Done) {
+      if (step1Done && step2Done && step3Done && step4Done) {
         updates.status = "intake_complete"; // fires dispatch trigger
       }
 
