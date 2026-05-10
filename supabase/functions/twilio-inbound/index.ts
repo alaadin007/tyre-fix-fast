@@ -1022,11 +1022,9 @@ Deno.serve(async (req) => {
     }
 
     const INTAKE_TEMPLATE =
-      "Tyre Fly here 👋 I'll get you sorted in 3 quick steps:\n\n" +
-      "▢ Step 1 — Location + number plate\n" +
-      "▢ Step 2 — What happened\n" +
-      "▢ Step 3 — Photos of the tyre(s)\n\n" +
-      "Let's start 👉 *Step 1*: what's your name, postcode/Maps pin 📍, and the car's number plate? (You can send a photo of the plate if easier.)";
+      "Tyre Fly here 👋 I'll get you sorted quickly.\n\n" +
+      "*Step 1 of 3 — Location + number plate*\n" +
+      "What's your *name*, your *📍 location* (Maps pin, postcode, or full address), and the *car's number plate*? (You can send a photo of the plate if easier.)";
 
     // Helpers for parsing follow-up intake messages
     const POSTCODE_RE = /\b([A-Z]{1,2}\d[A-Z\d]?)\s*(\d[A-Z]{2})\b/i;
