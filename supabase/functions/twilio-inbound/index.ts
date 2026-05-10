@@ -1137,8 +1137,8 @@ Deno.serve(async (req) => {
       // otherwise merge with existing.
       const wheelsFromText = extractWheels(body);
       const lowerBodyForWheels = body.toLowerCase();
-      const explicitCorrection = /\b(just|only|actually|sorry|correction|i said|i meant|its only|it's only)\b/.test(lowerBodyForWheels)
-        || /\b([1-4]|one|two|three|four)\s*(tyres?|tires?|wheels?)\b/.test(lowerBodyForWheels)
+      const explicitCorrection = /\b(just|only|actually|sorry|correction|i said|i asid|i meant|its only|it's only|its just|it's just)\b/.test(lowerBodyForWheels)
+        || /\b([1-4]|one|two|three|four)\b[\s,.\-]*(tyres?|tires?|wheels?|the\s+(front|rear|back))/.test(lowerBodyForWheels)
         || /\ball\s*(four|4)\b/.test(lowerBodyForWheels);
       if (wheelsFromText.length > 0) {
         if (explicitCorrection) {
