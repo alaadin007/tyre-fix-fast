@@ -1096,8 +1096,12 @@ Deno.serve(async (req) => {
     // 3a. If there's an in-flight intake (intake_pending), enrich it
     if (job && job.status === "intake_pending") {
       const updates: Record<string, any> = { updated_at: new Date().toISOString() };
-      const newDesc = [job.issue_description, body].filter(Boolean).join("\n").slice(0, 2000);
-      updates.issue_description = newDesc;
+      // Only store the actual incident description (not the whole transcript of names/postcodes/plates).
+      // Replace prior description if the new body actually describes what happened.
+      const incidentRe = /(nail|screw|slow|fast|sudden|drove|driving|park|kerb|curb|pothole|bulge|split|crack|flat|puncture|blowout|burst|leak|valve|hit|damage|tear|tore|cut|deflat|pressure|no idea|not sure|don'?t know|dont know|dunno|unsure|no clue)/i;
+      if (body && incidentRe.test(body)) {
+        updates.issue_description = body.slice(0, 500);
+      }
       if (mediaUrls.length > 0) {
         updates.photo_urls = [...(job.photo_urls ?? []), ...mediaUrls].slice(0, 12);
       }
