@@ -477,6 +477,56 @@ function DispatchModal({ job, allTechs, onClose, onDispatch }: DispatchModalProp
   const [price, setPrice] = useState<string>("85");
   const [eta, setEta] = useState<string>(String(suggested[0]?.etaMin ?? 30));
   const [notes, setNotes] = useState("");
+  const [showSpecific, setShowSpecific] = useState(false);
+  const [selectedTechIds, setSelectedTechIds] = useState<Set<string>>(new Set());
+  const [broadcasting, setBroadcasting] = useState<null | "all" | "specific">(null);
+
+  // Job is "complete" — required fields gathered before broadcasting
+  const wheels = ((job as any).affected_wheels ?? []) as string[];
+  const isComplete =
+    !!job.customer_name && job.customer_name !== "Customer" &&
+    !!job.customer_phone &&
+    !!job.postcode &&
+    !!job.issue_type && job.issue_type !== "unknown" &&
+    !!job.vehicle_reg &&
+    wheels.length > 0 &&
+    (job.photo_urls?.length ?? 0) > 0;
+
+  const missing: string[] = [];
+  if (!job.customer_name || job.customer_name === "Customer") missing.push("name");
+  if (!job.customer_phone) missing.push("phone");
+  if (!job.postcode) missing.push("postcode");
+  if (!job.issue_type || job.issue_type === "unknown") missing.push("issue type");
+  if (!job.vehicle_reg) missing.push("reg");
+  if (wheels.length === 0) missing.push("affected wheel");
+  if ((job.photo_urls?.length ?? 0) === 0) missing.push("photo");
+
+  const eligibleTechs = allTechs.filter((t: any) => t.active && (t.approval_status ?? "approved") === "approved");
+
+  const broadcast = async (mode: "all" | "specific") => {
+    if (mode === "specific" && selectedTechIds.size === 0) {
+      toast.error("Pick at least one technician");
+      return;
+    }
+    setBroadcasting(mode);
+    try {
+      const { data, error } = await supabase.functions.invoke("broadcast-job", {
+        body: {
+          job_id: job.id,
+          mode,
+          technician_ids: mode === "specific" ? Array.from(selectedTechIds) : undefined,
+        },
+      });
+      if (error) throw error;
+      toast.success(`Sent to ${data?.sent ?? 0} technician(s) on WhatsApp ✅`);
+      setShowSpecific(false);
+      setSelectedTechIds(new Set());
+    } catch (e: any) {
+      toast.error(`Broadcast failed: ${e.message ?? e}`);
+    } finally {
+      setBroadcasting(null);
+    }
+  };
 
   const filteredTechs = useMemo(() => {
     const q = search.trim().toLowerCase();
