@@ -145,6 +145,24 @@ Deno.serve(async (req) => {
       await supabase.from("job_allocations").insert(allocations);
     }
 
+    if (sent === 0) {
+      await supabase.from("ops_alerts").insert({
+        level: "error",
+        title: `Broadcast failed (${mode})`,
+        body: `No technician messages were delivered for job ${job_id.slice(0, 8)}. Check WhatsApp sender/channel configuration.`,
+        job_id,
+      });
+
+      return new Response(JSON.stringify({
+        error: "No technician messages were delivered. The technician signup numbers were used, but the current WhatsApp sender configuration rejected the dispatch.",
+        sent,
+        total: techs.length,
+      }), {
+        status: 502,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     await supabase.from("jobs").update({
       status: "broadcasting",
       broadcast_count: sent,
