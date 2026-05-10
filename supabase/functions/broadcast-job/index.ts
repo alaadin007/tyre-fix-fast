@@ -181,12 +181,12 @@ Deno.serve(async (req) => {
       await supabase.from("ops_alerts").insert({
         level: "error",
         title: `Broadcast failed (${mode})`,
-        body: `No technician messages were delivered for job ${job_id.slice(0, 8)}. ${failures.slice(0, 3).join(" | ")}`,
+        body: `No technician WhatsApp messages were delivered for job ${job_id.slice(0, 8)}. ${failures.slice(0, 3).join(" | ")}`,
         job_id,
       });
 
       return new Response(JSON.stringify({
-        error: "No technician messages were delivered. The technician numbers were used, but the current message sender configuration rejected both WhatsApp and SMS.",
+        error: "No technician WhatsApp messages were delivered. The technician numbers were used, but WhatsApp delivery was rejected.",
         sent,
         total: techs.length,
         failures,
