@@ -96,29 +96,32 @@ Deno.serve(async (req) => {
     const mapsLink = (job.lat != null && job.lng != null)
       ? `\n📍 https://maps.google.com/?q=${job.lat},${job.lng}`
       : "";
-    const photoLine = (job.photo_urls && job.photo_urls.length > 0)
-      ? `\n📸 ${job.photo_urls[0]}`
-      : "";
+    const photos = (job.photo_urls ?? []).filter((u: string) => !!u).slice(0, 6);
     const msg =
       `🛞 New Tyre Fly job — ${job.postcode}\n` +
       `Issue: ${job.issue_type ?? "tyre"}${job.tyre_size ? ` · Size: ${job.tyre_size}` : ""}\n` +
       `Wheels: ${wheels}` +
       (job.vehicle_reg ? ` · Reg: ${job.vehicle_reg}` : "") +
       (job.issue_description ? `\nDetails: ${job.issue_description.slice(0, 280)}` : "") +
-      mapsLink + photoLine + "\n\n" +
-      `Reply ACCEPT ${job.id.slice(0, 6)} <price> <eta-mins> to claim it.`;
+      mapsLink + "\n\n" +
+      `Job ref: ${job.id.slice(0, 6)}\n` +
+      `If you can take it, reply with:\n` +
+      `1) Your 📍 live location (or postcode)\n` +
+      `2) Your price £ and ETA in minutes\n` +
+      `e.g. "Yes, £85, 25 mins" + share location pin.`;
 
     let sent = 0;
     const allocations: any[] = [];
     for (const t of techs) {
-      const to = t.whatsapp || t.phone;
+      // Use the phone the technician registered with (fallback to whatsapp field).
+      const to = t.phone || t.whatsapp;
       if (!to) continue;
-      const ok = await sendMsg(to, msg);
+      const ok = await sendMsg(to, msg, photos);
       if (ok) sent++;
       allocations.push({
         job_id,
         technician_id: t.id,
-        status: ok ? "broadcasted" : "send_failed",
+        status: ok ? "broadcast" : "send_failed",
         ai_reasoning: mode === "all" ? "manual broadcast (all)" : "manual broadcast (specific)",
       });
     }
