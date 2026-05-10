@@ -1105,6 +1105,12 @@ Deno.serve(async (req) => {
       }
       return Array.from(out);
     };
+    const isLikelyLocationAttempt = (t: string): boolean => {
+      const s = (t || "").trim();
+      if (!s) return false;
+      if (POSTCODE_RE.test(s) || COORD_RE.test(s) || ADDRESS_HINT_RE.test(s)) return true;
+      return /\b(postcode|address|location|loc|pin|drop\s*pin|share\s*location|i'?m\s+at|im\s+at|my\s+address\s+is|near\s+[a-z]|outside\s+[a-z])\b/i.test(s);
+    };
 
     // 3a. If there's an in-flight intake (intake_pending), enrich it
     if (job && job.status === "intake_pending") {
@@ -1212,7 +1218,8 @@ Deno.serve(async (req) => {
       // must NOT satisfy step 2.
       const haveWhatHappened = hasContext;
 
-      // Step 3 readiness — need wheel positions AND at least one photo per affected tyre
+      // Step 3 readiness — need incident summary AND affected wheel positions.
+      // Step 4 readiness — need at least one photo per affected tyre.
       const tyreCount = finalWheels.length;
       const photoCount = finalPhotos.length;
       const photosOkForCount = tyreCount > 0 && photoCount >= tyreCount;
@@ -1220,14 +1227,14 @@ Deno.serve(async (req) => {
       // Step gates (4 steps now)
       // Step 1: Location only
       // Step 2: Number plate + full name
-      // Step 3: What happened
+      // Step 3: What happened + affected tyres
       // Step 4: Photos
       const step1Done = havePostcode;
       const step2Done = step1Done && haveName && !!finalReg;
-      const step3Done = step2Done && haveWhatHappened;
-      const step4Done = step3Done && tyreCount > 0 && photosOkForCount;
+      const step3Done = step2Done && haveWhatHappened && tyreCount > 0;
+      const step4Done = step3Done && photosOkForCount;
 
-      const justCompletedIntake = step1Done && step2Done && step3Done && step4Done;
+      const justCompletedIntake = step4Done;
       if (justCompletedIntake) {
         updates.status = "intake_complete"; // fires dispatch trigger
       }
@@ -1293,7 +1300,7 @@ Deno.serve(async (req) => {
       let ask: string;
       // ----- STEP 1: location -----
       if (!step1Done) {
-        const couldntParse = userSentSomething && !finalPostcode;
+        const couldntParse = userSentSomething && !finalPostcode && isLikelyLocationAttempt(body);
         ask =
           (couldntParse
             ? "I couldn't read a valid UK *postcode* or location from that ❌\n\n"
@@ -1313,35 +1320,30 @@ Deno.serve(async (req) => {
           `*Still need:* ${need.join(" *and* ")}.\n\n` +
           checklist;
       }
-      // ----- STEP 3: what happened -----
+      // ----- STEP 3: what happened + tyres -----
       else if (!step3Done) {
+        const need: string[] = [];
+        if (!haveWhatHappened) {
+          need.push("a short description of *what happened* (text or voice note)");
+        }
+        if (statedCount && statedCount > tyreCount) {
+          need.push(`the *other tyre position(s)* — I've only got ${tyreCount}/${statedCount} so far (${finalWheels.join(", ")})`);
+        } else if (tyreCount === 0) {
+          need.push("*which tyre(s)* are affected — front-left, front-right, rear-left, rear-right, \"both front\", \"both rear\", or \"all four\"");
+        }
         ask =
           "Thanks ✅\n\n" +
-          "*Step 3 of 4 — What happened?* 🛞\n" +
-          "*Still need:* a short description of the issue (text or voice note).\n" +
-          "Examples: \"hit a kerb last night\", \"slow puncture going down overnight\", \"nail in the front-left\".\n" +
+          "*Step 3 of 4 — What happened + which tyre(s)?* 🛞\n" +
+          `*Still need:* ${need.join(" *and* ")}.\n` +
+          "Examples: \"hit a kerb last night, front-right\", \"slow puncture going down overnight on both front tyres\", \"nail in the rear-left\".\n" +
           "If you really don't know, reply *\"not sure\"* and we'll work it out from the photos.\n\n" +
           checklist;
       }
-      // ----- STEP 4: tyres + photos -----
-      else if (tyreCount === 0) {
-        ask =
-          "Got it ✅\n\n" +
-          "*Step 4 of 4 — Photos + which tyres* 📸\n" +
-          "*Still need:* (1) *which tyres* are affected, and (2) a *clear photo* of each one.\n" +
-          "For tyres you can say: front-left, front-right, rear-left, rear-right, \"both front\", \"both rear\", or \"all four\".\n\n" +
-          checklist;
-      }
-      else if (statedCount && statedCount > tyreCount) {
-        ask =
-          `You mentioned ${statedCount} tyres but I've only got ${tyreCount} position(s) so far (${finalWheels.join(", ")}).\n` +
-          "*Still need:* the *other position(s)* — front-left / front-right / rear-left / rear-right.\n\n" +
-          checklist;
-      }
+      // ----- STEP 4: photos -----
       else if (!photosOkForCount) {
         const remaining = Math.max(1, tyreCount - photoCount);
         ask =
-          `*Step 4 — Photos* 📸 (${photoCount}/${tyreCount} so far)\n` +
+          `*Step 4 of 4 — Photos* 📸 (${photoCount}/${tyreCount} so far)\n` +
           `*Still need:* ${remaining} more tyre photo${remaining === 1 ? "" : "s"}.\n` +
           "For every affected tyre, send:\n" +
           "  • A *FULL photo* of the tyre/wheel (use flash 🔦 if it's dark)\n" +
@@ -1524,8 +1526,8 @@ Deno.serve(async (req) => {
     // 4-step gates
     const step1Done0 = havePostcode0;
     const step2Done0 = step1Done0 && haveName0 && !!reg0;
-    const step3Done0 = step2Done0 && haveWhatHappened0;
-    const step4Done0 = step3Done0 && tyreCount0 > 0 && photosOkForCount0;
+    const step3Done0 = step2Done0 && haveWhatHappened0 && tyreCount0 > 0;
+    const step4Done0 = step3Done0 && photosOkForCount0;
 
     // If literally nothing useful was provided, send the warm intro once.
     if (!haveName0 && !havePostcode0 && !reg0 && !haveWhatHappened0 && photoCount0 === 0) {
@@ -1548,20 +1550,19 @@ Deno.serve(async (req) => {
         "*Step 2 of 4 — Number plate + your name*\n" +
         `Please send: ${need.join(" and ")}.`;
     } else if (!step3Done0) {
+      const need: string[] = [];
+      if (!haveWhatHappened0) need.push("a short description of *what happened*");
+      if (tyreCount0 === 0) need.push("*which tyre(s)* are affected");
       ask0 =
         "Thanks ✅\n\n" +
-        "*Step 3 of 4 — What happened?* 🛞\n" +
-        "Tell me in your own words (a short voice note works too).\n" +
+        "*Step 3 of 4 — What happened + which tyre(s)?* 🛞\n" +
+        `Please send: ${need.join(" and ")}.\n` +
+        "Examples: \"hit a kerb last night, front-right\", \"slow puncture on both front tyres\", \"nail in the rear-left\".\n" +
         "If you genuinely don't know, just reply *\"not sure\"*.";
-    } else if (tyreCount0 === 0) {
-      ask0 =
-        "Got it ✅\n\n" +
-        "*Step 4 of 4 — Photos of the tyre(s)* 📸\n" +
-        "Please send the *tyre photo(s)* now and tell me *which tyres are affected* in the same reply (front-left / front-right / rear-left / rear-right, or \"both front\", \"both rear\", \"all four\").";
     } else if (!photosOkForCount0) {
       const remaining = Math.max(1, tyreCount0 - photoCount0);
       ask0 =
-        `*Step 4 — Photos* 📸 (${photoCount0}/${tyreCount0} so far)\n` +
+        `*Step 4 of 4 — Photos* 📸 (${photoCount0}/${tyreCount0} so far)\n` +
         `Please send photos for *each affected tyre* — I still need ${remaining} more.\n` +
         "For every tyre: a *FULL photo* (use flash 🔦 if dark), a *sidewall close-up* showing the size (e.g. 225/45 R17), and a *close-up of the damage*. Caption with the position.";
     } else {
