@@ -185,13 +185,18 @@ Deno.serve(async (req) => {
         job_id,
       });
 
+      const isRegion = failures.some((f) => /Region capability/i.test(f));
       return new Response(JSON.stringify({
-        error: "No technician WhatsApp messages were delivered. The technician numbers were used, but WhatsApp delivery was rejected.",
+        ok: false,
+        fallback: true,
+        error: isRegion
+          ? "WhatsApp rejected: your Twilio sender isn't enabled to message UK numbers. Enable UK in Twilio → Messaging → Geo Permissions (and ensure the WhatsApp sender is approved for GB)."
+          : "No technician WhatsApp messages were delivered.",
         sent,
         total: techs.length,
         failures,
       }), {
-        status: 502,
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
