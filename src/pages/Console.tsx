@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { X, Star, Search, Sparkles, UserCheck, UserPlus, Users, Phone, MapPin, Camera } from "lucide-react";
+import { X, Star, Search, Sparkles, UserCheck, UserPlus, Users, Phone, MapPin, Camera, Trash2 } from "lucide-react";
 import { PendingTechnicians } from "@/components/admin/PendingTechnicians";
 import { JobConversation } from "@/components/console/JobConversation";
 import { Button } from "@/components/ui/button";
