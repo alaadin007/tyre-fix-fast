@@ -483,7 +483,7 @@ function DispatchModal({ job, allTechs, onClose, onDispatch }: DispatchModalProp
 
   // Job is "complete" — required fields gathered before broadcasting
   const wheels = ((job as any).affected_wheels ?? []) as string[];
-  const isComplete =
+  const hasRequiredDetails =
     !!job.customer_name && job.customer_name !== "Customer" &&
     !!job.customer_phone &&
     !!job.postcode &&
@@ -491,6 +491,7 @@ function DispatchModal({ job, allTechs, onClose, onDispatch }: DispatchModalProp
     !!job.vehicle_reg &&
     wheels.length > 0 &&
     (job.photo_urls?.length ?? 0) > 0;
+  const isComplete = job.status === "intake_complete" || job.status === "broadcasting" || hasRequiredDetails;
 
   const missing: string[] = [];
   if (!job.customer_name || job.customer_name === "Customer") missing.push("name");
