@@ -91,6 +91,38 @@ async function reverseGeocodePostcode(lat: number, lng: number): Promise<string 
   return null;
 }
 
+// Forward-geocode a free-text address (e.g. "w1 harley street", "10 downing st london")
+// to a UK postcode using Nominatim. Returns null if nothing matches confidently.
+async function geocodeAddressToPostcode(address: string): Promise<{ postcode: string | null; lat: number | null; lng: number | null }> {
+  const empty = { postcode: null as string | null, lat: null as number | null, lng: null as number | null };
+  const q = (address || "").trim();
+  if (q.length < 4) return empty;
+  try {
+    const r = await fetch(
+      `https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=1&countrycodes=gb&q=${encodeURIComponent(q)}`,
+      { headers: { "User-Agent": "tyre-fix-fast/1.0" } },
+    );
+    if (!r.ok) return empty;
+    const arr = await r.json();
+    const hit = Array.isArray(arr) ? arr[0] : null;
+    if (!hit) return empty;
+    const lat = Number(hit.lat);
+    const lng = Number(hit.lon);
+    let pc: string | null = hit?.address?.postcode ?? null;
+    if (pc) pc = pc.trim().toUpperCase();
+    if (!pc && Number.isFinite(lat) && Number.isFinite(lng)) {
+      pc = await reverseGeocodePostcode(lat, lng);
+    }
+    return { postcode: pc, lat: Number.isFinite(lat) ? lat : null, lng: Number.isFinite(lng) ? lng : null };
+  } catch (e) {
+    console.error("geocodeAddressToPostcode failed", e);
+    return empty;
+  }
+}
+
+// Heuristic — does the text look like a street address? (used to decide whether to forward-geocode)
+const ADDRESS_HINT_RE = /\b(street|st\b|road|rd\b|avenue|ave\b|lane|ln\b|drive|dr\b|close|crescent|way|place|pl\b|square|sq\b|terrace|court|ct\b|mews|gardens|park|hill|row)\b/i;
+
 async function aiExtractQuote(text: string): Promise<{
   price_gbp: number | null;
   callout_fee_gbp: number | null;
@@ -1069,6 +1101,14 @@ Deno.serve(async (req) => {
           }
         }
       }
+      // Fallback: if still no postcode but the text looks like a street address, forward-geocode it.
+      if (!pc && ADDRESS_HINT_RE.test(body)) {
+        const geo = await geocodeAddressToPostcode(body);
+        if (geo.postcode) {
+          pc = geo.postcode;
+          console.log("derived postcode from address text", JSON.stringify({ jobId: job.id, address: body.slice(0, 80), pc }));
+        }
+      }
       if (pc && !job.postcode) updates.postcode = pc;
       const it = guessIssueType(body);
       if (it && (!job.issue_type || job.issue_type === "unknown")) updates.issue_type = it;
@@ -1324,7 +1364,10 @@ Deno.serve(async (req) => {
       }
     }
 
-    // 4. Unknown sender (or stale closed job) → start intake automatically
+    // 4. Unknown sender (or stale closed job) → start intake automatically.
+    // Eagerly extract anything the customer already provided so multi-detail
+    // first messages (e.g. "location is W1 Harley St, plate YC69 PGX, hit a kerb"
+    // + photo) are credited immediately instead of starting from scratch.
     let pc0 = extractPostcode(body);
     if (!pc0) {
       const coords = body.match(COORD_RE);
@@ -1337,13 +1380,28 @@ Deno.serve(async (req) => {
         }
       }
     }
+    if (!pc0 && ADDRESS_HINT_RE.test(body)) {
+      const geo = await geocodeAddressToPostcode(body);
+      if (geo.postcode) {
+        pc0 = geo.postcode;
+        console.log("derived postcode from new intake address", JSON.stringify({ from, pc0 }));
+      }
+    }
     const it0 = guessIssueType(body);
     const reg0 = extractReg(body);
     const wheels0 = extractWheels(body);
+
+    // Try to capture a name from the very first message (same logic as 3a)
+    let name0: string | null = null;
+    const explicitName = body.match(/\b(?:my name is|i am|i'm|im|this is|name[:\-])\s+([A-Za-z][A-Za-z .'-]{1,38})/i);
+    if (explicitName) {
+      name0 = explicitName[1].trim().replace(/\s+/g, " ");
+    }
+
     const { data: newJob } = await supabase
       .from("jobs")
       .insert({
-        customer_name: "Customer",
+        customer_name: name0 ?? "Customer",
         customer_phone: from,
         postcode: pc0 ?? "",
         issue_type: it0 ?? "unknown",
@@ -1363,7 +1421,67 @@ Deno.serve(async (req) => {
       job_id: newJob?.id ?? null,
     });
 
-    await sendReply(from, INTAKE_TEMPLATE, channel);
+    // Compute step completion against what we already extracted from the very
+    // first message and respond with the dynamic checklist instead of a generic
+    // greeting. If the customer sent literally nothing useful, this falls back
+    // to the original template.
+    const haveName0 = !!(name0 && name0 !== "Customer");
+    const havePostcode0 = !!pc0;
+    const lowerBody0 = (body || "").toLowerCase();
+    const saidUnknown0 = /\b(no idea|not sure|don'?t know|dont know|dunno|unsure|no clue)\b/i.test(lowerBody0);
+    const hasContext0 =
+      /(nail|screw|slow|fast|sudden|drove|driving|park|kerb|pothole|bulge|split|crack|flat overnight|lost.*key|valve|leak|hit|burst|curb)/i.test(lowerBody0) ||
+      lowerBody0.length > 40 ||
+      saidUnknown0;
+    const haveWhatHappened0 = (it0 && it0 !== "unknown") || hasContext0;
+    const tyreCount0 = wheels0.length;
+    const photoCount0 = mediaUrls.length;
+    const photosOkForCount0 = tyreCount0 > 0 && photoCount0 >= tyreCount0;
+    const step1Done0 = haveName0 && havePostcode0 && !!reg0;
+    const step2Done0 = step1Done0 && haveWhatHappened0;
+    const step3Done0 = step2Done0 && tyreCount0 > 0 && photosOkForCount0;
+    const tick0 = (d: boolean) => (d ? "✅" : "▢");
+
+    // If literally nothing useful was provided, send the warm intro once.
+    if (!haveName0 && !havePostcode0 && !reg0 && !haveWhatHappened0 && photoCount0 === 0) {
+      await sendReply(from, INTAKE_TEMPLATE, channel);
+      return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+    }
+
+    const checklist0 =
+      `Tyre Fly here 👋 Got it — let's tick these off:\n\n` +
+      `${tick0(step1Done0)} Step 1 — Location + plate\n` +
+      `${tick0(step2Done0)} Step 2 — What happened\n` +
+      `${tick0(step3Done0)} Step 3 — Photos of the tyre(s)`;
+
+    let ask0: string;
+    if (!step1Done0) {
+      const need: string[] = [];
+      if (!haveName0) need.push("your *name*");
+      if (!havePostcode0) need.push("your *📍 location* (Maps pin, postcode, or full address)");
+      if (!reg0) need.push("the *number plate* (text or photo)");
+      ask0 = `*Step 1 — Location + plate*\nStill need: ${need.join(", ")}.`;
+    } else if (!step2Done0) {
+      ask0 =
+        "*Step 2 — What happened?* 🛞\n" +
+        "Tell me in your own words (a short voice note works too).\n" +
+        "If you genuinely don't know, just reply *\"not sure\"*.";
+    } else if (tyreCount0 === 0) {
+      ask0 =
+        "*Step 3 — Photos of the tyre(s)* 📸\n" +
+        "How many tyres are affected, and which ones? (front-left / front-right / rear-left / rear-right, or \"all four\").";
+    } else if (!photosOkForCount0) {
+      const remaining = Math.max(1, tyreCount0 - photoCount0);
+      ask0 =
+        `*Step 3 — Photos* 📸 (${photoCount0}/${tyreCount0} so far)\n` +
+        `Please send photos for *each affected tyre* — I still need ${remaining} more.\n` +
+        "For every tyre: a *FULL photo* (use flash 🔦 if dark), a *sidewall close-up* showing the size (e.g. 225/45 R17), and a *close-up of the damage*. Caption with the position.";
+    } else {
+      ask0 = "All done ✅ Finding you a technician now — we'll message the moment one is matched.";
+      if (newJob) await supabase.from("jobs").update({ status: "intake_complete" }).eq("id", newJob.id);
+    }
+
+    await sendReply(from, `${checklist0}\n\n${ask0}`, channel);
     return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
   } catch (e) {
     console.error("twilio-inbound error", e);
