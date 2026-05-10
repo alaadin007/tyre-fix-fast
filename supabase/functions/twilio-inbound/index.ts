@@ -1132,11 +1132,21 @@ Deno.serve(async (req) => {
       const reg = extractReg(body);
       if (reg && !job.vehicle_reg) updates.vehicle_reg = reg;
 
-      // Affected wheels — merge with existing
+      // Affected wheels — REPLACE when user gives an explicit count/"just/only"
+      // (so corrections like "just the one, front right" override prior guesses);
+      // otherwise merge with existing.
       const wheelsFromText = extractWheels(body);
+      const lowerBodyForWheels = body.toLowerCase();
+      const explicitCorrection = /\b(just|only|actually|sorry|correction|i said|i meant|its only|it's only)\b/.test(lowerBodyForWheels)
+        || /\b([1-4]|one|two|three|four)\s*(tyres?|tires?|wheels?)\b/.test(lowerBodyForWheels)
+        || /\ball\s*(four|4)\b/.test(lowerBodyForWheels);
       if (wheelsFromText.length > 0) {
-        const merged = Array.from(new Set([...(job.affected_wheels ?? []), ...wheelsFromText]));
-        updates.affected_wheels = merged;
+        if (explicitCorrection) {
+          updates.affected_wheels = wheelsFromText;
+        } else {
+          const merged = Array.from(new Set([...(job.affected_wheels ?? []), ...wheelsFromText]));
+          updates.affected_wheels = merged;
+        }
       }
 
       const haveName = (updates.customer_name ?? job.customer_name) && (updates.customer_name ?? job.customer_name) !== "Customer";
