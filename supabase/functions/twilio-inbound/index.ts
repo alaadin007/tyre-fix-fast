@@ -1526,8 +1526,8 @@ Deno.serve(async (req) => {
     // 4-step gates
     const step1Done0 = havePostcode0;
     const step2Done0 = step1Done0 && haveName0 && !!reg0;
-    const step3Done0 = step2Done0 && haveWhatHappened0;
-    const step4Done0 = step3Done0 && tyreCount0 > 0 && photosOkForCount0;
+    const step3Done0 = step2Done0 && haveWhatHappened0 && tyreCount0 > 0;
+    const step4Done0 = step3Done0 && photosOkForCount0;
 
     // If literally nothing useful was provided, send the warm intro once.
     if (!haveName0 && !havePostcode0 && !reg0 && !haveWhatHappened0 && photoCount0 === 0) {
@@ -1550,20 +1550,19 @@ Deno.serve(async (req) => {
         "*Step 2 of 4 — Number plate + your name*\n" +
         `Please send: ${need.join(" and ")}.`;
     } else if (!step3Done0) {
+      const need: string[] = [];
+      if (!haveWhatHappened0) need.push("a short description of *what happened*");
+      if (tyreCount0 === 0) need.push("*which tyre(s)* are affected");
       ask0 =
         "Thanks ✅\n\n" +
-        "*Step 3 of 4 — What happened?* 🛞\n" +
-        "Tell me in your own words (a short voice note works too).\n" +
+        "*Step 3 of 4 — What happened + which tyre(s)?* 🛞\n" +
+        `Please send: ${need.join(" and ")}.\n` +
+        "Examples: \"hit a kerb last night, front-right\", \"slow puncture on both front tyres\", \"nail in the rear-left\".\n" +
         "If you genuinely don't know, just reply *\"not sure\"*.";
-    } else if (tyreCount0 === 0) {
-      ask0 =
-        "Got it ✅\n\n" +
-        "*Step 4 of 4 — Photos of the tyre(s)* 📸\n" +
-        "Please send the *tyre photo(s)* now and tell me *which tyres are affected* in the same reply (front-left / front-right / rear-left / rear-right, or \"both front\", \"both rear\", \"all four\").";
     } else if (!photosOkForCount0) {
       const remaining = Math.max(1, tyreCount0 - photoCount0);
       ask0 =
-        `*Step 4 — Photos* 📸 (${photoCount0}/${tyreCount0} so far)\n` +
+        `*Step 4 of 4 — Photos* 📸 (${photoCount0}/${tyreCount0} so far)\n` +
         `Please send photos for *each affected tyre* — I still need ${remaining} more.\n` +
         "For every tyre: a *FULL photo* (use flash 🔦 if dark), a *sidewall close-up* showing the size (e.g. 225/45 R17), and a *close-up of the damage*. Caption with the position.";
     } else {
