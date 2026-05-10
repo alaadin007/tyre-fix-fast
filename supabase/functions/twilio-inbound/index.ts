@@ -993,9 +993,12 @@ Deno.serve(async (req) => {
       "Tyre Fly here 👋 Send these in any order — text, photos or a voice note:\n\n" +
       "1. Name + 📍 location (pin or postcode)\n" +
       "2. Car (make, model, colour, reg)\n" +
-      "3. What happened + which wheel\n" +
-      "4. A couple of photos — tyre + wheel\n\n" +
-      "More detail = faster quote. 🛠️";
+      "3. What happened + which wheel — describe it in your own words (if you really don't know, just say \"not sure\")\n" +
+      "4. Photos:\n" +
+      "   • A FULL photo of the tyre/wheel (step back so the whole wheel is in frame — use flash if it's dark 🔦)\n" +
+      "   • A CLOSE-UP of the sidewall showing the size markings (e.g. 225/45 R17) so the tech brings the right tyre\n" +
+      "   • A close-up of the damage if you can see it\n\n" +
+      "More detail = faster, accurate quote. 🛠️";
 
     // Helpers for parsing follow-up intake messages
     const POSTCODE_RE = /\b([A-Z]{1,2}\d[A-Z\d]?)\s*(\d[A-Z]{2})\b/i;
