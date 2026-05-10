@@ -990,15 +990,11 @@ Deno.serve(async (req) => {
     }
 
     const INTAKE_TEMPLATE =
-      "Tyre Fly here 👋 Send these in any order — text, photos or a voice note:\n\n" +
-      "1. Name + 📍 location (pin or postcode)\n" +
-      "2. Car (make, model, colour, reg)\n" +
-      "3. What happened + which wheel — describe it in your own words (if you really don't know, just say \"not sure\")\n" +
-      "4. Photos:\n" +
-      "   • A FULL photo of the tyre/wheel (step back so the whole wheel is in frame — use flash if it's dark 🔦)\n" +
-      "   • A CLOSE-UP of the sidewall showing the size markings (e.g. 225/45 R17) so the tech brings the right tyre\n" +
-      "   • A close-up of the damage if you can see it\n\n" +
-      "More detail = faster, accurate quote. 🛠️";
+      "Tyre Fly here 👋 I'll get you sorted in 3 quick steps:\n\n" +
+      "▢ Step 1 — Location + number plate\n" +
+      "▢ Step 2 — What happened\n" +
+      "▢ Step 3 — Photos of the tyre(s)\n\n" +
+      "Let's start 👉 *Step 1*: what's your name, postcode/Maps pin 📍, and the car's number plate? (You can send a photo of the plate if easier.)";
 
     // Helpers for parsing follow-up intake messages
     const POSTCODE_RE = /\b([A-Z]{1,2}\d[A-Z\d]?)\s*(\d[A-Z]{2})\b/i;
@@ -1107,22 +1103,45 @@ Deno.serve(async (req) => {
       const havePostcode = !!(updates.postcode ?? job.postcode);
       const finalDesc: string = updates.issue_description ?? job.issue_description ?? "";
       const finalPhotos: string[] = updates.photo_urls ?? job.photo_urls ?? [];
-      const haveDetails = finalDesc.length > 5 || finalPhotos.length > 0;
       const finalReg: string | null = updates.vehicle_reg ?? job.vehicle_reg ?? null;
       const finalWheels: string[] = updates.affected_wheels ?? job.affected_wheels ?? [];
 
-      // Diagnostic depth: do we actually understand the problem?
+      // Detect a stated tyre count from the customer ("1 tyre", "two tyres", "all four", etc.)
+      const NUM_WORDS: Record<string, number> = { one: 1, two: 2, three: 3, four: 4 };
+      const lowerBody = body.toLowerCase();
+      let statedCount: number | null = null;
+      const allFour = /\ball\s*(four|4)\b/.test(lowerBody);
+      if (allFour) statedCount = 4;
+      else {
+        const mDigit = lowerBody.match(/\b([1-4])\s*(tyres?|tires?|wheels?)\b/);
+        if (mDigit) statedCount = parseInt(mDigit[1], 10);
+        else {
+          const mWord = lowerBody.match(/\b(one|two|three|four)\s*(tyres?|tires?|wheels?)\b/);
+          if (mWord) statedCount = NUM_WORDS[mWord[1]];
+        }
+      }
+
+      // Diagnostic depth — Step 2
       const finalIssueType = updates.issue_type ?? job.issue_type;
       const lowerDesc = finalDesc.toLowerCase();
       const saidUnknown = /\b(no idea|not sure|don'?t know|dont know|dunno|unsure|no clue)\b/i.test(lowerDesc);
       const hasContext =
-        /(nail|screw|slow|fast|sudden|drove|driving|park|kerb|pothole|bulge|split|crack|flat overnight|lost.*key|valve|leak)/i.test(lowerDesc) ||
-        lowerDesc.length > 60 ||
+        /(nail|screw|slow|fast|sudden|drove|driving|park|kerb|pothole|bulge|split|crack|flat overnight|lost.*key|valve|leak|hit|burst)/i.test(lowerDesc) ||
+        lowerDesc.length > 40 ||
         saidUnknown;
-      const diagnosisOk = finalPhotos.length > 0 || (finalIssueType && finalIssueType !== "unknown" && hasContext) || (saidUnknown && finalPhotos.length > 0);
+      const haveWhatHappened = (finalIssueType && finalIssueType !== "unknown") || hasContext;
 
-      // Reg + at least one wheel position are now required before dispatch
-      if (haveName && havePostcode && haveDetails && diagnosisOk && finalReg && finalWheels.length > 0) {
+      // Step 3 readiness — need wheel positions AND at least one photo per affected tyre
+      const tyreCount = finalWheels.length;
+      const photoCount = finalPhotos.length;
+      const photosOkForCount = tyreCount > 0 && photoCount >= tyreCount;
+
+      // Step gates
+      const step1Done = haveName && havePostcode && !!finalReg;
+      const step2Done = step1Done && haveWhatHappened;
+      const step3Done = step2Done && tyreCount > 0 && photosOkForCount;
+
+      if (step1Done && step2Done && step3Done) {
         updates.status = "intake_complete"; // fires dispatch trigger
       }
 
@@ -1148,7 +1167,7 @@ Deno.serve(async (req) => {
           if (aj?.damage_type === "not-a-tyre") {
             await sendReply(
               from,
-              aj.damage_summary || "That doesn't look like a tyre photo 🤔 Could you send a clear photo of the damaged tyre/wheel (and the sidewall if you can)?",
+              aj.damage_summary || "That doesn't look like a tyre photo 🤔 Could you send a clear photo of the tyre/wheel — full tyre + sidewall close-up?",
               channel,
             );
             return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
@@ -1158,46 +1177,66 @@ Deno.serve(async (req) => {
         }
       }
 
-      // Decide ONE next missing thing to ask for, in priority order.
-      // This avoids dumping a long checklist on the customer.
-      const fullText = `${finalDesc}`.toLowerCase();
-      const haveVehicleDesc =
-        /\b(audi|bmw|mercedes|merc|vw|volkswagen|ford|vauxhall|toyota|honda|nissan|hyundai|kia|peugeot|renault|citroen|fiat|seat|skoda|mini|land\s?rover|range\s?rover|jaguar|porsche|tesla|volvo|mazda|suzuki|dacia|mg|lexus|jeep|chevrolet|cadillac|gmc|ram|subaru|mitsubishi|chrysler|dodge)\b/.test(fullText) ||
-        /\b(black|white|silver|grey|gray|blue|red|green|yellow|orange|brown|beige|gold|bronze)\b.*\b(car|saloon|hatch|suv|estate|coupe|van|truck)\b/.test(fullText);
+      // Build a checklist header so the customer always sees progress
+      const tick = (done: boolean) => (done ? "✅" : "▢");
+      const checklist =
+        `${tick(step1Done)} Step 1 — Location + plate\n` +
+        `${tick(step2Done)} Step 2 — What happened\n` +
+        `${tick(step3Done)} Step 3 — Photos of the tyre(s)`;
 
-      let reply: string;
-      if (!haveName) {
-        reply = "What's your name? 🙂";
-      } else if (!havePostcode) {
-        reply = `Thanks ${(updates.customer_name ?? job.customer_name)}! 📍 Could you share your postcode/ZIP, or drop a Maps location pin?`;
-      } else if (finalPhotos.length === 0) {
-        reply =
-          "Could you send a few photos? 📸\n" +
-          "1) FULL photo of the tyre/wheel — step back so the whole wheel is in frame (use flash 🔦 if it's dark)\n" +
-          "2) CLOSE-UP of the sidewall showing the size markings (e.g. 225/45 R17)\n" +
-          "3) Close-up of the damage if visible\n\n" +
-          "This helps the technician bring the right tyre & tools first time.";
-      } else if (!finalReg) {
-        reply = "Thanks for the photo! What's the car's number plate? You can type it (e.g. AB12 CDE) or snap a photo of the plate.";
-      } else if (!haveVehicleDesc) {
-        reply = "Almost done — what's the car's make, model & colour? (e.g. \"Black BMW 3 Series\")";
-      } else if (finalWheels.length === 0) {
-        reply = "Which wheel is affected? Front-left, front-right, rear-left, or rear-right (multiple is fine — voice note works too).";
-      } else if (!diagnosisOk) {
-        if (!finalIssueType || finalIssueType === "unknown") {
-          reply =
-            "Last thing — can you tell me what happened, in your own words? 🛞\n" +
-            "Even a quick voice note is perfect (e.g. \"hit a kerb last night\", \"flat this morning\", \"nail in it\").\n" +
-            "If you genuinely don't know, just reply \"not sure\" and we'll go from the photos.";
-        } else {
-          reply =
-            `You mentioned ${finalIssueType}. Two quick things so the technician arrives prepared:\n` +
-            "• Did it happen suddenly or slowly?\n" +
-            "• Is the car drivable or stuck?";
-        }
-      } else {
-        reply = "Got everything ✅ Finding you a technician now — we'll text the moment one is matched.";
+      let ask: string;
+
+      // ----- STEP 1: location + reg (+ name) -----
+      if (!step1Done) {
+        const need: string[] = [];
+        if (!haveName) need.push("your *name*");
+        if (!havePostcode) need.push("a 📍 *postcode or Maps pin*");
+        if (!finalReg) need.push("the car's *number plate* (text it or send a photo)");
+        ask =
+          `*Step 1 — Location + plate*\nStill need: ${need.join(", ")}.`;
       }
+      // ----- STEP 2: what happened -----
+      else if (!step2Done) {
+        ask =
+          "*Step 2 — What happened?* 🛞\n" +
+          "Tell me in your own words — a short voice note works great too.\n" +
+          "Examples: \"hit a kerb last night\", \"slow puncture, going down overnight\", \"nail in the front-left\".\n" +
+          "If you genuinely don't know, just reply *\"not sure\"* and we'll work it out from the photos.";
+      }
+      // ----- STEP 3: how many tyres + photos -----
+      else if (tyreCount === 0) {
+        ask =
+          "*Step 3 — Photos of the tyre(s)* 📸\n" +
+          "First: *how many tyres* have a problem, and *which ones*?\n" +
+          "Reply with the positions: front-left, front-right, rear-left, rear-right (or \"all four\").";
+      }
+      else if (statedCount && statedCount > tyreCount) {
+        ask =
+          `You mentioned ${statedCount} tyres but I've only got ${tyreCount} position(s) so far (${finalWheels.join(", ")}).\n` +
+          "Could you list the *other position(s)*? front-left / front-right / rear-left / rear-right.";
+      }
+      else if (tyreCount > 1 && !/\b(same|different|all the same|each|both)\b/i.test(lowerDesc)) {
+        ask =
+          `Got *${tyreCount} tyres* affected (${finalWheels.join(", ")}).\n` +
+          "Quick check: is it the *same problem on all of them*, or *different issues* per tyre?\n" +
+          "If different, tell me what's wrong with each one.";
+      }
+      else if (!photosOkForCount) {
+        const remaining = Math.max(1, tyreCount - photoCount);
+        ask =
+          `*Step 3 — Photos* 📸 (${photoCount}/${tyreCount} tyre photos so far)\n` +
+          `Please send photos for *each affected tyre* — I still need ${remaining} more.\n` +
+          "For every tyre, send:\n" +
+          "  • A *FULL photo* of the tyre/wheel (use flash 🔦 if it's dark)\n" +
+          "  • A *CLOSE-UP of the sidewall* showing the size markings (e.g. 225/45 R17)\n" +
+          "  • A *close-up of the damage* if visible\n" +
+          "Caption each one with the position (e.g. \"front-left\") so I match them up.";
+      }
+      else {
+        ask = "All done ✅ Finding you a technician now — we'll message the moment one is matched.";
+      }
+
+      const reply = `${checklist}\n\n${ask}`;
       await sendReply(from, reply, channel);
       return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
     }
