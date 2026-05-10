@@ -1424,10 +1424,10 @@ Deno.serve(async (req) => {
     const lowerBody0 = (body || "").toLowerCase();
     const saidUnknown0 = /\b(no idea|not sure|don'?t know|dont know|dunno|unsure|no clue)\b/i.test(lowerBody0);
     const hasContext0 =
-      /(nail|screw|slow|fast|sudden|drove|driving|park|kerb|pothole|bulge|split|crack|flat overnight|lost.*key|valve|leak|hit|burst|curb)/i.test(lowerBody0) ||
-      lowerBody0.length > 40 ||
+      /(nail|screw|slow|fast|sudden|drove|driving|park|kerb|curb|pothole|bulge|split|crack|flat|puncture|blowout|burst|leak|valve|hit|damage|tear|tore|cut|deflat|pressure)/i.test(lowerBody0) ||
       saidUnknown0;
-    const haveWhatHappened0 = (it0 && it0 !== "unknown") || hasContext0;
+    // Strict: step 2 only counts if the customer actually described the incident.
+    const haveWhatHappened0 = hasContext0;
     const tyreCount0 = wheels0.length;
     const photoCount0 = mediaUrls.length;
     const photosOkForCount0 = tyreCount0 > 0 && photoCount0 >= tyreCount0;
