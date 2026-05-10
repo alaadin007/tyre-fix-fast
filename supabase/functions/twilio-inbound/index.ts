@@ -1024,7 +1024,7 @@ Deno.serve(async (req) => {
     const INTAKE_TEMPLATE =
       "Tyre Fly here 👋 I'll get you sorted quickly.\n\n" +
       "*Step 1 of 3 — Location + number plate*\n" +
-      "What's your *name*, your *📍 location* (Maps pin, postcode, or full address), and the *car's number plate*? (You can send a photo of the plate if easier.)";
+      "What's your *full name* (first + last), your *📍 location* (Maps pin, postcode, or full address), and the *car's number plate*? (You can send a photo of the plate if easier.)";
 
     // Helpers for parsing follow-up intake messages
     const POSTCODE_RE = /\b([A-Z]{1,2}\d[A-Z\d]?)\s*(\d[A-Z]{2})\b/i;
@@ -1038,7 +1038,9 @@ Deno.serve(async (req) => {
       if (/lock|locking/.test(s)) return "locked wheel";
       if (/flat|deflat/.test(s)) return "flat tyre";
       if (/punct|nail|screw/.test(s)) return "puncture";
-      if (/sidewall|bulge/.test(s)) return "sidewall damage";
+      if (/sidewall|bulge|buckl/.test(s)) return "sidewall damage";
+      if (/kerb|curb|pothole|hit|impact|crash|bump/.test(s)) return "impact damage";
+      if (/pressure|leak|valve|going down|deflating/.test(s)) return "slow leak";
       return null;
     };
     // Number plate (international) — accept letter+digit combos 4–10 chars.
@@ -1130,11 +1132,21 @@ Deno.serve(async (req) => {
       const reg = extractReg(body);
       if (reg && !job.vehicle_reg) updates.vehicle_reg = reg;
 
-      // Affected wheels — merge with existing
+      // Affected wheels — REPLACE when user gives an explicit count/"just/only"
+      // (so corrections like "just the one, front right" override prior guesses);
+      // otherwise merge with existing.
       const wheelsFromText = extractWheels(body);
+      const lowerBodyForWheels = body.toLowerCase();
+      const explicitCorrection = /\b(just|only|actually|sorry|correction|i said|i asid|i meant|its only|it's only|its just|it's just)\b/.test(lowerBodyForWheels)
+        || /\b([1-4]|one|two|three|four)\b[\s,.\-]*(tyres?|tires?|wheels?|the\s+(front|rear|back))/.test(lowerBodyForWheels)
+        || /\ball\s*(four|4)\b/.test(lowerBodyForWheels);
       if (wheelsFromText.length > 0) {
-        const merged = Array.from(new Set([...(job.affected_wheels ?? []), ...wheelsFromText]));
-        updates.affected_wheels = merged;
+        if (explicitCorrection) {
+          updates.affected_wheels = wheelsFromText;
+        } else {
+          const merged = Array.from(new Set([...(job.affected_wheels ?? []), ...wheelsFromText]));
+          updates.affected_wheels = merged;
+        }
       }
 
       const haveName = (updates.customer_name ?? job.customer_name) && (updates.customer_name ?? job.customer_name) !== "Customer";
@@ -1222,7 +1234,7 @@ Deno.serve(async (req) => {
       // ----- STEP 1: location + reg (+ name) -----
       if (!step1Done) {
         const need: string[] = [];
-        if (!haveName) need.push("your *name*");
+        if (!haveName) need.push("your *full name* (first + last)");
         if (!havePostcode) need.push("a *📍 location* (Maps pin, postcode, or full address)");
         if (!finalReg) need.push("the car's *number plate* (text it or send a photo)");
         ask =
