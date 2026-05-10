@@ -1023,8 +1023,8 @@ Deno.serve(async (req) => {
 
     const INTAKE_TEMPLATE =
       "Tyre Fly here 👋 I'll get you sorted quickly.\n\n" +
-      "*Step 1 of 3 — Location + number plate*\n" +
-      "What's your *full name* (first + last), your *📍 location* (Maps pin, postcode, or full address), and the *car's number plate*? (You can send a photo of the plate if easier.)";
+      "*Step 1 of 4 — Your location* 📍\n" +
+      "Please share your *location*: send a WhatsApp pin 📍, your *postcode*, or your *full address*.";
 
     // Helpers for parsing follow-up intake messages
     const POSTCODE_RE = /\b([A-Z]{1,2}\d[A-Z\d]?)\s*(\d[A-Z]{2})\b/i;
@@ -1188,12 +1188,17 @@ Deno.serve(async (req) => {
       const photoCount = finalPhotos.length;
       const photosOkForCount = tyreCount > 0 && photoCount >= tyreCount;
 
-      // Step gates
-      const step1Done = haveName && havePostcode && !!finalReg;
-      const step2Done = step1Done && haveWhatHappened;
-      const step3Done = step2Done && tyreCount > 0 && photosOkForCount;
+      // Step gates (4 steps now)
+      // Step 1: Location only
+      // Step 2: Number plate + full name
+      // Step 3: What happened
+      // Step 4: Photos
+      const step1Done = havePostcode;
+      const step2Done = step1Done && haveName && !!finalReg;
+      const step3Done = step2Done && haveWhatHappened;
+      const step4Done = step3Done && tyreCount > 0 && photosOkForCount;
 
-      if (step1Done && step2Done && step3Done) {
+      if (step1Done && step2Done && step3Done && step4Done) {
         updates.status = "intake_complete"; // fires dispatch trigger
       }
 
@@ -1230,30 +1235,36 @@ Deno.serve(async (req) => {
       }
 
       let ask: string;
-
-      // ----- STEP 1: location + reg (+ name) -----
+      // ----- STEP 1: location -----
       if (!step1Done) {
-        const need: string[] = [];
-        if (!haveName) need.push("your *full name* (first + last)");
-        if (!havePostcode) need.push("a *📍 location* (Maps pin, postcode, or full address)");
-        if (!finalReg) need.push("the car's *number plate* (text it or send a photo)");
         ask =
-          `*Step 1 of 3 — Location + plate*\nStill need: ${need.join(", ")}.`;
+          "*Step 1 of 4 — Your location* 📍\n" +
+          "Please share your *location*: send a WhatsApp pin 📍, your *postcode*, or your *full address*.";
       }
-      // ----- STEP 2: what happened -----
+      // ----- STEP 2: plate + name -----
       else if (!step2Done) {
+        const need: string[] = [];
+        if (!finalReg) need.push("the car's *number plate* (text it or send a photo)");
+        if (!haveName) need.push("your *full name* (first + last)");
         ask =
-          "Great, got your location and plate ✅\n\n" +
-          "*Step 2 of 3 — What happened?* 🛞\n" +
+          "Got your location ✅\n\n" +
+          "*Step 2 of 4 — Number plate + your name*\n" +
+          `Please send: ${need.join(" and ")}.`;
+      }
+      // ----- STEP 3: what happened -----
+      else if (!step3Done) {
+        ask =
+          "Thanks ✅\n\n" +
+          "*Step 3 of 4 — What happened?* 🛞\n" +
           "Tell me in your own words — a short voice note works great too.\n" +
           "Examples: \"hit a kerb last night\", \"slow puncture, going down overnight\", \"nail in the front-left\".\n" +
           "If you genuinely don't know, just reply *\"not sure\"* and we'll work it out from the photos.";
       }
-      // ----- STEP 3: how many tyres + photos -----
+      // ----- STEP 4: how many tyres + photos -----
       else if (tyreCount === 0) {
         ask =
-          "Thanks ✅\n\n" +
-          "*Step 3 of 3 — Photos of the tyre(s)* 📸\n" +
+          "Got it ✅\n\n" +
+          "*Step 4 of 4 — Photos of the tyre(s)* 📸\n" +
           "First: *how many tyres* have a problem, and *which ones*?\n" +
           "Reply with the positions: front-left, front-right, rear-left, rear-right (or \"all four\").";
       }
@@ -1271,7 +1282,7 @@ Deno.serve(async (req) => {
       else if (!photosOkForCount) {
         const remaining = Math.max(1, tyreCount - photoCount);
         ask =
-          `*Step 3 — Photos* 📸 (${photoCount}/${tyreCount} tyre photos so far)\n` +
+          `*Step 4 — Photos* 📸 (${photoCount}/${tyreCount} tyre photos so far)\n` +
           `Please send photos for *each affected tyre* — I still need ${remaining} more.\n` +
           "For every tyre, send:\n" +
           "  • A *FULL photo* of the tyre/wheel (use flash 🔦 if it's dark)\n" +
@@ -1402,6 +1413,14 @@ Deno.serve(async (req) => {
     const explicitName = body.match(/\b(?:my name is|i am|i'm|im|this is|name[:\-])\s+([A-Za-z][A-Za-z .'-]{1,38})/i);
     if (explicitName) {
       name0 = explicitName[1].trim().replace(/\s+/g, " ");
+    } else {
+      // Naive line scan fallback (matches the 3a branch behaviour)
+      const firstLine = (body || "").split(/\n|,|\./).map((s) => s.trim()).find((s) =>
+        s && s.length < 40 && !POSTCODE_RE.test(s) && !/punct|flat|blow|lock|tyre|tire|nail|hi|hello|hey|thanks|location|pin/i.test(s),
+      );
+      if (firstLine && /^[A-Za-z][A-Za-z .'-]{1,38}$/.test(firstLine) && firstLine.split(/\s+/).length <= 4) {
+        name0 = firstLine;
+      }
     }
 
     const { data: newJob } = await supabase
@@ -1428,9 +1447,7 @@ Deno.serve(async (req) => {
     });
 
     // Compute step completion against what we already extracted from the very
-    // first message and respond with the dynamic checklist instead of a generic
-    // greeting. If the customer sent literally nothing useful, this falls back
-    // to the original template.
+    // first message and respond with the dynamic prompt for the next missing step.
     const haveName0 = !!(name0 && name0 !== "Customer");
     const havePostcode0 = !!pc0;
     const lowerBody0 = (body || "").toLowerCase();
@@ -1438,15 +1455,15 @@ Deno.serve(async (req) => {
     const hasContext0 =
       /(nail|screw|slow|fast|sudden|drove|driving|park|kerb|curb|pothole|bulge|split|crack|flat|puncture|blowout|burst|leak|valve|hit|damage|tear|tore|cut|deflat|pressure)/i.test(lowerBody0) ||
       saidUnknown0;
-    // Strict: step 2 only counts if the customer actually described the incident.
     const haveWhatHappened0 = hasContext0;
     const tyreCount0 = wheels0.length;
     const photoCount0 = mediaUrls.length;
     const photosOkForCount0 = tyreCount0 > 0 && photoCount0 >= tyreCount0;
-    const step1Done0 = haveName0 && havePostcode0 && !!reg0;
-    const step2Done0 = step1Done0 && haveWhatHappened0;
-    const step3Done0 = step2Done0 && tyreCount0 > 0 && photosOkForCount0;
-    const tick0 = (d: boolean) => (d ? "✅" : "▢");
+    // 4-step gates
+    const step1Done0 = havePostcode0;
+    const step2Done0 = step1Done0 && haveName0 && !!reg0;
+    const step3Done0 = step2Done0 && haveWhatHappened0;
+    const step4Done0 = step3Done0 && tyreCount0 > 0 && photosOkForCount0;
 
     // If literally nothing useful was provided, send the warm intro once.
     if (!haveName0 && !havePostcode0 && !reg0 && !haveWhatHappened0 && photoCount0 === 0) {
@@ -1456,28 +1473,33 @@ Deno.serve(async (req) => {
 
     let ask0: string;
     if (!step1Done0) {
-      const need: string[] = [];
-      if (!haveName0) need.push("your *name*");
-      if (!havePostcode0) need.push("your *📍 location* (Maps pin, postcode, or full address)");
-      if (!reg0) need.push("the *number plate* (text or photo)");
       ask0 =
         "Tyre Fly here 👋\n\n" +
-        `*Step 1 of 3 — Location + plate*\nStill need: ${need.join(", ")}.`;
+        "*Step 1 of 4 — Your location* 📍\n" +
+        "Please share your *location*: send a WhatsApp pin 📍, your *postcode*, or your *full address*.";
     } else if (!step2Done0) {
+      const need: string[] = [];
+      if (!reg0) need.push("the car's *number plate* (text it or send a photo)");
+      if (!haveName0) need.push("your *full name* (first + last)");
       ask0 =
-        "Great, got your location and plate ✅\n\n" +
-        "*Step 2 of 3 — What happened?* 🛞\n" +
+        "Got your location ✅\n\n" +
+        "*Step 2 of 4 — Number plate + your name*\n" +
+        `Please send: ${need.join(" and ")}.`;
+    } else if (!step3Done0) {
+      ask0 =
+        "Thanks ✅\n\n" +
+        "*Step 3 of 4 — What happened?* 🛞\n" +
         "Tell me in your own words (a short voice note works too).\n" +
         "If you genuinely don't know, just reply *\"not sure\"*.";
     } else if (tyreCount0 === 0) {
       ask0 =
-        "Thanks ✅\n\n" +
-        "*Step 3 of 3 — Photos of the tyre(s)* 📸\n" +
+        "Got it ✅\n\n" +
+        "*Step 4 of 4 — Photos of the tyre(s)* 📸\n" +
         "How many tyres are affected, and which ones? (front-left / front-right / rear-left / rear-right, or \"all four\").";
     } else if (!photosOkForCount0) {
       const remaining = Math.max(1, tyreCount0 - photoCount0);
       ask0 =
-        `*Step 3 — Photos* 📸 (${photoCount0}/${tyreCount0} so far)\n` +
+        `*Step 4 — Photos* 📸 (${photoCount0}/${tyreCount0} so far)\n` +
         `Please send photos for *each affected tyre* — I still need ${remaining} more.\n` +
         "For every tyre: a *FULL photo* (use flash 🔦 if dark), a *sidewall close-up* showing the size (e.g. 225/45 R17), and a *close-up of the damage*. Caption with the position.";
     } else {
