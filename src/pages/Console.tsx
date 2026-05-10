@@ -169,6 +169,15 @@ export default function Console() {
             Add tech
           </button>
           <button
+            onClick={() => setShowAllTechs(true)}
+            className="inline-flex items-center gap-1.5 rounded-md border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-foreground hover:bg-white/10"
+            title="View all technicians"
+          >
+            <Users className="h-3.5 w-3.5" />
+            All techs
+            <span className="ml-1 rounded-full bg-white/10 px-1.5 text-[10px]">{techs.length}</span>
+          </button>
+          <button
             onClick={() => setShowPending(true)}
             className="relative inline-flex items-center gap-1.5 rounded-md border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-foreground hover:bg-white/10"
             title="Approve technician applications"
