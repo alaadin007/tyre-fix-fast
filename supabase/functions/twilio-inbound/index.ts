@@ -1234,31 +1234,36 @@ Deno.serve(async (req) => {
         }
       }
 
-      let ask: string;
-
-      // ----- STEP 1: location + reg (+ name) -----
+      // ----- STEP 1: location -----
       if (!step1Done) {
-        const need: string[] = [];
-        if (!haveName) need.push("your *full name* (first + last)");
-        if (!havePostcode) need.push("a *📍 location* (Maps pin, postcode, or full address)");
-        if (!finalReg) need.push("the car's *number plate* (text it or send a photo)");
         ask =
-          `*Step 1 of 3 — Location + plate*\nStill need: ${need.join(", ")}.`;
+          "*Step 1 of 4 — Your location* 📍\n" +
+          "Please share your *location*: send a WhatsApp pin 📍, your *postcode*, or your *full address*.";
       }
-      // ----- STEP 2: what happened -----
+      // ----- STEP 2: plate + name -----
       else if (!step2Done) {
+        const need: string[] = [];
+        if (!finalReg) need.push("the car's *number plate* (text it or send a photo)");
+        if (!haveName) need.push("your *full name* (first + last)");
         ask =
-          "Great, got your location and plate ✅\n\n" +
-          "*Step 2 of 3 — What happened?* 🛞\n" +
+          "Got your location ✅\n\n" +
+          "*Step 2 of 4 — Number plate + your name*\n" +
+          `Please send: ${need.join(" and ")}.`;
+      }
+      // ----- STEP 3: what happened -----
+      else if (!step3Done) {
+        ask =
+          "Thanks ✅\n\n" +
+          "*Step 3 of 4 — What happened?* 🛞\n" +
           "Tell me in your own words — a short voice note works great too.\n" +
           "Examples: \"hit a kerb last night\", \"slow puncture, going down overnight\", \"nail in the front-left\".\n" +
           "If you genuinely don't know, just reply *\"not sure\"* and we'll work it out from the photos.";
       }
-      // ----- STEP 3: how many tyres + photos -----
+      // ----- STEP 4: how many tyres + photos -----
       else if (tyreCount === 0) {
         ask =
-          "Thanks ✅\n\n" +
-          "*Step 3 of 3 — Photos of the tyre(s)* 📸\n" +
+          "Got it ✅\n\n" +
+          "*Step 4 of 4 — Photos of the tyre(s)* 📸\n" +
           "First: *how many tyres* have a problem, and *which ones*?\n" +
           "Reply with the positions: front-left, front-right, rear-left, rear-right (or \"all four\").";
       }
@@ -1276,7 +1281,7 @@ Deno.serve(async (req) => {
       else if (!photosOkForCount) {
         const remaining = Math.max(1, tyreCount - photoCount);
         ask =
-          `*Step 3 — Photos* 📸 (${photoCount}/${tyreCount} tyre photos so far)\n` +
+          `*Step 4 — Photos* 📸 (${photoCount}/${tyreCount} tyre photos so far)\n` +
           `Please send photos for *each affected tyre* — I still need ${remaining} more.\n` +
           "For every tyre, send:\n" +
           "  • A *FULL photo* of the tyre/wheel (use flash 🔦 if it's dark)\n" +
