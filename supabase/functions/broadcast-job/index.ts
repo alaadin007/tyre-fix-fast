@@ -36,7 +36,7 @@ async function sendWhatsApp(to: string, body: string, media_urls?: string[]): Pr
         "Content-Type": "application/json",
         Authorization: `Bearer ${Deno.env.get("SUPABASE_ANON_KEY")}`,
       },
-      body: JSON.stringify({ to, body, channel: "whatsapp", media_urls, provider_preference: "twilio" }),
+      body: JSON.stringify({ to, body, channel: "whatsapp", media_urls, provider_preference: "auto" }),
     });
     const payload = await r2.json().catch(() => ({}));
     if (!r2.ok) console.error("twilio whatsapp send failed", payload);
