@@ -1261,58 +1261,85 @@ Deno.serve(async (req) => {
         }
       }
 
+      // Build a checklist of what's confirmed so far and what's still needed.
+      const finalName = (updates.customer_name ?? job.customer_name) ?? null;
+      const finalPostcode = updates.postcode ?? job.postcode ?? null;
+      const checklist =
+        "*Progress so far:*\n" +
+        `${finalPostcode ? "✅" : "⬜️"} Location${finalPostcode ? ` — ${finalPostcode}` : ""}\n` +
+        `${finalReg ? "✅" : "⬜️"} Number plate${finalReg ? ` — ${finalReg}` : ""}\n` +
+        `${haveName ? "✅" : "⬜️"} Full name${haveName ? ` — ${finalName}` : ""}\n` +
+        `${haveWhatHappened ? "✅" : "⬜️"} What happened\n` +
+        `${tyreCount > 0 ? "✅" : "⬜️"} Affected tyres${tyreCount > 0 ? ` — ${finalWheels.join(", ")}` : ""}\n` +
+        `${photosOkForCount ? "✅" : "⬜️"} Photos${tyreCount > 0 ? ` (${photoCount}/${tyreCount})` : ""}`;
+
+      // Did the user just send something we couldn't use for the current step?
+      const userSentSomething = body.trim().length > 0 || mediaUrls.length > 0;
+
       let ask: string;
       // ----- STEP 1: location -----
       if (!step1Done) {
+        const couldntParse = userSentSomething && !finalPostcode;
         ask =
+          (couldntParse
+            ? "I couldn't read a valid UK *postcode* or location from that ❌\n\n"
+            : "Tyre Fly here 👋\n\n") +
           "*Step 1 of 4 — Your location* 📍\n" +
-          "Please share your *location*: send a WhatsApp pin 📍, your *postcode*, or your *full address*.";
+          "*Still need:* your *postcode* (e.g. SW1A 1AA), a *WhatsApp pin* 📍, or a *full address*.\n\n" +
+          checklist;
       }
       // ----- STEP 2: plate + name -----
       else if (!step2Done) {
         const need: string[] = [];
-        if (!finalReg) need.push("the car's *number plate* (text it or send a photo)");
-        if (!haveName) need.push("your *full name* (first + last)");
+        if (!finalReg) need.push("the car's *number plate* (text it or send a clear photo)");
+        if (!haveName) need.push("your *full name* (first + last, e.g. \"John Smith\")");
         ask =
           "Got your location ✅\n\n" +
           "*Step 2 of 4 — Number plate + your name*\n" +
-          `Please send: ${need.join(" and ")}.`;
+          `*Still need:* ${need.join(" *and* ")}.\n\n` +
+          checklist;
       }
       // ----- STEP 3: what happened -----
       else if (!step3Done) {
         ask =
           "Thanks ✅\n\n" +
           "*Step 3 of 4 — What happened?* 🛞\n" +
-          "Tell me in your own words — a short voice note works great too.\n" +
-          "Examples: \"hit a kerb last night\", \"slow puncture, going down overnight\", \"nail in the front-left\".\n" +
-          "If you genuinely don't know, just reply *\"not sure\"* and we'll work it out from the photos.";
+          "*Still need:* a short description of the issue (text or voice note).\n" +
+          "Examples: \"hit a kerb last night\", \"slow puncture going down overnight\", \"nail in the front-left\".\n" +
+          "If you really don't know, reply *\"not sure\"* and we'll work it out from the photos.\n\n" +
+          checklist;
       }
-      // ----- STEP 4: how many tyres + photos -----
+      // ----- STEP 4: tyres + photos -----
       else if (tyreCount === 0) {
         ask =
           "Got it ✅\n\n" +
-          "*Step 4 of 4 — Photos of the tyre(s)* 📸\n" +
-          "Please send the *tyre photo(s)* now and tell me *which tyres are affected* in the same reply.\n" +
-          "You can say: front-left, front-right, rear-left, rear-right, \"both front\", \"both rear\", or \"all four\".";
+          "*Step 4 of 4 — Photos + which tyres* 📸\n" +
+          "*Still need:* (1) *which tyres* are affected, and (2) a *clear photo* of each one.\n" +
+          "For tyres you can say: front-left, front-right, rear-left, rear-right, \"both front\", \"both rear\", or \"all four\".\n\n" +
+          checklist;
       }
       else if (statedCount && statedCount > tyreCount) {
         ask =
           `You mentioned ${statedCount} tyres but I've only got ${tyreCount} position(s) so far (${finalWheels.join(", ")}).\n` +
-          "Could you list the *other position(s)*? front-left / front-right / rear-left / rear-right.";
+          "*Still need:* the *other position(s)* — front-left / front-right / rear-left / rear-right.\n\n" +
+          checklist;
       }
       else if (!photosOkForCount) {
         const remaining = Math.max(1, tyreCount - photoCount);
         ask =
-          `*Step 4 — Photos* 📸 (${photoCount}/${tyreCount} tyre photos so far)\n` +
-          `Please send photos for *each affected tyre* — I still need ${remaining} more.\n` +
-          "For every tyre, send:\n" +
+          `*Step 4 — Photos* 📸 (${photoCount}/${tyreCount} so far)\n` +
+          `*Still need:* ${remaining} more tyre photo${remaining === 1 ? "" : "s"}.\n` +
+          "For every affected tyre, send:\n" +
           "  • A *FULL photo* of the tyre/wheel (use flash 🔦 if it's dark)\n" +
           "  • A *CLOSE-UP of the sidewall* showing the size markings (e.g. 225/45 R17)\n" +
           "  • A *close-up of the damage* if visible\n" +
-          "Caption each one with the position (e.g. \"front-left\") so I match them up.";
+          "Caption each one with the position (e.g. \"front-left\").\n\n" +
+          checklist;
       }
       else {
-        ask = "All done ✅ Finding you a technician now — we'll message the moment one is matched.";
+        ask =
+          "All done ✅ Finding you a technician now — we'll message the moment one is matched.\n\n" +
+          checklist;
       }
 
       await sendReply(from, ask, channel);
