@@ -91,6 +91,38 @@ async function reverseGeocodePostcode(lat: number, lng: number): Promise<string 
   return null;
 }
 
+// Forward-geocode a free-text address (e.g. "w1 harley street", "10 downing st london")
+// to a UK postcode using Nominatim. Returns null if nothing matches confidently.
+async function geocodeAddressToPostcode(address: string): Promise<{ postcode: string | null; lat: number | null; lng: number | null }> {
+  const empty = { postcode: null as string | null, lat: null as number | null, lng: null as number | null };
+  const q = (address || "").trim();
+  if (q.length < 4) return empty;
+  try {
+    const r = await fetch(
+      `https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=1&countrycodes=gb&q=${encodeURIComponent(q)}`,
+      { headers: { "User-Agent": "tyre-fix-fast/1.0" } },
+    );
+    if (!r.ok) return empty;
+    const arr = await r.json();
+    const hit = Array.isArray(arr) ? arr[0] : null;
+    if (!hit) return empty;
+    const lat = Number(hit.lat);
+    const lng = Number(hit.lon);
+    let pc: string | null = hit?.address?.postcode ?? null;
+    if (pc) pc = pc.trim().toUpperCase();
+    if (!pc && Number.isFinite(lat) && Number.isFinite(lng)) {
+      pc = await reverseGeocodePostcode(lat, lng);
+    }
+    return { postcode: pc, lat: Number.isFinite(lat) ? lat : null, lng: Number.isFinite(lng) ? lng : null };
+  } catch (e) {
+    console.error("geocodeAddressToPostcode failed", e);
+    return empty;
+  }
+}
+
+// Heuristic — does the text look like a street address? (used to decide whether to forward-geocode)
+const ADDRESS_HINT_RE = /\b(street|st\b|road|rd\b|avenue|ave\b|lane|ln\b|drive|dr\b|close|crescent|way|place|pl\b|square|sq\b|terrace|court|ct\b|mews|gardens|park|hill|row)\b/i;
+
 async function aiExtractQuote(text: string): Promise<{
   price_gbp: number | null;
   callout_fee_gbp: number | null;
