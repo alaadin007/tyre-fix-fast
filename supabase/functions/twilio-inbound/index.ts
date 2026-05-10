@@ -1215,28 +1215,22 @@ Deno.serve(async (req) => {
         }
       }
 
-      // Build a checklist header so the customer always sees progress
-      const tick = (done: boolean) => (done ? "✅" : "▢");
-      const checklist =
-        `${tick(step1Done)} Step 1 — Location + plate\n` +
-        `${tick(step2Done)} Step 2 — What happened\n` +
-        `${tick(step3Done)} Step 3 — Photos of the tyre(s)`;
-
       let ask: string;
 
       // ----- STEP 1: location + reg (+ name) -----
       if (!step1Done) {
         const need: string[] = [];
         if (!haveName) need.push("your *name*");
-        if (!havePostcode) need.push("a 📍 *postcode or Maps pin*");
+        if (!havePostcode) need.push("a *📍 location* (Maps pin, postcode, or full address)");
         if (!finalReg) need.push("the car's *number plate* (text it or send a photo)");
         ask =
-          `*Step 1 — Location + plate*\nStill need: ${need.join(", ")}.`;
+          `*Step 1 of 3 — Location + plate*\nStill need: ${need.join(", ")}.`;
       }
       // ----- STEP 2: what happened -----
       else if (!step2Done) {
         ask =
-          "*Step 2 — What happened?* 🛞\n" +
+          "Great, got your location and plate ✅\n\n" +
+          "*Step 2 of 3 — What happened?* 🛞\n" +
           "Tell me in your own words — a short voice note works great too.\n" +
           "Examples: \"hit a kerb last night\", \"slow puncture, going down overnight\", \"nail in the front-left\".\n" +
           "If you genuinely don't know, just reply *\"not sure\"* and we'll work it out from the photos.";
@@ -1244,7 +1238,8 @@ Deno.serve(async (req) => {
       // ----- STEP 3: how many tyres + photos -----
       else if (tyreCount === 0) {
         ask =
-          "*Step 3 — Photos of the tyre(s)* 📸\n" +
+          "Thanks ✅\n\n" +
+          "*Step 3 of 3 — Photos of the tyre(s)* 📸\n" +
           "First: *how many tyres* have a problem, and *which ones*?\n" +
           "Reply with the positions: front-left, front-right, rear-left, rear-right (or \"all four\").";
       }
@@ -1274,8 +1269,7 @@ Deno.serve(async (req) => {
         ask = "All done ✅ Finding you a technician now — we'll message the moment one is matched.";
       }
 
-      const reply = `${checklist}\n\n${ask}`;
-      await sendReply(from, reply, channel);
+      await sendReply(from, ask, channel);
       return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
     }
 
