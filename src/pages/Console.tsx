@@ -728,3 +728,203 @@ Tap to pay (Apple Pay / Google Pay / card) → [secure link]`}
     </div>
   );
 }
+
+// ---------- All technicians slide-over ----------
+type TechRow = {
+  id: string;
+  name: string;
+  phone: string;
+  whatsapp: string | null;
+  email: string | null;
+  vehicle: string | null;
+  rating: number | null;
+  jobs_completed: number;
+  active: boolean;
+  approval_status: string;
+  service_postcodes: string[] | null;
+  travel_radius_miles: number | null;
+  last_lat: number | null;
+  last_lng: number | null;
+  last_location_at: string | null;
+  live_location_until: string | null;
+  created_at: string;
+};
+
+function AllTechniciansPanel({ onClose }: { onClose: () => void }) {
+  const [techs, setTechs] = useState<TechRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [q, setQ] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      const { data, error } = await supabase
+        .from("technicians")
+        .select("id,name,phone,whatsapp,email,vehicle,rating,jobs_completed,active,approval_status,service_postcodes,travel_radius_miles,last_lat,last_lng,last_location_at,live_location_until,created_at")
+        .order("created_at", { ascending: false });
+      if (cancelled) return;
+      if (error) toast.error(error.message);
+      setTechs((data ?? []) as TechRow[]);
+      setLoading(false);
+    };
+    load();
+    const ch = supabase
+      .channel("all-techs-panel")
+      .on("postgres_changes", { event: "*", schema: "public", table: "technicians" }, load)
+      .subscribe();
+    return () => { cancelled = true; supabase.removeChannel(ch); };
+  }, []);
+
+  const toggleActive = async (t: TechRow) => {
+    const { error } = await supabase
+      .from("technicians")
+      .update({ active: !t.active })
+      .eq("id", t.id);
+    if (error) toast.error(error.message);
+    else toast.success(`${t.name} ${!t.active ? "activated" : "deactivated"}`);
+  };
+
+  const filtered = techs.filter((t) => {
+    if (!q.trim()) return true;
+    const s = q.toLowerCase();
+    return (
+      t.name.toLowerCase().includes(s) ||
+      t.phone.toLowerCase().includes(s) ||
+      (t.email ?? "").toLowerCase().includes(s) ||
+      (t.vehicle ?? "").toLowerCase().includes(s) ||
+      (t.service_postcodes ?? []).some((p) => p.toLowerCase().includes(s))
+    );
+  });
+
+  const fmtAgo = (iso: string | null) => {
+    if (!iso) return "never";
+    const m = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
+    if (m < 1) return "just now";
+    if (m < 60) return `${m}m ago`;
+    const h = Math.floor(m / 60);
+    if (h < 24) return `${h}h ago`;
+    return `${Math.floor(h / 24)}d ago`;
+  };
+
+  const isLive = (t: TechRow) =>
+    !!(t.live_location_until && new Date(t.live_location_until) > new Date());
+
+  return (
+    <div className="fixed inset-0 z-50 flex">
+      <div className="flex-1 bg-black/60" onClick={onClose} />
+      <div className="flex h-full w-full max-w-2xl flex-col bg-card shadow-2xl">
+        <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
+          <div className="flex items-center gap-2">
+            <Users className="h-4 w-4 text-primary" />
+            <h2 className="text-sm font-semibold">All technicians</h2>
+            <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] text-muted-foreground">
+              {techs.length}
+            </span>
+          </div>
+          <button onClick={onClose} className="rounded-md p-1.5 hover:bg-white/10">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="border-b border-white/10 px-4 py-2">
+          <div className="relative">
+            <Search className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Search name, phone, postcode, vehicle…"
+              className="pl-8 text-xs"
+            />
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-3">
+          {loading && <p className="p-6 text-center text-sm text-muted-foreground">Loading…</p>}
+          {!loading && filtered.length === 0 && (
+            <p className="p-6 text-center text-sm text-muted-foreground">No technicians found.</p>
+          )}
+          <div className="grid gap-2">
+            {filtered.map((t) => {
+              const live = isLive(t);
+              const statusBadge =
+                t.approval_status === "approved"
+                  ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-300"
+                  : t.approval_status === "pending"
+                  ? "border-amber-400/30 bg-amber-400/10 text-amber-300"
+                  : "border-red-400/30 bg-red-400/10 text-red-300";
+              return (
+                <div key={t.id} className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="truncate font-semibold">{t.name}</span>
+                        {live && (
+                          <span className="inline-flex items-center gap-1 rounded-full border border-emerald-400/30 bg-emerald-400/10 px-1.5 text-[10px] font-semibold text-emerald-300">
+                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> live
+                          </span>
+                        )}
+                      </div>
+                      <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
+                        <a href={`tel:${t.phone}`} className="inline-flex items-center gap-1 hover:text-foreground">
+                          <Phone className="h-3 w-3" /> {t.phone}
+                        </a>
+                        {t.email && <span className="truncate">{t.email}</span>}
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-end gap-1">
+                      <span className={`rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-wider ${statusBadge}`}>
+                        {t.approval_status}
+                      </span>
+                      <span className="inline-flex items-center gap-1 text-[11px] text-amber-300">
+                        <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                        {(t.rating ?? 5).toFixed(1)}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
+                    {t.vehicle && <div><span className="text-foreground/70">Vehicle:</span> {t.vehicle}</div>}
+                    <div><span className="text-foreground/70">Jobs:</span> {t.jobs_completed}</div>
+                    {t.travel_radius_miles != null && (
+                      <div><span className="text-foreground/70">Radius:</span> {t.travel_radius_miles}mi</div>
+                    )}
+                    <div className="inline-flex items-center gap-1">
+                      <MapPin className="h-3 w-3" /> {fmtAgo(t.last_location_at)}
+                    </div>
+                  </div>
+
+                  {t.service_postcodes && t.service_postcodes.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      {t.service_postcodes.slice(0, 8).map((p) => (
+                        <span key={p} className="rounded bg-white/5 px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
+                          {p}
+                        </span>
+                      ))}
+                      {t.service_postcodes.length > 8 && (
+                        <span className="text-[10px] text-muted-foreground">+{t.service_postcodes.length - 8}</span>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="mt-3 flex items-center justify-between gap-2">
+                    <span className={`text-[11px] ${t.active ? "text-emerald-300" : "text-muted-foreground"}`}>
+                      {t.active ? "● Active" : "○ Inactive"}
+                    </span>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => toggleActive(t)}
+                      className="h-7 text-[11px]"
+                    >
+                      {t.active ? "Deactivate" : "Activate"}
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
