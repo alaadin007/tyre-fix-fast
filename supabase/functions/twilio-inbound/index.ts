@@ -1440,27 +1440,25 @@ Deno.serve(async (req) => {
       return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
     }
 
-    const checklist0 =
-      `Tyre Fly here 👋 Got it — let's tick these off:\n\n` +
-      `${tick0(step1Done0)} Step 1 — Location + plate\n` +
-      `${tick0(step2Done0)} Step 2 — What happened\n` +
-      `${tick0(step3Done0)} Step 3 — Photos of the tyre(s)`;
-
     let ask0: string;
     if (!step1Done0) {
       const need: string[] = [];
       if (!haveName0) need.push("your *name*");
       if (!havePostcode0) need.push("your *📍 location* (Maps pin, postcode, or full address)");
       if (!reg0) need.push("the *number plate* (text or photo)");
-      ask0 = `*Step 1 — Location + plate*\nStill need: ${need.join(", ")}.`;
+      ask0 =
+        "Tyre Fly here 👋\n\n" +
+        `*Step 1 of 3 — Location + plate*\nStill need: ${need.join(", ")}.`;
     } else if (!step2Done0) {
       ask0 =
-        "*Step 2 — What happened?* 🛞\n" +
+        "Great, got your location and plate ✅\n\n" +
+        "*Step 2 of 3 — What happened?* 🛞\n" +
         "Tell me in your own words (a short voice note works too).\n" +
         "If you genuinely don't know, just reply *\"not sure\"*.";
     } else if (tyreCount0 === 0) {
       ask0 =
-        "*Step 3 — Photos of the tyre(s)* 📸\n" +
+        "Thanks ✅\n\n" +
+        "*Step 3 of 3 — Photos of the tyre(s)* 📸\n" +
         "How many tyres are affected, and which ones? (front-left / front-right / rear-left / rear-right, or \"all four\").";
     } else if (!photosOkForCount0) {
       const remaining = Math.max(1, tyreCount0 - photoCount0);
@@ -1473,7 +1471,7 @@ Deno.serve(async (req) => {
       if (newJob) await supabase.from("jobs").update({ status: "intake_complete" }).eq("id", newJob.id);
     }
 
-    await sendReply(from, `${checklist0}\n\n${ask0}`, channel);
+    await sendReply(from, ask0, channel);
     return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
   } catch (e) {
     console.error("twilio-inbound error", e);
