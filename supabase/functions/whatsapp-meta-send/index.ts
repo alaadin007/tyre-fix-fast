@@ -10,7 +10,8 @@ const corsHeaders = {
 
 const BodySchema = z.object({
   to: z.string().trim().min(7).max(20),
-  body: z.string().trim().min(1).max(4096),
+  body: z.string().trim().min(1).max(4096).optional().default(""),
+  media_urls: z.array(z.string().url()).max(10).optional(),
 });
 
 Deno.serve(async (req) => {
@@ -27,26 +28,39 @@ Deno.serve(async (req) => {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    const { to, body } = parsed.data;
+    const { to, body, media_urls } = parsed.data;
     const toClean = to.replace(/^whatsapp:/, "").replace(/[^\d+]/g, "");
+    const toNum = toClean.replace(/^\+/, "");
 
-    const r = await fetch(`https://graph.facebook.com/v22.0/${PHONE_NUMBER_ID}/messages`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${TOKEN}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        messaging_product: "whatsapp",
-        to: toClean.replace(/^\+/, ""),
-        type: "text",
-        text: { body },
-      }),
-    });
-    const data = await r.json();
-    if (!r.ok) {
-      console.error("meta send failed", r.status, data);
-      return new Response(JSON.stringify({ error: data?.error?.message ?? "Meta send failed", status: r.status }), {
+    const sendOne = async (payload: any) => {
+      const r = await fetch(`https://graph.facebook.com/v22.0/${PHONE_NUMBER_ID}/messages`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${TOKEN}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ messaging_product: "whatsapp", to: toNum, ...payload }),
+      });
+      const data = await r.json();
+      return { ok: r.ok, status: r.status, data };
+    };
+
+    const results: any[] = [];
+    const images = media_urls ?? [];
+
+    if (images.length > 0) {
+      // First image carries the caption (body); remainder send as bare images.
+      for (let i = 0; i < images.length; i++) {
+        const caption = i === 0 && body ? body.slice(0, 1024) : undefined;
+        const res = await sendOne({ type: "image", image: { link: images[i], ...(caption ? { caption } : {}) } });
+        results.push(res);
+        if (!res.ok) break;
+      }
+    } else if (body) {
+      results.push(await sendOne({ type: "text", text: { body } }));
+    }
+
+    const failed = results.find((r) => !r.ok);
+    if (failed) {
+      console.error("meta send failed", failed.status, failed.data);
+      return new Response(JSON.stringify({ error: failed.data?.error?.message ?? "Meta send failed", status: failed.status }), {
         status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -60,14 +74,14 @@ Deno.serve(async (req) => {
       channel: "whatsapp",
       from_number: Deno.env.get("TWILIO_WHATSAPP_NUMBER") ?? "",
       to_number: toClean,
-      body,
-      twilio_sid: data?.messages?.[0]?.id ?? null,
-      num_media: 0,
-      media_urls: [],
+      body: body ?? "",
+      twilio_sid: results[0]?.data?.messages?.[0]?.id ?? null,
+      num_media: images.length,
+      media_urls: images,
       status: "sent",
     });
 
-    return new Response(JSON.stringify({ ok: true, id: data?.messages?.[0]?.id }), {
+    return new Response(JSON.stringify({ ok: true, id: results[0]?.data?.messages?.[0]?.id, count: results.length }), {
       status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
