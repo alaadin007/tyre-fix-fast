@@ -1234,7 +1234,7 @@ Deno.serve(async (req) => {
       // ----- STEP 1: location + reg (+ name) -----
       if (!step1Done) {
         const need: string[] = [];
-        if (!haveName) need.push("your *name*");
+        if (!haveName) need.push("your *full name* (first + last)");
         if (!havePostcode) need.push("a *📍 location* (Maps pin, postcode, or full address)");
         if (!finalReg) need.push("the car's *number plate* (text it or send a photo)");
         ask =
