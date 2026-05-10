@@ -132,13 +132,26 @@ Deno.serve(async (req) => {
       // Use the phone the technician registered with (fallback to whatsapp field).
       const to = t.phone || t.whatsapp;
       if (!to) continue;
-      const ok = await sendMsg(to, msg, photos);
+      const waOk = await sendWhatsApp(to, msg, photos);
+      // Always send an SMS too — guarantees delivery even if WhatsApp drops the
+      // message (e.g. recipient is outside the 24-hr customer-service window
+      // and there's no approved Meta template).
+      const smsBody =
+        `🛞 Tyre Fly job ${job.id.slice(0, 6)} · ${job.postcode}\n` +
+        `${job.issue_type ?? "tyre"}${job.tyre_size ? ` · ${job.tyre_size}` : ""} · ${wheels}` +
+        (job.vehicle_reg ? ` · ${job.vehicle_reg}` : "") +
+        (job.lat != null && job.lng != null ? `\nMap: https://maps.google.com/?q=${job.lat},${job.lng}` : "") +
+        `\nReply on WhatsApp with your location + price £ + ETA mins.`;
+      const smsOk = await sendSMS(to, smsBody);
+      const ok = waOk || smsOk;
       if (ok) sent++;
       allocations.push({
         job_id,
         technician_id: t.id,
         status: ok ? "broadcast" : "send_failed",
-        ai_reasoning: mode === "all" ? "manual broadcast (all)" : "manual broadcast (specific)",
+        ai_reasoning:
+          (mode === "all" ? "manual broadcast (all)" : "manual broadcast (specific)") +
+          ` · wa=${waOk ? "ok" : "fail"} sms=${smsOk ? "ok" : "fail"}`,
       });
     }
 
