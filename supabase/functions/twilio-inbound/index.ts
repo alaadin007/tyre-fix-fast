@@ -1004,7 +1004,9 @@ Deno.serve(async (req) => {
       const isAccept = /^\s*(yes|y|accept|ok|book it)\b/i.test(body);
       const lockedStates = ["awaiting_payment", "accepted", "in_progress", "paid"];
       const isLocked = lockedStates.includes(job.status);
-      if (!isRating && !isAccept && !isLocked) {
+      const activeIntakeStates = ["intake_pending", "pending"];
+      const isActiveIntake = activeIntakeStates.includes(job.status);
+      if (!isRating && !isAccept && !isLocked && !isActiveIntake) {
         const relation = await aiClassifyJobContinuity({
           body,
           hasMedia: mediaUrls.length > 0,
@@ -1225,11 +1227,23 @@ Deno.serve(async (req) => {
       const step3Done = step2Done && haveWhatHappened;
       const step4Done = step3Done && tyreCount > 0 && photosOkForCount;
 
-      if (step1Done && step2Done && step3Done && step4Done) {
+      const justCompletedIntake = step1Done && step2Done && step3Done && step4Done;
+      if (justCompletedIntake) {
         updates.status = "intake_complete"; // fires dispatch trigger
       }
 
       await supabase.from("jobs").update(updates).eq("id", job.id);
+
+      if (justCompletedIntake) {
+        await supabase.from("ops_alerts").insert({
+          level: "info",
+          title: "Intake complete — all details found",
+          body:
+            `Job ${job.id.slice(0, 6)} is ready for technician matching. ` +
+            `Reg: ${finalReg ?? "—"}, wheels: ${finalWheels.join(", ") || "—"}, photos: ${finalPhotos.length}.`,
+          job_id: job.id,
+        });
+      }
 
       // If new photos arrived, run vision analysis and bounce non-tyre photos back
       if (mediaUrls.length > 0) {
