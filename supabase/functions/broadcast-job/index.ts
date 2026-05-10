@@ -18,7 +18,17 @@ const BodySchema = z.object({
   technician_ids: z.array(z.string().uuid()).optional(),
 });
 
-async function sendWhatsApp(to: string, body: string, media_urls?: string[]) {
+type SendAttempt = {
+  ok: boolean;
+  channel: "whatsapp" | "sms";
+  error?: string;
+  code?: number | null;
+  provider?: string | null;
+  from_number?: string | null;
+  to_number?: string | null;
+};
+
+async function sendWhatsApp(to: string, body: string, media_urls?: string[]): Promise<SendAttempt> {
   try {
     const r2 = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/twilio-send`, {
       method: "POST",
@@ -28,15 +38,24 @@ async function sendWhatsApp(to: string, body: string, media_urls?: string[]) {
       },
       body: JSON.stringify({ to, body, channel: "whatsapp", media_urls, provider_preference: "twilio" }),
     });
-    if (!r2.ok) console.error("twilio whatsapp send failed", await r2.text());
-    return r2.ok;
+    const payload = await r2.json().catch(() => ({}));
+    if (!r2.ok) console.error("twilio whatsapp send failed", payload);
+    return {
+      ok: r2.ok,
+      channel: "whatsapp",
+      error: payload?.error,
+      code: payload?.code ?? payload?.status ?? null,
+      provider: payload?.provider ?? "twilio",
+      from_number: payload?.from_number ?? null,
+      to_number: payload?.to_number ?? to,
+    };
   } catch (e) {
     console.error("sendWhatsApp failed:", e);
-    return false;
+    return { ok: false, channel: "whatsapp", error: String(e), provider: "twilio" };
   }
 }
 
-async function sendSMS(to: string, body: string) {
+async function sendSMS(to: string, body: string): Promise<SendAttempt> {
   try {
     const r = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/twilio-send`, {
       method: "POST",
@@ -46,10 +65,20 @@ async function sendSMS(to: string, body: string) {
       },
       body: JSON.stringify({ to, body: body.slice(0, 1500), channel: "sms" }),
     });
-    return r.ok;
+    const payload = await r.json().catch(() => ({}));
+    if (!r.ok) console.error("twilio sms send failed", payload);
+    return {
+      ok: r.ok,
+      channel: "sms",
+      error: payload?.error,
+      code: payload?.code ?? payload?.status ?? null,
+      provider: payload?.provider ?? "twilio",
+      from_number: payload?.from_number ?? null,
+      to_number: payload?.to_number ?? to,
+    };
   } catch (e) {
     console.error("sendSMS failed:", e);
-    return false;
+    return { ok: false, channel: "sms", error: String(e), provider: "twilio" };
   }
 }
 
@@ -116,28 +145,39 @@ Deno.serve(async (req) => {
       `e.g. "Yes, £85, 25 mins" + share location pin.`;
 
     let sent = 0;
+    const failures: string[] = [];
     const allocations: any[] = [];
     for (const t of techs) {
       // Use the phone the technician registered with (fallback to whatsapp field).
       const to = t.phone || t.whatsapp;
-      if (!to) continue;
-      const waOk = await sendWhatsApp(to, msg, photos);
+      if (!to) {
+        failures.push(`${t.name ?? t.id}: no signup number saved`);
+        continue;
+      }
+      const wa = await sendWhatsApp(to, msg, photos);
       const smsBody =
         `🛞 Tyre Fly job ${job.id.slice(0, 6)} · ${job.postcode}\n` +
         `${job.issue_type ?? "tyre"}${job.tyre_size ? ` · ${job.tyre_size}` : ""} · ${wheels}` +
         (job.vehicle_reg ? ` · ${job.vehicle_reg}` : "") +
         (job.lat != null && job.lng != null ? `\nMap: https://maps.google.com/?q=${job.lat},${job.lng}` : "") +
         `\nIf WhatsApp doesn’t load, reply to this SMS with your postcode + price £ + ETA mins.`;
-      const smsOk = waOk ? false : await sendSMS(to, smsBody);
-      const ok = waOk || smsOk;
+      const sms = wa.ok ? { ok: false, channel: "sms" as const } : await sendSMS(to, smsBody);
+      const ok = wa.ok || sms.ok;
       if (ok) sent++;
+      if (!ok) {
+        failures.push(
+          `${t.name ?? t.id}: WA ${wa.code ?? "fail"}${wa.error ? ` (${wa.error})` : ""}; SMS ${sms.code ?? "fail"}${sms.error ? ` (${sms.error})` : ""}`,
+        );
+      }
       allocations.push({
         job_id,
         technician_id: t.id,
         status: ok ? "broadcast" : "send_failed",
         ai_reasoning:
           (mode === "all" ? "manual broadcast (all)" : "manual broadcast (specific)") +
-          ` · to=${to} wa=${waOk ? "ok" : "fail"} sms=${smsOk ? "ok" : "skip/fail"}`,
+          ` · to=${to}` +
+          ` wa=${wa.ok ? "ok" : `fail:${wa.code ?? "unknown"}`}` +
+          ` sms=${sms.ok ? "ok" : wa.ok ? "skip" : `fail:${sms.code ?? "unknown"}`}`,
       });
     }
 
@@ -149,14 +189,15 @@ Deno.serve(async (req) => {
       await supabase.from("ops_alerts").insert({
         level: "error",
         title: `Broadcast failed (${mode})`,
-        body: `No technician messages were delivered for job ${job_id.slice(0, 8)}. Check WhatsApp sender/channel configuration.`,
+        body: `No technician messages were delivered for job ${job_id.slice(0, 8)}. ${failures.slice(0, 3).join(" | ")}`,
         job_id,
       });
 
       return new Response(JSON.stringify({
-        error: "No technician messages were delivered. The technician signup numbers were used, but the current WhatsApp sender configuration rejected the dispatch.",
+        error: "No technician messages were delivered. The technician numbers were used, but the current message sender configuration rejected both WhatsApp and SMS.",
         sent,
         total: techs.length,
+        failures,
       }), {
         status: 502,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -176,7 +217,7 @@ Deno.serve(async (req) => {
       job_id,
     });
 
-    return new Response(JSON.stringify({ ok: true, sent, total: techs.length }), {
+    return new Response(JSON.stringify({ ok: true, sent, total: techs.length, failures }), {
       status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e: any) {
