@@ -972,6 +972,18 @@ Deno.serve(async (req) => {
         `Quote received ${timeNote}: £${parsed.price_gbp}, ETA ${parsed.eta_minutes} min${tyreNote}. We'll text when the customer chooses.`,
         channel,
       );
+
+      // Notify admin/operations console
+      const locNote = (tech.last_lat != null && tech.last_lng != null)
+        ? ` · 📍 https://maps.google.com/?q=${tech.last_lat},${tech.last_lng}`
+        : "";
+      await supabase.from("ops_alerts").insert({
+        level: "info",
+        title: `Tech quote — ${tech.name ?? "technician"}`,
+        body: `${tech.name ?? "Tech"} quoted £${parsed.price_gbp}, ETA ${parsed.eta_minutes} min${tyreNote} for job ${alloc.job_id.slice(0, 8)}${locNote}`,
+        job_id: alloc.job_id,
+      });
+
       return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
     }
 
