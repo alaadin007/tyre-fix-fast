@@ -155,18 +155,11 @@ Deno.serve(async (req) => {
         continue;
       }
       const wa = await sendWhatsApp(to, msg, photos);
-      const smsBody =
-        `🛞 Tyre Fly job ${job.id.slice(0, 6)} · ${job.postcode}\n` +
-        `${job.issue_type ?? "tyre"}${job.tyre_size ? ` · ${job.tyre_size}` : ""} · ${wheels}` +
-        (job.vehicle_reg ? ` · ${job.vehicle_reg}` : "") +
-        (job.lat != null && job.lng != null ? `\nMap: https://maps.google.com/?q=${job.lat},${job.lng}` : "") +
-        `\nIf WhatsApp doesn’t load, reply to this SMS with your postcode + price £ + ETA mins.`;
-      const sms = wa.ok ? { ok: false, channel: "sms" as const } : await sendSMS(to, smsBody);
-      const ok = wa.ok || sms.ok;
+      const ok = wa.ok;
       if (ok) sent++;
       if (!ok) {
         failures.push(
-          `${t.name ?? t.id}: WA ${wa.code ?? "fail"}${wa.error ? ` (${wa.error})` : ""}; SMS ${sms.code ?? "fail"}${sms.error ? ` (${sms.error})` : ""}`,
+          `${t.name ?? t.id}: WhatsApp ${wa.code ?? "fail"}${wa.error ? ` (${wa.error})` : ""}`,
         );
       }
       allocations.push({
@@ -175,9 +168,8 @@ Deno.serve(async (req) => {
         status: ok ? "broadcast" : "send_failed",
         ai_reasoning:
           (mode === "all" ? "manual broadcast (all)" : "manual broadcast (specific)") +
-          ` · to=${to}` +
-          ` wa=${wa.ok ? "ok" : `fail:${wa.code ?? "unknown"}`}` +
-          ` sms=${sms.ok ? "ok" : wa.ok ? "skip" : `fail:${sms.code ?? "unknown"}`}`,
+          ` · whatsapp to=${to}` +
+          ` wa=${wa.ok ? "ok" : `fail:${wa.code ?? "unknown"}`}`,
       });
     }
 
@@ -189,12 +181,12 @@ Deno.serve(async (req) => {
       await supabase.from("ops_alerts").insert({
         level: "error",
         title: `Broadcast failed (${mode})`,
-        body: `No technician messages were delivered for job ${job_id.slice(0, 8)}. ${failures.slice(0, 3).join(" | ")}`,
+        body: `No technician WhatsApp messages were delivered for job ${job_id.slice(0, 8)}. ${failures.slice(0, 3).join(" | ")}`,
         job_id,
       });
 
       return new Response(JSON.stringify({
-        error: "No technician messages were delivered. The technician numbers were used, but the current message sender configuration rejected both WhatsApp and SMS.",
+        error: "No technician WhatsApp messages were delivered. The technician numbers were used, but WhatsApp delivery was rejected.",
         sent,
         total: techs.length,
         failures,
