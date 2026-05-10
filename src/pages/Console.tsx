@@ -350,6 +350,10 @@ export default function Console() {
       {showAddTech && (
         <AddTechnicianModal onClose={() => setShowAddTech(false)} />
       )}
+
+      {showAllTechs && (
+        <AllTechniciansPanel onClose={() => setShowAllTechs(false)} />
+      )}
     </div>
   );
 }
