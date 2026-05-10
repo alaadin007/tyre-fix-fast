@@ -993,9 +993,12 @@ Deno.serve(async (req) => {
       "Tyre Fly here 👋 Send these in any order — text, photos or a voice note:\n\n" +
       "1. Name + 📍 location (pin or postcode)\n" +
       "2. Car (make, model, colour, reg)\n" +
-      "3. What happened + which wheel\n" +
-      "4. A couple of photos — tyre + wheel\n\n" +
-      "More detail = faster quote. 🛠️";
+      "3. What happened + which wheel — describe it in your own words (if you really don't know, just say \"not sure\")\n" +
+      "4. Photos:\n" +
+      "   • A FULL photo of the tyre/wheel (step back so the whole wheel is in frame — use flash if it's dark 🔦)\n" +
+      "   • A CLOSE-UP of the sidewall showing the size markings (e.g. 225/45 R17) so the tech brings the right tyre\n" +
+      "   • A close-up of the damage if you can see it\n\n" +
+      "More detail = faster, accurate quote. 🛠️";
 
     // Helpers for parsing follow-up intake messages
     const POSTCODE_RE = /\b([A-Z]{1,2}\d[A-Z\d]?)\s*(\d[A-Z]{2})\b/i;
@@ -1111,10 +1114,12 @@ Deno.serve(async (req) => {
       // Diagnostic depth: do we actually understand the problem?
       const finalIssueType = updates.issue_type ?? job.issue_type;
       const lowerDesc = finalDesc.toLowerCase();
+      const saidUnknown = /\b(no idea|not sure|don'?t know|dont know|dunno|unsure|no clue)\b/i.test(lowerDesc);
       const hasContext =
         /(nail|screw|slow|fast|sudden|drove|driving|park|kerb|pothole|bulge|split|crack|flat overnight|lost.*key|valve|leak)/i.test(lowerDesc) ||
-        lowerDesc.length > 60;
-      const diagnosisOk = finalPhotos.length > 0 || (finalIssueType && finalIssueType !== "unknown" && hasContext);
+        lowerDesc.length > 60 ||
+        saidUnknown;
+      const diagnosisOk = finalPhotos.length > 0 || (finalIssueType && finalIssueType !== "unknown" && hasContext) || (saidUnknown && finalPhotos.length > 0);
 
       // Reg + at least one wheel position are now required before dispatch
       if (haveName && havePostcode && haveDetails && diagnosisOk && finalReg && finalWheels.length > 0) {
@@ -1166,7 +1171,12 @@ Deno.serve(async (req) => {
       } else if (!havePostcode) {
         reply = `Thanks ${(updates.customer_name ?? job.customer_name)}! 📍 Could you share your postcode/ZIP, or drop a Maps location pin?`;
       } else if (finalPhotos.length === 0) {
-        reply = "Got it. Could you send a quick photo of the damaged tyre/wheel — sidewall + tread close-up if possible? 📸";
+        reply =
+          "Could you send a few photos? 📸\n" +
+          "1) FULL photo of the tyre/wheel — step back so the whole wheel is in frame (use flash 🔦 if it's dark)\n" +
+          "2) CLOSE-UP of the sidewall showing the size markings (e.g. 225/45 R17)\n" +
+          "3) Close-up of the damage if visible\n\n" +
+          "This helps the technician bring the right tyre & tools first time.";
       } else if (!finalReg) {
         reply = "Thanks for the photo! What's the car's number plate? You can type it (e.g. AB12 CDE) or snap a photo of the plate.";
       } else if (!haveVehicleDesc) {
@@ -1175,7 +1185,10 @@ Deno.serve(async (req) => {
         reply = "Which wheel is affected? Front-left, front-right, rear-left, or rear-right (multiple is fine — voice note works too).";
       } else if (!diagnosisOk) {
         if (!finalIssueType || finalIssueType === "unknown") {
-          reply = "Last thing — what do YOU think happened? Slow puncture, blowout, sidewall bulge, nail in it, or locked wheel?";
+          reply =
+            "Last thing — can you tell me what happened, in your own words? 🛞\n" +
+            "Even a quick voice note is perfect (e.g. \"hit a kerb last night\", \"flat this morning\", \"nail in it\").\n" +
+            "If you genuinely don't know, just reply \"not sure\" and we'll go from the photos.";
         } else {
           reply =
             `You mentioned ${finalIssueType}. Two quick things so the technician arrives prepared:\n` +
