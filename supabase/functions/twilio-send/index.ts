@@ -33,6 +33,40 @@ function normalizePhone(raw: string): string {
   return cleaned;
 }
 
+async function sendViaTwilioDirect(args: {
+  to: string;
+  body: string;
+  channel: "sms" | "whatsapp";
+  mediaUrls?: string[];
+}) {
+  const accountSid = Deno.env.get("TWILIO_ACCOUNT_SID");
+  const authToken = Deno.env.get("TWILIO_AUTH_TOKEN");
+  if (!accountSid || !authToken) {
+    return { ok: false, status: 500, data: { message: "Direct Twilio credentials are not configured" }, fromBase: null };
+  }
+
+  const fromBase = args.channel === "whatsapp" ? FROM_WHATSAPP : FROM_SMS;
+  const toNormalized = normalizePhone(args.to);
+  const fromNormalized = normalizePhone(fromBase);
+  const To = args.channel === "whatsapp" ? `whatsapp:${toNormalized}` : toNormalized;
+  const From = args.channel === "whatsapp" ? `whatsapp:${fromNormalized}` : fromNormalized;
+  const form = new URLSearchParams({ To, From, Body: args.body });
+  for (const mediaUrl of args.mediaUrls ?? []) form.append("MediaUrl", mediaUrl);
+
+  const auth = btoa(`${accountSid}:${authToken}`);
+  const tw = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`, {
+    method: "POST",
+    headers: {
+      Authorization: `Basic ${auth}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: form,
+  });
+
+  const data = await tw.json();
+  return { ok: tw.ok, status: tw.status, data, fromBase };
+}
+
 async function sendViaTwilio(args: {
   to: string;
   body: string;
@@ -161,7 +195,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const twilioSms = await sendViaTwilio({
+    let twilioSms = await sendViaTwilio({
       to,
       body,
       channel,
@@ -169,6 +203,13 @@ Deno.serve(async (req) => {
       lovableApiKey: LOVABLE_API_KEY,
       twilioApiKey: TWILIO_API_KEY,
     });
+    if (!twilioSms.ok && channel === "sms") {
+      const code = Number(twilioSms.data?.code ?? 0);
+      if (code === 21663 || code === 20422) {
+        console.error("gateway sms send failed, retrying direct twilio", twilioSms.status, twilioSms.data);
+        twilioSms = await sendViaTwilioDirect({ to, body, channel, mediaUrls: media_urls });
+      }
+    }
     if (!twilioSms.ok) {
       const twilioErr = formatProviderError(twilioSms.data, "Twilio send failed");
       console.error("twilio send failed", twilioSms.status, twilioSms.data);
