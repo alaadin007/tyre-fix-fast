@@ -1038,7 +1038,9 @@ Deno.serve(async (req) => {
       if (/lock|locking/.test(s)) return "locked wheel";
       if (/flat|deflat/.test(s)) return "flat tyre";
       if (/punct|nail|screw/.test(s)) return "puncture";
-      if (/sidewall|bulge/.test(s)) return "sidewall damage";
+      if (/sidewall|bulge|buckl/.test(s)) return "sidewall damage";
+      if (/kerb|curb|pothole|hit|impact|crash|bump/.test(s)) return "impact damage";
+      if (/pressure|leak|valve|going down|deflating/.test(s)) return "slow leak";
       return null;
     };
     // Number plate (international) — accept letter+digit combos 4–10 chars.
