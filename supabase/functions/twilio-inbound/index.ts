@@ -760,7 +760,8 @@ Deno.serve(async (req) => {
           await sendReply(
             from,
             "👋 Welcome to Tyre Fly! I'll get you set up here on WhatsApp — no website needed.\n\n" +
-              "I'll need: your full name, the areas you cover (postcodes/ZIPs/cities), your vehicle, a 📍live location pin, equipment photo, and photos of your insurance, ID, and public liability docs.\n\n" +
+              "To submit your application I just need 4 quick things: your full name, the areas you cover (postcodes/ZIPs/cities), your vehicle, and your max travel radius.\n\n" +
+              "After that, you can also send (anytime — even after submitting): a 📍live location pin, equipment photo, and photos of your insurance, ID & public liability docs. Admin will follow up if anything else is needed.\n\n" +
               "Let's start — what's your full name?",
             channel,
           );
