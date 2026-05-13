@@ -305,6 +305,7 @@ async function aiExtractTechProfile(args: {
   current: any;
 }): Promise<{
   name: string | null;
+  email: string | null;
   service_postcodes: string[] | null;
   vehicle: string | null;
   travel_radius_miles: number | null;
@@ -317,7 +318,7 @@ async function aiExtractTechProfile(args: {
   const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
   if (!LOVABLE_API_KEY) {
     return {
-      name: null, service_postcodes: null, vehicle: null, travel_radius_miles: null,
+      name: null, email: null, service_postcodes: null, vehicle: null, travel_radius_miles: null,
       weekly_schedule: null, availability_summary: null, media_classification: null,
       reply: "Thanks — we'll be in touch.", ready_for_review: false,
     };
@@ -325,7 +326,7 @@ async function aiExtractTechProfile(args: {
   const sys =
     "You are Tyre Fly's onboarding agent. You're chatting with a mobile-tyre technician applying to join. " +
     "Be warm, brief, one short message at a time. " +
-    "MANDATORY items (must collect before submitting for review): full name, service area, vehicle (make/model/year), travel radius (accept km — convert to miles, 1 km = 0.621 miles, round to nearest int). " +
+    "MANDATORY items (must collect before submitting for review): full name, email address, service area, vehicle (make/model/year), travel radius (accept km — convert to miles, 1 km = 0.621 miles, round to nearest int). " +
     "OPTIONAL items (collect as many as possible, but do NOT block review on them): weekly availability, live location pin (📍), equipment/vehicle photo, insurance doc photo, driving licence / ID doc photo, public liability doc photo. " +
     "COLLECTION ORDER: First, ask for any missing MANDATORY items one at a time. Once all mandatory items are in, KEEP GOING and ask for missing OPTIONAL items one at a time (in the order listed above) so we capture as much as possible up front. Any extra information the tech volunteers should also be stored. " +
     "SERVICE AREA RULES: Accept ANY answer the tech gives — UK postcodes (W5, SW1A), US ZIPs, Canadian postcodes, city/town/borough names ('West London', 'Manchester'), regions ('M25 area', 'North London'), or a mix. ALWAYS put their answer into service_postcodes as one or more string entries — never leave it null/empty if they have answered. Do NOT reformat or 'correct' what they wrote; pass it through as given. " +
@@ -338,6 +339,7 @@ async function aiExtractTechProfile(args: {
   const user =
     `Conversation so far:\n${args.history}\n\n` +
     `Already collected: name=${args.current.name ?? "?"}, ` +
+    `email=${args.current.email ?? "?"}, ` +
     `service_postcodes=${JSON.stringify(args.current.service_postcodes ?? [])}, ` +
     `vehicle=${args.current.vehicle ?? "?"}, ` +
     `travel_radius_miles=${args.current.travel_radius_miles ?? "?"}, ` +
@@ -363,6 +365,7 @@ async function aiExtractTechProfile(args: {
               type: "object",
               properties: {
                 name: { type: ["string", "null"] },
+                email: { type: ["string", "null"] },
                 service_postcodes: { type: ["array", "null"], items: { type: "string" } },
                 vehicle: { type: ["string", "null"] },
                 travel_radius_miles: { type: ["integer", "null"] },
@@ -385,12 +388,13 @@ async function aiExtractTechProfile(args: {
     });
     if (!r.ok) {
       console.error("aiExtractTechProfile failed", r.status, await r.text());
-      return { name: null, service_postcodes: null, vehicle: null, travel_radius_miles: null, weekly_schedule: null, availability_summary: null, media_classification: null, reply: "Got it — what's next?", ready_for_review: false };
+      return { name: null, email: null, service_postcodes: null, vehicle: null, travel_radius_miles: null, weekly_schedule: null, availability_summary: null, media_classification: null, reply: "Got it — what's next?", ready_for_review: false };
     }
     const j = await r.json();
     const a = JSON.parse(j.choices[0].message.tool_calls[0].function.arguments);
     return {
       name: a.name ?? null,
+      email: a.email ?? null,
       service_postcodes: a.service_postcodes ?? null,
       vehicle: a.vehicle ?? null,
       travel_radius_miles: a.travel_radius_miles ?? null,
@@ -402,7 +406,7 @@ async function aiExtractTechProfile(args: {
     };
   } catch (e) {
     console.error("aiExtractTechProfile error", e);
-    return { name: null, service_postcodes: null, vehicle: null, travel_radius_miles: null, weekly_schedule: null, availability_summary: null, media_classification: null, reply: "Got it — what's next?", ready_for_review: false };
+    return { name: null, email: null, service_postcodes: null, vehicle: null, travel_radius_miles: null, weekly_schedule: null, availability_summary: null, media_classification: null, reply: "Got it — what's next?", ready_for_review: false };
   }
 }
 
@@ -772,6 +776,8 @@ Deno.serve(async (req) => {
               whatsapp: from,
               approval_status: "intake",
               active: false,
+              travel_radius_miles: null,
+              email: null,
             })
             .select("*")
             .single();
@@ -785,7 +791,7 @@ Deno.serve(async (req) => {
           await sendReply(
             from,
             "👋 Welcome to Tyre Fly! I'll get you set up here on WhatsApp — no website needed.\n\n" +
-              "To submit your application I just need 4 quick things: your full name, the areas you cover (postcodes/ZIPs/cities), your vehicle, and your max travel radius.\n\n" +
+              "To submit your application I just need 5 quick things: your full name, email address, the areas you cover (postcodes/ZIPs/cities), your vehicle, and your max travel radius.\n\n" +
               "After that, you can also send (anytime — even after submitting): a 📍live location pin, equipment photo, and photos of your insurance, ID & public liability docs. Admin will follow up if anything else is needed.\n\n" +
               "Let's start — what's your full name?",
             channel,
@@ -820,6 +826,7 @@ Deno.serve(async (req) => {
 
         const updates: Record<string, any> = { updated_at: new Date().toISOString() };
         if (ai.name && (!row.name || row.name === "Pending applicant")) updates.name = ai.name;
+        if (ai.email && !row.email) updates.email = ai.email;
         if (ai.service_postcodes?.length) updates.service_postcodes = ai.service_postcodes;
         if (ai.vehicle && !row.vehicle) updates.vehicle = ai.vehicle;
         if (ai.travel_radius_miles && ai.travel_radius_miles > 0) updates.travel_radius_miles = ai.travel_radius_miles;
@@ -856,6 +863,7 @@ Deno.serve(async (req) => {
         const merged = { ...row, ...updates };
         const complete =
           merged.name && merged.name !== "Pending applicant" &&
+          merged.email &&
           (merged.service_postcodes?.length ?? 0) > 0 &&
           merged.vehicle &&
           (merged.travel_radius_miles ?? 0) > 0;
