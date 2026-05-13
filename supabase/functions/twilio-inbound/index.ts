@@ -826,6 +826,7 @@ Deno.serve(async (req) => {
 
         const updates: Record<string, any> = { updated_at: new Date().toISOString() };
         if (ai.name && (!row.name || row.name === "Pending applicant")) updates.name = ai.name;
+        if (ai.email && !row.email) updates.email = ai.email;
         if (ai.service_postcodes?.length) updates.service_postcodes = ai.service_postcodes;
         if (ai.vehicle && !row.vehicle) updates.vehicle = ai.vehicle;
         if (ai.travel_radius_miles && ai.travel_radius_miles > 0) updates.travel_radius_miles = ai.travel_radius_miles;
