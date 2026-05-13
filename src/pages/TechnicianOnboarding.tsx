@@ -11,7 +11,7 @@ import { useAuthSession } from "@/hooks/useTechnicianAuth";
 
 const schema = z.object({
   name: z.string().trim().min(2).max(100),
-  whatsapp: z.string().trim().max(20).optional().or(z.literal("")),
+  whatsapp: z.string().trim().min(7, "WhatsApp number is required").max(20),
   email: z.string().trim().email().max(255).optional().or(z.literal("")),
   vehicle: z.string().trim().max(100).optional().or(z.literal("")),
   service_postcodes: z.string().trim().min(1, "Add at least one postcode area"),
