@@ -318,7 +318,7 @@ async function aiExtractTechProfile(args: {
   const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
   if (!LOVABLE_API_KEY) {
     return {
-      name: null, service_postcodes: null, vehicle: null, travel_radius_miles: null,
+      name: null, email: null, service_postcodes: null, vehicle: null, travel_radius_miles: null,
       weekly_schedule: null, availability_summary: null, media_classification: null,
       reply: "Thanks — we'll be in touch.", ready_for_review: false,
     };
