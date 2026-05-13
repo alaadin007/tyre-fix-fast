@@ -772,6 +772,8 @@ Deno.serve(async (req) => {
               whatsapp: from,
               approval_status: "intake",
               active: false,
+              travel_radius_miles: null,
+              email: null,
             })
             .select("*")
             .single();
