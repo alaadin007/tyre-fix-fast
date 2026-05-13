@@ -562,7 +562,7 @@ Deno.serve(async (req) => {
       }
 
       // APPROVE / REJECT
-      const apMatch = trimmed.match(/^\s*(approve|reject)\s+(\S+)\s*(.*)$/i);
+      const apMatch = trimmed.match(/^\s*(approve|reject)d?\s+(\S+)\s*(.*)$/i);
       if (apMatch) {
         const action = apMatch[1].toLowerCase();
         const idOrPhone = apMatch[2];
