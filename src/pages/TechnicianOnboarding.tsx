@@ -115,7 +115,7 @@ export default function TechnicianOnboarding() {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label htmlFor="whatsapp">WhatsApp</Label>
+              <Label htmlFor="whatsapp">WhatsApp *</Label>
               <Input id="whatsapp" value={form.whatsapp} onChange={(e) => set("whatsapp", e.target.value)} placeholder="+44…" className="bg-black/40 border-white/10" />
             </div>
             <div>
