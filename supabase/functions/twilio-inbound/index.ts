@@ -567,10 +567,23 @@ Deno.serve(async (req) => {
         const action = apMatch[1].toLowerCase();
         const idOrPhone = apMatch[2];
         const reason = apMatch[3]?.trim() || null;
-        let q = supabase.from("technicians").select("id,name,phone,approval_status");
-        if (idOrPhone.startsWith("+")) q = q.eq("phone", idOrPhone);
-        else q = q.ilike("id", `${idOrPhone}%`);
-        const { data: matches } = await q.limit(2);
+        let matches: any[] | null = null;
+        if (idOrPhone.startsWith("+")) {
+          const { data } = await supabase
+            .from("technicians")
+            .select("id,name,phone,approval_status")
+            .eq("phone", idOrPhone)
+            .limit(2);
+          matches = data;
+        } else {
+          // id is uuid — ilike doesn't work without cast. Use PostgREST cast filter.
+          const { data } = await supabase
+            .from("technicians")
+            .select("id,name,phone,approval_status")
+            .filter("id::text", "ilike", `${idOrPhone.toLowerCase()}%`)
+            .limit(2);
+          matches = data;
+        }
         if (!matches || matches.length === 0) {
           await sendReply(from, `No technician found for "${idOrPhone}". Try PENDING.`, channel);
         } else if (matches.length > 1) {
