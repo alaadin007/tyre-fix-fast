@@ -826,17 +826,15 @@ Deno.serve(async (req) => {
           if (equipment.length) updates.equipment_photo_urls = equipment.slice(0, 8);
         }
 
-        // Decide if we have everything
+        // Decide if we have everything MANDATORY (optional items don't block review)
         const merged = { ...row, ...updates };
         const complete =
           merged.name && merged.name !== "Pending applicant" &&
           (merged.service_postcodes?.length ?? 0) > 0 &&
           merged.vehicle &&
-          merged.last_lat !== null && merged.last_lng !== null &&
-          (merged.equipment_photo_urls?.length ?? 0) > 0 &&
-          merged.insurance_doc_url && merged.id_doc_url && merged.public_liability_doc_url;
+          (merged.travel_radius_miles ?? 0) > 0;
 
-        if (complete || ai.ready_for_review) {
+        if ((complete || ai.ready_for_review) && row.approval_status !== "pending" && row.approval_status !== "approved" && row.approval_status !== "rejected") {
           updates.approval_status = "pending"; // fires admin notification trigger
         }
 
