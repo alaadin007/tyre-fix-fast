@@ -388,12 +388,13 @@ async function aiExtractTechProfile(args: {
     });
     if (!r.ok) {
       console.error("aiExtractTechProfile failed", r.status, await r.text());
-      return { name: null, service_postcodes: null, vehicle: null, travel_radius_miles: null, weekly_schedule: null, availability_summary: null, media_classification: null, reply: "Got it — what's next?", ready_for_review: false };
+      return { name: null, email: null, service_postcodes: null, vehicle: null, travel_radius_miles: null, weekly_schedule: null, availability_summary: null, media_classification: null, reply: "Got it — what's next?", ready_for_review: false };
     }
     const j = await r.json();
     const a = JSON.parse(j.choices[0].message.tool_calls[0].function.arguments);
     return {
       name: a.name ?? null,
+      email: a.email ?? null,
       service_postcodes: a.service_postcodes ?? null,
       vehicle: a.vehicle ?? null,
       travel_radius_miles: a.travel_radius_miles ?? null,
@@ -405,7 +406,7 @@ async function aiExtractTechProfile(args: {
     };
   } catch (e) {
     console.error("aiExtractTechProfile error", e);
-    return { name: null, service_postcodes: null, vehicle: null, travel_radius_miles: null, weekly_schedule: null, availability_summary: null, media_classification: null, reply: "Got it — what's next?", ready_for_review: false };
+    return { name: null, email: null, service_postcodes: null, vehicle: null, travel_radius_miles: null, weekly_schedule: null, availability_summary: null, media_classification: null, reply: "Got it — what's next?", ready_for_review: false };
   }
 }
 
