@@ -666,7 +666,15 @@ Deno.serve(async (req) => {
 
       const joinPhrase = TECH_JOIN_RE.test(body);
       const customerHelp = CUSTOMER_HELP_RE.test(body);
-      const inIntake = existingByPhone?.approval_status === "intake";
+      // Continue routing through the onboarding agent while the application is
+      // still in `intake` (mandatory data being collected) OR `pending` (mandatory
+      // submitted, optional items like insurance/ID/equipment photos still being
+      // gathered). Without `pending` here, the next inbound message after the
+      // mandatory-complete flip falls through to the CUSTOMER intake flow and
+      // the tech sees "Step 1 of 4 — Your location" instead of an onboarding reply.
+      const inIntake =
+        existingByPhone?.approval_status === "intake" ||
+        existingByPhone?.approval_status === "pending";
       const status = existingByPhone?.approval_status;
 
       // If they're mid-onboarding or already a tech but this message is clearly
