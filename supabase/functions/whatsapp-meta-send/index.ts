@@ -10,7 +10,7 @@ const corsHeaders = {
 
 const BodySchema = z.object({
   to: z.string().trim().min(7).max(20),
-  body: z.string().trim().min(1).max(4096).optional().default(""),
+  body: z.string().trim().max(4096).optional().default(""),
   media_urls: z.array(z.string().url()).max(10).optional(),
   template: z.object({
     name: z.string().min(1),
