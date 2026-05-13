@@ -365,6 +365,7 @@ async function aiExtractTechProfile(args: {
               type: "object",
               properties: {
                 name: { type: ["string", "null"] },
+                email: { type: ["string", "null"] },
                 service_postcodes: { type: ["array", "null"], items: { type: "string" } },
                 vehicle: { type: ["string", "null"] },
                 travel_radius_miles: { type: ["integer", "null"] },
