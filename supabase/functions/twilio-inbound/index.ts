@@ -324,10 +324,15 @@ async function aiExtractTechProfile(args: {
   }
   const sys =
     "You are Tyre Fly's onboarding agent. You're chatting with a mobile-tyre technician applying to join. " +
-    "Be warm, brief, one short message at a time. Collect: full name, service area, vehicle (make/model/year), travel radius (accept km — convert to miles, 1 km = 0.621 miles, round to nearest int), weekly availability (free text → JSON like {mon:'9-6', tue:'9-6', sat:'off'}), live location pin (📍), equipment photo, insurance doc photo, ID doc photo, public liability doc photo. " +
+    "Be warm, brief, one short message at a time. " +
+    "MANDATORY items (must collect before submitting for review): full name, service area, vehicle (make/model/year), travel radius (accept km — convert to miles, 1 km = 0.621 miles, round to nearest int). " +
+    "OPTIONAL items (nice-to-have, do NOT block review): weekly availability, live location pin (📍), equipment photo, insurance doc photo, ID doc photo, public liability doc photo. " +
     "SERVICE AREA RULES: Accept ANY answer the tech gives — UK postcodes (W5, SW1A), US ZIPs, Canadian postcodes, city/town/borough names ('West London', 'Manchester'), regions ('M25 area', 'North London'), or a mix. ALWAYS put their answer into service_postcodes as one or more string entries — never leave it null/empty if they have answered. Do NOT reformat or 'correct' what they wrote; pass it through as given. " +
     "CRITICAL — DO NOT REPEAT QUESTIONS: The conversation history is the source of truth. If the tech already answered an item in any previous message (even loosely, even if the structured 'Already collected' field below still looks empty because extraction missed it), DO NOT ask for it again. Re-extract it from history into the correct field this turn, then move on to the next genuinely-missing item. " +
-    "Ask for the NEXT missing item only. When everything is collected, set ready_for_review=true and reply confirming review. " +
+    "DEFERRAL RULES: If the tech says they will provide an item 'later', 'soon', 'after some time', 'don't have it now', 'will send tomorrow', etc.: " +
+    "  • If it's a MANDATORY item — politely explain you need it now to submit their application, and ask again. " +
+    "  • If it's an OPTIONAL item — accept the deferral, do NOT ask again, and move on to the next missing MANDATORY item. " +
+    "SUBMISSION RULES: As soon as ALL MANDATORY items are collected, set ready_for_review=true and reply confirming the application has been submitted to admin for review (mention any optional items they can still send later — admin will follow up if anything else is needed). Do NOT keep asking for optional items once mandatory items are complete. " +
     "If the latest message has media, classify EACH attachment as one of insurance|id|public_liability|equipment|other based on context (what they were last asked for, or what they say). Return one entry per attachment in media_classification array, in order.";
   const user =
     `Conversation so far:\n${args.history}\n\n` +
@@ -755,7 +760,8 @@ Deno.serve(async (req) => {
           await sendReply(
             from,
             "👋 Welcome to Tyre Fly! I'll get you set up here on WhatsApp — no website needed.\n\n" +
-              "I'll need: your full name, the areas you cover (postcodes/ZIPs/cities), your vehicle, a 📍live location pin, equipment photo, and photos of your insurance, ID, and public liability docs.\n\n" +
+              "To submit your application I just need 4 quick things: your full name, the areas you cover (postcodes/ZIPs/cities), your vehicle, and your max travel radius.\n\n" +
+              "After that, you can also send (anytime — even after submitting): a 📍live location pin, equipment photo, and photos of your insurance, ID & public liability docs. Admin will follow up if anything else is needed.\n\n" +
               "Let's start — what's your full name?",
             channel,
           );
@@ -821,17 +827,15 @@ Deno.serve(async (req) => {
           if (equipment.length) updates.equipment_photo_urls = equipment.slice(0, 8);
         }
 
-        // Decide if we have everything
+        // Decide if we have everything MANDATORY (optional items don't block review)
         const merged = { ...row, ...updates };
         const complete =
           merged.name && merged.name !== "Pending applicant" &&
           (merged.service_postcodes?.length ?? 0) > 0 &&
           merged.vehicle &&
-          merged.last_lat !== null && merged.last_lng !== null &&
-          (merged.equipment_photo_urls?.length ?? 0) > 0 &&
-          merged.insurance_doc_url && merged.id_doc_url && merged.public_liability_doc_url;
+          (merged.travel_radius_miles ?? 0) > 0;
 
-        if (complete || ai.ready_for_review) {
+        if ((complete || ai.ready_for_review) && row.approval_status !== "pending" && row.approval_status !== "approved" && row.approval_status !== "rejected") {
           updates.approval_status = "pending"; // fires admin notification trigger
         }
 
