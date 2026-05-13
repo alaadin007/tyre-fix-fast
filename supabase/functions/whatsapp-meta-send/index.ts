@@ -33,7 +33,7 @@ Deno.serve(async (req) => {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    const { to, body, media_urls } = parsed.data;
+    const { to, body, media_urls, template } = parsed.data;
     const toClean = to.replace(/^whatsapp:/, "").replace(/[^\d+]/g, "");
     const toNum = toClean.replace(/^\+/, "");
 
@@ -50,7 +50,19 @@ Deno.serve(async (req) => {
     const results: any[] = [];
     const images = media_urls ?? [];
 
-    if (images.length > 0) {
+    if (template) {
+      const components = template.body_params && template.body_params.length > 0
+        ? [{ type: "body", parameters: template.body_params.map((t) => ({ type: "text", text: String(t) })) }]
+        : [];
+      results.push(await sendOne({
+        type: "template",
+        template: {
+          name: template.name,
+          language: { code: template.language },
+          ...(components.length ? { components } : {}),
+        },
+      }));
+    } else if (images.length > 0) {
       // First image carries the caption (body); remainder send as bare images.
       for (let i = 0; i < images.length; i++) {
         const caption = i === 0 && body ? body.slice(0, 1024) : undefined;
