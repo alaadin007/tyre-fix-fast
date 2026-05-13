@@ -339,6 +339,7 @@ async function aiExtractTechProfile(args: {
   const user =
     `Conversation so far:\n${args.history}\n\n` +
     `Already collected: name=${args.current.name ?? "?"}, ` +
+    `email=${args.current.email ?? "?"}, ` +
     `service_postcodes=${JSON.stringify(args.current.service_postcodes ?? [])}, ` +
     `vehicle=${args.current.vehicle ?? "?"}, ` +
     `travel_radius_miles=${args.current.travel_radius_miles ?? "?"}, ` +
