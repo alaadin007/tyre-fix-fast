@@ -576,13 +576,16 @@ Deno.serve(async (req) => {
             .limit(2);
           matches = data;
         } else {
-          // id is uuid — ilike doesn't work without cast. Use PostgREST cast filter.
+          const prefix = idOrPhone.toLowerCase();
           const { data } = await supabase
             .from("technicians")
-            .select("id,name,phone,approval_status")
-            .filter("id::text", "ilike", `${idOrPhone.toLowerCase()}%`)
-            .limit(2);
-          matches = data;
+            .select("id,name,phone,approval_status,created_at")
+            .order("created_at", { ascending: false })
+            .limit(200);
+          matches = (data ?? [])
+            .filter((tech: any) => String(tech.id).toLowerCase().startsWith(prefix))
+            .map(({ created_at: _createdAt, ...tech }: any) => tech)
+            .slice(0, 2);
         }
         if (!matches || matches.length === 0) {
           await sendReply(from, `No technician found for "${idOrPhone}". Try PENDING.`, channel);
