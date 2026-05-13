@@ -1,4 +1,8 @@
-// Broadcast a WhatsApp/SMS message to every master admin number in app_settings.
+// Broadcast a notification to every master admin number in app_settings.
+// Supports two modes:
+//   1) Free-text body  → sent via twilio-send (legacy SMS / WhatsApp session messages).
+//   2) event:"new_tech_application" → sent via whatsapp-meta-send using the
+//      Meta-approved template "new_technician_application_alert" (en_GB).
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { z } from "https://esm.sh/zod@3.23.8";
 
@@ -8,27 +12,68 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const BodySchema = z.object({
-  body: z.string().trim().min(1).max(1500),
-  channel: z.enum(["sms", "whatsapp"]).default("whatsapp"),
-});
+const TEMPLATE_NAME = "new_technician_application_alert";
+const TEMPLATE_LANG = "en_GB";
+
+const BodySchema = z.union([
+  z.object({
+    event: z.literal("new_tech_application"),
+    technician_id: z.string().uuid(),
+  }),
+  z.object({
+    body: z.string().trim().min(1).max(1500),
+    channel: z.enum(["sms", "whatsapp"]).default("whatsapp"),
+  }),
+]);
+
+function buildTemplateParams(t: any): string[] {
+  const idPrefix = String(t.id).slice(0, 6);
+  const docs: string[] = [];
+  if (t.id_doc_url) docs.push("ID");
+  if (t.insurance_doc_url) docs.push("Insurance");
+  if (t.public_liability_doc_url) docs.push("Public Liability");
+  if (Array.isArray(t.equipment_photo_urls) && t.equipment_photo_urls.length > 0) docs.push("Equipment photos");
+
+  const missing: string[] = [];
+  if (!t.email) missing.push("Email");
+  if (!t.vehicle) missing.push("Vehicle");
+  if (!t.id_doc_url) missing.push("ID");
+  if (!t.insurance_doc_url) missing.push("Insurance");
+  if (!t.public_liability_doc_url) missing.push("Public Liability");
+  if (!Array.isArray(t.equipment_photo_urls) || t.equipment_photo_urls.length === 0) missing.push("Equipment photos");
+  if (!t.weekly_schedule || Object.keys(t.weekly_schedule || {}).length === 0) missing.push("Weekly schedule");
+
+  const postcodes = Array.isArray(t.service_postcodes) ? t.service_postcodes.join(", ") : "";
+
+  return [
+    t.name || "—",                                    // {{1}}
+    t.phone || "—",                                   // {{2}}
+    t.email || "Not provided",                        // {{3}}
+    t.vehicle || "Not provided",                      // {{4}}
+    postcodes || "Not provided",                      // {{5}}
+    String(t.travel_radius_miles ?? "—"),             // {{6}}
+    docs.length ? docs.join(", ") : "None",           // {{7}}
+    missing.length ? missing.join(", ") : "None",     // {{8}}
+    idPrefix,                                         // {{9}}
+    idPrefix,                                         // {{10}}
+  ];
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   try {
     const parsed = BodySchema.safeParse(await req.json());
     if (!parsed.success) {
-      return new Response(JSON.stringify({ error: parsed.error.flatten().fieldErrors }), {
+      return new Response(JSON.stringify({ error: parsed.error.flatten() }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    const { body, channel } = parsed.data;
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-    );
+    const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+    const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
+
     const { data: setting } = await supabase
       .from("app_settings")
       .select("value")
@@ -41,13 +86,54 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Branch 1: Meta-approved template for new technician applications.
+    if ("event" in parsed.data) {
+      const { data: tech, error: techErr } = await supabase
+        .from("technicians")
+        .select("*")
+        .eq("id", parsed.data.technician_id)
+        .maybeSingle();
+      if (techErr || !tech) {
+        return new Response(JSON.stringify({ error: "technician not found" }), {
+          status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const body_params = buildTemplateParams(tech);
+
+      const results = await Promise.allSettled(
+        numbers.map((to) =>
+          fetch(`${SUPABASE_URL}/functions/v1/whatsapp-meta-send`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${SERVICE_KEY}`,
+            },
+            body: JSON.stringify({
+              to,
+              template: { name: TEMPLATE_NAME, language: TEMPLATE_LANG, body_params },
+            }),
+          }).then(async (r) => ({ ok: r.ok, status: r.status, data: await r.json().catch(() => null) })),
+        ),
+      );
+      const sent = results.filter((r) => r.status === "fulfilled" && (r.value as any).ok).length;
+      const errors = results
+        .map((r) => r.status === "fulfilled" ? (r.value as any) : { ok: false, error: (r as any).reason?.message })
+        .filter((r) => !r.ok);
+      if (errors.length) console.error("notify-admins template errors", JSON.stringify(errors));
+      return new Response(JSON.stringify({ ok: true, sent, total: numbers.length, errors }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Branch 2: legacy free-text body via twilio-send.
+    const { body, channel } = parsed.data;
     const results = await Promise.allSettled(
       numbers.map((to) =>
-        fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/twilio-send`, {
+        fetch(`${SUPABASE_URL}/functions/v1/twilio-send`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+            Authorization: `Bearer ${SERVICE_KEY}`,
           },
           body: JSON.stringify({ to, body, channel }),
         }),
