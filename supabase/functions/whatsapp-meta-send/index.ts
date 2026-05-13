@@ -12,6 +12,11 @@ const BodySchema = z.object({
   to: z.string().trim().min(7).max(20),
   body: z.string().trim().min(1).max(4096).optional().default(""),
   media_urls: z.array(z.string().url()).max(10).optional(),
+  template: z.object({
+    name: z.string().min(1),
+    language: z.string().min(2).default("en_GB"),
+    body_params: z.array(z.string()).max(20).optional(),
+  }).optional(),
 });
 
 Deno.serve(async (req) => {
