@@ -863,6 +863,7 @@ Deno.serve(async (req) => {
         const merged = { ...row, ...updates };
         const complete =
           merged.name && merged.name !== "Pending applicant" &&
+          merged.email &&
           (merged.service_postcodes?.length ?? 0) > 0 &&
           merged.vehicle &&
           (merged.travel_radius_miles ?? 0) > 0;
