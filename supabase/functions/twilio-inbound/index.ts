@@ -305,6 +305,7 @@ async function aiExtractTechProfile(args: {
   current: any;
 }): Promise<{
   name: string | null;
+  email: string | null;
   service_postcodes: string[] | null;
   vehicle: string | null;
   travel_radius_miles: number | null;
