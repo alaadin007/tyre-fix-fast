@@ -816,6 +816,38 @@ Deno.serve(async (req) => {
             });
             return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
           }
+        } else if (
+          joinPhrase &&
+          row.approval_status === "intake" &&
+          (!row.name || row.name === "Pending applicant") &&
+          !mediaUrls.length &&
+          !coords
+        ) {
+          // Existing intake row with no progress yet + clear join phrase
+          // (e.g. they restarted the chat). Re-send the canonical welcome and
+          // stop, so the AI extractor doesn't reply with a one-line greeting.
+          await sendReply(
+            from,
+            "👋 Welcome to Tyre Fly! I'll get you set up here on WhatsApp — no website needed.\n\n" +
+              "To submit your application I just need 5 quick things: your full name, email address, the areas you cover (postcodes/ZIPs/cities), your vehicle, and your max travel radius.\n\n" +
+              "After that, you can also send (anytime — even after submitting): a 📍live location pin, equipment photo, and photos of your insurance, ID & public liability docs. Admin will follow up if anything else is needed.\n\n" +
+              "Let's start — what's your full name?",
+            channel,
+          );
+          await logOnboarding(supabase, {
+            technician_id: row.id,
+            phone: from,
+            channel,
+            inbound_body: body,
+            has_media: false,
+            media_count: 0,
+            detected_intent: "join_request",
+            prior_status: "intake",
+            next_status: "intake",
+            route_taken: "intake_resumed_welcome_only",
+            reply_sent: "welcome",
+          });
+          return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
         }
 
         // Move any uploaded media to technician buckets and let AI classify
