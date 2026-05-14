@@ -257,7 +257,16 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    const result = await dispatchOne(supabase, jobRow as Job, 1);
+    // IMPORTANT: At job-post stage we ONLY notify admins. Technicians are
+    // NOT broadcast automatically — admin reviews the job first and then
+    // triggers a manual broadcast (see broadcast-job / manual-dispatch).
+    const result = { phase: 0, candidates: 0, sent: 0, admin_only: true };
+
+    // Mark the job as awaiting admin review so it shows up in the admin queue.
+    await supabase
+      .from("jobs")
+      .update({ status: "awaiting_approval", updated_at: new Date().toISOString() })
+      .eq("id", jobId);
 
     // Notify master admins on WhatsApp about this fresh job — formatted summary + photos.
     try {
