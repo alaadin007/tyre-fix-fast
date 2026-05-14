@@ -158,11 +158,10 @@ export function PendingTechnicians() {
     toast.success(`${t.name} rejected`);
     setRejectFor(null);
     setRejectReason("");
-    void supabase.functions.invoke("twilio-send", {
+    void supabase.functions.invoke("whatsapp-meta-send", {
       body: {
         to: t.phone,
         body: `Hi${t.name ? ` ${t.name.split(" ")[0]}` : ""} — thanks for applying to Tyre Fly. We're unable to approve your profile right now: ${reason}`,
-        channel: "whatsapp",
       },
     });
   };
