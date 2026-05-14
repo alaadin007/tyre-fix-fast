@@ -292,9 +292,18 @@ Deno.serve(async (req) => {
       if (j.tread_condition) lines.push(`• Tread: ${j.tread_condition}`);
       if (j.wheel_type) lines.push(`• Wheel: ${j.wheel_type}`);
       if (j.tyre_details) lines.push(`• Details: ${j.tyre_details}`);
-      const photos: string[] = Array.isArray(j.photo_urls) ? j.photo_urls.slice(0, 10) : [];
+      const allMedia: string[] = Array.isArray(j.photo_urls) ? j.photo_urls : [];
+      // Meta WhatsApp only accepts image/png|jpeg|webp as inline images.
+      // Filter out videos and other non-image attachments — list them as links instead.
+      const isImage = (u: string) => /\.(png|jpe?g|webp|gif)(\?|$)/i.test(u);
+      const photos: string[] = allMedia.filter(isImage).slice(0, 10);
+      const otherMedia: string[] = allMedia.filter((u) => !isImage(u));
       lines.push("");
-      lines.push(`📸 ${photos.length} photo(s) attached`);
+      lines.push(`📸 ${photos.length} photo(s) attached${allMedia.length > photos.length ? ` (+${allMedia.length - photos.length} other file/video)` : ""}`);
+      if (otherMedia.length) {
+        lines.push("*Other attachments:*");
+        for (const u of otherMedia.slice(0, 5)) lines.push(`• ${u}`);
+      }
       lines.push(`🔗 Job ID: ${j.id}`);
 
       await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/notify-admins`, {
