@@ -622,6 +622,18 @@ Deno.serve(async (req) => {
               rejected_reason: reason,
             }).eq("id", t.id);
             await sendReply(from, `❌ Rejected ${t.name}${reason ? ` (${reason})` : ""}.`, channel);
+            // Tell the technician
+            try {
+              await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/twilio-send`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}` },
+                body: JSON.stringify({
+                  to: t.phone,
+                  body: `Hi${t.name ? ` ${String(t.name).split(" ")[0]}` : ""} — thanks for applying to Tyre Fly. We're unable to approve your profile right now${reason ? `: ${reason}` : "."}`,
+                  channel: "whatsapp",
+                }),
+              });
+            } catch (_) {}
           }
         }
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
