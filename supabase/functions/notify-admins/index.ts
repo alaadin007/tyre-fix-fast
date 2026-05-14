@@ -126,8 +126,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Branch 2: legacy free-text body via twilio-send.
-    const { body, channel } = parsed.data;
+    // Branch 2: legacy free-text body via twilio-send (with optional media).
+    const { body, channel, media_urls } = parsed.data;
     const results = await Promise.allSettled(
       numbers.map((to) =>
         fetch(`${SUPABASE_URL}/functions/v1/twilio-send`, {
@@ -136,7 +136,7 @@ Deno.serve(async (req) => {
             "Content-Type": "application/json",
             Authorization: `Bearer ${SERVICE_KEY}`,
           },
-          body: JSON.stringify({ to, body, channel }),
+          body: JSON.stringify({ to, body, channel, media_urls }),
         }),
       ),
     );
