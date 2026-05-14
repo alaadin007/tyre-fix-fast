@@ -23,6 +23,7 @@ const BodySchema = z.union([
   z.object({
     body: z.string().trim().min(1).max(1500),
     channel: z.enum(["sms", "whatsapp"]).default("whatsapp"),
+    media_urls: z.array(z.string().url()).max(10).optional(),
   }),
 ]);
 
