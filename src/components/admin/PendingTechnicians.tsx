@@ -133,12 +133,11 @@ export function PendingTechnicians() {
     setBusy(null);
     if (error) return toast.error(error.message);
     toast.success(`${t.name} approved`);
-    // Notify technician on WhatsApp + SMS
-    void supabase.functions.invoke("twilio-send", {
+    // Notify technician via Meta WhatsApp (same number that handled onboarding)
+    void supabase.functions.invoke("whatsapp-meta-send", {
       body: {
         to: t.phone,
         body: `✅ You're approved as a Tyre Fly technician${t.name ? `, ${t.name.split(" ")[0]}` : ""}! Jobs in your area will arrive on this number.`,
-        channel: "whatsapp",
       },
     });
   };
