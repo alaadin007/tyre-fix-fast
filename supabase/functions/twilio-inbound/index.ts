@@ -894,16 +894,22 @@ Deno.serve(async (req) => {
           if (equipment.length) updates.equipment_photo_urls = equipment.slice(0, 8);
         }
 
-        // Decide if we have everything MANDATORY (optional items don't block review)
+        // Only submit for admin review once EVERYTHING (mandatory + optional docs/photos/pin/schedule) is collected
         const merged = { ...row, ...updates };
         const complete =
           merged.name && merged.name !== "Pending applicant" &&
           merged.email &&
           (merged.service_postcodes?.length ?? 0) > 0 &&
           merged.vehicle &&
-          (merged.travel_radius_miles ?? 0) > 0;
+          (merged.travel_radius_miles ?? 0) > 0 &&
+          merged.weekly_schedule && Object.keys(merged.weekly_schedule || {}).length > 0 &&
+          merged.last_lat !== null && merged.last_lng !== null &&
+          (merged.equipment_photo_urls?.length ?? 0) > 0 &&
+          merged.insurance_doc_url &&
+          merged.id_doc_url &&
+          merged.public_liability_doc_url;
 
-        if ((complete || ai.ready_for_review) && row.approval_status !== "pending" && row.approval_status !== "approved" && row.approval_status !== "rejected") {
+        if (complete && row.approval_status !== "pending" && row.approval_status !== "approved" && row.approval_status !== "rejected") {
           updates.approval_status = "pending"; // fires admin notification trigger
         }
 
