@@ -796,15 +796,18 @@ Deno.serve(async (req) => {
               "Let's start — what's your full name?",
             channel,
           );
-          // If first message was just the trigger phrase, stop here
-          if (body.length < 60 && !mediaUrls.length && !coords) {
+          // First contact: always stop after welcome message unless they already
+          // sent media or a location pin. The opening text (e.g. "I'd like to sign up
+          // as a technician") never carries profile data, so running the AI extractor
+          // would just produce a duplicate "what's your full name?" reply.
+          if (!mediaUrls.length && !coords) {
             await logOnboarding(supabase, {
               technician_id: row.id,
               phone: from,
               channel,
               inbound_body: body,
-              has_media: mediaUrls.length > 0,
-              media_count: mediaUrls.length,
+              has_media: false,
+              media_count: 0,
               detected_intent: "join_request",
               prior_status: null,
               next_status: "intake",
