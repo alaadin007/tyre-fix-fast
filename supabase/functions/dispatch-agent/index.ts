@@ -259,24 +259,55 @@ Deno.serve(async (req) => {
     }
     const result = await dispatchOne(supabase, jobRow as Job, 1);
 
-    // Notify master admins on WhatsApp about this fresh job
+    // Notify master admins on WhatsApp about this fresh job — formatted summary + photos.
     try {
       const j: any = jobRow;
-      const wheels = (j.affected_wheels && j.affected_wheels.length > 0) ? `\nWheels: ${j.affected_wheels.join(", ")}` : "";
-      const reg = j.vehicle_reg ? `\nReg: ${j.vehicle_reg}` : "";
-      const summary =
-        `🆕 New job ${String(j.id).slice(0, 6)}\n` +
-        `${j.customer_name} · ${j.customer_phone}\n` +
-        `${j.postcode} · ${j.issue_type}` +
-        reg + wheels +
-        (j.damage_summary ? `\n${j.damage_summary}` : "");
+      const shortId = String(j.id).slice(0, 6).toUpperCase();
+      const lines: string[] = [];
+      lines.push(`🆕 *New Job #${shortId}*`);
+      lines.push(`📅 ${new Date(j.created_at ?? Date.now()).toLocaleString("en-GB", { timeZone: "Europe/London" })}`);
+      lines.push("");
+      lines.push("*Customer*");
+      lines.push(`• Name: ${j.customer_name ?? "—"}`);
+      lines.push(`• Phone: ${j.customer_phone ?? "—"}`);
+      if (j.customer_email) lines.push(`• Email: ${j.customer_email}`);
+      lines.push("");
+      lines.push("*Location*");
+      lines.push(`• Postcode: ${j.postcode ?? "—"}`);
+      if (j.region) lines.push(`• Region: ${j.region}`);
+      lines.push("");
+      lines.push("*Issue*");
+      lines.push(`• Type: ${j.issue_type ?? "—"}`);
+      if (j.severity) lines.push(`• Severity: ${j.severity}`);
+      if (j.damage_type) lines.push(`• Damage: ${j.damage_type}`);
+      if (j.affected_wheels?.length) lines.push(`• Wheel(s): ${j.affected_wheels.join(", ")}`);
+      if (j.damage_summary) lines.push(`• Summary: ${j.damage_summary}`);
+      if (j.issue_description) lines.push(`• Notes: ${j.issue_description}`);
+      lines.push("");
+      lines.push("*Vehicle / Tyre*");
+      if (j.vehicle_reg) lines.push(`• Reg: ${j.vehicle_reg}`);
+      if (j.tyre_size) lines.push(`• Size: ${j.tyre_size}`);
+      if (j.tyre_brand) lines.push(`• Brand: ${j.tyre_brand}`);
+      if (j.tyre_type) lines.push(`• Type: ${j.tyre_type}`);
+      if (j.tread_condition) lines.push(`• Tread: ${j.tread_condition}`);
+      if (j.wheel_type) lines.push(`• Wheel: ${j.wheel_type}`);
+      if (j.tyre_details) lines.push(`• Details: ${j.tyre_details}`);
+      const photos: string[] = Array.isArray(j.photo_urls) ? j.photo_urls.slice(0, 10) : [];
+      lines.push("");
+      lines.push(`📸 ${photos.length} photo(s) attached`);
+      lines.push(`🔗 Job ID: ${j.id}`);
+
       await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/notify-admins`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
         },
-        body: JSON.stringify({ body: summary, channel: "whatsapp" }),
+        body: JSON.stringify({
+          body: lines.join("\n"),
+          channel: "whatsapp",
+          media_urls: photos,
+        }),
       });
     } catch (e) {
       console.error("admin notify failed", e);
