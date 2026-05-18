@@ -18,6 +18,12 @@ const BodySchema = z.object({
     body_params: z.array(z.string()).max(20).optional(),
     header_image_url: z.string().url().optional(),
   }).optional(),
+  location: z.object({
+    lat: z.number(),
+    lng: z.number(),
+    name: z.string().max(200).optional(),
+    address: z.string().max(200).optional(),
+  }).optional(),
 });
 
 Deno.serve(async (req) => {
