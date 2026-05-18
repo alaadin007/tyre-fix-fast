@@ -193,7 +193,7 @@ Deno.serve(async (req) => {
       // Meta template was approved with an IMAGE header, so it MUST be present
       // on every send. If the customer only uploaded videos (or nothing), fall
       // back to a generic placeholder so Meta still accepts the message.
-      const FALLBACK_HEADER = `${SUPABASE_URL}/storage/v1/object/public/job-photos/sample/tyre.png`;
+      const FALLBACK_HEADER = "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=800&h=418&fit=crop&fm=jpg";
       const header_image_url = photos[0] ?? FALLBACK_HEADER;
       const body_params = buildJobTemplateParams(job, photos);
 
