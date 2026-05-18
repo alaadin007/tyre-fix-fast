@@ -160,6 +160,56 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Branch 1b: Meta-approved template for new customer job posts.
+    if ("event" in parsed.data && parsed.data.event === "new_job_posted") {
+      const { data: job, error: jErr } = await supabase
+        .from("jobs")
+        .select("*")
+        .eq("id", parsed.data.job_id)
+        .maybeSingle();
+      if (jErr || !job) {
+        return new Response(JSON.stringify({ error: "job not found" }), {
+          status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const body_params = buildJobTemplateParams(job);
+      const allMedia: string[] = Array.isArray(job.photo_urls) ? job.photo_urls : [];
+      const isImage = (u: string) => /\.(png|jpe?g|webp)(\?|$)/i.test(u);
+      const photos = allMedia.filter(isImage);
+      const header_image_url = photos[0]; // optional; template approves with or without
+      const extra_photos = photos.slice(1, 10); // best-effort follow-ups
+
+      const results = await Promise.allSettled(
+        numbers.map((to) =>
+          fetch(`${SUPABASE_URL}/functions/v1/whatsapp-meta-send`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${SERVICE_KEY}`,
+            },
+            body: JSON.stringify({
+              to,
+              media_urls: extra_photos,
+              template: {
+                name: JOB_TEMPLATE_NAME,
+                language: JOB_TEMPLATE_LANG,
+                body_params,
+                ...(header_image_url ? { header_image_url } : {}),
+              },
+            }),
+          }).then(async (r) => ({ ok: r.ok, status: r.status, data: await r.json().catch(() => null) })),
+        ),
+      );
+      const sent = results.filter((r) => r.status === "fulfilled" && (r.value as any).ok).length;
+      const errors = results
+        .map((r) => r.status === "fulfilled" ? (r.value as any) : { ok: false, error: (r as any).reason?.message })
+        .filter((r) => !r.ok);
+      if (errors.length) console.error("notify-admins job template errors", JSON.stringify(errors));
+      return new Response(JSON.stringify({ ok: true, sent, total: numbers.length, errors }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // Branch 2: legacy free-text body via twilio-send (with optional media).
     const { body, channel, media_urls } = parsed.data;
     const results = await Promise.allSettled(
