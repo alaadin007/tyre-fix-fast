@@ -268,64 +268,19 @@ Deno.serve(async (req) => {
       .update({ status: "awaiting_approval", updated_at: new Date().toISOString() })
       .eq("id", jobId);
 
-    // Notify master admins on WhatsApp about this fresh job — formatted summary + photos.
+    // Notify master admins on WhatsApp about this fresh job using the
+    // Meta-approved template `new_job_posted_alert` (so delivery is NOT
+    // restricted by the 24h conversation window). The template carries the
+    // first photo in its header; remaining photos are sent as best-effort
+    // follow-up images (delivered only if the admin's 24h session is open).
     try {
-      const j: any = jobRow;
-      const shortId = String(j.id).slice(0, 6).toUpperCase();
-      const lines: string[] = [];
-      lines.push(`🆕 *New Job #${shortId}*`);
-      lines.push(`📅 ${new Date(j.created_at ?? Date.now()).toLocaleString("en-GB", { timeZone: "Europe/London" })}`);
-      lines.push("");
-      lines.push("*Customer*");
-      lines.push(`• Name: ${j.customer_name ?? "—"}`);
-      lines.push(`• Phone: ${j.customer_phone ?? "—"}`);
-      if (j.customer_email) lines.push(`• Email: ${j.customer_email}`);
-      lines.push("");
-      lines.push("*Location*");
-      lines.push(`• Postcode: ${j.postcode ?? "—"}`);
-      if (j.region) lines.push(`• Region: ${j.region}`);
-      lines.push("");
-      lines.push("*Issue*");
-      lines.push(`• Type: ${j.issue_type ?? "—"}`);
-      if (j.severity) lines.push(`• Severity: ${j.severity}`);
-      if (j.damage_type) lines.push(`• Damage: ${j.damage_type}`);
-      if (j.affected_wheels?.length) lines.push(`• Wheel(s): ${j.affected_wheels.join(", ")}`);
-      if (j.damage_summary) lines.push(`• Summary: ${j.damage_summary}`);
-      if (j.issue_description) lines.push(`• Notes: ${j.issue_description}`);
-      lines.push("");
-      lines.push("*Vehicle / Tyre*");
-      if (j.vehicle_reg) lines.push(`• Reg: ${j.vehicle_reg}`);
-      if (j.tyre_size) lines.push(`• Size: ${j.tyre_size}`);
-      if (j.tyre_brand) lines.push(`• Brand: ${j.tyre_brand}`);
-      if (j.tyre_type) lines.push(`• Type: ${j.tyre_type}`);
-      if (j.tread_condition) lines.push(`• Tread: ${j.tread_condition}`);
-      if (j.wheel_type) lines.push(`• Wheel: ${j.wheel_type}`);
-      if (j.tyre_details) lines.push(`• Details: ${j.tyre_details}`);
-      const allMedia: string[] = Array.isArray(j.photo_urls) ? j.photo_urls : [];
-      // Meta WhatsApp only accepts image/png|jpeg|webp as inline images.
-      // Filter out videos and other non-image attachments — list them as links instead.
-      const isImage = (u: string) => /\.(png|jpe?g|webp|gif)(\?|$)/i.test(u);
-      const photos: string[] = allMedia.filter(isImage).slice(0, 10);
-      const otherMedia: string[] = allMedia.filter((u) => !isImage(u));
-      lines.push("");
-      lines.push(`📸 ${photos.length} photo(s) attached${allMedia.length > photos.length ? ` (+${allMedia.length - photos.length} other file/video)` : ""}`);
-      if (otherMedia.length) {
-        lines.push("*Other attachments:*");
-        for (const u of otherMedia.slice(0, 5)) lines.push(`• ${u}`);
-      }
-      lines.push(`🔗 Job ID: ${j.id}`);
-
       await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/notify-admins`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
         },
-        body: JSON.stringify({
-          body: lines.join("\n"),
-          channel: "whatsapp",
-          media_urls: photos,
-        }),
+        body: JSON.stringify({ event: "new_job_posted", job_id: jobId }),
       });
     } catch (e) {
       console.error("admin notify failed", e);
