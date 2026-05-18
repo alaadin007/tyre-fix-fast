@@ -52,9 +52,19 @@ Deno.serve(async (req) => {
     const images = media_urls ?? [];
 
     if (template) {
-      const components = template.body_params && template.body_params.length > 0
-        ? [{ type: "body", parameters: template.body_params.map((t) => ({ type: "text", text: String(t) })) }]
-        : [];
+      const components: any[] = [];
+      if (template.header_image_url) {
+        components.push({
+          type: "header",
+          parameters: [{ type: "image", image: { link: template.header_image_url } }],
+        });
+      }
+      if (template.body_params && template.body_params.length > 0) {
+        components.push({
+          type: "body",
+          parameters: template.body_params.map((t) => ({ type: "text", text: String(t) })),
+        });
+      }
       results.push(await sendOne({
         type: "template",
         template: {
@@ -63,6 +73,15 @@ Deno.serve(async (req) => {
           ...(components.length ? { components } : {}),
         },
       }));
+      // If extra images were passed alongside the template, send them as
+      // follow-up session messages (these only deliver if the admin's 24h
+      // window is open — otherwise Meta will reject them, which is fine).
+      const extras = images.slice(template.header_image_url ? 1 : 0);
+      for (const link of extras) {
+        const r = await sendOne({ type: "image", image: { link } });
+        results.push(r);
+        if (!r.ok) break; // stop on first failure (likely window closed)
+      }
     } else if (images.length > 0) {
       // First image carries the caption (body); remainder send as bare images.
       for (let i = 0; i < images.length; i++) {
