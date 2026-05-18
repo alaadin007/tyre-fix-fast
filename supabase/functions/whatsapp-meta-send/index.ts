@@ -100,6 +100,21 @@ Deno.serve(async (req) => {
       results.push(await sendOne({ type: "text", text: { body } }));
     }
 
+    // Best-effort native location pin follow-up. Only delivers if the
+    // recipient's 24h session window is open; failures here are non-fatal.
+    if (location) {
+      const r = await sendOne({
+        type: "location",
+        location: {
+          latitude: location.lat,
+          longitude: location.lng,
+          ...(location.name ? { name: location.name } : {}),
+          ...(location.address ? { address: location.address } : {}),
+        },
+      });
+      results.push(r);
+    }
+
     // For template sends, only fail if the template itself failed; extra
      // follow-up images are best-effort (may be rejected if 24h window is closed).
     const primary = results[0];
