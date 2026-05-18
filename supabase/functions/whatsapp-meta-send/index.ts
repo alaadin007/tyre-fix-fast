@@ -40,7 +40,7 @@ Deno.serve(async (req) => {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    const { to, body, media_urls, template } = parsed.data;
+    const { to, body, media_urls, template, location } = parsed.data;
     const toClean = to.replace(/^whatsapp:/, "").replace(/[^\d+]/g, "");
     const toNum = toClean.replace(/^\+/, "");
 
