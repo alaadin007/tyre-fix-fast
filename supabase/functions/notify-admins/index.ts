@@ -14,6 +14,8 @@ const corsHeaders = {
 
 const TEMPLATE_NAME = "new_technician_application_alert";
 const TEMPLATE_LANG = "en_GB";
+const JOB_TEMPLATE_NAME = "new_job_posted_alert";
+const JOB_TEMPLATE_LANG = "en_GB";
 
 const BodySchema = z.union([
   z.object({
@@ -21,11 +23,43 @@ const BodySchema = z.union([
     technician_id: z.string().uuid(),
   }),
   z.object({
+    event: z.literal("new_job_posted"),
+    job_id: z.string().uuid(),
+  }),
+  z.object({
     body: z.string().trim().min(1).max(1500),
     channel: z.enum(["sms", "whatsapp"]).default("whatsapp"),
     media_urls: z.array(z.string().url()).max(10).optional(),
   }),
 ]);
+
+// WhatsApp body parameters cannot contain newlines, tabs, or 4+ consecutive spaces.
+function clean(v: any, fallback = "—"): string {
+  const s = (v ?? "").toString().trim();
+  if (!s) return fallback;
+  return s.replace(/[\r\n\t]+/g, " ").replace(/\s{4,}/g, "   ").slice(0, 200);
+}
+
+function buildJobTemplateParams(j: any): string[] {
+  const shortId = String(j.id).slice(0, 6).toUpperCase();
+  const wheels = Array.isArray(j.affected_wheels) && j.affected_wheels.length
+    ? j.affected_wheels.join(", ") : "—";
+  const photos = Array.isArray(j.photo_urls) ? j.photo_urls.length : 0;
+  return [
+    shortId,                                       // {{1}}
+    clean(j.customer_name),                        // {{2}}
+    clean(j.customer_phone),                       // {{3}}
+    clean(j.postcode),                             // {{4}}
+    clean(j.issue_type),                           // {{5}}
+    clean(j.severity, "Not assessed"),             // {{6}}
+    clean(wheels),                                 // {{7}}
+    clean(j.damage_summary ?? j.issue_description, "No summary"), // {{8}}
+    clean(j.vehicle_reg, "Not provided"),          // {{9}}
+    clean(j.tyre_size, "Not provided"),            // {{10}}
+    String(photos),                                // {{11}}
+    String(j.id),                                  // {{12}}
+  ];
+}
 
 function buildTemplateParams(t: any): string[] {
   const idPrefix = String(t.id).slice(0, 6);
@@ -87,8 +121,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Branch 1: Meta-approved template for new technician applications.
-    if ("event" in parsed.data) {
+    // Branch 1a: Meta-approved template for new technician applications.
+    if ("event" in parsed.data && parsed.data.event === "new_tech_application") {
       const { data: tech, error: techErr } = await supabase
         .from("technicians")
         .select("*")
@@ -121,6 +155,56 @@ Deno.serve(async (req) => {
         .map((r) => r.status === "fulfilled" ? (r.value as any) : { ok: false, error: (r as any).reason?.message })
         .filter((r) => !r.ok);
       if (errors.length) console.error("notify-admins template errors", JSON.stringify(errors));
+      return new Response(JSON.stringify({ ok: true, sent, total: numbers.length, errors }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Branch 1b: Meta-approved template for new customer job posts.
+    if ("event" in parsed.data && parsed.data.event === "new_job_posted") {
+      const { data: job, error: jErr } = await supabase
+        .from("jobs")
+        .select("*")
+        .eq("id", parsed.data.job_id)
+        .maybeSingle();
+      if (jErr || !job) {
+        return new Response(JSON.stringify({ error: "job not found" }), {
+          status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const body_params = buildJobTemplateParams(job);
+      const allMedia: string[] = Array.isArray(job.photo_urls) ? job.photo_urls : [];
+      const isImage = (u: string) => /\.(png|jpe?g|webp)(\?|$)/i.test(u);
+      const photos = allMedia.filter(isImage);
+      const header_image_url = photos[0]; // optional; template approves with or without
+      const extra_photos = photos.slice(1, 10); // best-effort follow-ups
+
+      const results = await Promise.allSettled(
+        numbers.map((to) =>
+          fetch(`${SUPABASE_URL}/functions/v1/whatsapp-meta-send`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${SERVICE_KEY}`,
+            },
+            body: JSON.stringify({
+              to,
+              media_urls: extra_photos,
+              template: {
+                name: JOB_TEMPLATE_NAME,
+                language: JOB_TEMPLATE_LANG,
+                body_params,
+                ...(header_image_url ? { header_image_url } : {}),
+              },
+            }),
+          }).then(async (r) => ({ ok: r.ok, status: r.status, data: await r.json().catch(() => null) })),
+        ),
+      );
+      const sent = results.filter((r) => r.status === "fulfilled" && (r.value as any).ok).length;
+      const errors = results
+        .map((r) => r.status === "fulfilled" ? (r.value as any) : { ok: false, error: (r as any).reason?.message })
+        .filter((r) => !r.ok);
+      if (errors.length) console.error("notify-admins job template errors", JSON.stringify(errors));
       return new Response(JSON.stringify({ ok: true, sent, total: numbers.length, errors }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });

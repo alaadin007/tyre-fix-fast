@@ -16,6 +16,7 @@ const BodySchema = z.object({
     name: z.string().min(1),
     language: z.string().min(2).default("en_GB"),
     body_params: z.array(z.string()).max(20).optional(),
+    header_image_url: z.string().url().optional(),
   }).optional(),
 });
 
@@ -51,9 +52,19 @@ Deno.serve(async (req) => {
     const images = media_urls ?? [];
 
     if (template) {
-      const components = template.body_params && template.body_params.length > 0
-        ? [{ type: "body", parameters: template.body_params.map((t) => ({ type: "text", text: String(t) })) }]
-        : [];
+      const components: any[] = [];
+      if (template.header_image_url) {
+        components.push({
+          type: "header",
+          parameters: [{ type: "image", image: { link: template.header_image_url } }],
+        });
+      }
+      if (template.body_params && template.body_params.length > 0) {
+        components.push({
+          type: "body",
+          parameters: template.body_params.map((t) => ({ type: "text", text: String(t) })),
+        });
+      }
       results.push(await sendOne({
         type: "template",
         template: {
@@ -62,6 +73,15 @@ Deno.serve(async (req) => {
           ...(components.length ? { components } : {}),
         },
       }));
+      // If extra images were passed alongside the template, send them as
+      // follow-up session messages (these only deliver if the admin's 24h
+      // window is open — otherwise Meta will reject them, which is fine).
+      const extras = images.slice(template.header_image_url ? 1 : 0);
+      for (const link of extras) {
+        const r = await sendOne({ type: "image", image: { link } });
+        results.push(r);
+        if (!r.ok) break; // stop on first failure (likely window closed)
+      }
     } else if (images.length > 0) {
       // First image carries the caption (body); remainder send as bare images.
       for (let i = 0; i < images.length; i++) {
@@ -74,12 +94,23 @@ Deno.serve(async (req) => {
       results.push(await sendOne({ type: "text", text: { body } }));
     }
 
-    const failed = results.find((r) => !r.ok);
-    if (failed) {
-      console.error("meta send failed", failed.status, failed.data);
-      return new Response(JSON.stringify({ error: failed.data?.error?.message ?? "Meta send failed", status: failed.status }), {
+    // For template sends, only fail if the template itself failed; extra
+     // follow-up images are best-effort (may be rejected if 24h window is closed).
+    const primary = results[0];
+    if (primary && !primary.ok) {
+      console.error("meta send failed", primary.status, primary.data);
+      return new Response(JSON.stringify({ error: primary.data?.error?.message ?? "Meta send failed", status: primary.status }), {
         status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+    if (!template) {
+      const failed = results.find((r) => !r.ok);
+      if (failed) {
+        console.error("meta send failed", failed.status, failed.data);
+        return new Response(JSON.stringify({ error: failed.data?.error?.message ?? "Meta send failed", status: failed.status }), {
+          status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
 
     const supabase = createClient(
