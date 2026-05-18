@@ -14,6 +14,8 @@ const corsHeaders = {
 
 const TEMPLATE_NAME = "new_technician_application_alert";
 const TEMPLATE_LANG = "en_GB";
+const JOB_TEMPLATE_NAME = "new_job_posted_alert";
+const JOB_TEMPLATE_LANG = "en_GB";
 
 const BodySchema = z.union([
   z.object({
@@ -21,11 +23,43 @@ const BodySchema = z.union([
     technician_id: z.string().uuid(),
   }),
   z.object({
+    event: z.literal("new_job_posted"),
+    job_id: z.string().uuid(),
+  }),
+  z.object({
     body: z.string().trim().min(1).max(1500),
     channel: z.enum(["sms", "whatsapp"]).default("whatsapp"),
     media_urls: z.array(z.string().url()).max(10).optional(),
   }),
 ]);
+
+// WhatsApp body parameters cannot contain newlines, tabs, or 4+ consecutive spaces.
+function clean(v: any, fallback = "—"): string {
+  const s = (v ?? "").toString().trim();
+  if (!s) return fallback;
+  return s.replace(/[\r\n\t]+/g, " ").replace(/\s{4,}/g, "   ").slice(0, 200);
+}
+
+function buildJobTemplateParams(j: any): string[] {
+  const shortId = String(j.id).slice(0, 6).toUpperCase();
+  const wheels = Array.isArray(j.affected_wheels) && j.affected_wheels.length
+    ? j.affected_wheels.join(", ") : "—";
+  const photos = Array.isArray(j.photo_urls) ? j.photo_urls.length : 0;
+  return [
+    shortId,                                       // {{1}}
+    clean(j.customer_name),                        // {{2}}
+    clean(j.customer_phone),                       // {{3}}
+    clean(j.postcode),                             // {{4}}
+    clean(j.issue_type),                           // {{5}}
+    clean(j.severity, "Not assessed"),             // {{6}}
+    clean(wheels),                                 // {{7}}
+    clean(j.damage_summary ?? j.issue_description, "No summary"), // {{8}}
+    clean(j.vehicle_reg, "Not provided"),          // {{9}}
+    clean(j.tyre_size, "Not provided"),            // {{10}}
+    String(photos),                                // {{11}}
+    String(j.id),                                  // {{12}}
+  ];
+}
 
 function buildTemplateParams(t: any): string[] {
   const idPrefix = String(t.id).slice(0, 6);
