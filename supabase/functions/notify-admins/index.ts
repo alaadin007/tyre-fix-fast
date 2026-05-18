@@ -53,6 +53,9 @@ function buildJobTemplateParams(j: any, photoUrls: string[]): string[] {
   const mi = String(created.getUTCMinutes()).padStart(2, "0");
   const ss = String(created.getUTCSeconds()).padStart(2, "0");
   const when = `${dd}/${mm}/${yyyy}, ${hh}:${mi}:${ss}`;
+  const mapsLink = (j.lat != null && j.lng != null)
+    ? `https://maps.google.com/?q=${j.lat},${j.lng}`
+    : "—";
   return [
     shortId,                                                          // {{1}}
     when,                                                             // {{2}}
@@ -69,6 +72,7 @@ function buildJobTemplateParams(j: any, photoUrls: string[]): string[] {
     String(j.id),                                                     // {{13}}
     clean(photoUrls[1], "—"),                                         // {{14}}
     clean(photoUrls[2], "—"),                                         // {{15}}
+    mapsLink,                                                         // {{16}}
   ];
 }
 
@@ -205,6 +209,16 @@ Deno.serve(async (req) => {
                 body_params,
                 ...(header_image_url ? { header_image_url } : {}),
               },
+              ...(job.lat != null && job.lng != null
+                ? {
+                    location: {
+                      lat: Number(job.lat),
+                      lng: Number(job.lng),
+                      name: `Job ${String(job.id).slice(0, 6).toUpperCase()} — ${job.customer_name ?? ""}`.trim(),
+                      address: job.postcode ?? undefined,
+                    },
+                  }
+                : {}),
             }),
           }).then(async (r) => ({ ok: r.ok, status: r.status, data: await r.json().catch(() => null) })),
         ),

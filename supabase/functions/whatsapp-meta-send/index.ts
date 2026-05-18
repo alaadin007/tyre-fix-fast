@@ -18,6 +18,12 @@ const BodySchema = z.object({
     body_params: z.array(z.string()).max(20).optional(),
     header_image_url: z.string().url().optional(),
   }).optional(),
+  location: z.object({
+    lat: z.number(),
+    lng: z.number(),
+    name: z.string().max(200).optional(),
+    address: z.string().max(200).optional(),
+  }).optional(),
 });
 
 Deno.serve(async (req) => {
@@ -34,7 +40,7 @@ Deno.serve(async (req) => {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    const { to, body, media_urls, template } = parsed.data;
+    const { to, body, media_urls, template, location } = parsed.data;
     const toClean = to.replace(/^whatsapp:/, "").replace(/[^\d+]/g, "");
     const toNum = toClean.replace(/^\+/, "");
 
@@ -92,6 +98,21 @@ Deno.serve(async (req) => {
       }
     } else if (body) {
       results.push(await sendOne({ type: "text", text: { body } }));
+    }
+
+    // Best-effort native location pin follow-up. Only delivers if the
+    // recipient's 24h session window is open; failures here are non-fatal.
+    if (location) {
+      const r = await sendOne({
+        type: "location",
+        location: {
+          latitude: location.lat,
+          longitude: location.lng,
+          ...(location.name ? { name: location.name } : {}),
+          ...(location.address ? { address: location.address } : {}),
+        },
+      });
+      results.push(r);
     }
 
     // For template sends, only fail if the template itself failed; extra
