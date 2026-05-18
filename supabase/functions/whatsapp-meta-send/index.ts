@@ -94,12 +94,23 @@ Deno.serve(async (req) => {
       results.push(await sendOne({ type: "text", text: { body } }));
     }
 
-    const failed = results.find((r) => !r.ok);
-    if (failed) {
-      console.error("meta send failed", failed.status, failed.data);
-      return new Response(JSON.stringify({ error: failed.data?.error?.message ?? "Meta send failed", status: failed.status }), {
+    // For template sends, only fail if the template itself failed; extra
+     // follow-up images are best-effort (may be rejected if 24h window is closed).
+    const primary = results[0];
+    if (primary && !primary.ok) {
+      console.error("meta send failed", primary.status, primary.data);
+      return new Response(JSON.stringify({ error: primary.data?.error?.message ?? "Meta send failed", status: primary.status }), {
         status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+    if (!template) {
+      const failed = results.find((r) => !r.ok);
+      if (failed) {
+        console.error("meta send failed", failed.status, failed.data);
+        return new Response(JSON.stringify({ error: failed.data?.error?.message ?? "Meta send failed", status: failed.status }), {
+          status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
 
     const supabase = createClient(
