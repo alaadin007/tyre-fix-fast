@@ -16,6 +16,7 @@ const BodySchema = z.object({
     name: z.string().min(1),
     language: z.string().min(2).default("en_GB"),
     body_params: z.array(z.string()).max(20).optional(),
+    header_image_url: z.string().url().optional(),
   }).optional(),
 });
 
