@@ -14,7 +14,7 @@ const corsHeaders = {
 
 const TEMPLATE_NAME = "new_technician_application_alert";
 const TEMPLATE_LANG = "en_GB";
-const JOB_TEMPLATE_NAME = "new_job_posted_alert";
+const JOB_TEMPLATE_NAME = "new_job_alert_to_admin";
 const JOB_TEMPLATE_LANG = "en_GB";
 
 const BodySchema = z.union([
