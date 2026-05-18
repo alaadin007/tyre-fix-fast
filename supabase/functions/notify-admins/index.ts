@@ -121,8 +121,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Branch 1: Meta-approved template for new technician applications.
-    if ("event" in parsed.data) {
+    // Branch 1a: Meta-approved template for new technician applications.
+    if ("event" in parsed.data && parsed.data.event === "new_tech_application") {
       const { data: tech, error: techErr } = await supabase
         .from("technicians")
         .select("*")
