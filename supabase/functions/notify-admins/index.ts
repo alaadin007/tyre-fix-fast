@@ -209,6 +209,16 @@ Deno.serve(async (req) => {
                 body_params,
                 ...(header_image_url ? { header_image_url } : {}),
               },
+              ...(job.lat != null && job.lng != null
+                ? {
+                    location: {
+                      lat: Number(job.lat),
+                      lng: Number(job.lng),
+                      name: `Job ${String(job.id).slice(0, 6).toUpperCase()} — ${job.customer_name ?? ""}`.trim(),
+                      address: job.postcode ?? undefined,
+                    },
+                  }
+                : {}),
             }),
           }).then(async (r) => ({ ok: r.ok, status: r.status, data: await r.json().catch(() => null) })),
         ),
