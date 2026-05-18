@@ -183,12 +183,11 @@ Deno.serve(async (req) => {
           status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      const body_params = buildJobTemplateParams(job);
       const allMedia: string[] = Array.isArray(job.photo_urls) ? job.photo_urls : [];
       const isImage = (u: string) => /\.(png|jpe?g|webp)(\?|$)/i.test(u);
       const photos = allMedia.filter(isImage);
       const header_image_url = photos[0]; // optional; template approves with or without
-      const extra_photos = photos.slice(1, 10); // best-effort follow-ups
+      const body_params = buildJobTemplateParams(job, photos);
 
       const results = await Promise.allSettled(
         numbers.map((to) =>
@@ -200,7 +199,6 @@ Deno.serve(async (req) => {
             },
             body: JSON.stringify({
               to,
-              media_urls: extra_photos,
               template: {
                 name: JOB_TEMPLATE_NAME,
                 language: JOB_TEMPLATE_LANG,
