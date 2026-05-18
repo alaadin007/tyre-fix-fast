@@ -40,24 +40,35 @@ function clean(v: any, fallback = "—"): string {
   return s.replace(/[\r\n\t]+/g, " ").replace(/\s{4,}/g, "   ").slice(0, 200);
 }
 
-function buildJobTemplateParams(j: any): string[] {
+function buildJobTemplateParams(j: any, photoUrls: string[]): string[] {
   const shortId = String(j.id).slice(0, 6).toUpperCase();
   const wheels = Array.isArray(j.affected_wheels) && j.affected_wheels.length
     ? j.affected_wheels.join(", ") : "—";
-  const photos = Array.isArray(j.photo_urls) ? j.photo_urls.length : 0;
+  const photoCount = Array.isArray(j.photo_urls) ? j.photo_urls.length : 0;
+  const created = j.created_at ? new Date(j.created_at) : new Date();
+  const dd = String(created.getUTCDate()).padStart(2, "0");
+  const mm = String(created.getUTCMonth() + 1).padStart(2, "0");
+  const yyyy = created.getUTCFullYear();
+  const hh = String(created.getUTCHours()).padStart(2, "0");
+  const mi = String(created.getUTCMinutes()).padStart(2, "0");
+  const ss = String(created.getUTCSeconds()).padStart(2, "0");
+  const when = `${dd}/${mm}/${yyyy}, ${hh}:${mi}:${ss}`;
   return [
-    shortId,                                       // {{1}}
-    clean(j.customer_name),                        // {{2}}
-    clean(j.customer_phone),                       // {{3}}
-    clean(j.postcode),                             // {{4}}
-    clean(j.issue_type),                           // {{5}}
-    clean(j.severity, "Not assessed"),             // {{6}}
-    clean(wheels),                                 // {{7}}
-    clean(j.damage_summary ?? j.issue_description, "No summary"), // {{8}}
-    clean(j.vehicle_reg, "Not provided"),          // {{9}}
-    clean(j.tyre_size, "Not provided"),            // {{10}}
-    String(photos),                                // {{11}}
-    String(j.id),                                  // {{12}}
+    shortId,                                                          // {{1}}
+    when,                                                             // {{2}}
+    clean(j.customer_name),                                           // {{3}}
+    clean(j.customer_phone),                                          // {{4}}
+    clean(j.postcode),                                                // {{5}}
+    clean(j.issue_type),                                              // {{6}}
+    clean(j.severity, "Not assessed"),                                // {{7}}
+    clean(wheels),                                                    // {{8}}
+    clean(j.damage_summary ?? j.issue_description, "No summary"),     // {{9}}
+    clean(j.notes, "—"),                                              // {{10}}
+    clean(j.vehicle_reg, "Not provided"),                             // {{11}}
+    String(photoCount),                                               // {{12}}
+    String(j.id),                                                     // {{13}}
+    clean(photoUrls[1], "—"),                                         // {{14}}
+    clean(photoUrls[2], "—"),                                         // {{15}}
   ];
 }
 
