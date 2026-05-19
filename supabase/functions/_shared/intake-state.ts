@@ -456,6 +456,7 @@ function nudgeFor(step: IntakeStep): string {
   switch (step) {
     case "awaiting_location": return "I couldn't read a postcode or location from that ❌";
     case "awaiting_plate": return "I couldn't read a number plate from that ❌";
+    case "awaiting_plate_confirm": return "Please reply *YES* to reuse the plate on file, or send the new number plate ❌";
     case "awaiting_name": return "I need your full name as text (e.g. \"John Smith\") ❌";
     case "awaiting_description": return "I need a short description of what happened ❌";
     case "awaiting_wheels": return "I need to know which tyre positions are affected ❌";
