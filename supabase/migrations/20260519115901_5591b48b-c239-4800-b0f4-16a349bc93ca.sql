@@ -1,0 +1,1 @@
+ALTER TYPE public.intake_step ADD VALUE IF NOT EXISTS 'awaiting_plate_confirm' BEFORE 'awaiting_plate';
