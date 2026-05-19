@@ -132,20 +132,36 @@ export function extractName(t: string): string | null {
   return null;
 }
 
-const INCIDENT_RE = /(nail|screw|slow|fast|sudden|drove|driving|park|kerb|curb|pothole|bulge|split|crack|flat|puncture|blowout|burst|leak|valve|hit|damage|tear|tore|cut|deflat|pressure|no idea|not sure|don'?t know|dont know|dunno|unsure|no clue)/i;
+// Words/phrases that indicate the customer is describing a real tyre/wheel
+// incident — used to decide whether the first message already carries enough
+// context to skip the "what happened" question. Kept deliberately broad so
+// free-form phrasing ("my tyre burst on the road", "leaking air", "stuck with
+// a damaged tyre", "need urgent puncture repair") all qualify.
+const INCIDENT_RE = /(nail|screw|slow|fast|sudden|drove|driving|park|kerb|curb|pothole|bulge|split|crack|flat|puncture|blow[- ]?out|burst|busted|shred|ripped|gash|gouge|leak|leaking|valve|hit|damage|damaged|tear|tore|cut|deflat|pressure|stuck|stranded|roadside|emergency|urgent|repair|fix(?:ing)?|replace|change\s+(?:my\s+)?(?:tyre|tire|wheel)|new\s+(?:tyre|tire)|no idea|not sure|don'?t know|dont know|dunno|unsure|no clue)/i;
+
+// A loose tyre/wheel mention combined with any service verb is also enough
+// signal — handles "Can you send a technician? My car tyre needs help".
+const TYRE_MENTION_RE = /\b(tyre|tire|wheel|puncture|blowout|flat)s?\b/i;
+const SERVICE_VERB_RE = /\b(help|service|technician|come|send|need|require|book|fix|repair|replace|change|sort|stuck|stranded)\b/i;
+
 export function hasIncidentContext(t: string): boolean {
-  return INCIDENT_RE.test(t || "");
+  const s = t || "";
+  if (INCIDENT_RE.test(s)) return true;
+  if (TYRE_MENTION_RE.test(s) && SERVICE_VERB_RE.test(s)) return true;
+  return false;
 }
 
 export function guessIssueType(t: string): string | null {
   const s = (t || "").toLowerCase();
-  if (/blow.?out/.test(s)) return "blowout";
+  if (/blow.?out|burst|busted|shred|exploded/.test(s)) return "blowout";
   if (/lock|locking/.test(s)) return "locked wheel";
   if (/flat|deflat/.test(s)) return "flat tyre";
   if (/punct|nail|screw/.test(s)) return "puncture";
   if (/sidewall|bulge|buckl/.test(s)) return "sidewall damage";
   if (/kerb|curb|pothole|hit|impact|crash|bump/.test(s)) return "impact damage";
-  if (/pressure|leak|valve|going down|deflating/.test(s)) return "slow leak";
+  if (/leak|valve|pressure|going down|deflating|losing air/.test(s)) return "slow leak";
+  if (/replace|new\s+(tyre|tire)|change\s+(my\s+)?(tyre|tire|wheel)|fit(ting)?\s+(a\s+)?(new\s+)?(tyre|tire)/.test(s)) return "tyre replacement";
+  if (/damage|damaged|repair|fix/.test(s)) return "tyre damage";
   return null;
 }
 
