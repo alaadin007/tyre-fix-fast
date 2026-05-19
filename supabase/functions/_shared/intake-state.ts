@@ -636,6 +636,15 @@ export async function processCustomerIntake(
   if (mediaUrls.length > 0) {
     updates.photo_urls = [...(job.photo_urls ?? []), ...mediaUrls].slice(0, 12);
     parsedSomething = true;
+    // If the customer uploads 2+ photos in a single batch (and we now have
+    // at least the minimum), treat that as completion — no need to ask for
+    // an optional extra angle.
+    if (conversation.step === "awaiting_photos"
+        && mediaUrls.length >= MIN_REQUIRED_PHOTOS
+        && updates.photo_urls.length >= MIN_REQUIRED_PHOTOS) {
+      convContext.photos_done = true;
+      contextChanged = true;
+    }
   }
 
   // At the photos step, accept a plain text "DONE" (or similar) reply as
