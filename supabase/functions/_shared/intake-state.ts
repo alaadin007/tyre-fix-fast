@@ -515,10 +515,14 @@ export async function processCustomerIntake(
     if (jobErr) throw jobErr;
     job = newJob;
 
-    const initialContext = resolvedLocation.hasPin
+    const initialContext: Record<string, any> = resolvedLocation.hasPin
       ? { location_pin_confirmed: true }
       : {};
     const step = firstMissingStep(job, customer, { context: initialContext });
+    // Lock the step plan ONCE so "Step N of M" stays stable for the whole intake.
+    const planSnapshot = buildStepPlan(job, customer, { context: initialContext });
+    const lockedPlan = planSnapshot.includes(step) ? planSnapshot : [step, ...planSnapshot];
+    initialContext.step_plan = lockedPlan;
     const { data: newConv, error: convErr } = await supabase.from("conversations").insert({
       customer_phone: from,
       current_job_id: job.id,
