@@ -299,21 +299,25 @@ export async function processCustomerIntake(
 
   if (!conversation) {
     isNew = true;
+    // IMPORTANT — never reuse the customer's previous postcode. Each job must
+    // have a fresh current location. We also do NOT seed customer_name from a
+    // greeting like "hi" or "I need help" (the loose name regex matches those).
+    // For returning customers we use the stored full_name; otherwise leave it
+    // as "Customer" and ask in the awaiting_name step.
     const extractedPostcode = await resolvePostcode(body);
-    const extractedReg = extractReg(body);
-    const extractedName = extractName(body);
     const extractedWheels = extractWheels(body);
     const extractedDesc = hasIncidentContext(body) ? body.slice(0, 500) : null;
     const issueType = guessIssueType(body) ?? "unknown";
 
     const initial = {
       customer_phone: from,
-      customer_name: extractedName ?? customer?.full_name ?? "Customer",
-      postcode: extractedPostcode ?? customer?.default_postcode ?? "",
+      customer_name: customer?.full_name ?? "Customer",
+      postcode: extractedPostcode ?? "",
       issue_type: issueType,
       issue_description: extractedDesc,
       photo_urls: mediaUrls,
-      vehicle_reg: extractedReg ?? customer?.vehicle_reg ?? null,
+      // Don't silently reuse customer.vehicle_reg — we ask via awaiting_plate_confirm.
+      vehicle_reg: null,
       affected_wheels: extractedWheels,
       status: "intake_pending",
     };
@@ -322,23 +326,20 @@ export async function processCustomerIntake(
     if (jobErr) throw jobErr;
     job = newJob;
 
-    const step = firstMissingStep(job, customer);
+    const step = firstMissingStep(job, customer, null);
     const { data: newConv, error: convErr } = await supabase.from("conversations").insert({
       customer_phone: from,
       current_job_id: job.id,
       step,
       last_message_at: new Date().toISOString(),
+      context: {},
     }).select().single();
     if (convErr) throw convErr;
     conversation = newConv;
 
     let greeting: string;
     if (isReturning && customer?.full_name) {
-      const knownBits: string[] = [];
-      if (customer.vehicle_reg) knownBits.push(`plate *${customer.vehicle_reg}*`);
-      if (customer.default_postcode) knownBits.push(`usual postcode *${customer.default_postcode}*`);
-      const recap = knownBits.length ? `\nI've got ${knownBits.join(" and ")} on file — I'll reuse those unless you tell me otherwise.` : "";
-      greeting = `Welcome back ${customer.full_name.split(/\s+/)[0]} 👋 New job — let's get you sorted.${recap}`;
+      greeting = `Welcome back ${customer.full_name.split(/\s+/)[0]} 👋 New job — let's get you sorted. I'll need a fresh location for this one.`;
     } else {
       greeting = "Tyre Fly here 👋 I'll get you sorted quickly.";
     }
@@ -360,15 +361,39 @@ export async function processCustomerIntake(
   }
 
   const updates: Record<string, any> = { updated_at: new Date().toISOString() };
+  const convContext: Record<string, any> = { ...(conversation.context ?? {}) };
+  let contextChanged = false;
   let parsedSomething = false;
+
+  // Special handling for the plate-confirmation step: don't fall through to the
+  // generic reg-extraction (which would only capture a brand-new plate). We
+  // need to accept short YES/NO style answers too.
+  if (conversation.step === "awaiting_plate_confirm" && !job.vehicle_reg) {
+    const reg = extractReg(body);
+    const yes = /^\s*(y|yes|yeah|yep|same|use it|use that|confirm|ok(?:ay)?|keep|correct|sure)\b/i.test(body);
+    const no = /^\s*(n|no|new|different|change|nope|nah)\b/i.test(body);
+    if (reg) {
+      updates.vehicle_reg = reg;
+      convContext.plate_confirm_done = true; contextChanged = true;
+      parsedSomething = true;
+    } else if (yes && customer?.vehicle_reg) {
+      updates.vehicle_reg = customer.vehicle_reg;
+      convContext.plate_confirm_done = true; contextChanged = true;
+      parsedSomething = true;
+    } else if (no) {
+      convContext.plate_confirm_done = true; contextChanged = true;
+      parsedSomething = true;
+    }
+  } else {
+    const reg = extractReg(body);
+    if (reg && !job.vehicle_reg) { updates.vehicle_reg = reg; parsedSomething = true; }
+  }
 
   const pc = await resolvePostcode(body);
   if (pc && !job.postcode) { updates.postcode = pc; parsedSomething = true; }
 
-  const reg = extractReg(body);
-  if (reg && !job.vehicle_reg) { updates.vehicle_reg = reg; parsedSomething = true; }
-
-  if ((!job.customer_name || job.customer_name === "Customer")) {
+  if ((!job.customer_name || job.customer_name === "Customer")
+      && conversation.step === "awaiting_name") {
     const nm = extractName(body);
     if (nm) { updates.customer_name = nm; parsedSomething = true; }
   }
@@ -397,7 +422,12 @@ export async function processCustomerIntake(
     if (updated) job = updated;
   }
 
-  const nextStep = firstMissingStep(job, customer);
+  if (contextChanged) {
+    await supabase.from("conversations").update({ context: convContext }).eq("id", conversation.id);
+    conversation = { ...conversation, context: convContext };
+  }
+
+  const nextStep = firstMissingStep(job, customer, conversation);
   const justCompleted = nextStep === "complete" && conversation.step !== "complete";
   await supabase.from("conversations").update({
     step: nextStep,
