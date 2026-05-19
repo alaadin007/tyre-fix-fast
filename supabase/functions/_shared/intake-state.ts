@@ -21,6 +21,7 @@ const ACTIVE_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 export type IntakeStep =
   | "awaiting_location"
+  | "awaiting_plate_confirm"
   | "awaiting_plate"
   | "awaiting_name"
   | "awaiting_description"
@@ -31,12 +32,17 @@ export type IntakeStep =
 
 const STEP_ORDER: IntakeStep[] = [
   "awaiting_location",
+  "awaiting_plate_confirm",
   "awaiting_plate",
   "awaiting_name",
   "awaiting_description",
   "awaiting_wheels",
   "awaiting_photos",
 ];
+
+// Minimum photos we always require before completing intake, regardless of
+// how many wheels are affected — keeps the damage assessment meaningful.
+const MIN_REQUIRED_PHOTOS = 2;
 
 // ───────────────────────── parsing helpers ─────────────────────────
 
