@@ -107,7 +107,7 @@ Deno.test("service intent during awaiting_location is acknowledged before locati
   );
 
   assertStringIncludes(outcome.reply, "Got it — I've noted the tyre issue and your service request.");
-  assertStringIncludes(outcome.reply, "Your *current* location");
+  assertStringIncludes(outcome.reply, "Your *current pin location*");
   assert(!outcome.reply.includes("I couldn't read a postcode or location from that"));
   assertEquals(tables.jobs[0].issue_description, message);
   assertEquals(tables.jobs[0].issue_type, "flat tyre");
@@ -149,7 +149,7 @@ Deno.test("generic tyre-help request during awaiting_location does not get treat
   );
 
   assert(!outcome.reply.includes("I've noted the tyre issue"));
-  assertStringIncludes(outcome.reply, "Your *current* location");
+  assertStringIncludes(outcome.reply, "Your *current pin location*");
   assertEquals(tables.jobs[0].issue_description, null);
   assertEquals(tables.jobs[0].issue_type, "unknown");
   assertEquals(outcome.conversation.step, "awaiting_location");
@@ -174,7 +174,7 @@ Deno.test("returning customer is greeted by first name on a new job", async () =
     { from: phone, body: "Hi", mediaUrls: [], channel: "whatsapp" },
   );
 
-  assertStringIncludes(outcome.reply, "Welcome back Hilal 👋");
+  assertStringIncludes(outcome.reply, "Welcome Back Hilal 👋");
   assertStringIncludes(outcome.reply, "Your *current pin location*");
   assertEquals(outcome.conversation.step, "awaiting_location");
 });
