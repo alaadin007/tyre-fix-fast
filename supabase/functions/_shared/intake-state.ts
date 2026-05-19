@@ -420,18 +420,14 @@ export async function processCustomerIntake(
   const bodyHasTyreServiceIntent = hasTyreServiceIntent(body);
   const storedCustomer = await loadCustomer(supabase, from);
   const recentJobMemory = await loadRecentJobMemory(supabase, from);
-  const customer = mergeCustomerMemory(storedCustomer, recentJobMemory);
+  const hasPriorJobHistory = Number(recentJobMemory?.total_jobs ?? 0) > 0;
+  const customer = isValidPersonName(storedCustomer?.full_name) || hasPriorJobHistory
+    ? mergeCustomerMemory(storedCustomer, recentJobMemory)
+    : null;
   let conversation = await loadActiveConversation(supabase, from);
   let job: any = null;
-  // "Returning" = we have any record of this phone before — name, plate or a
-  // prior job. We don't gate on total_jobs because some prior conversations
-  // never reached intake_complete but the customer is still a known number.
-  const isReturning = !!customer && (
-    (customer.total_jobs ?? 0) > 0 ||
-    isValidPersonName(customer.full_name) ||
-    !!customer.vehicle_reg ||
-    !!customer.default_postcode
-  );
+  // Returning customers must have actual prior history on the same phone.
+  const isReturning = hasPriorJobHistory;
   let isNew = false;
 
   if (!conversation) {
