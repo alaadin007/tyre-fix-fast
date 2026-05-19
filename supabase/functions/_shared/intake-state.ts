@@ -40,9 +40,11 @@ const STEP_ORDER: IntakeStep[] = [
   "awaiting_photos",
 ];
 
-// Minimum photos we always require before completing intake, regardless of
-// how many wheels are affected — keeps the damage assessment meaningful.
+// Photos policy: ask for 2–3 images. At ≥3 photos OR an explicit "done"
+// reply with ≥2 photos, intake is allowed to complete.
 const MIN_REQUIRED_PHOTOS = 2;
+const TARGET_PHOTOS = 3;
+const PHOTOS_DONE_RE = /^\s*(done|finish(?:ed)?|that'?s all|no more|continue|next|good|ok(?:ay)?|enough|complete)\b/i;
 
 // ───────────────────────── parsing helpers ─────────────────────────
 
@@ -337,6 +339,16 @@ async function upsertCustomer(supabase: Supa, phone: string, patch: Record<strin
   }
 }
 
+function photosSatisfied(job: any, conversation: any | null): boolean {
+  const have = (job?.photo_urls ?? []).length;
+  const need = (job?.affected_wheels ?? []).length;
+  const wheelRequired = Math.max(MIN_REQUIRED_PHOTOS, need);
+  if (have >= Math.max(TARGET_PHOTOS, wheelRequired)) return true;
+  // Customer explicitly said "done" after providing at least the minimum.
+  if (!!conversation?.context?.photos_done && have >= wheelRequired) return true;
+  return false;
+}
+
 function firstMissingStep(job: any, customer: any, conversation: any | null): IntakeStep {
   if (!conversation?.context?.location_pin_confirmed || job.lat == null || job.lng == null) return "awaiting_location";
   if (!job.vehicle_reg) {
@@ -349,10 +361,7 @@ function firstMissingStep(job: any, customer: any, conversation: any | null): In
   if (!job.customer_name || job.customer_name === "Customer") return "awaiting_name";
   if (!hasIncidentContext(job.issue_description ?? "")) return "awaiting_description";
   if (!Array.isArray(job.affected_wheels) || job.affected_wheels.length === 0) return "awaiting_wheels";
-  const need = (job.affected_wheels ?? []).length;
-  const have = (job.photo_urls ?? []).length;
-  const required = Math.max(MIN_REQUIRED_PHOTOS, need);
-  if (have < required) return "awaiting_photos";
+  if (!photosSatisfied(job, conversation)) return "awaiting_photos";
   return "complete";
 }
 
@@ -370,12 +379,8 @@ function isStepSatisfied(s: IntakeStep, job: any, conversation: any | null): boo
       return hasIncidentContext(job?.issue_description ?? "");
     case "awaiting_wheels":
       return Array.isArray(job?.affected_wheels) && job.affected_wheels.length > 0;
-    case "awaiting_photos": {
-      const need = (job?.affected_wheels ?? []).length;
-      const have = (job?.photo_urls ?? []).length;
-      const required = Math.max(MIN_REQUIRED_PHOTOS, need);
-      return have >= required;
-    }
+    case "awaiting_photos":
+      return photosSatisfied(job, conversation);
     default:
       return false;
   }
@@ -449,11 +454,15 @@ function prompt(
       return `${greet}${head}Which tyre(s)? 🛞\nReply with *front-left*, *front-right*, *rear-left*, *rear-right*, *both front*, *both rear*, or *all four*.`;
     }
     case "awaiting_photos": {
-      const need = (ctx.job.affected_wheels ?? []).length;
       const have = (ctx.job.photo_urls ?? []).length;
-      const required = Math.max(MIN_REQUIRED_PHOTOS, need);
-      const remaining = Math.max(1, required - have);
-      return `${greet}${head}Photos 📸 (${have}/${required} so far)\nPlease send ${remaining} more *clear tyre photo${remaining === 1 ? "" : "s"}* — we need at least ${required} images before we can match a technician. Image files only — no videos or PDFs.`;
+      if (have === 0) {
+        return `${greet}${head}Photos 📸\nPlease upload *2–3 clear photos* of the tyre (close-up of the damage works best). Image files only — no videos or PDFs.`;
+      }
+      if (have === 1) {
+        return `${greet}${head}Photos 📸 (1/2 so far)\nThanks ✅ — please upload *1 more image* so the technician can quote accurately. Image files only.`;
+      }
+      // have >= 2 but we haven't completed yet → invite an optional third angle.
+      return `${greet}${head}Photos 📸 (${have} received)\nThanks ✅ — if you'd like, share *one more photo from a different angle* for better clarity, or reply *DONE* to continue.`;
     }
     default:
       return "";
@@ -547,7 +556,8 @@ export async function processCustomerIntake(
       await supabase.from("conversations").update({ step: "complete" }).eq("id", conversation.id);
       await supabase.from("jobs").update({ status: "intake_complete" }).eq("id", job.id);
       await bumpCustomer(supabase, from, job);
-      return { reply: `${greeting}\n\nAll done ✅ Finding you a technician now — we'll message the moment one is matched.`, job, conversation: { ...conversation, step: "complete" }, justCompleted: true };
+      const refId = String(job.id).slice(0, 6).toUpperCase();
+      return { reply: `${greeting}\n\nThank you 🙏 — your job reference is *#${refId}*. We're finding you a technician now and will message the moment one is matched.`, job, conversation: { ...conversation, step: "complete" }, justCompleted: true };
     }
 
     return { reply: prompt(step, { job, customer, greeting, conversation }), job, conversation, justCompleted: false };
@@ -628,6 +638,17 @@ export async function processCustomerIntake(
     parsedSomething = true;
   }
 
+  // At the photos step, accept a plain text "DONE" (or similar) reply as
+  // explicit consent to stop uploading photos once we already have >=2.
+  if (conversation.step === "awaiting_photos" && mediaUrls.length === 0) {
+    const haveNow = (updates.photo_urls ?? job.photo_urls ?? []).length;
+    if (haveNow >= MIN_REQUIRED_PHOTOS && PHOTOS_DONE_RE.test(body || "")) {
+      convContext.photos_done = true;
+      contextChanged = true;
+      parsedSomething = true;
+    }
+  }
+
   if (Object.keys(updates).length > 1) {
     const { data: updated } = await supabase.from("jobs").update(updates).eq("id", job.id).select().single();
     if (updated) job = updated;
@@ -654,8 +675,9 @@ export async function processCustomerIntake(
   if (justCompleted) {
     await supabase.from("jobs").update({ status: "intake_complete" }).eq("id", job.id);
     await bumpCustomer(supabase, from, job);
+    const refId = String(job.id).slice(0, 6).toUpperCase();
     return {
-      reply: "All done ✅ Finding you a technician now — we'll message the moment one is matched.",
+      reply: `Thank you 🙏 — your job reference is *#${refId}*. We're finding you a technician now and will message the moment one is matched.`,
       job, conversation, justCompleted: true,
     };
   }

@@ -59,14 +59,19 @@ function buildJobTemplateParams(j: any, photoUrls: string[]): string[] {
   const ss = String(created.getUTCSeconds()).padStart(2, "0");
   const when = `${dd}/${mm}/${yyyy}, ${hh}:${mi}:${ss}`;
   const mapsLink = (j.lat != null && j.lng != null)
-    ? `https://maps.google.com/?q=${j.lat},${j.lng}`
+    ? `https://www.google.com/maps?q=${j.lat},${j.lng}`
     : "—";
+  // Prefer postcode text; otherwise show the clickable pin link so admins
+  // can open the customer's exact location directly from the template.
+  const locationText = (j.postcode && String(j.postcode).trim())
+    ? clean(j.postcode)
+    : (mapsLink !== "—" ? mapsLink : "—");
   return [
     shortId,                                                          // {{1}}
     when,                                                             // {{2}}
     customerName,                                                     // {{3}}
     clean(j.customer_phone),                                          // {{4}}
-    clean(j.postcode),                                                // {{5}}
+    locationText,                                                     // {{5}}
     clean(j.issue_type),                                              // {{6}}
     clean(j.severity, "Not assessed"),                                // {{7}}
     clean(wheels),                                                    // {{8}}
