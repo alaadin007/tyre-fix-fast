@@ -214,8 +214,15 @@ async function geocodeAddressToLocation(address: string): Promise<{ postcode: st
     const hit = Array.isArray(arr) ? arr[0] : null;
     if (!hit) return { postcode: null, lat: null, lng: null };
     let pc: string | null = hit?.address?.postcode ?? null;
-    if (pc) return pc.trim().toUpperCase();
-    const lat = Number(hit.lat); const lng = Number(hit.lon);
+    const lat = Number(hit.lat);
+    const lng = Number(hit.lon);
+    if (pc) {
+      return {
+        postcode: pc.trim().toUpperCase(),
+        lat: Number.isFinite(lat) ? lat : null,
+        lng: Number.isFinite(lng) ? lng : null,
+      };
+    }
     if (Number.isFinite(lat) && Number.isFinite(lng)) {
       pc = await reverseGeocodePostcode(lat, lng);
       return { postcode: pc, lat, lng };
@@ -258,6 +265,30 @@ async function loadCustomer(supabase: Supa, phone: string) {
   return data as any | null;
 }
 
+async function loadRecentJobMemory(supabase: Supa, phone: string) {
+  const { data } = await supabase
+    .from("jobs")
+    .select("*")
+    .eq("customer_phone", phone)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return data as any | null;
+}
+
+function mergeCustomerMemory(customer: any | null, recentJob: any | null) {
+  const fallbackName = isValidPersonName(recentJob?.customer_name) ? recentJob.customer_name : null;
+  const fallbackReg = recentJob?.vehicle_reg ?? null;
+  const fallbackPostcode = recentJob?.postcode ?? null;
+  return {
+    ...(customer ?? {}),
+    full_name: isValidPersonName(customer?.full_name) ? customer.full_name : fallbackName,
+    vehicle_reg: customer?.vehicle_reg ?? fallbackReg,
+    default_postcode: customer?.default_postcode ?? fallbackPostcode,
+    total_jobs: Math.max(Number(customer?.total_jobs ?? 0), recentJob ? 1 : 0),
+  };
+}
+
 async function loadActiveConversation(supabase: Supa, phone: string) {
   const cutoff = new Date(Date.now() - ACTIVE_WINDOW_MS).toISOString();
   const { data } = await supabase
@@ -296,7 +327,7 @@ async function upsertCustomer(supabase: Supa, phone: string, patch: Record<strin
 }
 
 function firstMissingStep(job: any, customer: any, conversation: any | null): IntakeStep {
-  if (!job.postcode) return "awaiting_location";
+  if (!conversation?.context?.location_pin_confirmed || job.lat == null || job.lng == null) return "awaiting_location";
   if (!job.vehicle_reg) {
     // Returning customer with a plate on file: confirm before reusing.
     if (customer?.vehicle_reg && !conversation?.context?.plate_confirm_done) {
@@ -336,7 +367,7 @@ function prompt(step: IntakeStep, ctx: { job: any; customer: any | null; greetin
   const greet = ctx.greeting ? ctx.greeting + "\n\n" : "";
   switch (step) {
     case "awaiting_location":
-      return `${greet}${head}Your *current* location 📍\nShare a WhatsApp pin 📍, your *postcode* (e.g. SW1A 1AA), or your *full address* for this job. (We always need a fresh location — never reuse a previous one.)`;
+      return `${greet}${head}Your *current pin location* 📍\nPlease share your live WhatsApp pin for *this* job. You can also add your postcode or address for reference, but the pin is required and we never reuse an old location.`;
     case "awaiting_plate_confirm": {
       const reg = ctx.customer?.vehicle_reg ?? "your vehicle";
       return `${greet}${head}Vehicle 🚗\nWe've got *${reg}* on file for you. Reply *YES* to use the same vehicle, or send the *new number plate* if it's a different car this time.`;
