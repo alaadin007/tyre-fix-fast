@@ -459,10 +459,10 @@ function prompt(
         return `${greet}${head}Photos 📸\nPlease upload *2–3 clear photos* of the tyre (close-up of the damage works best). Image files only — no videos or PDFs.`;
       }
       if (have === 1) {
-        return `${greet}${head}Photos 📸 (1/2 so far)\nThanks ✅ — please upload *1 more image* so the technician can quote accurately. Image files only.`;
+        return `${greet}${head}Photos 📸 (1 received)\nThanks ✅ — please add *1–2 more images* so the technician can quote accurately. Image files only.`;
       }
       // have >= 2 but we haven't completed yet → invite an optional third angle.
-      return `${greet}${head}Photos 📸 (${have} received)\nThanks ✅ — if you'd like, share *one more photo from a different angle* for better clarity, or reply *DONE* to continue.`;
+      return `${greet}${head}Photos 📸 (${have} received)\nThanks ✅ — if you'd like, share *one more photo from a different angle* for better clarity for the technician, or reply *DONE* to continue.`;
     }
     default:
       return "";
@@ -557,7 +557,7 @@ export async function processCustomerIntake(
       await supabase.from("jobs").update({ status: "intake_complete" }).eq("id", job.id);
       await bumpCustomer(supabase, from, job);
       const refId = String(job.id).slice(0, 6).toUpperCase();
-      return { reply: `${greeting}\n\nThank you 🙏 — your job reference is *#${refId}*. We're finding you a technician now and will message the moment one is matched.`, job, conversation: { ...conversation, step: "complete" }, justCompleted: true };
+      return { reply: `${greeting}\n\nThank you for sharing the details 🙏 — one of our technicians will be aligned with you shortly.\nYour job posting reference *#${refId}*.`, job, conversation: { ...conversation, step: "complete" }, justCompleted: true };
     }
 
     return { reply: prompt(step, { job, customer, greeting, conversation }), job, conversation, justCompleted: false };
@@ -636,6 +636,15 @@ export async function processCustomerIntake(
   if (mediaUrls.length > 0) {
     updates.photo_urls = [...(job.photo_urls ?? []), ...mediaUrls].slice(0, 12);
     parsedSomething = true;
+    // If the customer uploads 2+ photos in a single batch (and we now have
+    // at least the minimum), treat that as completion — no need to ask for
+    // an optional extra angle.
+    if (conversation.step === "awaiting_photos"
+        && mediaUrls.length >= MIN_REQUIRED_PHOTOS
+        && updates.photo_urls.length >= MIN_REQUIRED_PHOTOS) {
+      convContext.photos_done = true;
+      contextChanged = true;
+    }
   }
 
   // At the photos step, accept a plain text "DONE" (or similar) reply as
@@ -677,7 +686,7 @@ export async function processCustomerIntake(
     await bumpCustomer(supabase, from, job);
     const refId = String(job.id).slice(0, 6).toUpperCase();
     return {
-      reply: `Thank you 🙏 — your job reference is *#${refId}*. We're finding you a technician now and will message the moment one is matched.`,
+      reply: `Thank you for sharing the details 🙏 — one of our technicians will be aligned with you shortly.\nYour job posting reference *#${refId}*.`,
       job, conversation, justCompleted: true,
     };
   }
