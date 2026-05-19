@@ -274,6 +274,7 @@ async function loadRecentJobMemory(supabase: Supa, phone: string) {
     .limit(10);
 
   const jobs = Array.isArray(data) ? data : [];
+  if (jobs.length === 0) return null;
   const fallbackName = jobs.find((job: any) => isValidPersonName(job?.customer_name))?.customer_name ?? null;
   const fallbackReg = jobs.find((job: any) => job?.vehicle_reg)?.vehicle_reg ?? null;
   const fallbackPostcode = jobs.find((job: any) => job?.postcode)?.postcode ?? null;
@@ -295,7 +296,7 @@ function mergeCustomerMemory(customer: any | null, recentJob: any | null) {
     full_name: isValidPersonName(customer?.full_name) ? customer.full_name : fallbackName,
     vehicle_reg: customer?.vehicle_reg ?? fallbackReg,
     default_postcode: customer?.default_postcode ?? fallbackPostcode,
-    total_jobs: Math.max(Number(customer?.total_jobs ?? 0), recentJob ? 1 : 0),
+    total_jobs: Math.max(Number(customer?.total_jobs ?? 0), Number(recentJob?.total_jobs ?? 0)),
   };
 }
 
