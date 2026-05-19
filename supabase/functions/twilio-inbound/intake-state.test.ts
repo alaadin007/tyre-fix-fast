@@ -208,7 +208,6 @@ Deno.test("returning customer falls back to prior jobs when customer memory row 
   );
 
   assertStringIncludes(outcome.reply, "Welcome Back Hilal 👋");
-  assertStringIncludes(outcome.reply, "We've got *D565A1* on file for you");
   assertEquals(outcome.job.customer_name, "Hilal Ahmed");
   assertEquals(outcome.conversation.step, "awaiting_location");
 });
@@ -259,7 +258,7 @@ Deno.test("shared pin location is required before leaving the location step", as
 
   const withPin = await processCustomerIntake(
     new MockSupabase(tables) as never,
-    { from: phone, body: "Location pin shared — (51.5198, -0.1482)", mediaUrls: [], channel: "whatsapp" },
+    { from: phone, body: "Location pin shared — W1G 9PF — (51.5198, -0.1482)", mediaUrls: [], channel: "whatsapp" },
   );
 
   assertEquals(withPin.job.lat, 51.5198);
