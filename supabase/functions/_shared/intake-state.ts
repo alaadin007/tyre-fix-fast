@@ -92,12 +92,40 @@ export function extractWheels(t: string): string[] {
   return Array.from(out);
 }
 
+// Common greeting / filler words that must never be saved as a customer name.
+const NAME_BLOCKLIST = new Set([
+  "hey","hi","hello","hiya","yo","sup","help","urgent","please","pls","thanks","thank you",
+  "ok","okay","yes","no","yeah","yep","nope","sure","mate","sir","madam","customer",
+  "hii","hiii","heyy","heyyy","hola","hai","good","morning","evening","afternoon","night",
+  "tyre","tire","tyres","tires","wheel","flat","puncture","car","emergency",
+]);
+
+export function isValidPersonName(s: string | null | undefined): boolean {
+  if (!s) return false;
+  const cleaned = s.trim();
+  if (cleaned.length < 2) return false;
+  if (cleaned.toLowerCase() === "customer") return false;
+  const lower = cleaned.toLowerCase();
+  if (NAME_BLOCKLIST.has(lower)) return false;
+  // Reject single-word entries that look like a greeting or single common word.
+  const words = cleaned.split(/\s+/);
+  if (words.length === 1 && words[0].length < 3) return false;
+  // Require letters only (with spaces, hyphens, apostrophes, dots).
+  if (!/^[A-Za-z][A-Za-z .'-]{1,38}$/.test(cleaned)) return false;
+  return true;
+}
+
 export function extractName(t: string): string | null {
   if (!t) return null;
   const explicit = t.match(/\b(?:my name is|i am|i'm|im|this is|name[:\-])\s+([A-Za-z][A-Za-z .'-]{1,38})/i);
-  if (explicit) return explicit[1].trim().replace(/\s+/g, " ");
+  if (explicit) {
+    const cand = explicit[1].trim().replace(/\s+/g, " ");
+    return isValidPersonName(cand) ? cand : null;
+  }
   const s = t.trim();
-  if (/^[A-Za-z][A-Za-z .'-]{1,38}$/.test(s) && s.split(/\s+/).length <= 4) return s;
+  if (/^[A-Za-z][A-Za-z .'-]{1,38}$/.test(s) && s.split(/\s+/).length <= 4) {
+    return isValidPersonName(s) ? s : null;
+  }
   return null;
 }
 
