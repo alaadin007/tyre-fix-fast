@@ -92,12 +92,40 @@ export function extractWheels(t: string): string[] {
   return Array.from(out);
 }
 
+// Common greeting / filler words that must never be saved as a customer name.
+const NAME_BLOCKLIST = new Set([
+  "hey","hi","hello","hiya","yo","sup","help","urgent","please","pls","thanks","thank you",
+  "ok","okay","yes","no","yeah","yep","nope","sure","mate","sir","madam","customer",
+  "hii","hiii","heyy","heyyy","hola","hai","good","morning","evening","afternoon","night",
+  "tyre","tire","tyres","tires","wheel","flat","puncture","car","emergency",
+]);
+
+export function isValidPersonName(s: string | null | undefined): boolean {
+  if (!s) return false;
+  const cleaned = s.trim();
+  if (cleaned.length < 2) return false;
+  if (cleaned.toLowerCase() === "customer") return false;
+  const lower = cleaned.toLowerCase();
+  if (NAME_BLOCKLIST.has(lower)) return false;
+  // Reject single-word entries that look like a greeting or single common word.
+  const words = cleaned.split(/\s+/);
+  if (words.length === 1 && words[0].length < 3) return false;
+  // Require letters only (with spaces, hyphens, apostrophes, dots).
+  if (!/^[A-Za-z][A-Za-z .'-]{1,38}$/.test(cleaned)) return false;
+  return true;
+}
+
 export function extractName(t: string): string | null {
   if (!t) return null;
   const explicit = t.match(/\b(?:my name is|i am|i'm|im|this is|name[:\-])\s+([A-Za-z][A-Za-z .'-]{1,38})/i);
-  if (explicit) return explicit[1].trim().replace(/\s+/g, " ");
+  if (explicit) {
+    const cand = explicit[1].trim().replace(/\s+/g, " ");
+    return isValidPersonName(cand) ? cand : null;
+  }
   const s = t.trim();
-  if (/^[A-Za-z][A-Za-z .'-]{1,38}$/.test(s) && s.split(/\s+/).length <= 4) return s;
+  if (/^[A-Za-z][A-Za-z .'-]{1,38}$/.test(s) && s.split(/\s+/).length <= 4) {
+    return isValidPersonName(s) ? s : null;
+  }
   return null;
 }
 
@@ -233,7 +261,7 @@ function firstMissingStep(job: any, customer: any, conversation: any | null): In
 
 function stepNumberAndTotal(step: IntakeStep, customer: any | null): { n: number; total: number } | null {
   if (step === "complete" || step === "idle") return null;
-  const knowsName = !!(customer?.full_name);
+  const knowsName = isValidPersonName(customer?.full_name);
   const hasStoredReg = !!(customer?.vehicle_reg);
   const visible = STEP_ORDER.filter((s) => {
     if (s === "awaiting_name" && knowsName) return false;
@@ -311,7 +339,7 @@ export async function processCustomerIntake(
 
     const initial = {
       customer_phone: from,
-      customer_name: customer?.full_name ?? "Customer",
+      customer_name: isValidPersonName(customer?.full_name) ? customer!.full_name : "Customer",
       postcode: extractedPostcode ?? "",
       issue_type: issueType,
       issue_description: extractedDesc,
@@ -338,8 +366,11 @@ export async function processCustomerIntake(
     conversation = newConv;
 
     let greeting: string;
-    if (isReturning && customer?.full_name) {
-      greeting = `Welcome back ${customer.full_name.split(/\s+/)[0]} 👋 New job — let's get you sorted. I'll need a fresh location for this one.`;
+    if (isReturning && isValidPersonName(customer?.full_name)) {
+      const firstName = customer!.full_name.trim().split(/\s+/)[0];
+      greeting = `Welcome back ${firstName} 👋 New job — let's get you sorted. I'll need a fresh location for this one.`;
+    } else if (isReturning) {
+      greeting = "Welcome back 👋 New job — let's get you sorted. I'll need a fresh location for this one.";
     } else {
       greeting = "Tyre Fly here 👋 I'll get you sorted quickly.";
     }
@@ -468,7 +499,7 @@ function nudgeFor(step: IntakeStep): string {
 async function bumpCustomer(supabase: Supa, phone: string, job: any) {
   const existing = await loadCustomer(supabase, phone);
   const patch: Record<string, any> = {
-    full_name: job.customer_name && job.customer_name !== "Customer" ? job.customer_name : existing?.full_name ?? null,
+    full_name: isValidPersonName(job.customer_name) ? job.customer_name : (isValidPersonName(existing?.full_name) ? existing!.full_name : null),
     default_postcode: job.postcode || existing?.default_postcode || null,
     vehicle_reg: job.vehicle_reg || existing?.vehicle_reg || null,
     last_seen_at: new Date().toISOString(),
