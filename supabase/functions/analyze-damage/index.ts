@@ -49,15 +49,18 @@ serve(async (req) => {
       {
         type: "text",
         text:
-          `A customer reported a tyre issue.\n` +
-          `Issue type selected: ${issue_type ?? "unspecified"}\n` +
-          `Customer description: ${issue_description ?? "(none)"}\n\n` +
-          `Look at the attached photo(s) and extract everything useful. The photos may show different things — a damaged tyre, a wheel from a specific corner of the car, or the car's number plate. Multiple wheels may be affected.\n\n` +
+          `You are assessing tyre/wheel photos a customer just sent in.\n\n` +
+          `STRICT RULES for damage_summary:\n` +
+          `- Describe ONLY what you can actually see in the photos (the visible damage, tread, wheel, plate).\n` +
+          `- Do NOT repeat, paraphrase or quote anything the customer said or any text from their message.\n` +
+          `- Do NOT begin with phrases like "Customer says…" or restate the request — write the summary in YOUR voice as the technician.\n` +
+          `- Keep it to 1–2 short sentences a technician can read in an SMS, e.g. "Visible nail in the tread shoulder, slow leak likely; plug/patch repair should be sufficient."\n\n` +
+          `Context (for classification ONLY, never to be repeated back): issue_type=${issue_type ?? "unspecified"}.\n\n` +
           `IMPORTANT: First decide whether each photo actually shows a tyre, wheel, or vehicle/number plate. If NONE of the photos show any of those (e.g. it's a selfie, a meme, food, a screenshot, a random object), set damage_type to "not-a-tyre", set damage_summary to a short polite message saying it doesn't look like a tyre photo and asking for one, and set damage_confidence to "high". Do NOT guess tyre details in that case.\n\n` +
-          `1. Damage: classify type, write a 1–2 sentence summary, give a confidence level.\n` +
+          `1. Damage: classify type, write the 1–2 sentence summary per the rules above, give a confidence level.\n` +
           `2. Tyre details (per visible sidewall): size (e.g. 225/45R17 94Y), brand, tyre type (summer/winter/all-season/run-flat/performance), tread condition (new/good/worn/illegal — illegal ≈ below ~1.6mm), wheel material (alloy/steel).\n` +
           `3. Vehicle registration / number plate: if ANY plate is visible in any photo, return the characters exactly as shown (uppercase). Plates may be from any country (UK, US, France, Germany etc.) — do NOT force UK formatting.\n` +
-          `4. Affected wheels: which corner(s) of the car are damaged? Use any combination of "front-left", "front-right", "rear-left", "rear-right". Infer from photo angles, customer description, or visible context. If unclear, return an empty array.\n\n` +
+          `4. Affected wheels: which corner(s) of the car are damaged? Use any combination of "front-left", "front-right", "rear-left", "rear-right". Infer from photo angles or visible context. If unclear, return an empty array.\n\n` +
           `Return null for anything not legible — do NOT guess. Use the record_damage_assessment tool.`,
       },
       ...photo_urls.slice(0, 6).map((url: string) => ({
