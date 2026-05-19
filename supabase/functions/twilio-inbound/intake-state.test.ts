@@ -175,6 +175,94 @@ Deno.test("returning customer is greeted by first name on a new job", async () =
   );
 
   assertStringIncludes(outcome.reply, "Welcome back Hilal 👋");
-  assertStringIncludes(outcome.reply, "Your *current* location");
+  assertStringIncludes(outcome.reply, "Your *current pin location*");
   assertEquals(outcome.conversation.step, "awaiting_location");
+});
+
+Deno.test("returning customer falls back to prior jobs when customer memory row is missing", async () => {
+  const phone = "+441234567893";
+  const tables = {
+    customers: [],
+    conversations: [],
+    jobs: [{
+      id: "old-job-1",
+      customer_phone: phone,
+      customer_name: "Hilal Ahmed",
+      postcode: "W1G 9PF",
+      lat: 51.5198,
+      lng: -0.1482,
+      issue_type: "flat tyre",
+      issue_description: "Previous job",
+      photo_urls: [],
+      vehicle_reg: "D565A1",
+      affected_wheels: ["front-right"],
+      status: "awaiting_approval",
+      created_at: new Date(Date.now() - 60_000).toISOString(),
+      updated_at: new Date(Date.now() - 60_000).toISOString(),
+    }],
+  };
+
+  const outcome = await processCustomerIntake(
+    new MockSupabase(tables) as never,
+    { from: phone, body: "Hello", mediaUrls: [], channel: "whatsapp" },
+  );
+
+  assertStringIncludes(outcome.reply, "Welcome Back Hilal 👋");
+  assertStringIncludes(outcome.reply, "We've got *D565A1* on file for you");
+  assertEquals(outcome.job.customer_name, "Hilal Ahmed");
+  assertEquals(outcome.conversation.step, "awaiting_location");
+});
+
+Deno.test("shared pin location is required before leaving the location step", async () => {
+  const phone = "+441234567894";
+  const jobId = "job-pin-1";
+  const tables = {
+    customers: [{
+      phone,
+      full_name: "Hilal Ahmed",
+      vehicle_reg: "D565A1",
+      default_postcode: "W1G 9PF",
+      total_jobs: 2,
+    }],
+    conversations: [{
+      id: "conv-pin-1",
+      customer_phone: phone,
+      current_job_id: jobId,
+      step: "awaiting_location",
+      last_message_at: new Date().toISOString(),
+      context: {},
+    }],
+    jobs: [{
+      id: jobId,
+      customer_phone: phone,
+      customer_name: "Hilal Ahmed",
+      postcode: "",
+      lat: null,
+      lng: null,
+      issue_type: "flat tyre",
+      issue_description: "My tyre is flat",
+      photo_urls: [],
+      vehicle_reg: null,
+      affected_wheels: [],
+      status: "intake_pending",
+      updated_at: new Date().toISOString(),
+    }],
+  };
+
+  const postcodeOnly = await processCustomerIntake(
+    new MockSupabase(tables) as never,
+    { from: phone, body: "W1G 9PF", mediaUrls: [], channel: "whatsapp" },
+  );
+
+  assertStringIncludes(postcodeOnly.reply, "current pin location");
+  assertEquals(postcodeOnly.conversation.step, "awaiting_location");
+
+  const withPin = await processCustomerIntake(
+    new MockSupabase(tables) as never,
+    { from: phone, body: "Location pin shared — (51.5198, -0.1482)", mediaUrls: [], channel: "whatsapp" },
+  );
+
+  assertEquals(withPin.job.lat, 51.5198);
+  assertEquals(withPin.job.lng, -0.1482);
+  assertEquals(withPin.conversation.step, "awaiting_plate_confirm");
 });
