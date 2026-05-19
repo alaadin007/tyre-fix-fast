@@ -212,6 +212,57 @@ Deno.test("returning customer falls back to prior jobs when customer memory row 
   assertEquals(outcome.conversation.step, "awaiting_location");
 });
 
+Deno.test("returning customer skips the name step when only an older job has the valid saved name", async () => {
+  const phone = "+441234567895";
+  const tables = {
+    customers: [],
+    conversations: [],
+    jobs: [
+      {
+        id: "old-valid-job",
+        customer_phone: phone,
+        customer_name: "Hilal Ahmed",
+        postcode: "W1G 9PF",
+        lat: 51.5198,
+        lng: -0.1482,
+        issue_type: "flat tyre",
+        issue_description: "Previous valid job",
+        photo_urls: [],
+        vehicle_reg: "D565A1",
+        affected_wheels: ["front-right"],
+        status: "awaiting_approval",
+        created_at: new Date(Date.now() - 120_000).toISOString(),
+        updated_at: new Date(Date.now() - 120_000).toISOString(),
+      },
+      {
+        id: "latest-bad-job",
+        customer_phone: phone,
+        customer_name: "Hey I need Help",
+        postcode: "NW1 6XE",
+        lat: 51.5237,
+        lng: -0.1585,
+        issue_type: "unknown",
+        issue_description: null,
+        photo_urls: [],
+        vehicle_reg: "D565A1",
+        affected_wheels: [],
+        status: "intake_pending",
+        created_at: new Date(Date.now() - 60_000).toISOString(),
+        updated_at: new Date(Date.now() - 60_000).toISOString(),
+      },
+    ],
+  };
+
+  const outcome = await processCustomerIntake(
+    new MockSupabase(tables) as never,
+    { from: phone, body: "Hello", mediaUrls: [], channel: "whatsapp" },
+  );
+
+  assertStringIncludes(outcome.reply, "Welcome Back Hilal 👋");
+  assert(!outcome.reply.includes("Your name"));
+  assertEquals(outcome.job.customer_name, "Hilal Ahmed");
+});
+
 Deno.test("shared pin location is required before leaving the location step", async () => {
   const phone = "+441234567894";
   const jobId = "job-pin-1";
