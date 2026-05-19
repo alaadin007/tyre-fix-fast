@@ -85,19 +85,6 @@ function buildJobTemplateParams(j: any, photoUrls: string[]): string[] {
     mapsLink,                                                         // {{16}}
   ];
 }
-    clean(j.issue_type),                                              // {{6}}
-    clean(j.severity, "Not assessed"),                                // {{7}}
-    clean(wheels),                                                    // {{8}}
-    clean(j.damage_summary ?? j.issue_description, "No summary"),     // {{9}}
-    clean(j.notes, "—"),                                              // {{10}}
-    clean(j.vehicle_reg, "Not provided"),                             // {{11}}
-    String(photoCount),                                               // {{12}}
-    String(j.id),                                                     // {{13}}
-    clean(photoUrls[1], "—"),                                         // {{14}}
-    clean(photoUrls[2], "—"),                                         // {{15}}
-    mapsLink,                                                         // {{16}}
-  ];
-}
 
 function buildTemplateParams(t: any): string[] {
   const idPrefix = String(t.id).slice(0, 6);
