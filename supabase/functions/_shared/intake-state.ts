@@ -325,7 +325,15 @@ export async function processCustomerIntake(
   const customer = await loadCustomer(supabase, from);
   let conversation = await loadActiveConversation(supabase, from);
   let job: any = null;
-  const isReturning = !!customer && (customer.total_jobs ?? 0) > 0;
+  // "Returning" = we have any record of this phone before — name, plate or a
+  // prior job. We don't gate on total_jobs because some prior conversations
+  // never reached intake_complete but the customer is still a known number.
+  const isReturning = !!customer && (
+    (customer.total_jobs ?? 0) > 0 ||
+    isValidPersonName(customer.full_name) ||
+    !!customer.vehicle_reg ||
+    !!customer.default_postcode
+  );
   let isNew = false;
 
   if (!conversation) {
