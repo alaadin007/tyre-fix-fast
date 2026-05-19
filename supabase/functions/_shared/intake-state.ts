@@ -356,7 +356,37 @@ function firstMissingStep(job: any, customer: any, conversation: any | null): In
   return "complete";
 }
 
-function stepNumberAndTotal(step: IntakeStep, customer: any | null): { n: number; total: number } | null {
+function isStepSatisfied(s: IntakeStep, job: any, conversation: any | null): boolean {
+  switch (s) {
+    case "awaiting_location":
+      return !!conversation?.context?.location_pin_confirmed && job?.lat != null && job?.lng != null;
+    case "awaiting_plate_confirm":
+      return !!conversation?.context?.plate_confirm_done;
+    case "awaiting_plate":
+      return !!job?.vehicle_reg;
+    case "awaiting_name":
+      return !!job?.customer_name && job.customer_name !== "Customer";
+    case "awaiting_description":
+      return hasIncidentContext(job?.issue_description ?? "");
+    case "awaiting_wheels":
+      return Array.isArray(job?.affected_wheels) && job.affected_wheels.length > 0;
+    case "awaiting_photos": {
+      const need = (job?.affected_wheels ?? []).length;
+      const have = (job?.photo_urls ?? []).length;
+      const required = Math.max(MIN_REQUIRED_PHOTOS, need);
+      return have >= required;
+    }
+    default:
+      return false;
+  }
+}
+
+function stepNumberAndTotal(
+  step: IntakeStep,
+  customer: any | null,
+  job: any | null,
+  conversation: any | null,
+): { n: number; total: number } | null {
   if (step === "complete" || step === "idle") return null;
   const knowsName = isValidPersonName(customer?.full_name);
   const hasStoredReg = !!(customer?.vehicle_reg);
@@ -367,13 +397,19 @@ function stepNumberAndTotal(step: IntakeStep, customer: any | null): { n: number
     if (s === "awaiting_plate" && hasStoredReg) return false;
     return true;
   });
-  const idx = visible.indexOf(step);
+  // A step "counts" only if it's the current step or not already auto-satisfied
+  // (so steps the user never had to answer don't inflate the numbering).
+  const counted = visible.filter((s) => s === step || !isStepSatisfied(s, job, conversation));
+  const idx = counted.indexOf(step);
   if (idx === -1) return null;
-  return { n: idx + 1, total: visible.length };
+  return { n: idx + 1, total: counted.length };
 }
 
-function prompt(step: IntakeStep, ctx: { job: any; customer: any | null; greeting?: string }): string {
-  const meta = stepNumberAndTotal(step, ctx.customer);
+function prompt(
+  step: IntakeStep,
+  ctx: { job: any; customer: any | null; greeting?: string; conversation?: any | null },
+): string {
+  const meta = stepNumberAndTotal(step, ctx.customer, ctx.job, ctx.conversation ?? null);
   const head = meta ? `*Step ${meta.n} of ${meta.total}* — ` : "";
   const greet = ctx.greeting ? ctx.greeting + "\n\n" : "";
   switch (step) {
@@ -490,7 +526,7 @@ export async function processCustomerIntake(
       return { reply: `${greeting}\n\nAll done ✅ Finding you a technician now — we'll message the moment one is matched.`, job, conversation: { ...conversation, step: "complete" }, justCompleted: true };
     }
 
-    return { reply: prompt(step, { job, customer, greeting }), job, conversation, justCompleted: false };
+    return { reply: prompt(step, { job, customer, greeting, conversation }), job, conversation, justCompleted: false };
   }
 
   job = await loadJob(supabase, conversation.current_job_id);
@@ -602,7 +638,7 @@ export async function processCustomerIntake(
 
   if (tyreIntentWhileAwaitingLocation && bodyHasIssueDetails) {
     return {
-      reply: `Got it — I've noted the tyre issue and your service request.\n\n${prompt(nextStep, { job, customer })}`,
+      reply: `Got it — I've noted the tyre issue and your service request.\n\n${prompt(nextStep, { job, customer, conversation })}`,
       job,
       conversation,
       justCompleted: false,
@@ -610,15 +646,15 @@ export async function processCustomerIntake(
   }
 
   if (tyreIntentWhileAwaitingLocation) {
-    return { reply: prompt(nextStep, { job, customer }), job, conversation, justCompleted: false };
+    return { reply: prompt(nextStep, { job, customer, conversation }), job, conversation, justCompleted: false };
   }
 
   if (!parsedSomething && (body.trim().length > 0 || mediaUrls.length > 0)) {
     const nudge = nudgeFor(conversation.step);
-    return { reply: `${nudge}\n\n${prompt(nextStep, { job, customer })}`, job, conversation, justCompleted: false };
+    return { reply: `${nudge}\n\n${prompt(nextStep, { job, customer, conversation })}`, job, conversation, justCompleted: false };
   }
 
-  return { reply: prompt(nextStep, { job, customer }), job, conversation, justCompleted: false };
+  return { reply: prompt(nextStep, { job, customer, conversation }), job, conversation, justCompleted: false };
 }
 
 function nudgeFor(step: IntakeStep): string {
