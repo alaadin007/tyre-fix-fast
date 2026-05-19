@@ -261,7 +261,7 @@ function firstMissingStep(job: any, customer: any, conversation: any | null): In
 
 function stepNumberAndTotal(step: IntakeStep, customer: any | null): { n: number; total: number } | null {
   if (step === "complete" || step === "idle") return null;
-  const knowsName = !!(customer?.full_name);
+  const knowsName = isValidPersonName(customer?.full_name);
   const hasStoredReg = !!(customer?.vehicle_reg);
   const visible = STEP_ORDER.filter((s) => {
     if (s === "awaiting_name" && knowsName) return false;
