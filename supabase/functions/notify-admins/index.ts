@@ -42,6 +42,11 @@ function clean(v: any, fallback = "—"): string {
 
 function buildJobTemplateParams(j: any, photoUrls: string[]): string[] {
   const shortId = String(j.id).slice(0, 6).toUpperCase();
+  const customerName = clean(
+    j.customer_name && String(j.customer_name).trim().toLowerCase() !== "customer"
+      ? j.customer_name
+      : j.customer_full_name ?? j.full_name ?? "Customer"
+  );
   const wheels = Array.isArray(j.affected_wheels) && j.affected_wheels.length
     ? j.affected_wheels.join(", ") : "—";
   const photoCount = Array.isArray(j.photo_urls) ? j.photo_urls.length : 0;
@@ -59,7 +64,7 @@ function buildJobTemplateParams(j: any, photoUrls: string[]): string[] {
   return [
     shortId,                                                          // {{1}}
     when,                                                             // {{2}}
-    clean(j.customer_name),                                           // {{3}}
+    customerName,                                                     // {{3}}
     clean(j.customer_phone),                                          // {{4}}
     clean(j.postcode),                                                // {{5}}
     clean(j.issue_type),                                              // {{6}}
