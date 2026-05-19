@@ -1237,6 +1237,29 @@ Deno.serve(async (req) => {
     }
 
     if (outcome.justCompleted) {
+      // Re-run the vision analysis over ALL collected photos so the final
+      // damage_summary reflects every image, not just the last one uploaded.
+      const allPhotos: string[] = Array.isArray(outcome.job?.photo_urls) ? outcome.job.photo_urls : [];
+      if (allPhotos.length > 0) {
+        try {
+          await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/analyze-damage`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+            },
+            body: JSON.stringify({
+              job_id: outcome.job.id,
+              photo_urls: allPhotos,
+              issue_type: outcome.job.issue_type,
+              // Intentionally NOT passing issue_description — keeps the AI
+              // summary focused on the visuals instead of parroting the user.
+            }),
+          });
+        } catch (e) {
+          console.error("final analyze-damage call failed", e);
+        }
+      }
       await supabase.from("ops_alerts").insert({
         level: "info",
         title: "Intake complete — all details collected",
