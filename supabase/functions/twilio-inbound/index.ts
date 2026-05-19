@@ -449,6 +449,7 @@ Deno.serve(async (req) => {
     const sid = params.MessageSid ?? null;
     const numMedia = parseInt(params.NumMedia ?? "0", 10) || 0;
     const mediaUrls: string[] = [];
+    let rejectedNonImageCount = 0;
 
     // Twilio media URLs require Basic Auth. Download with credentials and
     // re-upload to our public job-photos bucket so they render in the browser
@@ -458,8 +459,17 @@ Deno.serve(async (req) => {
 
     for (let i = 0; i < numMedia; i++) {
       const u = params[`MediaUrl${i}`];
-      const ct = params[`MediaContentType${i}`] || "image/jpeg";
+      const ct = (params[`MediaContentType${i}`] || "image/jpeg").toLowerCase();
       if (!u) continue;
+      // Reject anything that isn't a still image (no video, GIF/MP4, PDF, audio, docs).
+      // WhatsApp GIFs arrive as video/mp4 — those must be rejected too so the
+      // damage-analysis + template flow only ever sees real tyre photos.
+      const isImage = ct.startsWith("image/") && !ct.includes("gif");
+      if (!isImage) {
+        console.log("rejected non-image media", { ct, u });
+        rejectedNonImageCount++;
+        continue;
+      }
       try {
         const headers: Record<string, string> = {};
         if (TWILIO_ACCOUNT_SID && TWILIO_AUTH_TOKEN) {
@@ -488,6 +498,18 @@ Deno.serve(async (req) => {
         console.error("media handling error", e);
         mediaUrls.push(u);
       }
+    }
+
+    // If the customer sent only invalid media (video/GIF/PDF/doc/audio) and no
+    // valid images, stop here and ask them to resend as image files. Don't
+    // advance intake — we don't want to mark photos step complete with junk.
+    if (rejectedNonImageCount > 0 && mediaUrls.length === 0) {
+      await sendReply(
+        from,
+        "Only valid image formats are accepted ❌\nPlease send a clear *photo* of the tyre (JPG/PNG) — not a video, GIF, PDF or document.",
+        channel,
+      );
+      return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
     }
 
     // 1. Always log
