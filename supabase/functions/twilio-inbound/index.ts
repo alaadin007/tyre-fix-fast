@@ -6,6 +6,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { feeForPhone } from "../_shared/region-fee.ts";
+import { processCustomerIntake } from "../_shared/intake-state.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
