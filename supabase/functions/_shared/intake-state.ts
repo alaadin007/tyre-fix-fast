@@ -338,6 +338,7 @@ export async function processCustomerIntake(
   input: { from: string; body: string; mediaUrls: string[]; channel: "sms" | "whatsapp" },
 ): Promise<IntakeOutcome> {
   const { from, body, mediaUrls } = input;
+  const bodyHasIncidentContext = hasIncidentContext(body);
   const customer = await loadCustomer(supabase, from);
   let conversation = await loadActiveConversation(supabase, from);
   let job: any = null;
@@ -361,7 +362,7 @@ export async function processCustomerIntake(
     // as "Customer" and ask in the awaiting_name step.
     const extractedPostcode = await resolvePostcode(body);
     const extractedWheels = extractWheels(body);
-    const extractedDesc = hasIncidentContext(body) ? body.slice(0, 500) : null;
+    const extractedDesc = bodyHasIncidentContext ? body.slice(0, 500) : null;
     const issueType = guessIssueType(body) ?? "unknown";
 
     const initial = {
@@ -395,11 +396,17 @@ export async function processCustomerIntake(
     let greeting: string;
     if (isReturning && isValidPersonName(customer?.full_name)) {
       const firstName = customer!.full_name.trim().split(/\s+/)[0];
-      greeting = `Welcome back ${firstName} 👋 New job — let's get you sorted. I'll need a fresh location for this one.`;
+      greeting = bodyHasIncidentContext
+        ? `Welcome back ${firstName} 👋 I understand you need tyre help. New job — let's get you sorted, starting with a fresh location for this one.`
+        : `Welcome back ${firstName} 👋 New job — let's get you sorted. I'll need a fresh location for this one.`;
     } else if (isReturning) {
-      greeting = "Welcome back 👋 New job — let's get you sorted. I'll need a fresh location for this one.";
+      greeting = bodyHasIncidentContext
+        ? "Welcome back 👋 I understand you need tyre help. New job — let's get you sorted, starting with a fresh location for this one."
+        : "Welcome back 👋 New job — let's get you sorted. I'll need a fresh location for this one.";
     } else {
-      greeting = "Tyre Fly here 👋 I'll get you sorted quickly.";
+      greeting = bodyHasIncidentContext
+        ? "Tyre Fly here 👋 I understand you need tyre help — I'll get you sorted quickly."
+        : "Tyre Fly here 👋 I'll get you sorted quickly.";
     }
 
     if (step === "complete") {
@@ -456,7 +463,7 @@ export async function processCustomerIntake(
     if (nm) { updates.customer_name = nm; parsedSomething = true; }
   }
 
-  if (!hasIncidentContext(job.issue_description ?? "") && hasIncidentContext(body)) {
+  if (!hasIncidentContext(job.issue_description ?? "") && bodyHasIncidentContext) {
     updates.issue_description = body.slice(0, 500);
     const it = guessIssueType(body); if (it) updates.issue_type = it;
     parsedSomething = true;
@@ -487,6 +494,10 @@ export async function processCustomerIntake(
 
   const nextStep = firstMissingStep(job, customer, conversation);
   const justCompleted = nextStep === "complete" && conversation.step !== "complete";
+  const serviceIntentWhileAwaitingLocation =
+    conversation.step === "awaiting_location" &&
+    !pc &&
+    bodyHasIncidentContext;
   await supabase.from("conversations").update({
     step: nextStep,
     last_message_at: new Date().toISOString(),
@@ -499,6 +510,15 @@ export async function processCustomerIntake(
     return {
       reply: "All done ✅ Finding you a technician now — we'll message the moment one is matched.",
       job, conversation, justCompleted: true,
+    };
+  }
+
+  if (serviceIntentWhileAwaitingLocation) {
+    return {
+      reply: `Got it — I've noted the tyre issue and your service request.\n\n${prompt(nextStep, { job, customer })}`,
+      job,
+      conversation,
+      justCompleted: false,
     };
   }
 
