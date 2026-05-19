@@ -454,11 +454,15 @@ function prompt(
       return `${greet}${head}Which tyre(s)? 🛞\nReply with *front-left*, *front-right*, *rear-left*, *rear-right*, *both front*, *both rear*, or *all four*.`;
     }
     case "awaiting_photos": {
-      const need = (ctx.job.affected_wheels ?? []).length;
       const have = (ctx.job.photo_urls ?? []).length;
-      const required = Math.max(MIN_REQUIRED_PHOTOS, need);
-      const remaining = Math.max(1, required - have);
-      return `${greet}${head}Photos 📸 (${have}/${required} so far)\nPlease send ${remaining} more *clear tyre photo${remaining === 1 ? "" : "s"}* — we need at least ${required} images before we can match a technician. Image files only — no videos or PDFs.`;
+      if (have === 0) {
+        return `${greet}${head}Photos 📸\nPlease upload *2–3 clear photos* of the tyre (close-up of the damage works best). Image files only — no videos or PDFs.`;
+      }
+      if (have === 1) {
+        return `${greet}${head}Photos 📸 (1/2 so far)\nThanks ✅ — please upload *1 more image* so the technician can quote accurately. Image files only.`;
+      }
+      // have >= 2 but we haven't completed yet → invite an optional third angle.
+      return `${greet}${head}Photos 📸 (${have} received)\nThanks ✅ — if you'd like, share *one more photo from a different angle* for better clarity, or reply *DONE* to continue.`;
     }
     default:
       return "";
