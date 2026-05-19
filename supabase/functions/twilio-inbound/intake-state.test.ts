@@ -188,6 +188,26 @@ Deno.test("returning customer is greeted by first name on a new job", async () =
   assertEquals(outcome.conversation.step, "awaiting_location");
 });
 
+Deno.test("brand-new customer is not greeted as returning when no prior rows exist", async () => {
+  const phone = "+923311396603";
+  const tables = {
+    customers: [],
+    conversations: [],
+    jobs: [],
+  };
+
+  const outcome = await processCustomerIntake(
+    new MockSupabase(tables) as never,
+    { from: phone, body: "Hello, I need urgent tyre repair service for my car.", mediaUrls: [], channel: "whatsapp" },
+  );
+
+  assertStringIncludes(outcome.reply, "Hi, welcome to Tyre Fly 👋");
+  assert(!outcome.reply.includes("Welcome Back"));
+  assertEquals(outcome.job.customer_phone, phone);
+  assertEquals(outcome.job.customer_name, "Customer");
+  assertEquals(outcome.conversation.step, "awaiting_location");
+});
+
 Deno.test("returning customer falls back to prior jobs when customer memory row is missing", async () => {
   const phone = "+441234567893";
   const tables = {
