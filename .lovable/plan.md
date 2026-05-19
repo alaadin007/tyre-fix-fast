@@ -1,40 +1,84 @@
+# Rewrite Customer Intake Flow + Memory
+
+## Problem (from screenshots + code)
+
+- `twilio-inbound/index.ts` is 1669 lines with multiple branches that each independently send "Step 1 of 4 — Your location". After "All done ✅" the same handler falls through and re-asks step 1.
+- No clear conversation state — the bot infers progress from `jobs` row fields, so any null field re-triggers the question.
+- No customer memory: a returning client is treated as brand new, even when we already have their name / vehicle / past jobs.
+
 ## Goal
-Make the Console a single, simple, working dispatcher view that shows **every job** with its **full WhatsApp conversation, photos, and customer details** — no hidden tabs, no missing data.
 
-## What's wrong today
-1. The Console hides jobs in 3 tabs (New / In progress / Completed). Statuses like `superseded`, `no_response`, `intake_pending` get buried — that's why CO55DOC didn't show up.
-2. The job card only shows postcode + issue type. The actual intake info (Porsche, reg, "front right", photos, location pin) lives in `sms_messages` and is **never displayed**.
-3. The dispatch modal shows fields from the `jobs` row but not the message thread, so dispatchers can't see what the customer actually said.
+One linear, deterministic intake. Returning customers skip what we already know but always start a **new case**.
 
-## Plan
+## New conversation model
 
-### 1. One unified job list (no tabs)
-- Replace the 3 tabs with a single scrollable list, newest first.
-- Add a small filter bar at the top: `All · New · In progress · Completed` (just filters the same list, doesn't hide jobs by default).
-- Each card shows: postcode, customer name, phone, reg, issue, status pill, timer, first photo thumbnail, last inbound message snippet.
+Two tables, one state machine.
 
-### 2. Show the full conversation in the dispatch modal
-- When a job is opened, fetch all `sms_messages` where `job_id = job.id` **OR** `from_number / to_number = customer_phone` (since intake messages may be linked by phone before a job_id is set).
-- Render a chat-style thread (inbound left, outbound right) with timestamps, photos inline, and location pins as links.
-- Subscribe to realtime so new messages appear live.
+**`customers`** (one row per phone, the long-term memory)
+- `phone` (PK), `full_name`, `default_postcode`, `vehicle_reg`, `last_seen_at`, `total_jobs`, `notes`
 
-### 3. Surface all extracted intake fields
-- Show every field the AI extracted: `vehicle_reg`, `tyre_size`, `tyre_brand`, `wheel_type`, `affected_wheels`, `damage_type`, `damage_summary`, lat/lng, etc. — in a compact grid in the modal header.
+**`conversations`** (one row per active WhatsApp thread)
+- `id`, `customer_phone`, `current_job_id`, `step` enum, `last_message_at`, `context jsonb`
+- `step`: `idle | awaiting_location | awaiting_plate | awaiting_name | awaiting_description | awaiting_wheels | awaiting_photos | complete`
+- Conversation auto-expires after 24h of silence → next inbound starts a **new case**, but `customers` row is reused.
 
-### 4. Top-bar counters reflect reality
-- "X jobs · Y techs" counts every job in the database (last 50), not just the visible tab.
+## Intake state machine (single source of truth)
 
-### 5. Keep dispatch flow as-is
-- The "Send pay link" button still calls the existing `manual-dispatch` edge function. No backend changes.
+```text
+inbound msg
+   │
+   ▼
+load customer (by phone) → load active conversation (<24h)
+   │
+   ├─ no active convo  → create new job + conversation, step = first missing field
+   │                     using customer memory to pre-fill name/postcode/reg
+   │
+   └─ active convo     → route by conversation.step, NOT by job fields
+```
 
-## Files to change
-- `src/pages/Console.tsx` — flatten tabs into one filterable list; richer cards.
-- `src/components/console/JobConversation.tsx` *(new)* — chat thread component.
-- `src/pages/Console.tsx` (DispatchModal section) — embed `<JobConversation>` and the full intake grid.
-- `src/hooks/useConsoleData.ts` — return all jobs (already does), no status filter.
+Each step handler does exactly three things:
+1. Try to parse the inbound message for its field.
+2. If parsed → save to job + customer memory, advance `step`, send next prompt.
+3. If not parsed → resend *only* the current step prompt (no progress checklist spam).
 
-## Out of scope
-- No new edge functions, no schema changes, no auth changes. The backend already works — this is a presentation fix.
-- Drag-and-drop, sound alerts, AI rematch — separate follow-ups.
+When `step` becomes `complete`:
+- Mark job `intake_complete` (fires dispatch trigger).
+- Send the "All done ✅" message **once**.
+- Set conversation `step = idle`. No further prompts until customer sends something new.
 
-Ready to implement on approval.
+## Returning customer behaviour
+
+On new conversation, if `customers` row exists:
+- Greet by name: "Welcome back, {name} 👋 New job?"
+- Pre-fill `customer_name`, optionally `vehicle_reg` and `postcode` from memory.
+- Skip those steps; jump straight to "What happened this time?"
+- Never carry over: previous photos, previous damage, previous affected wheels, previous job status.
+- Always create a fresh `jobs` row.
+
+## What gets deleted / rewritten
+
+- All the duplicate "Step 1 of 4" branches in `twilio-inbound/index.ts` collapse into one `sendStepPrompt(step)` helper.
+- The post-completion fall-through that re-asks step 1 is removed.
+- `whatsapp-meta-webhook/index.ts` routed through the same state machine (shared module).
+
+## Technical section
+
+**Files**
+- `supabase/functions/_shared/intake-state.ts` (new) — pure state machine: `nextStep(conversation, job, customer, inboundText, mediaUrls) → { updates, reply }`.
+- `supabase/functions/twilio-inbound/index.ts` — thin: parse Twilio body, call shared state machine, send reply.
+- `supabase/functions/whatsapp-meta-webhook/index.ts` — same, for Meta.
+
+**Migration**
+- Create `customers` + `conversations` tables with RLS (service-role only; no end-user auth on these).
+- Backfill `customers` from existing `jobs` (group by `customer_phone`, keep latest non-null values).
+- Add index `conversations(customer_phone) where step <> 'complete'`.
+
+**Out of scope (not touching)**
+- `dispatch-agent`, `notify-admins`, technician side, admin console, payments.
+- The approved Meta template `new_job_alert_to_admin` keeps firing exactly as today once `status = intake_complete`.
+
+## Confirm before I build
+
+1. **24h window** for "same case vs new case" — OK, or do you want shorter (e.g. 2h) / longer?
+2. **What to remember** between visits — name + postcode + vehicle reg + count of past jobs. Anything else (preferred technician, last damage type)?
+3. **Returning-customer greeting** — should it confirm details ("Same car C13ATA?") or silently reuse them?

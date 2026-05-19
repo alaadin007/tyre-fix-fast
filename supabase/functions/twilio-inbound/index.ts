@@ -6,6 +6,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { feeForPhone } from "../_shared/region-fee.ts";
+import { processCustomerIntake } from "../_shared/intake-state.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -1077,423 +1078,58 @@ Deno.serve(async (req) => {
       return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
     }
 
-    // 3. Customer? Look up their most recent job
-    const { data: customerJobs } = await supabase
+    // 3. Customer? Check for pending quote acceptance / review rating first.
+    //    These are reply-shaped interactions on an existing job (NOT intake).
+    const { data: recentJobs } = await supabase
       .from("jobs")
       .select("*")
       .eq("customer_phone", from)
       .order("created_at", { ascending: false })
       .limit(1);
-    let job: any = customerJobs?.[0];
+    const recentJob: any = recentJobs?.[0];
 
-    // If the customer has an existing job, decide whether this new message
-    // continues that job or is a brand-new request. Skip the classifier for
-    // obvious continuations (rating reply, quote acceptance, in-progress states).
-    if (job) {
-      const isRating = /^\s*[1-5]\b/.test(body);
-      const isAccept = /^\s*(yes|y|accept|ok|book it)\b/i.test(body);
-      const lockedStates = ["awaiting_payment", "accepted", "in_progress", "paid"];
-      const isLocked = lockedStates.includes(job.status);
-      const activeIntakeStates = ["intake_pending", "pending"];
-      const isActiveIntake = activeIntakeStates.includes(job.status);
-      if (!isRating && !isAccept && !isLocked && !isActiveIntake) {
-        const relation = await aiClassifyJobContinuity({
-          body,
-          hasMedia: mediaUrls.length > 0,
-          job: {
-            id: job.id,
-            status: job.status,
-            issue_type: job.issue_type,
-            postcode: job.postcode,
-            created_at: job.created_at,
-            issue_description: job.issue_description,
-          },
-        });
-        if (relation === "new_job") {
-          await supabase.from("ops_alerts").insert({
-            level: "info",
-            title: "Customer started a new job",
-            body: `From ${from} (${channel}). Previous job ${job.id.slice(0, 6)} status=${job.status}. Message: "${body.slice(0, 120)}"`,
-            job_id: job.id,
-          });
-          // Mark stale open job as superseded so it doesn't keep absorbing replies
-          if (["intake_pending", "broadcasting", "awaiting_approval", "intake_complete", "pending"].includes(job.status)) {
-            await supabase.from("jobs").update({ status: "superseded" }).eq("id", job.id);
-          }
-          job = null; // fall through to section 4 (new intake)
-        }
-      }
-    }
-
-    const INTAKE_TEMPLATE =
-      "Tyre Fly here 👋 I'll get you sorted quickly.\n\n" +
-      "*Step 1 of 4 — Your location* 📍\n" +
-      "Please share your *location*: send a WhatsApp pin 📍, your *postcode*, or your *full address*.";
-
-    // Helpers for parsing follow-up intake messages
-    const POSTCODE_RE = /\b([A-Z]{1,2}\d[A-Z\d]?)\s*(\d[A-Z]{2})\b/i;
-    const extractPostcode = (t: string) => {
-      const m = t.match(POSTCODE_RE);
-      return m ? `${m[1].toUpperCase()} ${m[2].toUpperCase()}` : null;
-    };
-    const guessIssueType = (t: string) => {
-      const s = t.toLowerCase();
-      if (/blow.?out/.test(s)) return "blowout";
-      if (/lock|locking/.test(s)) return "locked wheel";
-      if (/flat|deflat/.test(s)) return "flat tyre";
-      if (/punct|nail|screw/.test(s)) return "puncture";
-      if (/sidewall|bulge|buckl/.test(s)) return "sidewall damage";
-      if (/kerb|curb|pothole|hit|impact|crash|bump/.test(s)) return "impact damage";
-      if (/pressure|leak|valve|going down|deflating/.test(s)) return "slow leak";
-      return null;
-    };
-    // Number plate (international) — accept letter+digit combos 4–10 chars.
-    // Avoid grabbing common words / postcodes by requiring at least 1 letter
-    // AND 1 digit, and skip if it matches a UK postcode.
-    const PLATE_HINT_RE = /\b(?:reg(?:istration)?|plate|number\s*plate|licen[cs]e\s*plate|tag)\s*[:\-]?\s*([A-Z0-9][A-Z0-9\s\-]{2,12}[A-Z0-9])\b/i;
-    const PLATE_LOOSE_RE = /\b([A-Z0-9]{2,4}[\s\-]?[A-Z0-9]{2,5})\b/g;
-    const extractReg = (t: string): string | null => {
-      const hinted = t.match(PLATE_HINT_RE);
-      if (hinted) {
-        return hinted[1].toUpperCase().trim().replace(/\s+/g, " ");
-      }
-      // Loose pass — only accept tokens that contain BOTH a letter and a digit
-      // and aren't a UK postcode.
-      const matches = t.toUpperCase().matchAll(PLATE_LOOSE_RE);
-      for (const m of matches) {
-        const raw = m[1].replace(/\s+/g, "");
-        if (!/[A-Z]/.test(raw) || !/\d/.test(raw)) continue;
-        if (POSTCODE_RE.test(raw)) continue;
-        if (raw.length < 4 || raw.length > 10) continue;
-        return m[1].toUpperCase().trim();
-      }
-      return null;
-    };
-    const extractWheels = (t: string): string[] => {
-      const s = t.toLowerCase();
-      const out = new Set<string>();
-      const has = (re: RegExp) => re.test(s);
-      const addFrontPair = () => {
-        out.add("front-left");
-        out.add("front-right");
-      };
-      const addRearPair = () => {
-        out.add("rear-left");
-        out.add("rear-right");
-      };
-      // Direct corner mentions
-      if (has(/front[-\s]?left|fl\b|nearside front|front near.?side/)) out.add("front-left");
-      if (has(/front[-\s]?right|fr\b|offside front|front off.?side/)) out.add("front-right");
-      if (has(/(rear|back)[-\s]?left|rl\b|nearside rear|nearside back|rear near.?side/)) out.add("rear-left");
-      if (has(/(rear|back)[-\s]?right|rr\b|offside rear|offside back|rear off.?side/)) out.add("rear-right");
-      // Pairs like "both front tyres", "2 rear tyres", "both front ones"
-      if (has(/\b(?:both|two|2)\s+front(?:\s+(?:tyres?|tires?|wheels?|ones?))?\b|\bfront\s+(?:both|two|2)(?:\s+(?:tyres?|tires?|wheels?|ones?))?\b|\bboth\s+front\s+ones?\b/)) addFrontPair();
-      if (has(/\b(?:both|two|2)\s+(?:rear|back)(?:\s+(?:tyres?|tires?|wheels?|ones?))?\b|\b(?:rear|back)\s+(?:both|two|2)(?:\s+(?:tyres?|tires?|wheels?|ones?))?\b|\bboth\s+(?:rear|back)\s+ones?\b/)) addRearPair();
-      // "all four", "all 4"
-      if (has(/all\s*(four|4)\b/)) {
-        ["front-left", "front-right", "rear-left", "rear-right"].forEach((w) => out.add(w));
-      }
-      return Array.from(out);
-    };
-    const isLikelyLocationAttempt = (t: string): boolean => {
-      const s = (t || "").trim();
-      if (!s) return false;
-      if (POSTCODE_RE.test(s) || COORD_RE.test(s) || ADDRESS_HINT_RE.test(s)) return true;
-      return /\b(postcode|address|location|loc|pin|drop\s*pin|share\s*location|i'?m\s+at|im\s+at|my\s+address\s+is|near\s+[a-z]|outside\s+[a-z])\b/i.test(s);
-    };
-
-    // 3a. If there's an in-flight intake (intake_pending), enrich it
-    if (job && job.status === "intake_pending") {
-      const updates: Record<string, any> = { updated_at: new Date().toISOString() };
-      // Only store the actual incident description (not the whole transcript of names/postcodes/plates).
-      // Replace prior description if the new body actually describes what happened.
-      const incidentRe = /(nail|screw|slow|fast|sudden|drove|driving|park|kerb|curb|pothole|bulge|split|crack|flat|puncture|blowout|burst|leak|valve|hit|damage|tear|tore|cut|deflat|pressure|no idea|not sure|don'?t know|dont know|dunno|unsure|no clue)/i;
-      if (body && incidentRe.test(body)) {
-        updates.issue_description = body.slice(0, 500);
-      }
-      if (mediaUrls.length > 0) {
-        updates.photo_urls = [...(job.photo_urls ?? []), ...mediaUrls].slice(0, 12);
-      }
-      let pc = extractPostcode(body);
-      if (!pc) {
-        const coords = body.match(COORD_RE);
-        if (coords) {
-          const lat = Number(coords[1]);
-          const lng = Number(coords[2]);
-          if (Number.isFinite(lat) && Number.isFinite(lng)) {
-            pc = await reverseGeocodePostcode(lat, lng);
-            if (pc) console.log("derived postcode from coords", JSON.stringify({ jobId: job.id, lat, lng, pc }));
-          }
-        }
-      }
-      // Fallback: if still no postcode but the text looks like a street address, forward-geocode it.
-      if (!pc && ADDRESS_HINT_RE.test(body)) {
-        const geo = await geocodeAddressToPostcode(body);
-        if (geo.postcode) {
-          pc = geo.postcode;
-          console.log("derived postcode from address text", JSON.stringify({ jobId: job.id, address: body.slice(0, 80), pc }));
-        }
-      }
-      if (pc && !job.postcode) updates.postcode = pc;
-      const it = guessIssueType(body);
-      if (it && (!job.issue_type || job.issue_type === "unknown")) updates.issue_type = it;
-      // Name capture: explicit phrases first, then naive line scan
-      if (!job.customer_name || job.customer_name === "Customer") {
-        const explicit =
-          body.match(/\b(?:my name is|i am|i'm|im|this is|name[:\-])\s+([A-Za-z][A-Za-z .'-]{1,38})/i);
-        if (explicit) {
-          updates.customer_name = explicit[1].trim().replace(/\s+/g, " ");
-        } else {
-          const firstLine = body.split(/\n|,|\./).map((s) => s.trim()).find((s) =>
-            s && s.length < 40 && !POSTCODE_RE.test(s) && !/punct|flat|blow|lock|tyre|tire|nail|hi|hello|hey|thanks|location|pin/i.test(s),
-          );
-          if (firstLine && /^[A-Za-z][A-Za-z .'-]{1,38}$/.test(firstLine) && firstLine.split(/\s+/).length <= 4) {
-            updates.customer_name = firstLine;
-          }
-        }
-      }
-
-      // Vehicle reg from text (photo extraction happens in analyze-damage)
-      const reg = extractReg(body);
-      if (reg && !job.vehicle_reg) updates.vehicle_reg = reg;
-
-      // Affected wheels — REPLACE when user gives an explicit count/"just/only"
-      // (so corrections like "just the one, front right" override prior guesses);
-      // otherwise merge with existing.
-      const wheelsFromText = extractWheels(body);
-      const lowerBodyForWheels = body.toLowerCase();
-      const explicitCorrection = /\b(just|only|actually|sorry|correction|i said|i asid|i meant|its only|it's only|its just|it's just)\b/.test(lowerBodyForWheels)
-        || /\b([1-4]|one|two|three|four)\b[\s,.\-]*(tyres?|tires?|wheels?|the\s+(front|rear|back))/.test(lowerBodyForWheels)
-        || /\ball\s*(four|4)\b/.test(lowerBodyForWheels);
-      if (wheelsFromText.length > 0) {
-        if (explicitCorrection) {
-          updates.affected_wheels = wheelsFromText;
-        } else {
-          const merged = Array.from(new Set([...(job.affected_wheels ?? []), ...wheelsFromText]));
-          updates.affected_wheels = merged;
-        }
-      }
-
-      const haveName = (updates.customer_name ?? job.customer_name) && (updates.customer_name ?? job.customer_name) !== "Customer";
-      const havePostcode = !!(updates.postcode ?? job.postcode);
-      const finalDesc: string = updates.issue_description ?? job.issue_description ?? "";
-      const finalPhotos: string[] = updates.photo_urls ?? job.photo_urls ?? [];
-      const finalReg: string | null = updates.vehicle_reg ?? job.vehicle_reg ?? null;
-      const finalWheels: string[] = updates.affected_wheels ?? job.affected_wheels ?? [];
-
-      // Detect a stated tyre count from the customer ("1 tyre", "two tyres", "all four", etc.)
-      const NUM_WORDS: Record<string, number> = { one: 1, two: 2, three: 3, four: 4 };
-      const lowerBody = body.toLowerCase();
-      let statedCount: number | null = null;
-      const allFour = /\ball\s*(four|4)\b/.test(lowerBody);
-      if (allFour) statedCount = 4;
-      else {
-        const mDigit = lowerBody.match(/\b([1-4])\s*(tyres?|tires?|wheels?)\b/);
-        if (mDigit) statedCount = parseInt(mDigit[1], 10);
-        else {
-          const mWord = lowerBody.match(/\b(one|two|three|four)\s*(tyres?|tires?|wheels?)\b/);
-          if (mWord) statedCount = NUM_WORDS[mWord[1]];
-        }
-      }
-
-      // Diagnostic depth — Step 2
-      const finalIssueType = updates.issue_type ?? job.issue_type;
-      const lowerDesc = finalDesc.toLowerCase();
-      const saidUnknown = /\b(no idea|not sure|don'?t know|dont know|dunno|unsure|no clue)\b/i.test(lowerDesc);
-      const hasContext =
-        /(nail|screw|slow|fast|sudden|drove|driving|park|kerb|curb|pothole|bulge|split|crack|flat|puncture|blowout|burst|leak|valve|hit|damage|tear|tore|cut|deflat|pressure)/i.test(lowerDesc) ||
-        saidUnknown;
-      // Only count step 2 as done if the customer actually described the incident
-      // (keywords or "not sure"). A long message containing only name/location/plate
-      // must NOT satisfy step 2.
-      const haveWhatHappened = hasContext;
-
-      // Step 3 readiness — need incident summary AND affected wheel positions.
-      // Step 4 readiness — need at least one photo per affected tyre.
-      const tyreCount = finalWheels.length;
-      const photoCount = finalPhotos.length;
-      const photosOkForCount = tyreCount > 0 && photoCount >= tyreCount;
-
-      // Step gates (4 steps now)
-      // Step 1: Location only
-      // Step 2: Number plate + full name
-      // Step 3: What happened + affected tyres
-      // Step 4: Photos
-      const step1Done = havePostcode;
-      const step2Done = step1Done && haveName && !!finalReg;
-      const step3Done = step2Done && haveWhatHappened && tyreCount > 0;
-      const step4Done = step3Done && photosOkForCount;
-
-      const justCompletedIntake = step4Done;
-      if (justCompletedIntake) {
-        updates.status = "intake_complete"; // fires dispatch trigger
-      }
-
-      await supabase.from("jobs").update(updates).eq("id", job.id);
-
-      if (justCompletedIntake) {
-        await supabase.from("ops_alerts").insert({
-          level: "info",
-          title: "Intake complete — all details found",
-          body:
-            `Job ${job.id.slice(0, 6)} is ready for technician matching. ` +
-            `Reg: ${finalReg ?? "—"}, wheels: ${finalWheels.join(", ") || "—"}, photos: ${finalPhotos.length}.`,
-          job_id: job.id,
-        });
-      }
-
-      // If new photos arrived, run vision analysis and bounce non-tyre photos back
-      if (mediaUrls.length > 0) {
-        try {
-          const ar = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/analyze-damage`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
-            },
-            body: JSON.stringify({
-              job_id: job.id,
-              photo_urls: mediaUrls,
-              issue_description: finalDesc,
-              issue_type: finalIssueType,
-            }),
-          });
-          const aj = await ar.json();
-          if (aj?.damage_type === "not-a-tyre") {
-            await sendReply(
-              from,
-              aj.damage_summary || "That doesn't look like a tyre photo 🤔 Could you send a clear photo of the tyre/wheel — full tyre + sidewall close-up?",
-              channel,
-            );
-            return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
-          }
-        } catch (e) {
-          console.error("analyze-damage call failed", e);
-        }
-      }
-
-      // Build a checklist of what's confirmed so far and what's still needed.
-      const finalName = (updates.customer_name ?? job.customer_name) ?? null;
-      const finalPostcode = updates.postcode ?? job.postcode ?? null;
-      const checklist =
-        "*Progress so far:*\n" +
-        `${finalPostcode ? "✅" : "⬜️"} Location${finalPostcode ? ` — ${finalPostcode}` : ""}\n` +
-        `${finalReg ? "✅" : "⬜️"} Number plate${finalReg ? ` — ${finalReg}` : ""}\n` +
-        `${haveName ? "✅" : "⬜️"} Full name${haveName ? ` — ${finalName}` : ""}\n` +
-        `${haveWhatHappened ? "✅" : "⬜️"} What happened\n` +
-        `${tyreCount > 0 ? "✅" : "⬜️"} Affected tyres${tyreCount > 0 ? ` — ${finalWheels.join(", ")}` : ""}\n` +
-        `${photosOkForCount ? "✅" : "⬜️"} Photos${tyreCount > 0 ? ` (${photoCount}/${tyreCount})` : ""}`;
-
-      // Did the user just send something we couldn't use for the current step?
-      const userSentSomething = body.trim().length > 0 || mediaUrls.length > 0;
-
-      let ask: string;
-      // ----- STEP 1: location -----
-      if (!step1Done) {
-        const couldntParse = userSentSomething && !finalPostcode && isLikelyLocationAttempt(body);
-        ask =
-          (couldntParse
-            ? "I couldn't read a valid UK *postcode* or location from that ❌\n\n"
-            : "Tyre Fly here 👋\n\n") +
-          "*Step 1 of 4 — Your location* 📍\n" +
-          "*Still need:* your *postcode* (e.g. SW1A 1AA), a *WhatsApp pin* 📍, or a *full address*.\n\n" +
-          checklist;
-      }
-      // ----- STEP 2: plate + name -----
-      else if (!step2Done) {
-        const need: string[] = [];
-        if (!finalReg) need.push("the car's *number plate* (text it or send a clear photo)");
-        if (!haveName) need.push("your *full name* (first + last, e.g. \"John Smith\")");
-        ask =
-          "Got your location ✅\n\n" +
-          "*Step 2 of 4 — Number plate + your name*\n" +
-          `*Still need:* ${need.join(" *and* ")}.\n\n` +
-          checklist;
-      }
-      // ----- STEP 3: what happened + tyres -----
-      else if (!step3Done) {
-        const need: string[] = [];
-        if (!haveWhatHappened) {
-          need.push("a short description of *what happened* (text or voice note)");
-        }
-        if (statedCount && statedCount > tyreCount) {
-          need.push(`the *other tyre position(s)* — I've only got ${tyreCount}/${statedCount} so far (${finalWheels.join(", ")})`);
-        } else if (tyreCount === 0) {
-          need.push("*which tyre(s)* are affected — front-left, front-right, rear-left, rear-right, \"both front\", \"both rear\", or \"all four\"");
-        }
-        ask =
-          "Thanks ✅\n\n" +
-          "*Step 3 of 4 — What happened + which tyre(s)?* 🛞\n" +
-          `*Still need:* ${need.join(" *and* ")}.\n` +
-          "Examples: \"hit a kerb last night, front-right\", \"slow puncture going down overnight on both front tyres\", \"nail in the rear-left\".\n" +
-          "If you really don't know, reply *\"not sure\"* and we'll work it out from the photos.\n\n" +
-          checklist;
-      }
-      // ----- STEP 4: photos -----
-      else if (!photosOkForCount) {
-        const remaining = Math.max(1, tyreCount - photoCount);
-        ask =
-          `*Step 4 of 4 — Photos* 📸 (${photoCount}/${tyreCount} so far)\n` +
-          `*Still need:* ${remaining} more tyre photo${remaining === 1 ? "" : "s"}.\n` +
-          "For every affected tyre, send:\n" +
-          "  • A *FULL photo* of the tyre/wheel (use flash 🔦 if it's dark)\n" +
-          "  • A *CLOSE-UP of the sidewall* showing the size markings (e.g. 225/45 R17)\n" +
-          "  • A *close-up of the damage* if visible\n" +
-          "Caption each one with the position (e.g. \"front-left\").\n\n" +
-          checklist;
-      }
-      else {
-        ask =
-          "All done ✅ Finding you a technician now — we'll message the moment one is matched.\n\n" +
-          checklist;
-      }
-
-      await sendReply(from, ask, channel);
-      return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
-    }
-
-    // 3b. Existing customer with a known job — handle review or quote acceptance
-    if (job && ["closed_pending_review", "broadcasting", "awaiting_approval", "intake_complete", "pending"].includes(job.status)) {
-      // Review (numeric 1-5)
+    if (recentJob) {
+      // 3a. Review rating (1-5) on a closed_pending_review job
       const ratingMatch = body.match(/^\s*([1-5])\b/);
-      if (ratingMatch && job.status === "closed_pending_review") {
+      if (ratingMatch && recentJob.status === "closed_pending_review") {
         const score = parseInt(ratingMatch[1], 10);
         const { data: q } = await supabase
           .from("quotes")
           .select("technician_id")
-          .eq("job_id", job.id)
+          .eq("job_id", recentJob.id)
           .eq("status", "paid")
           .maybeSingle();
         await supabase.from("reviews").insert({
-          job_id: job.id,
+          job_id: recentJob.id,
           technician_id: q?.technician_id ?? null,
           score,
           comment: body,
         });
-        await supabase.from("jobs").update({ status: "closed" }).eq("id", job.id);
+        await supabase.from("jobs").update({ status: "closed" }).eq("id", recentJob.id);
         await sendReply(from, `Thanks for the ${score}★ rating!`, channel);
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
       }
 
-      // Quote acceptance ("yes" / "accept")
-      if (/\b(yes|y|accept|ok|book it)\b/i.test(body)) {
+      // 3b. Quote acceptance on a job awaiting customer choice
+      const isAccept = /^\s*(yes|y|accept|ok|book it)\b/i.test(body);
+      const acceptableStates = ["broadcasting", "awaiting_approval", "intake_complete", "pending"];
+      if (isAccept && acceptableStates.includes(recentJob.status)) {
         const { data: pending } = await supabase
           .from("quotes")
           .select("*")
-          .eq("job_id", job.id)
+          .eq("job_id", recentJob.id)
           .eq("status", "pending")
           .order("price_gbp", { ascending: true })
           .limit(1);
         const cheapest: any = pending?.[0];
         if (cheapest) {
           await supabase.from("quotes").update({ status: "accepted" }).eq("id", cheapest.id);
-          await supabase.from("quotes").update({ status: "lost" }).eq("job_id", job.id).eq("status", "pending").neq("id", cheapest.id);
+          await supabase.from("quotes").update({ status: "lost" }).eq("job_id", recentJob.id).eq("status", "pending").neq("id", cheapest.id);
           await supabase.from("jobs").update({
             status: "awaiting_payment",
             assigned_technician_id: cheapest.technician_id,
-          }).eq("id", job.id);
+          }).eq("id", recentJob.id);
 
-          // Mint the Stripe checkout link for the £20 deposit and SMS it now
           let payUrl: string | null = null;
           try {
             const r = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/create-fee-checkout`, {
@@ -1502,7 +1138,7 @@ Deno.serve(async (req) => {
                 "Content-Type": "application/json",
                 Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
               },
-              body: JSON.stringify({ job_id: job.id }),
+              body: JSON.stringify({ job_id: recentJob.id }),
             });
             const j = await r.json();
             payUrl = j?.url ?? null;
@@ -1515,152 +1151,79 @@ Deno.serve(async (req) => {
           const feeDisp = fee?.display ?? `£20`;
           const sym = fee?.symbol ?? "£";
           const confirmMsg = payUrl
-            ? `Booked! ${sym}${cheapest.price_gbp} total, ETA ${cheapest.eta_minutes} min. Pay the ${feeDisp} booking fee to confirm (deducted from final bill): ${payUrl}. Remaining ${sym}${Math.max(0, Number(cheapest.price_gbp) - feeAmt)} paid to technician on-site by card, link, transfer or cash.`
+            ? `Booked! ${sym}${cheapest.price_gbp} total, ETA ${cheapest.eta_minutes} min. Pay the ${feeDisp} booking fee to confirm (deducted from final bill): ${payUrl}. Remaining ${sym}${Math.max(0, Number(cheapest.price_gbp) - feeAmt)} paid to technician on-site.`
             : `Booked! ${sym}${cheapest.price_gbp} total, ETA ${cheapest.eta_minutes} min. We'll text the ${feeDisp} booking fee link shortly (deducted from final bill).`;
-          // Send the deposit link on BOTH channels so the customer never misses it
           await sendReply(from, confirmMsg, "whatsapp");
           await sendReply(from, confirmMsg, "sms");
         }
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
       }
 
-      // Otherwise treat extra texts/photos as enrichment to the open job
-      const updates: Record<string, any> = { updated_at: new Date().toISOString() };
-      if (body) updates.issue_description = [job.issue_description, body].filter(Boolean).join("\n").slice(0, 2000);
-      if (mediaUrls.length > 0) updates.photo_urls = [...(job.photo_urls ?? []), ...mediaUrls].slice(0, 12);
-      if (Object.keys(updates).length > 1) {
-        await supabase.from("jobs").update(updates).eq("id", job.id);
-        await sendReply(from, "Thanks — added that to your job. We'll text as soon as a technician is matched.", channel);
-        return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
-      }
-    }
-
-    // 4. Unknown sender (or stale closed job) → start intake automatically.
-    // Eagerly extract anything the customer already provided so multi-detail
-    // first messages (e.g. "location is W1 Harley St, plate YC69 PGX, hit a kerb"
-    // + photo) are credited immediately instead of starting from scratch.
-    let pc0 = extractPostcode(body);
-    if (!pc0) {
-      const coords = body.match(COORD_RE);
-      if (coords) {
-        const lat = Number(coords[1]);
-        const lng = Number(coords[2]);
-        if (Number.isFinite(lat) && Number.isFinite(lng)) {
-          pc0 = await reverseGeocodePostcode(lat, lng);
-          if (pc0) console.log("derived postcode from new intake coords", JSON.stringify({ from, lat, lng, pc0 }));
+      // 3c. Locked states: job already in payment/in-progress. Treat texts as enrichment.
+      const lockedStates = ["awaiting_payment", "accepted", "in_progress", "paid"];
+      if (lockedStates.includes(recentJob.status)) {
+        const updates: Record<string, any> = { updated_at: new Date().toISOString() };
+        if (body) updates.issue_description = [recentJob.issue_description, body].filter(Boolean).join("\n").slice(0, 2000);
+        if (mediaUrls.length > 0) updates.photo_urls = [...(recentJob.photo_urls ?? []), ...mediaUrls].slice(0, 12);
+        if (Object.keys(updates).length > 1) {
+          await supabase.from("jobs").update(updates).eq("id", recentJob.id);
+          await sendReply(from, "Thanks — added that to your job. The technician has been notified.", channel);
+          return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
         }
       }
     }
-    if (!pc0 && ADDRESS_HINT_RE.test(body)) {
-      const geo = await geocodeAddressToPostcode(body);
-      if (geo.postcode) {
-        pc0 = geo.postcode;
-        console.log("derived postcode from new intake address", JSON.stringify({ from, pc0 }));
-      }
-    }
-    const it0 = guessIssueType(body);
-    const reg0 = extractReg(body);
-    const wheels0 = extractWheels(body);
 
-    // Try to capture a name from the very first message (same logic as 3a)
-    let name0: string | null = null;
-    const explicitName = body.match(/\b(?:my name is|i am|i'm|im|this is|name[:\-])\s+([A-Za-z][A-Za-z .'-]{1,38})/i);
-    if (explicitName) {
-      name0 = explicitName[1].trim().replace(/\s+/g, " ");
-    } else {
-      // Naive line scan fallback (matches the 3a branch behaviour)
-      const firstLine = (body || "").split(/\n|,|\./).map((s) => s.trim()).find((s) =>
-        s && s.length < 40 && !POSTCODE_RE.test(s) && !/punct|flat|blow|lock|tyre|tire|nail|hi|hello|hey|thanks|location|pin/i.test(s),
-      );
-      if (firstLine && /^[A-Za-z][A-Za-z .'-]{1,38}$/.test(firstLine) && firstLine.split(/\s+/).length <= 4) {
-        name0 = firstLine;
-      }
-    }
-
-    const { data: newJob } = await supabase
-      .from("jobs")
-      .insert({
-        customer_name: name0 ?? "Customer",
-        customer_phone: from,
-        postcode: pc0 ?? "",
-        issue_type: it0 ?? "unknown",
-        issue_description: body || null,
-        photo_urls: mediaUrls,
-        vehicle_reg: reg0,
-        affected_wheels: wheels0,
-        status: "intake_pending",
-      })
-      .select()
-      .single();
-
-    await supabase.from("ops_alerts").insert({
-      level: "info",
-      title: "New inbound — intake started",
-      body: `From ${from} (${channel}): "${body.slice(0, 120)}"`,
-      job_id: newJob?.id ?? null,
+    // 4. Otherwise → route through the customer intake state machine.
+    //    This is the single source of truth for the 6-step information gathering.
+    //    It handles brand-new customers, returning customers (with memory pre-fill),
+    //    and continuing an in-flight intake — all without re-asking completed steps.
+    const outcome = await processCustomerIntake(supabase, {
+      from,
+      body,
+      mediaUrls,
+      channel,
     });
 
-    // Compute step completion against what we already extracted from the very
-    // first message and respond with the dynamic prompt for the next missing step.
-    const haveName0 = !!(name0 && name0 !== "Customer");
-    const havePostcode0 = !!pc0;
-    const lowerBody0 = (body || "").toLowerCase();
-    const saidUnknown0 = /\b(no idea|not sure|don'?t know|dont know|dunno|unsure|no clue)\b/i.test(lowerBody0);
-    const hasContext0 =
-      /(nail|screw|slow|fast|sudden|drove|driving|park|kerb|curb|pothole|bulge|split|crack|flat|puncture|blowout|burst|leak|valve|hit|damage|tear|tore|cut|deflat|pressure)/i.test(lowerBody0) ||
-      saidUnknown0;
-    const haveWhatHappened0 = hasContext0;
-    const tyreCount0 = wheels0.length;
-    const photoCount0 = mediaUrls.length;
-    const photosOkForCount0 = tyreCount0 > 0 && photoCount0 >= tyreCount0;
-    // 4-step gates
-    const step1Done0 = havePostcode0;
-    const step2Done0 = step1Done0 && haveName0 && !!reg0;
-    const step3Done0 = step2Done0 && haveWhatHappened0 && tyreCount0 > 0;
-    const step4Done0 = step3Done0 && photosOkForCount0;
-
-    // If literally nothing useful was provided, send the warm intro once.
-    if (!haveName0 && !havePostcode0 && !reg0 && !haveWhatHappened0 && photoCount0 === 0) {
-      await sendReply(from, INTAKE_TEMPLATE, channel);
-      return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+    // Run vision analysis on any new photos (bounces back non-tyre photos).
+    if (mediaUrls.length > 0 && outcome.job?.id) {
+      try {
+        const ar = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/analyze-damage`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+          },
+          body: JSON.stringify({
+            job_id: outcome.job.id,
+            photo_urls: mediaUrls,
+            issue_description: outcome.job.issue_description,
+            issue_type: outcome.job.issue_type,
+          }),
+        });
+        const aj = await ar.json();
+        if (aj?.damage_type === "not-a-tyre") {
+          await sendReply(
+            from,
+            aj.damage_summary || "That doesn't look like a tyre photo 🤔 Could you send a clear photo of the tyre/wheel?",
+            channel,
+          );
+          return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+        }
+      } catch (e) {
+        console.error("analyze-damage call failed", e);
+      }
     }
 
-    let ask0: string;
-    if (!step1Done0) {
-      ask0 =
-        "Tyre Fly here 👋\n\n" +
-        "*Step 1 of 4 — Your location* 📍\n" +
-        "Please share your *location*: send a WhatsApp pin 📍, your *postcode*, or your *full address*.";
-    } else if (!step2Done0) {
-      const need: string[] = [];
-      if (!reg0) need.push("the car's *number plate* (text it or send a photo)");
-      if (!haveName0) need.push("your *full name* (first + last)");
-      ask0 =
-        "Got your location ✅\n\n" +
-        "*Step 2 of 4 — Number plate + your name*\n" +
-        `Please send: ${need.join(" and ")}.`;
-    } else if (!step3Done0) {
-      const need: string[] = [];
-      if (!haveWhatHappened0) need.push("a short description of *what happened*");
-      if (tyreCount0 === 0) need.push("*which tyre(s)* are affected");
-      ask0 =
-        "Thanks ✅\n\n" +
-        "*Step 3 of 4 — What happened + which tyre(s)?* 🛞\n" +
-        `Please send: ${need.join(" and ")}.\n` +
-        "Examples: \"hit a kerb last night, front-right\", \"slow puncture on both front tyres\", \"nail in the rear-left\".\n" +
-        "If you genuinely don't know, just reply *\"not sure\"*.";
-    } else if (!photosOkForCount0) {
-      const remaining = Math.max(1, tyreCount0 - photoCount0);
-      ask0 =
-        `*Step 4 of 4 — Photos* 📸 (${photoCount0}/${tyreCount0} so far)\n` +
-        `Please send photos for *each affected tyre* — I still need ${remaining} more.\n` +
-        "For every tyre: a *FULL photo* (use flash 🔦 if dark), a *sidewall close-up* showing the size (e.g. 225/45 R17), and a *close-up of the damage*. Caption with the position.";
-    } else {
-      ask0 = "All done ✅ Finding you a technician now — we'll message the moment one is matched.";
-      if (newJob) await supabase.from("jobs").update({ status: "intake_complete" }).eq("id", newJob.id);
+    if (outcome.justCompleted) {
+      await supabase.from("ops_alerts").insert({
+        level: "info",
+        title: "Intake complete — all details collected",
+        body: `Job ${outcome.job.id.slice(0, 6)} is ready for technician matching.`,
+        job_id: outcome.job.id,
+      });
     }
 
-    await sendReply(from, ask0, channel);
+    await sendReply(from, outcome.reply, channel);
     return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
   } catch (e) {
     console.error("twilio-inbound error", e);
