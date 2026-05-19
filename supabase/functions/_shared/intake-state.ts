@@ -637,6 +637,17 @@ export async function processCustomerIntake(
     parsedSomething = true;
   }
 
+  // At the photos step, accept a plain text "DONE" (or similar) reply as
+  // explicit consent to stop uploading photos once we already have >=2.
+  if (conversation.step === "awaiting_photos" && mediaUrls.length === 0) {
+    const haveNow = (updates.photo_urls ?? job.photo_urls ?? []).length;
+    if (haveNow >= MIN_REQUIRED_PHOTOS && PHOTOS_DONE_RE.test(body || "")) {
+      convContext.photos_done = true;
+      contextChanged = true;
+      parsedSomething = true;
+    }
+  }
+
   if (Object.keys(updates).length > 1) {
     const { data: updated } = await supabase.from("jobs").update(updates).eq("id", job.id).select().single();
     if (updated) job = updated;
