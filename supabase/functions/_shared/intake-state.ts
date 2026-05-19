@@ -212,25 +212,34 @@ async function upsertCustomer(supabase: Supa, phone: string, patch: Record<strin
   }
 }
 
-function firstMissingStep(job: any, _customer: any): IntakeStep {
+function firstMissingStep(job: any, customer: any, conversation: any | null): IntakeStep {
   if (!job.postcode) return "awaiting_location";
-  if (!job.vehicle_reg) return "awaiting_plate";
+  if (!job.vehicle_reg) {
+    // Returning customer with a plate on file: confirm before reusing.
+    if (customer?.vehicle_reg && !conversation?.context?.plate_confirm_done) {
+      return "awaiting_plate_confirm";
+    }
+    return "awaiting_plate";
+  }
   if (!job.customer_name || job.customer_name === "Customer") return "awaiting_name";
   if (!hasIncidentContext(job.issue_description ?? "")) return "awaiting_description";
   if (!Array.isArray(job.affected_wheels) || job.affected_wheels.length === 0) return "awaiting_wheels";
   const need = (job.affected_wheels ?? []).length;
   const have = (job.photo_urls ?? []).length;
-  if (need > 0 && have < need) return "awaiting_photos";
+  const required = Math.max(MIN_REQUIRED_PHOTOS, need);
+  if (have < required) return "awaiting_photos";
   return "complete";
 }
 
 function stepNumberAndTotal(step: IntakeStep, customer: any | null): { n: number; total: number } | null {
   if (step === "complete" || step === "idle") return null;
   const knowsName = !!(customer?.full_name);
-  const knowsReg = !!(customer?.vehicle_reg);
+  const hasStoredReg = !!(customer?.vehicle_reg);
   const visible = STEP_ORDER.filter((s) => {
     if (s === "awaiting_name" && knowsName) return false;
-    if (s === "awaiting_plate" && knowsReg) return false;
+    // Only ONE of the two plate steps is ever shown per conversation.
+    if (s === "awaiting_plate_confirm" && !hasStoredReg) return false;
+    if (s === "awaiting_plate" && hasStoredReg) return false;
     return true;
   });
   const idx = visible.indexOf(step);
@@ -244,7 +253,11 @@ function prompt(step: IntakeStep, ctx: { job: any; customer: any | null; greetin
   const greet = ctx.greeting ? ctx.greeting + "\n\n" : "";
   switch (step) {
     case "awaiting_location":
-      return `${greet}${head}Your location 📍\nShare a WhatsApp pin 📍, your *postcode* (e.g. SW1A 1AA), or your *full address*.`;
+      return `${greet}${head}Your *current* location 📍\nShare a WhatsApp pin 📍, your *postcode* (e.g. SW1A 1AA), or your *full address* for this job. (We always need a fresh location — never reuse a previous one.)`;
+    case "awaiting_plate_confirm": {
+      const reg = ctx.customer?.vehicle_reg ?? "your vehicle";
+      return `${greet}${head}Vehicle 🚗\nWe've got *${reg}* on file for you. Reply *YES* to use the same vehicle, or send the *new number plate* if it's a different car this time.`;
+    }
     case "awaiting_plate":
       return `${greet}${head}Number plate 🚗\nWhat's the car's *number plate*? (text it, e.g. "C13 ATA", or send a clear photo of it).`;
     case "awaiting_name":
@@ -257,8 +270,9 @@ function prompt(step: IntakeStep, ctx: { job: any; customer: any | null; greetin
     case "awaiting_photos": {
       const need = (ctx.job.affected_wheels ?? []).length;
       const have = (ctx.job.photo_urls ?? []).length;
-      const remaining = Math.max(1, need - have);
-      return `${greet}${head}Photos 📸 (${have}/${need} so far)\nPlease send ${remaining} more *clear tyre photo${remaining === 1 ? "" : "s"}* — one per affected tyre. Caption with the position if you can (e.g. "front-left"). Image files only — no videos or PDFs.`;
+      const required = Math.max(MIN_REQUIRED_PHOTOS, need);
+      const remaining = Math.max(1, required - have);
+      return `${greet}${head}Photos 📸 (${have}/${required} so far)\nPlease send ${remaining} more *clear tyre photo${remaining === 1 ? "" : "s"}* — we need at least ${required} images before we can match a technician. Image files only — no videos or PDFs.`;
     }
     default:
       return "";
