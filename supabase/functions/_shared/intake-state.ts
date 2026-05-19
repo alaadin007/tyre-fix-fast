@@ -107,11 +107,14 @@ export function isValidPersonName(s: string | null | undefined): boolean {
   if (cleaned.toLowerCase() === "customer") return false;
   const lower = cleaned.toLowerCase();
   if (NAME_BLOCKLIST.has(lower)) return false;
-  // Reject single-word entries that look like a greeting or single common word.
-  const words = cleaned.split(/\s+/);
-  if (words.length === 1 && words[0].length < 3) return false;
   // Require letters only (with spaces, hyphens, apostrophes, dots).
   if (!/^[A-Za-z][A-Za-z .'-]{1,38}$/.test(cleaned)) return false;
+  // Reject if ANY word in the string is a blocklisted greeting/filler
+  // (catches "Hey I need help", "Hi mate", "Hello please" etc.).
+  const words = cleaned.toLowerCase().split(/\s+/);
+  if (words.some((w) => NAME_BLOCKLIST.has(w))) return false;
+  if (words.length === 1 && words[0].length < 3) return false;
+  if (words.length > 4) return false;
   return true;
 }
 
