@@ -454,7 +454,7 @@ export async function processCustomerIntake(
     if (jobErr) throw jobErr;
     job = newJob;
 
-    const initialContext = resolvedLocation.lat != null && resolvedLocation.lng != null
+    const initialContext = resolvedLocation.hasPin
       ? { location_pin_confirmed: true }
       : {};
     const step = firstMissingStep(job, customer, { context: initialContext });
@@ -531,8 +531,10 @@ export async function processCustomerIntake(
   if (resolvedLocation.lat != null && resolvedLocation.lng != null) {
     updates.lat = resolvedLocation.lat;
     updates.lng = resolvedLocation.lng;
-    convContext.location_pin_confirmed = true;
-    contextChanged = true;
+    if (resolvedLocation.hasPin) {
+      convContext.location_pin_confirmed = true;
+      contextChanged = true;
+    }
     parsedSomething = true;
   }
 
