@@ -164,7 +164,7 @@ Deno.test("generic tyre-help request during awaiting_location does not get treat
   assertEquals(outcome.conversation.step, "awaiting_location");
 });
 
-Deno.test("returning customer is greeted by first name on a new job", async () => {
+Deno.test("returning customer is greeted by first name when the same phone has a prior job", async () => {
   const phone = "+441234567892";
   const tables = {
     customers: [{
@@ -175,7 +175,22 @@ Deno.test("returning customer is greeted by first name on a new job", async () =
       total_jobs: 2,
     }],
     conversations: [],
-    jobs: [],
+    jobs: [{
+      id: "old-job-remembered",
+      customer_phone: phone,
+      customer_name: "Hilal Ahmed",
+      postcode: "E1 1AA",
+      lat: 51.5194,
+      lng: -0.0632,
+      issue_type: "puncture",
+      issue_description: "Previous job",
+      photo_urls: [],
+      vehicle_reg: "AB12 CDE",
+      affected_wheels: ["front-left"],
+      status: "intake_complete",
+      created_at: new Date(Date.now() - 60_000).toISOString(),
+      updated_at: new Date(Date.now() - 60_000).toISOString(),
+    }],
   };
 
   const outcome = await processCustomerIntake(
