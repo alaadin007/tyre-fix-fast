@@ -499,7 +499,7 @@ function nudgeFor(step: IntakeStep): string {
 async function bumpCustomer(supabase: Supa, phone: string, job: any) {
   const existing = await loadCustomer(supabase, phone);
   const patch: Record<string, any> = {
-    full_name: job.customer_name && job.customer_name !== "Customer" ? job.customer_name : existing?.full_name ?? null,
+    full_name: isValidPersonName(job.customer_name) ? job.customer_name : (isValidPersonName(existing?.full_name) ? existing!.full_name : null),
     default_postcode: job.postcode || existing?.default_postcode || null,
     vehicle_reg: job.vehicle_reg || existing?.vehicle_reg || null,
     last_seen_at: new Date().toISOString(),
