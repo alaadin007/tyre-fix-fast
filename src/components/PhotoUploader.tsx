@@ -32,8 +32,11 @@ export const PhotoUploader = ({
     }
     const accepted: PhotoFile[] = [];
     for (const file of arr.slice(0, remaining)) {
-      if (!file.type.startsWith("image/")) {
-        setError("Only image files are allowed.");
+      const isImage =
+        file.type.startsWith("image/") &&
+        /\.(jpe?g|png|webp|gif|heic|heif)$/i.test(file.name);
+      if (!isImage) {
+        setError("Only valid image format are required.");
         continue;
       }
       if (file.size > MAX_BYTES) {
