@@ -339,6 +339,16 @@ async function upsertCustomer(supabase: Supa, phone: string, patch: Record<strin
   }
 }
 
+function photosSatisfied(job: any, conversation: any | null): boolean {
+  const have = (job?.photo_urls ?? []).length;
+  const need = (job?.affected_wheels ?? []).length;
+  const wheelRequired = Math.max(MIN_REQUIRED_PHOTOS, need);
+  if (have >= Math.max(TARGET_PHOTOS, wheelRequired)) return true;
+  // Customer explicitly said "done" after providing at least the minimum.
+  if (!!conversation?.context?.photos_done && have >= wheelRequired) return true;
+  return false;
+}
+
 function firstMissingStep(job: any, customer: any, conversation: any | null): IntakeStep {
   if (!conversation?.context?.location_pin_confirmed || job.lat == null || job.lng == null) return "awaiting_location";
   if (!job.vehicle_reg) {
@@ -351,10 +361,7 @@ function firstMissingStep(job: any, customer: any, conversation: any | null): In
   if (!job.customer_name || job.customer_name === "Customer") return "awaiting_name";
   if (!hasIncidentContext(job.issue_description ?? "")) return "awaiting_description";
   if (!Array.isArray(job.affected_wheels) || job.affected_wheels.length === 0) return "awaiting_wheels";
-  const need = (job.affected_wheels ?? []).length;
-  const have = (job.photo_urls ?? []).length;
-  const required = Math.max(MIN_REQUIRED_PHOTOS, need);
-  if (have < required) return "awaiting_photos";
+  if (!photosSatisfied(job, conversation)) return "awaiting_photos";
   return "complete";
 }
 
@@ -372,12 +379,8 @@ function isStepSatisfied(s: IntakeStep, job: any, conversation: any | null): boo
       return hasIncidentContext(job?.issue_description ?? "");
     case "awaiting_wheels":
       return Array.isArray(job?.affected_wheels) && job.affected_wheels.length > 0;
-    case "awaiting_photos": {
-      const need = (job?.affected_wheels ?? []).length;
-      const have = (job?.photo_urls ?? []).length;
-      const required = Math.max(MIN_REQUIRED_PHOTOS, need);
-      return have >= required;
-    }
+    case "awaiting_photos":
+      return photosSatisfied(job, conversation);
     default:
       return false;
   }
