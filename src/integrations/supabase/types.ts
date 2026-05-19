@@ -35,6 +35,75 @@ export type Database = {
         }
         Relationships: []
       }
+      conversations: {
+        Row: {
+          context: Json
+          created_at: string
+          current_job_id: string | null
+          customer_phone: string
+          id: string
+          last_message_at: string
+          step: Database["public"]["Enums"]["intake_step"]
+          updated_at: string
+        }
+        Insert: {
+          context?: Json
+          created_at?: string
+          current_job_id?: string | null
+          customer_phone: string
+          id?: string
+          last_message_at?: string
+          step?: Database["public"]["Enums"]["intake_step"]
+          updated_at?: string
+        }
+        Update: {
+          context?: Json
+          created_at?: string
+          current_job_id?: string | null
+          customer_phone?: string
+          id?: string
+          last_message_at?: string
+          step?: Database["public"]["Enums"]["intake_step"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      customers: {
+        Row: {
+          created_at: string
+          default_postcode: string | null
+          full_name: string | null
+          last_seen_at: string
+          notes: string | null
+          phone: string
+          total_jobs: number
+          updated_at: string
+          vehicle_reg: string | null
+        }
+        Insert: {
+          created_at?: string
+          default_postcode?: string | null
+          full_name?: string | null
+          last_seen_at?: string
+          notes?: string | null
+          phone: string
+          total_jobs?: number
+          updated_at?: string
+          vehicle_reg?: string | null
+        }
+        Update: {
+          created_at?: string
+          default_postcode?: string | null
+          full_name?: string | null
+          last_seen_at?: string
+          notes?: string | null
+          phone?: string
+          total_jobs?: number
+          updated_at?: string
+          vehicle_reg?: string | null
+        }
+        Relationships: []
+      }
       job_allocations: {
         Row: {
           ai_reasoning: string | null
@@ -672,6 +741,15 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
+      intake_step:
+        | "awaiting_location"
+        | "awaiting_plate"
+        | "awaiting_name"
+        | "awaiting_description"
+        | "awaiting_wheels"
+        | "awaiting_photos"
+        | "complete"
+        | "idle"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -800,6 +878,16 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "moderator", "user"],
+      intake_step: [
+        "awaiting_location",
+        "awaiting_plate",
+        "awaiting_name",
+        "awaiting_description",
+        "awaiting_wheels",
+        "awaiting_photos",
+        "complete",
+        "idle",
+      ],
     },
   },
 } as const
