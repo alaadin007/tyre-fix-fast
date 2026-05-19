@@ -132,23 +132,31 @@ export function extractName(t: string): string | null {
   return null;
 }
 
-// Words/phrases that indicate the customer is describing a real tyre/wheel
-// incident — used to decide whether the first message already carries enough
-// context to skip the "what happened" question. Kept deliberately broad so
-// free-form phrasing ("my tyre burst on the road", "leaking air", "stuck with
-// a damaged tyre", "need urgent puncture repair") all qualify.
-const INCIDENT_RE = /(nail|screw|slow|fast|sudden|drove|driving|park|kerb|curb|pothole|bulge|split|crack|flat|puncture|blow[- ]?out|burst|busted|shred|ripped|gash|gouge|leak|leaking|valve|hit|damage|damaged|tear|tore|cut|deflat|pressure|stuck|stranded|roadside|emergency|urgent|repair|fix(?:ing)?|replace|change\s+(?:my\s+)?(?:tyre|tire|wheel)|new\s+(?:tyre|tire)|no idea|not sure|don'?t know|dont know|dunno|unsure|no clue)/i;
+// Separate "this person wants tyre help" from "this message already explains
+// the actual issue". Generic openers like "I need tyre help" should start the
+// workflow, but they should NOT be treated as a completed incident description.
+const INCIDENT_RE = /(nail|screw|slow\s+puncture|flat|puncture|blow[- ]?out|burst|busted|shred|ripped|gash|gouge|leak|leaking|losing\s+air|valve|damage|damaged|tear|tore|cut|deflat|pressure|bulge|split|crack|sidewall|kerb|curb|pothole|hit|stuck|stranded|roadside|emergency|urgent|no idea|not sure|don'?t know|dont know|dunno|unsure|no clue)/i;
+const REPLACEMENT_RE = /(?:\b(?:need|want|require|book|arrange|get|replace|replacement|change|fit|fitting)\b[^.\n]*\b(?:new\s+)?(?:tyre|tire|wheel)s?\b|\b(?:new\s+)?(?:tyre|tire|wheel)s?\b[^.\n]*\b(?:replace|replacement|change|fit|fitting)\b)/i;
 
-// A loose tyre/wheel mention combined with any service verb is also enough
-// signal — handles "Can you send a technician? My car tyre needs help".
+// A loose tyre/wheel mention combined with a service verb is enough to know
+// they want help, but not enough to skip the "what happened" question.
 const TYRE_MENTION_RE = /\b(tyre|tire|wheel|puncture|blowout|flat)s?\b/i;
 const SERVICE_VERB_RE = /\b(help|service|technician|come|send|need|require|book|fix|repair|replace|change|sort|stuck|stranded)\b/i;
 
-export function hasIncidentContext(t: string): boolean {
+export function hasIssueDetails(t: string): boolean {
   const s = t || "";
-  if (INCIDENT_RE.test(s)) return true;
+  return INCIDENT_RE.test(s) || REPLACEMENT_RE.test(s);
+}
+
+export function hasTyreServiceIntent(t: string): boolean {
+  const s = t || "";
+  if (hasIssueDetails(s)) return true;
   if (TYRE_MENTION_RE.test(s) && SERVICE_VERB_RE.test(s)) return true;
   return false;
+}
+
+export function hasIncidentContext(t: string): boolean {
+  return hasIssueDetails(t);
 }
 
 export function guessIssueType(t: string): string | null {
@@ -338,7 +346,8 @@ export async function processCustomerIntake(
   input: { from: string; body: string; mediaUrls: string[]; channel: "sms" | "whatsapp" },
 ): Promise<IntakeOutcome> {
   const { from, body, mediaUrls } = input;
-  const bodyHasIncidentContext = hasIncidentContext(body);
+  const bodyHasIssueDetails = hasIssueDetails(body);
+  const bodyHasTyreServiceIntent = hasTyreServiceIntent(body);
   const customer = await loadCustomer(supabase, from);
   let conversation = await loadActiveConversation(supabase, from);
   let job: any = null;
@@ -362,7 +371,7 @@ export async function processCustomerIntake(
     // as "Customer" and ask in the awaiting_name step.
     const extractedPostcode = await resolvePostcode(body);
     const extractedWheels = extractWheels(body);
-    const extractedDesc = bodyHasIncidentContext ? body.slice(0, 500) : null;
+    const extractedDesc = bodyHasIssueDetails ? body.slice(0, 500) : null;
     const issueType = guessIssueType(body) ?? "unknown";
 
     const initial = {
@@ -396,17 +405,11 @@ export async function processCustomerIntake(
     let greeting: string;
     if (isReturning && isValidPersonName(customer?.full_name)) {
       const firstName = customer!.full_name.trim().split(/\s+/)[0];
-      greeting = bodyHasIncidentContext
-        ? `Welcome back ${firstName} 👋 I understand you need tyre help. New job — let's get you sorted, starting with a fresh location for this one.`
-        : `Welcome back ${firstName} 👋 New job — let's get you sorted. I'll need a fresh location for this one.`;
+      greeting = `Welcome back ${firstName} 👋`;
     } else if (isReturning) {
-      greeting = bodyHasIncidentContext
-        ? "Welcome back 👋 I understand you need tyre help. New job — let's get you sorted, starting with a fresh location for this one."
-        : "Welcome back 👋 New job — let's get you sorted. I'll need a fresh location for this one.";
+      greeting = "Welcome back 👋";
     } else {
-      greeting = bodyHasIncidentContext
-        ? "Tyre Fly here 👋 I understand you need tyre help — I'll get you sorted quickly."
-        : "Tyre Fly here 👋 I'll get you sorted quickly.";
+      greeting = "Hi, welcome to Tyre Fly 👋";
     }
 
     if (step === "complete") {
@@ -463,7 +466,7 @@ export async function processCustomerIntake(
     if (nm) { updates.customer_name = nm; parsedSomething = true; }
   }
 
-  if (!hasIncidentContext(job.issue_description ?? "") && bodyHasIncidentContext) {
+  if (!hasIncidentContext(job.issue_description ?? "") && bodyHasIssueDetails) {
     updates.issue_description = body.slice(0, 500);
     const it = guessIssueType(body); if (it) updates.issue_type = it;
     parsedSomething = true;
@@ -494,10 +497,10 @@ export async function processCustomerIntake(
 
   const nextStep = firstMissingStep(job, customer, conversation);
   const justCompleted = nextStep === "complete" && conversation.step !== "complete";
-  const serviceIntentWhileAwaitingLocation =
+  const tyreIntentWhileAwaitingLocation =
     conversation.step === "awaiting_location" &&
     !pc &&
-    bodyHasIncidentContext;
+    bodyHasTyreServiceIntent;
   await supabase.from("conversations").update({
     step: nextStep,
     last_message_at: new Date().toISOString(),
@@ -513,13 +516,17 @@ export async function processCustomerIntake(
     };
   }
 
-  if (serviceIntentWhileAwaitingLocation) {
+  if (tyreIntentWhileAwaitingLocation && bodyHasIssueDetails) {
     return {
       reply: `Got it — I've noted the tyre issue and your service request.\n\n${prompt(nextStep, { job, customer })}`,
       job,
       conversation,
       justCompleted: false,
     };
+  }
+
+  if (tyreIntentWhileAwaitingLocation) {
+    return { reply: prompt(nextStep, { job, customer }), job, conversation, justCompleted: false };
   }
 
   if (!parsedSomething && (body.trim().length > 0 || mediaUrls.length > 0)) {
