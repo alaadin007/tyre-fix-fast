@@ -7,6 +7,7 @@ class MockQuery {
   private filters: Array<(row: Row) => boolean> = [];
   private patch: Record<string, unknown> | null = null;
   private insertRows: Row[] | null = null;
+  private limitCount: number | null = null;
 
   constructor(
     private tables: Record<string, Row[]>,
@@ -15,7 +16,10 @@ class MockQuery {
 
   select() { return this; }
   order() { return this; }
-  limit() { return this; }
+  limit(count: number) {
+    this.limitCount = count;
+    return this;
+  }
   gte(column: string, value: string) {
     this.filters.push((row) => String(row[column] ?? "") >= value);
     return this;
@@ -59,8 +63,13 @@ class MockQuery {
     return { data: rows[0] ?? null, error: null };
   }
 
+  then(resolve: (value: { data: Row[]; error: null }) => unknown, reject?: (reason?: unknown) => unknown) {
+    return Promise.resolve({ data: this.filteredRows(), error: null }).then(resolve, reject);
+  }
+
   private filteredRows() {
-    return (this.tables[this.table] ?? []).filter((row) => this.filters.every((fn) => fn(row)));
+    const rows = (this.tables[this.table] ?? []).filter((row) => this.filters.every((fn) => fn(row)));
+    return this.limitCount == null ? rows : rows.slice(0, this.limitCount);
   }
 }
 
@@ -210,6 +219,57 @@ Deno.test("returning customer falls back to prior jobs when customer memory row 
   assertStringIncludes(outcome.reply, "Welcome Back Hilal 👋");
   assertEquals(outcome.job.customer_name, "Hilal Ahmed");
   assertEquals(outcome.conversation.step, "awaiting_location");
+});
+
+Deno.test("returning customer skips the name step when only an older job has the valid saved name", async () => {
+  const phone = "+441234567895";
+  const tables = {
+    customers: [],
+    conversations: [],
+    jobs: [
+      {
+        id: "old-valid-job",
+        customer_phone: phone,
+        customer_name: "Hilal Ahmed",
+        postcode: "W1G 9PF",
+        lat: 51.5198,
+        lng: -0.1482,
+        issue_type: "flat tyre",
+        issue_description: "Previous valid job",
+        photo_urls: [],
+        vehicle_reg: "D565A1",
+        affected_wheels: ["front-right"],
+        status: "awaiting_approval",
+        created_at: new Date(Date.now() - 120_000).toISOString(),
+        updated_at: new Date(Date.now() - 120_000).toISOString(),
+      },
+      {
+        id: "latest-bad-job",
+        customer_phone: phone,
+        customer_name: "Hey I need Help",
+        postcode: "NW1 6XE",
+        lat: 51.5237,
+        lng: -0.1585,
+        issue_type: "unknown",
+        issue_description: null,
+        photo_urls: [],
+        vehicle_reg: "D565A1",
+        affected_wheels: [],
+        status: "intake_pending",
+        created_at: new Date(Date.now() - 60_000).toISOString(),
+        updated_at: new Date(Date.now() - 60_000).toISOString(),
+      },
+    ],
+  };
+
+  const outcome = await processCustomerIntake(
+    new MockSupabase(tables) as never,
+    { from: phone, body: "Hello", mediaUrls: [], channel: "whatsapp" },
+  );
+
+  assertStringIncludes(outcome.reply, "Welcome Back Hilal 👋");
+  assert(!outcome.reply.includes("Your name"));
+  assertEquals(outcome.job.customer_name, "Hilal Ahmed");
 });
 
 Deno.test("shared pin location is required before leaving the location step", async () => {
