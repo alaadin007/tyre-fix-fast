@@ -686,7 +686,7 @@ export async function processCustomerIntake(
     await bumpCustomer(supabase, from, job);
     const refId = String(job.id).slice(0, 6).toUpperCase();
     return {
-      reply: `Thank you 🙏 — your job reference is *#${refId}*. We're finding you a technician now and will message the moment one is matched.`,
+      reply: `Thank you for sharing the details 🙏 — one of our technicians will be aligned with you shortly.\nYour job posting reference *#${refId}*.`,
       job, conversation, justCompleted: true,
     };
   }
