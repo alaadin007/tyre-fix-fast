@@ -381,6 +381,26 @@ function isStepSatisfied(s: IntakeStep, job: any, conversation: any | null): boo
   }
 }
 
+// Build the ordered list of steps the user will still need to answer, based on
+// a snapshot of the job + customer at this moment. Used once at conversation
+// creation to lock the "Step N of M" denominator so it doesn't drift mid-flow.
+export function buildStepPlan(
+  job: any | null,
+  customer: any | null,
+  conversation: any | null,
+): IntakeStep[] {
+  const knowsName = isValidPersonName(customer?.full_name);
+  const hasStoredReg = !!(customer?.vehicle_reg);
+  const structural = STEP_ORDER.filter((s) => {
+    if (s === "awaiting_name" && knowsName) return false;
+    // Only ONE of the two plate steps is ever shown per conversation.
+    if (s === "awaiting_plate_confirm" && !hasStoredReg) return false;
+    if (s === "awaiting_plate" && hasStoredReg) return false;
+    return true;
+  });
+  return structural.filter((s) => !isStepSatisfied(s, job, conversation));
+}
+
 function stepNumberAndTotal(
   step: IntakeStep,
   customer: any | null,
@@ -388,21 +408,21 @@ function stepNumberAndTotal(
   conversation: any | null,
 ): { n: number; total: number } | null {
   if (step === "complete" || step === "idle") return null;
-  const knowsName = isValidPersonName(customer?.full_name);
-  const hasStoredReg = !!(customer?.vehicle_reg);
-  const visible = STEP_ORDER.filter((s) => {
-    if (s === "awaiting_name" && knowsName) return false;
-    // Only ONE of the two plate steps is ever shown per conversation.
-    if (s === "awaiting_plate_confirm" && !hasStoredReg) return false;
-    if (s === "awaiting_plate" && hasStoredReg) return false;
-    return true;
-  });
-  // A step "counts" only if it's the current step or not already auto-satisfied
-  // (so steps the user never had to answer don't inflate the numbering).
-  const counted = visible.filter((s) => s === step || !isStepSatisfied(s, job, conversation));
-  const idx = counted.indexOf(step);
-  if (idx === -1) return null;
-  return { n: idx + 1, total: counted.length };
+  // Prefer the locked plan stored on the conversation so the denominator stays
+  // stable across the whole intake.
+  const stored = conversation?.context?.step_plan;
+  let plan: IntakeStep[] = Array.isArray(stored) && stored.length > 0
+    ? (stored as IntakeStep[])
+    : buildStepPlan(job, customer, conversation);
+  let idx = plan.indexOf(step);
+  if (idx === -1) {
+    // Defensive: current step wasn't in the locked plan (e.g. photo requirement
+    // appeared after wheels were chosen). Append so we still show a sensible
+    // monotonic number.
+    plan = [...plan, step];
+    idx = plan.length - 1;
+  }
+  return { n: idx + 1, total: plan.length };
 }
 
 function prompt(
