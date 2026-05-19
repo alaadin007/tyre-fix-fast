@@ -136,7 +136,7 @@ export function extractName(t: string): string | null {
 // the actual issue". Generic openers like "I need tyre help" should start the
 // workflow, but they should NOT be treated as a completed incident description.
 const INCIDENT_RE = /(nail|screw|slow\s+puncture|flat|puncture|blow[- ]?out|burst|busted|shred|ripped|gash|gouge|leak|leaking|losing\s+air|valve|damage|damaged|tear|tore|cut|deflat|pressure|bulge|split|crack|sidewall|kerb|curb|pothole|hit|stuck|stranded|roadside|emergency|urgent|no idea|not sure|don'?t know|dont know|dunno|unsure|no clue)/i;
-const REPLACEMENT_RE = /(?:\b(?:need|want|require|book|arrange|get|replace|replacement|change|fit|fitting)\b[^.\n]*\b(?:new\s+)?(?:tyre|tire|wheel)s?\b|\b(?:new\s+)?(?:tyre|tire|wheel)s?\b[^.\n]*\b(?:replace|replacement|change|fit|fitting)\b)/i;
+const REPLACEMENT_RE = /(?:\b(?:replace|replacement|change|fit|fitting)\b[^.\n]*\b(?:new\s+)?(?:tyre|tire|wheel)s?\b|\b(?:new\s+)?(?:tyre|tire|wheel)s?\b[^.\n]*\b(?:replace|replacement|change|fit|fitting)\b|\bneed\s+(?:a\s+)?new\s+(?:tyre|tire|wheel)s?\b)/i;
 
 // A loose tyre/wheel mention combined with a service verb is enough to know
 // they want help, but not enough to skip the "what happened" question.
