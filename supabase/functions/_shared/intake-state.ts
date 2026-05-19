@@ -52,9 +52,25 @@ const ADDRESS_HINT_RE = /\b(street|st\b|road|rd\b|avenue|ave\b|lane|ln\b|drive|d
 const PLATE_HINT_RE = /\b(?:reg(?:istration)?|plate|number\s*plate|licen[cs]e\s*plate|tag)\s*[:\-]?\s*([A-Z0-9][A-Z0-9\s\-]{2,12}[A-Z0-9])\b/i;
 const PLATE_LOOSE_RE = /\b([A-Z0-9]{2,4}[\s\-]?[A-Z0-9]{2,5})\b/g;
 
+type ResolvedLocation = {
+  postcode: string | null;
+  lat: number | null;
+  lng: number | null;
+  hasPin: boolean;
+};
+
 export function extractPostcode(t: string): string | null {
   const m = (t || "").match(POSTCODE_RE);
   return m ? `${m[1].toUpperCase()} ${m[2].toUpperCase()}` : null;
+}
+
+export function extractCoords(t: string): { lat: number; lng: number } | null {
+  const m = (t || "").match(COORD_RE);
+  if (!m) return null;
+  const lat = Number(m[1]);
+  const lng = Number(m[2]);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  return { lat, lng };
 }
 
 export function extractReg(t: string): string | null {
@@ -185,42 +201,54 @@ async function reverseGeocodePostcode(lat: number, lng: number): Promise<string 
   return null;
 }
 
-async function geocodeAddressToPostcode(address: string): Promise<string | null> {
+async function geocodeAddressToLocation(address: string): Promise<{ postcode: string | null; lat: number | null; lng: number | null }> {
   const q = (address || "").trim();
-  if (q.length < 4) return null;
+  if (q.length < 4) return { postcode: null, lat: null, lng: null };
   try {
     const r = await fetch(
       `https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=1&countrycodes=gb&q=${encodeURIComponent(q)}`,
       { headers: { "User-Agent": "tyre-fix-fast/1.0" } },
     );
-    if (!r.ok) return null;
+    if (!r.ok) return { postcode: null, lat: null, lng: null };
     const arr = await r.json();
     const hit = Array.isArray(arr) ? arr[0] : null;
-    if (!hit) return null;
+    if (!hit) return { postcode: null, lat: null, lng: null };
     let pc: string | null = hit?.address?.postcode ?? null;
     if (pc) return pc.trim().toUpperCase();
     const lat = Number(hit.lat); const lng = Number(hit.lon);
-    if (Number.isFinite(lat) && Number.isFinite(lng)) return reverseGeocodePostcode(lat, lng);
-  } catch (e) { console.error("geocodeAddress failed", e); }
-  return null;
-}
-
-async function resolvePostcode(body: string): Promise<string | null> {
-  let pc = extractPostcode(body);
-  if (pc) return pc;
-  const coords = body.match(COORD_RE);
-  if (coords) {
-    const lat = Number(coords[1]); const lng = Number(coords[2]);
     if (Number.isFinite(lat) && Number.isFinite(lng)) {
       pc = await reverseGeocodePostcode(lat, lng);
-      if (pc) return pc;
+      return { postcode: pc, lat, lng };
     }
+  } catch (e) { console.error("geocodeAddress failed", e); }
+  return { postcode: null, lat: null, lng: null };
+}
+
+async function resolveLocation(body: string): Promise<ResolvedLocation> {
+  const location: ResolvedLocation = {
+    postcode: extractPostcode(body),
+    lat: null,
+    lng: null,
+    hasPin: false,
+  };
+  const coords = extractCoords(body);
+  if (coords) {
+    location.lat = coords.lat;
+    location.lng = coords.lng;
+    location.hasPin = true;
+    location.postcode = location.postcode ?? await reverseGeocodePostcode(coords.lat, coords.lng);
+    return location;
   }
   if (ADDRESS_HINT_RE.test(body)) {
-    pc = await geocodeAddressToPostcode(body);
-    if (pc) return pc;
+    const geocoded = await geocodeAddressToLocation(body);
+    return {
+      postcode: location.postcode ?? geocoded.postcode,
+      lat: geocoded.lat,
+      lng: geocoded.lng,
+      hasPin: false,
+    };
   }
-  return null;
+  return location;
 }
 
 type Supa = ReturnType<typeof createClient>;
