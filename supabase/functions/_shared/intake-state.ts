@@ -526,7 +526,7 @@ export async function processCustomerIntake(
       return { reply: `${greeting}\n\nAll done ✅ Finding you a technician now — we'll message the moment one is matched.`, job, conversation: { ...conversation, step: "complete" }, justCompleted: true };
     }
 
-    return { reply: prompt(step, { job, customer, greeting }), job, conversation, justCompleted: false };
+    return { reply: prompt(step, { job, customer, greeting, conversation }), job, conversation, justCompleted: false };
   }
 
   job = await loadJob(supabase, conversation.current_job_id);
@@ -638,7 +638,7 @@ export async function processCustomerIntake(
 
   if (tyreIntentWhileAwaitingLocation && bodyHasIssueDetails) {
     return {
-      reply: `Got it — I've noted the tyre issue and your service request.\n\n${prompt(nextStep, { job, customer })}`,
+      reply: `Got it — I've noted the tyre issue and your service request.\n\n${prompt(nextStep, { job, customer, conversation })}`,
       job,
       conversation,
       justCompleted: false,
@@ -646,15 +646,15 @@ export async function processCustomerIntake(
   }
 
   if (tyreIntentWhileAwaitingLocation) {
-    return { reply: prompt(nextStep, { job, customer }), job, conversation, justCompleted: false };
+    return { reply: prompt(nextStep, { job, customer, conversation }), job, conversation, justCompleted: false };
   }
 
   if (!parsedSomething && (body.trim().length > 0 || mediaUrls.length > 0)) {
     const nudge = nudgeFor(conversation.step);
-    return { reply: `${nudge}\n\n${prompt(nextStep, { job, customer })}`, job, conversation, justCompleted: false };
+    return { reply: `${nudge}\n\n${prompt(nextStep, { job, customer, conversation })}`, job, conversation, justCompleted: false };
   }
 
-  return { reply: prompt(nextStep, { job, customer }), job, conversation, justCompleted: false };
+  return { reply: prompt(nextStep, { job, customer, conversation }), job, conversation, justCompleted: false };
 }
 
 function nudgeFor(step: IntakeStep): string {
