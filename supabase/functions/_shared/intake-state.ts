@@ -339,7 +339,7 @@ export async function processCustomerIntake(
 
     const initial = {
       customer_phone: from,
-      customer_name: customer?.full_name ?? "Customer",
+      customer_name: isValidPersonName(customer?.full_name) ? customer!.full_name : "Customer",
       postcode: extractedPostcode ?? "",
       issue_type: issueType,
       issue_description: extractedDesc,
