@@ -407,7 +407,9 @@ export async function processCustomerIntake(
   const { from, body, mediaUrls } = input;
   const bodyHasIssueDetails = hasIssueDetails(body);
   const bodyHasTyreServiceIntent = hasTyreServiceIntent(body);
-  const customer = await loadCustomer(supabase, from);
+  const storedCustomer = await loadCustomer(supabase, from);
+  const recentJobMemory = await loadRecentJobMemory(supabase, from);
+  const customer = mergeCustomerMemory(storedCustomer, recentJobMemory);
   let conversation = await loadActiveConversation(supabase, from);
   let job: any = null;
   // "Returning" = we have any record of this phone before — name, plate or a
@@ -428,7 +430,7 @@ export async function processCustomerIntake(
     // greeting like "hi" or "I need help" (the loose name regex matches those).
     // For returning customers we use the stored full_name; otherwise leave it
     // as "Customer" and ask in the awaiting_name step.
-    const extractedPostcode = await resolvePostcode(body);
+    const resolvedLocation = await resolveLocation(body);
     const extractedWheels = extractWheels(body);
     const extractedDesc = bodyHasIssueDetails ? body.slice(0, 500) : null;
     const issueType = guessIssueType(body) ?? "unknown";
@@ -436,7 +438,9 @@ export async function processCustomerIntake(
     const initial = {
       customer_phone: from,
       customer_name: isValidPersonName(customer?.full_name) ? customer!.full_name : "Customer",
-      postcode: extractedPostcode ?? "",
+      postcode: resolvedLocation.postcode ?? "",
+      lat: resolvedLocation.lat,
+      lng: resolvedLocation.lng,
       issue_type: issueType,
       issue_description: extractedDesc,
       photo_urls: mediaUrls,
@@ -464,9 +468,9 @@ export async function processCustomerIntake(
     let greeting: string;
     if (isReturning && isValidPersonName(customer?.full_name)) {
       const firstName = customer!.full_name.trim().split(/\s+/)[0];
-      greeting = `Welcome back ${firstName} 👋`;
+      greeting = `Welcome Back ${firstName} 👋`;
     } else if (isReturning) {
-      greeting = "Welcome back 👋";
+      greeting = "Welcome Back 👋";
     } else {
       greeting = "Hi, welcome to Tyre Fly 👋";
     }
@@ -516,8 +520,18 @@ export async function processCustomerIntake(
     if (reg && !job.vehicle_reg) { updates.vehicle_reg = reg; parsedSomething = true; }
   }
 
-  const pc = await resolvePostcode(body);
-  if (pc && !job.postcode) { updates.postcode = pc; parsedSomething = true; }
+  const resolvedLocation = await resolveLocation(body);
+  if (resolvedLocation.postcode && (!job.postcode || conversation.step === "awaiting_location")) {
+    updates.postcode = resolvedLocation.postcode;
+    parsedSomething = true;
+  }
+  if (resolvedLocation.lat != null && resolvedLocation.lng != null) {
+    updates.lat = resolvedLocation.lat;
+    updates.lng = resolvedLocation.lng;
+    convContext.location_pin_confirmed = true;
+    contextChanged = true;
+    parsedSomething = true;
+  }
 
   if ((!job.customer_name || job.customer_name === "Customer")
       && conversation.step === "awaiting_name") {
@@ -558,7 +572,8 @@ export async function processCustomerIntake(
   const justCompleted = nextStep === "complete" && conversation.step !== "complete";
   const tyreIntentWhileAwaitingLocation =
     conversation.step === "awaiting_location" &&
-    !pc &&
+    !resolvedLocation.postcode &&
+    resolvedLocation.lat == null &&
     bodyHasTyreServiceIntent;
   await supabase.from("conversations").update({
     step: nextStep,
@@ -598,7 +613,7 @@ export async function processCustomerIntake(
 
 function nudgeFor(step: IntakeStep): string {
   switch (step) {
-    case "awaiting_location": return "I couldn't read a postcode or location from that ❌";
+    case "awaiting_location": return "I still need your live pin location for this job ❌";
     case "awaiting_plate": return "I couldn't read a number plate from that ❌";
     case "awaiting_plate_confirm": return "Please reply *YES* to reuse the plate on file, or send the new number plate ❌";
     case "awaiting_name": return "I need your full name as text (e.g. \"John Smith\") ❌";
