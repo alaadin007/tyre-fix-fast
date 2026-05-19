@@ -366,8 +366,11 @@ export async function processCustomerIntake(
     conversation = newConv;
 
     let greeting: string;
-    if (isReturning && customer?.full_name) {
-      greeting = `Welcome back ${customer.full_name.split(/\s+/)[0]} 👋 New job — let's get you sorted. I'll need a fresh location for this one.`;
+    if (isReturning && isValidPersonName(customer?.full_name)) {
+      const firstName = customer!.full_name.trim().split(/\s+/)[0];
+      greeting = `Welcome back ${firstName} 👋 New job — let's get you sorted. I'll need a fresh location for this one.`;
+    } else if (isReturning) {
+      greeting = "Welcome back 👋 New job — let's get you sorted. I'll need a fresh location for this one.";
     } else {
       greeting = "Tyre Fly here 👋 I'll get you sorted quickly.";
     }
