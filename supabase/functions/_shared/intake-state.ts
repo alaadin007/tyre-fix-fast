@@ -675,8 +675,9 @@ export async function processCustomerIntake(
   if (justCompleted) {
     await supabase.from("jobs").update({ status: "intake_complete" }).eq("id", job.id);
     await bumpCustomer(supabase, from, job);
+    const refId = String(job.id).slice(0, 6).toUpperCase();
     return {
-      reply: "All done ✅ Finding you a technician now — we'll message the moment one is matched.",
+      reply: `Thank you 🙏 — your job reference is *#${refId}*. We're finding you a technician now and will message the moment one is matched.`,
       job, conversation, justCompleted: true,
     };
   }
