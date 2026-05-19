@@ -454,13 +454,16 @@ export async function processCustomerIntake(
     if (jobErr) throw jobErr;
     job = newJob;
 
-    const step = firstMissingStep(job, customer, null);
+    const initialContext = resolvedLocation.lat != null && resolvedLocation.lng != null
+      ? { location_pin_confirmed: true }
+      : {};
+    const step = firstMissingStep(job, customer, { context: initialContext });
     const { data: newConv, error: convErr } = await supabase.from("conversations").insert({
       customer_phone: from,
       current_job_id: job.id,
       step,
       last_message_at: new Date().toISOString(),
-      context: {},
+      context: initialContext,
     }).select().single();
     if (convErr) throw convErr;
     conversation = newConv;
