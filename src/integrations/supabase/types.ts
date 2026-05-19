@@ -73,6 +73,7 @@ export type Database = {
           created_at: string
           default_postcode: string | null
           full_name: string | null
+          id: string
           last_seen_at: string
           notes: string | null
           phone: string
@@ -84,6 +85,7 @@ export type Database = {
           created_at?: string
           default_postcode?: string | null
           full_name?: string | null
+          id?: string
           last_seen_at?: string
           notes?: string | null
           phone: string
@@ -95,6 +97,7 @@ export type Database = {
           created_at?: string
           default_postcode?: string | null
           full_name?: string | null
+          id?: string
           last_seen_at?: string
           notes?: string | null
           phone?: string
