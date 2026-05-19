@@ -743,6 +743,7 @@ export type Database = {
       app_role: "admin" | "moderator" | "user"
       intake_step:
         | "awaiting_location"
+        | "awaiting_plate_confirm"
         | "awaiting_plate"
         | "awaiting_name"
         | "awaiting_description"
@@ -880,6 +881,7 @@ export const Constants = {
       app_role: ["admin", "moderator", "user"],
       intake_step: [
         "awaiting_location",
+        "awaiting_plate_confirm",
         "awaiting_plate",
         "awaiting_name",
         "awaiting_description",

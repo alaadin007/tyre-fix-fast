@@ -21,6 +21,7 @@ const ACTIVE_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 export type IntakeStep =
   | "awaiting_location"
+  | "awaiting_plate_confirm"
   | "awaiting_plate"
   | "awaiting_name"
   | "awaiting_description"
@@ -31,12 +32,17 @@ export type IntakeStep =
 
 const STEP_ORDER: IntakeStep[] = [
   "awaiting_location",
+  "awaiting_plate_confirm",
   "awaiting_plate",
   "awaiting_name",
   "awaiting_description",
   "awaiting_wheels",
   "awaiting_photos",
 ];
+
+// Minimum photos we always require before completing intake, regardless of
+// how many wheels are affected — keeps the damage assessment meaningful.
+const MIN_REQUIRED_PHOTOS = 2;
 
 // ───────────────────────── parsing helpers ─────────────────────────
 
@@ -206,25 +212,34 @@ async function upsertCustomer(supabase: Supa, phone: string, patch: Record<strin
   }
 }
 
-function firstMissingStep(job: any, _customer: any): IntakeStep {
+function firstMissingStep(job: any, customer: any, conversation: any | null): IntakeStep {
   if (!job.postcode) return "awaiting_location";
-  if (!job.vehicle_reg) return "awaiting_plate";
+  if (!job.vehicle_reg) {
+    // Returning customer with a plate on file: confirm before reusing.
+    if (customer?.vehicle_reg && !conversation?.context?.plate_confirm_done) {
+      return "awaiting_plate_confirm";
+    }
+    return "awaiting_plate";
+  }
   if (!job.customer_name || job.customer_name === "Customer") return "awaiting_name";
   if (!hasIncidentContext(job.issue_description ?? "")) return "awaiting_description";
   if (!Array.isArray(job.affected_wheels) || job.affected_wheels.length === 0) return "awaiting_wheels";
   const need = (job.affected_wheels ?? []).length;
   const have = (job.photo_urls ?? []).length;
-  if (need > 0 && have < need) return "awaiting_photos";
+  const required = Math.max(MIN_REQUIRED_PHOTOS, need);
+  if (have < required) return "awaiting_photos";
   return "complete";
 }
 
 function stepNumberAndTotal(step: IntakeStep, customer: any | null): { n: number; total: number } | null {
   if (step === "complete" || step === "idle") return null;
   const knowsName = !!(customer?.full_name);
-  const knowsReg = !!(customer?.vehicle_reg);
+  const hasStoredReg = !!(customer?.vehicle_reg);
   const visible = STEP_ORDER.filter((s) => {
     if (s === "awaiting_name" && knowsName) return false;
-    if (s === "awaiting_plate" && knowsReg) return false;
+    // Only ONE of the two plate steps is ever shown per conversation.
+    if (s === "awaiting_plate_confirm" && !hasStoredReg) return false;
+    if (s === "awaiting_plate" && hasStoredReg) return false;
     return true;
   });
   const idx = visible.indexOf(step);
@@ -238,7 +253,11 @@ function prompt(step: IntakeStep, ctx: { job: any; customer: any | null; greetin
   const greet = ctx.greeting ? ctx.greeting + "\n\n" : "";
   switch (step) {
     case "awaiting_location":
-      return `${greet}${head}Your location 📍\nShare a WhatsApp pin 📍, your *postcode* (e.g. SW1A 1AA), or your *full address*.`;
+      return `${greet}${head}Your *current* location 📍\nShare a WhatsApp pin 📍, your *postcode* (e.g. SW1A 1AA), or your *full address* for this job. (We always need a fresh location — never reuse a previous one.)`;
+    case "awaiting_plate_confirm": {
+      const reg = ctx.customer?.vehicle_reg ?? "your vehicle";
+      return `${greet}${head}Vehicle 🚗\nWe've got *${reg}* on file for you. Reply *YES* to use the same vehicle, or send the *new number plate* if it's a different car this time.`;
+    }
     case "awaiting_plate":
       return `${greet}${head}Number plate 🚗\nWhat's the car's *number plate*? (text it, e.g. "C13 ATA", or send a clear photo of it).`;
     case "awaiting_name":
@@ -251,8 +270,9 @@ function prompt(step: IntakeStep, ctx: { job: any; customer: any | null; greetin
     case "awaiting_photos": {
       const need = (ctx.job.affected_wheels ?? []).length;
       const have = (ctx.job.photo_urls ?? []).length;
-      const remaining = Math.max(1, need - have);
-      return `${greet}${head}Photos 📸 (${have}/${need} so far)\nPlease send ${remaining} more *clear tyre photo${remaining === 1 ? "" : "s"}* — one per affected tyre. Caption with the position if you can (e.g. "front-left"). Image files only — no videos or PDFs.`;
+      const required = Math.max(MIN_REQUIRED_PHOTOS, need);
+      const remaining = Math.max(1, required - have);
+      return `${greet}${head}Photos 📸 (${have}/${required} so far)\nPlease send ${remaining} more *clear tyre photo${remaining === 1 ? "" : "s"}* — we need at least ${required} images before we can match a technician. Image files only — no videos or PDFs.`;
     }
     default:
       return "";
@@ -279,21 +299,25 @@ export async function processCustomerIntake(
 
   if (!conversation) {
     isNew = true;
+    // IMPORTANT — never reuse the customer's previous postcode. Each job must
+    // have a fresh current location. We also do NOT seed customer_name from a
+    // greeting like "hi" or "I need help" (the loose name regex matches those).
+    // For returning customers we use the stored full_name; otherwise leave it
+    // as "Customer" and ask in the awaiting_name step.
     const extractedPostcode = await resolvePostcode(body);
-    const extractedReg = extractReg(body);
-    const extractedName = extractName(body);
     const extractedWheels = extractWheels(body);
     const extractedDesc = hasIncidentContext(body) ? body.slice(0, 500) : null;
     const issueType = guessIssueType(body) ?? "unknown";
 
     const initial = {
       customer_phone: from,
-      customer_name: extractedName ?? customer?.full_name ?? "Customer",
-      postcode: extractedPostcode ?? customer?.default_postcode ?? "",
+      customer_name: customer?.full_name ?? "Customer",
+      postcode: extractedPostcode ?? "",
       issue_type: issueType,
       issue_description: extractedDesc,
       photo_urls: mediaUrls,
-      vehicle_reg: extractedReg ?? customer?.vehicle_reg ?? null,
+      // Don't silently reuse customer.vehicle_reg — we ask via awaiting_plate_confirm.
+      vehicle_reg: null,
       affected_wheels: extractedWheels,
       status: "intake_pending",
     };
@@ -302,23 +326,20 @@ export async function processCustomerIntake(
     if (jobErr) throw jobErr;
     job = newJob;
 
-    const step = firstMissingStep(job, customer);
+    const step = firstMissingStep(job, customer, null);
     const { data: newConv, error: convErr } = await supabase.from("conversations").insert({
       customer_phone: from,
       current_job_id: job.id,
       step,
       last_message_at: new Date().toISOString(),
+      context: {},
     }).select().single();
     if (convErr) throw convErr;
     conversation = newConv;
 
     let greeting: string;
     if (isReturning && customer?.full_name) {
-      const knownBits: string[] = [];
-      if (customer.vehicle_reg) knownBits.push(`plate *${customer.vehicle_reg}*`);
-      if (customer.default_postcode) knownBits.push(`usual postcode *${customer.default_postcode}*`);
-      const recap = knownBits.length ? `\nI've got ${knownBits.join(" and ")} on file — I'll reuse those unless you tell me otherwise.` : "";
-      greeting = `Welcome back ${customer.full_name.split(/\s+/)[0]} 👋 New job — let's get you sorted.${recap}`;
+      greeting = `Welcome back ${customer.full_name.split(/\s+/)[0]} 👋 New job — let's get you sorted. I'll need a fresh location for this one.`;
     } else {
       greeting = "Tyre Fly here 👋 I'll get you sorted quickly.";
     }
@@ -340,15 +361,39 @@ export async function processCustomerIntake(
   }
 
   const updates: Record<string, any> = { updated_at: new Date().toISOString() };
+  const convContext: Record<string, any> = { ...(conversation.context ?? {}) };
+  let contextChanged = false;
   let parsedSomething = false;
+
+  // Special handling for the plate-confirmation step: don't fall through to the
+  // generic reg-extraction (which would only capture a brand-new plate). We
+  // need to accept short YES/NO style answers too.
+  if (conversation.step === "awaiting_plate_confirm" && !job.vehicle_reg) {
+    const reg = extractReg(body);
+    const yes = /^\s*(y|yes|yeah|yep|same|use it|use that|confirm|ok(?:ay)?|keep|correct|sure)\b/i.test(body);
+    const no = /^\s*(n|no|new|different|change|nope|nah)\b/i.test(body);
+    if (reg) {
+      updates.vehicle_reg = reg;
+      convContext.plate_confirm_done = true; contextChanged = true;
+      parsedSomething = true;
+    } else if (yes && customer?.vehicle_reg) {
+      updates.vehicle_reg = customer.vehicle_reg;
+      convContext.plate_confirm_done = true; contextChanged = true;
+      parsedSomething = true;
+    } else if (no) {
+      convContext.plate_confirm_done = true; contextChanged = true;
+      parsedSomething = true;
+    }
+  } else {
+    const reg = extractReg(body);
+    if (reg && !job.vehicle_reg) { updates.vehicle_reg = reg; parsedSomething = true; }
+  }
 
   const pc = await resolvePostcode(body);
   if (pc && !job.postcode) { updates.postcode = pc; parsedSomething = true; }
 
-  const reg = extractReg(body);
-  if (reg && !job.vehicle_reg) { updates.vehicle_reg = reg; parsedSomething = true; }
-
-  if ((!job.customer_name || job.customer_name === "Customer")) {
+  if ((!job.customer_name || job.customer_name === "Customer")
+      && conversation.step === "awaiting_name") {
     const nm = extractName(body);
     if (nm) { updates.customer_name = nm; parsedSomething = true; }
   }
@@ -377,7 +422,12 @@ export async function processCustomerIntake(
     if (updated) job = updated;
   }
 
-  const nextStep = firstMissingStep(job, customer);
+  if (contextChanged) {
+    await supabase.from("conversations").update({ context: convContext }).eq("id", conversation.id);
+    conversation = { ...conversation, context: convContext };
+  }
+
+  const nextStep = firstMissingStep(job, customer, conversation);
   const justCompleted = nextStep === "complete" && conversation.step !== "complete";
   await supabase.from("conversations").update({
     step: nextStep,
@@ -406,6 +456,7 @@ function nudgeFor(step: IntakeStep): string {
   switch (step) {
     case "awaiting_location": return "I couldn't read a postcode or location from that ❌";
     case "awaiting_plate": return "I couldn't read a number plate from that ❌";
+    case "awaiting_plate_confirm": return "Please reply *YES* to reuse the plate on file, or send the new number plate ❌";
     case "awaiting_name": return "I need your full name as text (e.g. \"John Smith\") ❌";
     case "awaiting_description": return "I need a short description of what happened ❌";
     case "awaiting_wheels": return "I need to know which tyre positions are affected ❌";
