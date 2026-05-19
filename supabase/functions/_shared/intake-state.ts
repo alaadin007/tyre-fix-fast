@@ -40,9 +40,11 @@ const STEP_ORDER: IntakeStep[] = [
   "awaiting_photos",
 ];
 
-// Minimum photos we always require before completing intake, regardless of
-// how many wheels are affected — keeps the damage assessment meaningful.
+// Photos policy: ask for 2–3 images. At ≥3 photos OR an explicit "done"
+// reply with ≥2 photos, intake is allowed to complete.
 const MIN_REQUIRED_PHOTOS = 2;
+const TARGET_PHOTOS = 3;
+const PHOTOS_DONE_RE = /^\s*(done|finish(?:ed)?|that'?s all|no more|continue|next|good|ok(?:ay)?|enough|complete)\b/i;
 
 // ───────────────────────── parsing helpers ─────────────────────────
 
