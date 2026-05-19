@@ -459,10 +459,10 @@ function prompt(
         return `${greet}${head}Photos 📸\nPlease upload *2–3 clear photos* of the tyre (close-up of the damage works best). Image files only — no videos or PDFs.`;
       }
       if (have === 1) {
-        return `${greet}${head}Photos 📸 (1/2 so far)\nThanks ✅ — please upload *1 more image* so the technician can quote accurately. Image files only.`;
+        return `${greet}${head}Photos 📸 (1 received)\nThanks ✅ — please add *1–2 more images* so the technician can quote accurately. Image files only.`;
       }
       // have >= 2 but we haven't completed yet → invite an optional third angle.
-      return `${greet}${head}Photos 📸 (${have} received)\nThanks ✅ — if you'd like, share *one more photo from a different angle* for better clarity, or reply *DONE* to continue.`;
+      return `${greet}${head}Photos 📸 (${have} received)\nThanks ✅ — if you'd like, share *one more photo from a different angle* for better clarity for the technician, or reply *DONE* to continue.`;
     }
     default:
       return "";
