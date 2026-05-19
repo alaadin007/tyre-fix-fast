@@ -421,9 +421,7 @@ export async function processCustomerIntake(
   const storedCustomer = await loadCustomer(supabase, from);
   const recentJobMemory = await loadRecentJobMemory(supabase, from);
   const hasPriorJobHistory = Number(recentJobMemory?.total_jobs ?? 0) > 0;
-  const customer = isValidPersonName(storedCustomer?.full_name) || hasPriorJobHistory
-    ? mergeCustomerMemory(storedCustomer, recentJobMemory)
-    : null;
+  const customer = hasPriorJobHistory ? mergeCustomerMemory(storedCustomer, recentJobMemory) : null;
   let conversation = await loadActiveConversation(supabase, from);
   let job: any = null;
   // Returning customers must have actual prior history on the same phone.
