@@ -7,6 +7,7 @@ class MockQuery {
   private filters: Array<(row: Row) => boolean> = [];
   private patch: Record<string, unknown> | null = null;
   private insertRows: Row[] | null = null;
+  private limitCount: number | null = null;
 
   constructor(
     private tables: Record<string, Row[]>,
@@ -15,7 +16,10 @@ class MockQuery {
 
   select() { return this; }
   order() { return this; }
-  limit() { return this; }
+  limit(count: number) {
+    this.limitCount = count;
+    return this;
+  }
   gte(column: string, value: string) {
     this.filters.push((row) => String(row[column] ?? "") >= value);
     return this;
@@ -59,8 +63,13 @@ class MockQuery {
     return { data: rows[0] ?? null, error: null };
   }
 
+  then(resolve: (value: { data: Row[]; error: null }) => unknown, reject?: (reason?: unknown) => unknown) {
+    return Promise.resolve({ data: this.filteredRows(), error: null }).then(resolve, reject);
+  }
+
   private filteredRows() {
-    return (this.tables[this.table] ?? []).filter((row) => this.filters.every((fn) => fn(row)));
+    const rows = (this.tables[this.table] ?? []).filter((row) => this.filters.every((fn) => fn(row)));
+    return this.limitCount == null ? rows : rows.slice(0, this.limitCount);
   }
 }
 
