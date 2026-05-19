@@ -164,7 +164,7 @@ Deno.test("generic tyre-help request during awaiting_location does not get treat
   assertEquals(outcome.conversation.step, "awaiting_location");
 });
 
-Deno.test("returning customer is greeted by first name on a new job", async () => {
+Deno.test("returning customer is greeted by first name when the same phone has a prior job", async () => {
   const phone = "+441234567892";
   const tables = {
     customers: [{
@@ -175,7 +175,22 @@ Deno.test("returning customer is greeted by first name on a new job", async () =
       total_jobs: 2,
     }],
     conversations: [],
-    jobs: [],
+    jobs: [{
+      id: "old-job-remembered",
+      customer_phone: phone,
+      customer_name: "Hilal Ahmed",
+      postcode: "E1 1AA",
+      lat: 51.5194,
+      lng: -0.0632,
+      issue_type: "puncture",
+      issue_description: "Previous job",
+      photo_urls: [],
+      vehicle_reg: "AB12 CDE",
+      affected_wheels: ["front-left"],
+      status: "intake_complete",
+      created_at: new Date(Date.now() - 60_000).toISOString(),
+      updated_at: new Date(Date.now() - 60_000).toISOString(),
+    }],
   };
 
   const outcome = await processCustomerIntake(
@@ -185,6 +200,26 @@ Deno.test("returning customer is greeted by first name on a new job", async () =
 
   assertStringIncludes(outcome.reply, "Welcome Back Hilal 👋");
   assertStringIncludes(outcome.reply, "Your *current pin location*");
+  assertEquals(outcome.conversation.step, "awaiting_location");
+});
+
+Deno.test("brand-new customer is not greeted as returning when no prior rows exist", async () => {
+  const phone = "+923311396603";
+  const tables = {
+    customers: [],
+    conversations: [],
+    jobs: [],
+  };
+
+  const outcome = await processCustomerIntake(
+    new MockSupabase(tables) as never,
+    { from: phone, body: "Hello, I need urgent tyre repair service for my car.", mediaUrls: [], channel: "whatsapp" },
+  );
+
+  assertStringIncludes(outcome.reply, "Hi, welcome to Tyre Fly 👋");
+  assert(!outcome.reply.includes("Welcome Back"));
+  assertEquals(outcome.job.customer_phone, phone);
+  assertEquals(outcome.job.customer_name, "Customer");
   assertEquals(outcome.conversation.step, "awaiting_location");
 });
 
