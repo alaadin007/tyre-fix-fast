@@ -341,11 +341,10 @@ async function upsertCustomer(supabase: Supa, phone: string, patch: Record<strin
 
 function photosSatisfied(job: any, conversation: any | null): boolean {
   const have = (job?.photo_urls ?? []).length;
-  const need = (job?.affected_wheels ?? []).length;
-  const wheelRequired = Math.max(MIN_REQUIRED_PHOTOS, need);
-  if (have >= Math.max(TARGET_PHOTOS, wheelRequired)) return true;
-  // Customer explicitly said "done" after providing at least the minimum.
-  if (!!conversation?.context?.photos_done && have >= wheelRequired) return true;
+  // Reached the optional 3rd photo — auto-complete.
+  if (have >= TARGET_PHOTOS) return true;
+  // Customer explicitly said "done" after providing at least the minimum (2).
+  if (!!conversation?.context?.photos_done && have >= MIN_REQUIRED_PHOTOS) return true;
   return false;
 }
 
