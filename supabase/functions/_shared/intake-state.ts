@@ -52,9 +52,25 @@ const ADDRESS_HINT_RE = /\b(street|st\b|road|rd\b|avenue|ave\b|lane|ln\b|drive|d
 const PLATE_HINT_RE = /\b(?:reg(?:istration)?|plate|number\s*plate|licen[cs]e\s*plate|tag)\s*[:\-]?\s*([A-Z0-9][A-Z0-9\s\-]{2,12}[A-Z0-9])\b/i;
 const PLATE_LOOSE_RE = /\b([A-Z0-9]{2,4}[\s\-]?[A-Z0-9]{2,5})\b/g;
 
+type ResolvedLocation = {
+  postcode: string | null;
+  lat: number | null;
+  lng: number | null;
+  hasPin: boolean;
+};
+
 export function extractPostcode(t: string): string | null {
   const m = (t || "").match(POSTCODE_RE);
   return m ? `${m[1].toUpperCase()} ${m[2].toUpperCase()}` : null;
+}
+
+export function extractCoords(t: string): { lat: number; lng: number } | null {
+  const m = (t || "").match(COORD_RE);
+  if (!m) return null;
+  const lat = Number(m[1]);
+  const lng = Number(m[2]);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  return { lat, lng };
 }
 
 export function extractReg(t: string): string | null {
@@ -185,42 +201,61 @@ async function reverseGeocodePostcode(lat: number, lng: number): Promise<string 
   return null;
 }
 
-async function geocodeAddressToPostcode(address: string): Promise<string | null> {
+async function geocodeAddressToLocation(address: string): Promise<{ postcode: string | null; lat: number | null; lng: number | null }> {
   const q = (address || "").trim();
-  if (q.length < 4) return null;
+  if (q.length < 4) return { postcode: null, lat: null, lng: null };
   try {
     const r = await fetch(
       `https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=1&countrycodes=gb&q=${encodeURIComponent(q)}`,
       { headers: { "User-Agent": "tyre-fix-fast/1.0" } },
     );
-    if (!r.ok) return null;
+    if (!r.ok) return { postcode: null, lat: null, lng: null };
     const arr = await r.json();
     const hit = Array.isArray(arr) ? arr[0] : null;
-    if (!hit) return null;
+    if (!hit) return { postcode: null, lat: null, lng: null };
     let pc: string | null = hit?.address?.postcode ?? null;
-    if (pc) return pc.trim().toUpperCase();
-    const lat = Number(hit.lat); const lng = Number(hit.lon);
-    if (Number.isFinite(lat) && Number.isFinite(lng)) return reverseGeocodePostcode(lat, lng);
-  } catch (e) { console.error("geocodeAddress failed", e); }
-  return null;
-}
-
-async function resolvePostcode(body: string): Promise<string | null> {
-  let pc = extractPostcode(body);
-  if (pc) return pc;
-  const coords = body.match(COORD_RE);
-  if (coords) {
-    const lat = Number(coords[1]); const lng = Number(coords[2]);
+    const lat = Number(hit.lat);
+    const lng = Number(hit.lon);
+    if (pc) {
+      return {
+        postcode: pc.trim().toUpperCase(),
+        lat: Number.isFinite(lat) ? lat : null,
+        lng: Number.isFinite(lng) ? lng : null,
+      };
+    }
     if (Number.isFinite(lat) && Number.isFinite(lng)) {
       pc = await reverseGeocodePostcode(lat, lng);
-      if (pc) return pc;
+      return { postcode: pc, lat, lng };
     }
+  } catch (e) { console.error("geocodeAddress failed", e); }
+  return { postcode: null, lat: null, lng: null };
+}
+
+async function resolveLocation(body: string): Promise<ResolvedLocation> {
+  const location: ResolvedLocation = {
+    postcode: extractPostcode(body),
+    lat: null,
+    lng: null,
+    hasPin: false,
+  };
+  const coords = extractCoords(body);
+  if (coords) {
+    location.lat = coords.lat;
+    location.lng = coords.lng;
+    location.hasPin = true;
+    location.postcode = location.postcode ?? await reverseGeocodePostcode(coords.lat, coords.lng);
+    return location;
   }
   if (ADDRESS_HINT_RE.test(body)) {
-    pc = await geocodeAddressToPostcode(body);
-    if (pc) return pc;
+    const geocoded = await geocodeAddressToLocation(body);
+    return {
+      postcode: location.postcode ?? geocoded.postcode,
+      lat: geocoded.lat,
+      lng: geocoded.lng,
+      hasPin: false,
+    };
   }
-  return null;
+  return location;
 }
 
 type Supa = ReturnType<typeof createClient>;
@@ -228,6 +263,30 @@ type Supa = ReturnType<typeof createClient>;
 async function loadCustomer(supabase: Supa, phone: string) {
   const { data } = await supabase.from("customers").select("*").eq("phone", phone).maybeSingle();
   return data as any | null;
+}
+
+async function loadRecentJobMemory(supabase: Supa, phone: string) {
+  const { data } = await supabase
+    .from("jobs")
+    .select("*")
+    .eq("customer_phone", phone)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return data as any | null;
+}
+
+function mergeCustomerMemory(customer: any | null, recentJob: any | null) {
+  const fallbackName = isValidPersonName(recentJob?.customer_name) ? recentJob.customer_name : null;
+  const fallbackReg = recentJob?.vehicle_reg ?? null;
+  const fallbackPostcode = recentJob?.postcode ?? null;
+  return {
+    ...(customer ?? {}),
+    full_name: isValidPersonName(customer?.full_name) ? customer.full_name : fallbackName,
+    vehicle_reg: customer?.vehicle_reg ?? fallbackReg,
+    default_postcode: customer?.default_postcode ?? fallbackPostcode,
+    total_jobs: Math.max(Number(customer?.total_jobs ?? 0), recentJob ? 1 : 0),
+  };
 }
 
 async function loadActiveConversation(supabase: Supa, phone: string) {
@@ -268,7 +327,7 @@ async function upsertCustomer(supabase: Supa, phone: string, patch: Record<strin
 }
 
 function firstMissingStep(job: any, customer: any, conversation: any | null): IntakeStep {
-  if (!job.postcode) return "awaiting_location";
+  if (!conversation?.context?.location_pin_confirmed || job.lat == null || job.lng == null) return "awaiting_location";
   if (!job.vehicle_reg) {
     // Returning customer with a plate on file: confirm before reusing.
     if (customer?.vehicle_reg && !conversation?.context?.plate_confirm_done) {
@@ -308,7 +367,7 @@ function prompt(step: IntakeStep, ctx: { job: any; customer: any | null; greetin
   const greet = ctx.greeting ? ctx.greeting + "\n\n" : "";
   switch (step) {
     case "awaiting_location":
-      return `${greet}${head}Your *current* location 📍\nShare a WhatsApp pin 📍, your *postcode* (e.g. SW1A 1AA), or your *full address* for this job. (We always need a fresh location — never reuse a previous one.)`;
+      return `${greet}${head}Your *current pin location* 📍\nPlease share your live WhatsApp pin for *this* job. You can also add your postcode or address for reference, but the pin is required and we never reuse an old location.`;
     case "awaiting_plate_confirm": {
       const reg = ctx.customer?.vehicle_reg ?? "your vehicle";
       return `${greet}${head}Vehicle 🚗\nWe've got *${reg}* on file for you. Reply *YES* to use the same vehicle, or send the *new number plate* if it's a different car this time.`;
@@ -348,7 +407,9 @@ export async function processCustomerIntake(
   const { from, body, mediaUrls } = input;
   const bodyHasIssueDetails = hasIssueDetails(body);
   const bodyHasTyreServiceIntent = hasTyreServiceIntent(body);
-  const customer = await loadCustomer(supabase, from);
+  const storedCustomer = await loadCustomer(supabase, from);
+  const recentJobMemory = await loadRecentJobMemory(supabase, from);
+  const customer = mergeCustomerMemory(storedCustomer, recentJobMemory);
   let conversation = await loadActiveConversation(supabase, from);
   let job: any = null;
   // "Returning" = we have any record of this phone before — name, plate or a
@@ -369,7 +430,7 @@ export async function processCustomerIntake(
     // greeting like "hi" or "I need help" (the loose name regex matches those).
     // For returning customers we use the stored full_name; otherwise leave it
     // as "Customer" and ask in the awaiting_name step.
-    const extractedPostcode = await resolvePostcode(body);
+    const resolvedLocation = await resolveLocation(body);
     const extractedWheels = extractWheels(body);
     const extractedDesc = bodyHasIssueDetails ? body.slice(0, 500) : null;
     const issueType = guessIssueType(body) ?? "unknown";
@@ -377,7 +438,9 @@ export async function processCustomerIntake(
     const initial = {
       customer_phone: from,
       customer_name: isValidPersonName(customer?.full_name) ? customer!.full_name : "Customer",
-      postcode: extractedPostcode ?? "",
+      postcode: resolvedLocation.postcode ?? "",
+      lat: resolvedLocation.lat,
+      lng: resolvedLocation.lng,
       issue_type: issueType,
       issue_description: extractedDesc,
       photo_urls: mediaUrls,
@@ -391,13 +454,16 @@ export async function processCustomerIntake(
     if (jobErr) throw jobErr;
     job = newJob;
 
-    const step = firstMissingStep(job, customer, null);
+    const initialContext = resolvedLocation.hasPin
+      ? { location_pin_confirmed: true }
+      : {};
+    const step = firstMissingStep(job, customer, { context: initialContext });
     const { data: newConv, error: convErr } = await supabase.from("conversations").insert({
       customer_phone: from,
       current_job_id: job.id,
       step,
       last_message_at: new Date().toISOString(),
-      context: {},
+      context: initialContext,
     }).select().single();
     if (convErr) throw convErr;
     conversation = newConv;
@@ -405,9 +471,9 @@ export async function processCustomerIntake(
     let greeting: string;
     if (isReturning && isValidPersonName(customer?.full_name)) {
       const firstName = customer!.full_name.trim().split(/\s+/)[0];
-      greeting = `Welcome back ${firstName} 👋`;
+      greeting = `Welcome Back ${firstName} 👋`;
     } else if (isReturning) {
-      greeting = "Welcome back 👋";
+      greeting = "Welcome Back 👋";
     } else {
       greeting = "Hi, welcome to Tyre Fly 👋";
     }
@@ -457,8 +523,20 @@ export async function processCustomerIntake(
     if (reg && !job.vehicle_reg) { updates.vehicle_reg = reg; parsedSomething = true; }
   }
 
-  const pc = await resolvePostcode(body);
-  if (pc && !job.postcode) { updates.postcode = pc; parsedSomething = true; }
+  const resolvedLocation = await resolveLocation(body);
+  if (resolvedLocation.postcode && (!job.postcode || conversation.step === "awaiting_location")) {
+    updates.postcode = resolvedLocation.postcode;
+    parsedSomething = true;
+  }
+  if (resolvedLocation.lat != null && resolvedLocation.lng != null) {
+    updates.lat = resolvedLocation.lat;
+    updates.lng = resolvedLocation.lng;
+    if (resolvedLocation.hasPin) {
+      convContext.location_pin_confirmed = true;
+      contextChanged = true;
+    }
+    parsedSomething = true;
+  }
 
   if ((!job.customer_name || job.customer_name === "Customer")
       && conversation.step === "awaiting_name") {
@@ -499,7 +577,8 @@ export async function processCustomerIntake(
   const justCompleted = nextStep === "complete" && conversation.step !== "complete";
   const tyreIntentWhileAwaitingLocation =
     conversation.step === "awaiting_location" &&
-    !pc &&
+    !resolvedLocation.postcode &&
+    resolvedLocation.lat == null &&
     bodyHasTyreServiceIntent;
   await supabase.from("conversations").update({
     step: nextStep,
@@ -539,7 +618,7 @@ export async function processCustomerIntake(
 
 function nudgeFor(step: IntakeStep): string {
   switch (step) {
-    case "awaiting_location": return "I couldn't read a postcode or location from that ❌";
+    case "awaiting_location": return "I still need your live pin location for this job ❌";
     case "awaiting_plate": return "I couldn't read a number plate from that ❌";
     case "awaiting_plate_confirm": return "Please reply *YES* to reuse the plate on file, or send the new number plate ❌";
     case "awaiting_name": return "I need your full name as text (e.g. \"John Smith\") ❌";
