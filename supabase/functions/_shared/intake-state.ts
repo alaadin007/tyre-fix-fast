@@ -40,10 +40,10 @@ const STEP_ORDER: IntakeStep[] = [
   "awaiting_photos",
 ];
 
-// Photos policy: ask for 2–3 images. At ≥3 photos OR an explicit "done"
-// reply with ≥2 photos, intake is allowed to complete.
+// Photos policy: ask for images one at a time, 2 total required. At ≥2 photos
+// intake auto-completes — no DONE prompt needed.
 const MIN_REQUIRED_PHOTOS = 2;
-const TARGET_PHOTOS = 3;
+const TARGET_PHOTOS = 2;
 const PHOTOS_DONE_RE = /^\s*(done|finish(?:ed)?|that'?s all|no more|continue|next|good|ok(?:ay)?|enough|complete)\b/i;
 
 // ───────────────────────── parsing helpers ─────────────────────────
@@ -464,13 +464,10 @@ function prompt(
     case "awaiting_photos": {
       const have = (ctx.job.photo_urls ?? []).length;
       if (have === 0) {
-        return `${greet}${head}Photos 📸\nPlease upload *2–3 clear photos* of the tyre (close-up of the damage works best). Image files only — no videos or PDFs.`;
+        return `${greet}${head}Photos 📸 (1 of 2)\nPlease share a clear photo of the tyre (close-up of the damage works best). *Please upload one image at a time.* Image files only — no videos or PDFs.`;
       }
-      if (have === 1) {
-        return `${greet}${head}Photos 📸 (1 received)\nThanks ✅ — please add *1–2 more images* so the technician can quote accurately. Image files only.`;
-      }
-      // have >= 2 but we haven't completed yet → invite an optional third angle.
-      return `${greet}${head}Photos 📸 (${have} received)\nThanks ✅ — if you'd like, share *one more photo from a different angle* for better clarity for the technician, or reply *DONE* to continue.`;
+      // have === 1 → ask for the second and final image.
+      return `${greet}${head}Photos 📸 (2 of 2)\nThanks ✅ — please share *one more photo* of the tyre from a different angle. One image at a time, please.`;
     }
     default:
       return "";
@@ -642,17 +639,9 @@ export async function processCustomerIntake(
   }
 
   if (mediaUrls.length > 0) {
-    updates.photo_urls = [...(job.photo_urls ?? []), ...mediaUrls].slice(0, 12);
+    // Cap at 2 photos total — we only request 2, one at a time.
+    updates.photo_urls = [...(job.photo_urls ?? []), ...mediaUrls].slice(0, MIN_REQUIRED_PHOTOS);
     parsedSomething = true;
-    // If the customer uploads 2+ photos in a single batch (and we now have
-    // at least the minimum), treat that as completion — no need to ask for
-    // an optional extra angle.
-    if (conversation.step === "awaiting_photos"
-        && mediaUrls.length >= MIN_REQUIRED_PHOTOS
-        && updates.photo_urls.length >= MIN_REQUIRED_PHOTOS) {
-      convContext.photos_done = true;
-      contextChanged = true;
-    }
   }
 
   // At the photos step, accept a plain text "DONE" (or similar) reply as
