@@ -41,6 +41,45 @@ async function reverseGeocodePostcode(lat: number, lng: number): Promise<string>
   return "";
 }
 
+// Try to extract { lat, lng } from a Google/Apple Maps URL inside arbitrary text.
+// Supports: maps.google.com/?q=lat,lng, /@lat,lng,zoom, /place/.../@lat,lng,
+// google.com/maps/search/?api=1&query=lat,lng, goo.gl/maps/..., maps.app.goo.gl/...
+async function extractLatLngFromMapsUrl(text: string): Promise<{ lat: number; lng: number } | null> {
+  if (!text) return null;
+  const urlMatch = text.match(/https?:\/\/[^\s]+/i);
+  if (!urlMatch) return null;
+  let url = urlMatch[0].replace(/[)\].,]+$/, "");
+
+  const isShort = /(?:goo\.gl\/maps|maps\.app\.goo\.gl|g\.co\/kgs)/i.test(url);
+  if (isShort) {
+    try {
+      const r = await fetch(url, { redirect: "follow" });
+      url = r.url || url;
+    } catch (e) {
+      console.error("maps short-url resolve failed", e);
+    }
+  }
+
+  const patterns = [
+    /[?&]query=(-?\d+\.\d+),(-?\d+\.\d+)/i,
+    /[?&]q=(-?\d+\.\d+),(-?\d+\.\d+)/i,
+    /[?&]ll=(-?\d+\.\d+),(-?\d+\.\d+)/i,
+    /[?&]destination=(-?\d+\.\d+),(-?\d+\.\d+)/i,
+    /@(-?\d+\.\d+),(-?\d+\.\d+)/,
+    /\/(-?\d+\.\d+),(-?\d+\.\d+)(?:[,/?]|$)/,
+    /!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/,
+  ];
+  for (const p of patterns) {
+    const m = url.match(p);
+    if (m) {
+      const lat = parseFloat(m[1]);
+      const lng = parseFloat(m[2]);
+      if (Number.isFinite(lat) && Number.isFinite(lng)) return { lat, lng };
+    }
+  }
+  return null;
+}
+
 async function fetchMediaUrl(mediaId: string, token: string): Promise<{ url: string; mime: string } | null> {
   try {
     const r = await fetch(`${META_GRAPH}/${mediaId}`, {
@@ -163,6 +202,17 @@ Deno.serve(async (req) => {
 
       if (msg.type === "text") {
         body = msg.text?.body ?? "";
+        // If the text contains a Google/Apple Maps URL, treat it like a pin.
+        const coords = await extractLatLngFromMapsUrl(body);
+        if (coords) {
+          const postcode = await reverseGeocodePostcode(coords.lat, coords.lng);
+          const parts = [
+            postcode ? `Location: ${postcode}` : "Location pin shared",
+            `(${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)})`,
+          ].filter(Boolean);
+          body = parts.join(" — ");
+          console.log("maps url parsed", JSON.stringify({ ...coords, postcode, body }));
+        }
       } else if (msg.type === "image" || msg.type === "document" || msg.type === "video" || msg.type === "audio" || msg.type === "voice") {
         const kind = msg.type === "voice" ? "audio" : msg.type;
         const media = msg[kind] ?? msg[msg.type] ?? {};
