@@ -548,9 +548,86 @@ Deno.serve(async (req) => {
           "• PENDING — list applicants awaiting approval\n" +
           "• APPROVE <id-or-phone>\n" +
           "• REJECT <id-or-phone> [reason]\n" +
-          "• JOBS — list 5 latest jobs",
+          "• JOBS — list 5 latest jobs\n" +
+          "• YES <job ref> — show nearby technicians for that job (e.g. YES E1453B)",
           channel,
         );
+        return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+      }
+
+      // YES <job ref> → list nearby technicians for that specific job.
+      // Bare "YES" is rejected so the admin must always disambiguate which job.
+      const yesMatch = trimmed.match(/^\s*y(?:es)?\b\s*(.*)$/i);
+      if (yesMatch) {
+        const ref = (yesMatch[1] || "").trim().toLowerCase().replace(/^#/, "");
+        if (!ref) {
+          await sendReply(
+            from,
+            "Which job? Please reply with the job reference, e.g. YES E1453B (the 6-character ID at the top of the job alert).",
+            channel,
+          );
+          return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+        }
+        const { data: jobMatches } = await supabase
+          .from("jobs")
+          .select("id,customer_name,postcode,lat,lng,issue_type,created_at")
+          .order("created_at", { ascending: false })
+          .limit(500);
+        const jm = (jobMatches ?? []).filter((j: any) => String(j.id).toLowerCase().startsWith(ref));
+        if (jm.length === 0) {
+          await sendReply(from, `No job found for ref "${ref.toUpperCase()}". Reply JOBS to see recent jobs.`, channel);
+          return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+        }
+        if (jm.length > 1) {
+          await sendReply(from, `Multiple jobs match "${ref.toUpperCase()}" — please use the full 6-character ref.`, channel);
+          return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+        }
+        const job: any = jm[0];
+        const { data: techs } = await supabase
+          .from("technicians")
+          .select("id,name,phone,service_postcodes,last_lat,last_lng,travel_radius_miles")
+          .eq("approval_status", "approved")
+          .eq("active", true)
+          .limit(500);
+        const jobPc = String(job.postcode ?? "").toUpperCase().replace(/\s+/g, "");
+        const jobOutward = jobPc.replace(/\d[A-Z]{2}$/, "");
+        const haversine = (lat1: number, lng1: number, lat2: number, lng2: number) => {
+          const R = 3958.8;
+          const toRad = (d: number) => (d * Math.PI) / 180;
+          const dLat = toRad(lat2 - lat1);
+          const dLng = toRad(lng2 - lng1);
+          const a = Math.sin(dLat / 2) ** 2 +
+            Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+          return 2 * R * Math.asin(Math.sqrt(a));
+        };
+        const scored = (techs ?? []).map((t: any) => {
+          let miles: number | null = null;
+          if (job.lat != null && job.lng != null && t.last_lat != null && t.last_lng != null) {
+            miles = haversine(Number(job.lat), Number(job.lng), Number(t.last_lat), Number(t.last_lng));
+          }
+          const pcs: string[] = (t.service_postcodes ?? []).map((p: string) => String(p).toUpperCase().replace(/\s+/g, ""));
+          const pcMatch = !!jobOutward && pcs.some((p) => p === jobOutward || p.startsWith(jobOutward) || jobOutward.startsWith(p));
+          return { t, miles, pcMatch };
+        }).filter((x: any) => {
+          if (x.miles != null) return x.miles <= (x.t.travel_radius_miles ?? 15);
+          return x.pcMatch;
+        }).sort((a: any, b: any) => {
+          if (a.miles != null && b.miles != null) return a.miles - b.miles;
+          if (a.miles != null) return -1;
+          if (b.miles != null) return 1;
+          return 0;
+        }).slice(0, 10);
+        const shortRef = String(job.id).slice(0, 6).toUpperCase();
+        if (scored.length === 0) {
+          await sendReply(from, `Job ${shortRef} (${job.postcode}) — no approved technicians found nearby.`, channel);
+        } else {
+          const lines = scored.map(({ t, miles }: any) => {
+            const pcs = (t.service_postcodes ?? []).join(", ") || "—";
+            const dist = miles != null ? ` · ${miles.toFixed(1)} mi` : "";
+            return `• ${t.name} — ${pcs}${dist}`;
+          }).join("\n");
+          await sendReply(from, `Nearby technicians for job ${shortRef} (${job.postcode}):\n${lines}`, channel);
+        }
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
       }
 
