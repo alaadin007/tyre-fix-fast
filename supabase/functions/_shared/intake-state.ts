@@ -464,13 +464,10 @@ function prompt(
     case "awaiting_photos": {
       const have = (ctx.job.photo_urls ?? []).length;
       if (have === 0) {
-        return `${greet}${head}Photos 📸\nPlease upload *2–3 clear photos* of the tyre (close-up of the damage works best). Image files only — no videos or PDFs.`;
+        return `${greet}${head}Photos 📸 (1 of 2)\nPlease share a clear photo of the tyre (close-up of the damage works best). *Please upload one image at a time.* Image files only — no videos or PDFs.`;
       }
-      if (have === 1) {
-        return `${greet}${head}Photos 📸 (1 received)\nThanks ✅ — please add *1–2 more images* so the technician can quote accurately. Image files only.`;
-      }
-      // have >= 2 but we haven't completed yet → invite an optional third angle.
-      return `${greet}${head}Photos 📸 (${have} received)\nThanks ✅ — if you'd like, share *one more photo from a different angle* for better clarity for the technician, or reply *DONE* to continue.`;
+      // have === 1 → ask for the second and final image.
+      return `${greet}${head}Photos 📸 (2 of 2)\nThanks ✅ — please share *one more photo* of the tyre from a different angle. One image at a time, please.`;
     }
     default:
       return "";
