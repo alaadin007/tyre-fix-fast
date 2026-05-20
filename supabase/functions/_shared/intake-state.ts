@@ -40,10 +40,10 @@ const STEP_ORDER: IntakeStep[] = [
   "awaiting_photos",
 ];
 
-// Photos policy: ask for 2–3 images. At ≥3 photos OR an explicit "done"
-// reply with ≥2 photos, intake is allowed to complete.
+// Photos policy: ask for images one at a time, 2 total required. At ≥2 photos
+// intake auto-completes — no DONE prompt needed.
 const MIN_REQUIRED_PHOTOS = 2;
-const TARGET_PHOTOS = 3;
+const TARGET_PHOTOS = 2;
 const PHOTOS_DONE_RE = /^\s*(done|finish(?:ed)?|that'?s all|no more|continue|next|good|ok(?:ay)?|enough|complete)\b/i;
 
 // ───────────────────────── parsing helpers ─────────────────────────
