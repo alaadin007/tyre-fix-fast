@@ -202,6 +202,17 @@ Deno.serve(async (req) => {
 
       if (msg.type === "text") {
         body = msg.text?.body ?? "";
+        // If the text contains a Google/Apple Maps URL, treat it like a pin.
+        const coords = await extractLatLngFromMapsUrl(body);
+        if (coords) {
+          const postcode = await reverseGeocodePostcode(coords.lat, coords.lng);
+          const parts = [
+            postcode ? `Location: ${postcode}` : "Location pin shared",
+            `(${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)})`,
+          ].filter(Boolean);
+          body = parts.join(" — ");
+          console.log("maps url parsed", JSON.stringify({ ...coords, postcode, body }));
+        }
       } else if (msg.type === "image" || msg.type === "document" || msg.type === "video" || msg.type === "audio" || msg.type === "voice") {
         const kind = msg.type === "voice" ? "audio" : msg.type;
         const media = msg[kind] ?? msg[msg.type] ?? {};
