@@ -153,17 +153,26 @@ export function extractName(t: string): string | null {
 // Separate "this person wants tyre help" from "this message already explains
 // the actual issue". Generic openers like "I need tyre help" should start the
 // workflow, but they should NOT be treated as a completed incident description.
-const INCIDENT_RE = /(nail|screw|slow\s+puncture|flat|puncture|blow[- ]?out|burst|busted|shred|ripped|gash|gouge|leak|leaking|losing\s+air|valve|damage|damaged|tear|tore|cut|deflat|pressure|bulge|split|crack|sidewall|kerb|curb|pothole|hit|stuck|stranded|roadside|emergency|urgent|no idea|not sure|don'?t know|dont know|dunno|unsure|no clue)/i;
-const REPLACEMENT_RE = /(?:\b(?:replace|replacement|change|fit|fitting)\b[^.\n]*\b(?:new\s+)?(?:tyre|tire|wheel)s?\b|\b(?:new\s+)?(?:tyre|tire|wheel)s?\b[^.\n]*\b(?:replace|replacement|change|fit|fitting)\b|\bneed\s+(?:a\s+)?new\s+(?:tyre|tire|wheel)s?\b)/i;
+const INCIDENT_RE = /(nail|screw|slow\s+puncture|flat|puncture|blow[- ]?out|blew|burst|bust(?:ed)?|popp(?:ed|ing)|shred|ripped|rip\b|gash|gouge|leak|leaking|losing\s+air|loose\s+air|going\s+down|gone\s+down|down\s+to\s+\d|psi|valve|damage|damaged|broken|snapp(?:ed|ing)|tear|tore|torn|cut|slash|deflat|pressure|bulge|bulging|split|crack|cracked|sidewall|kerb|curb|pothole|hit|stuck|stranded|roadside|emergency|urgent|hiss(?:ing)?|noise|noisy|vibrat(?:e|ing|ion)|wobbl(?:e|ing|y)|shak(?:e|ing|y)|soft|spongy|squishy|warning\s+light|tpms|won'?t\s+inflate|keeps\s+going\s+flat|no idea|not sure|don'?t know|dont know|dunno|unsure|no clue)/i;
+const REPLACEMENT_RE = /(?:\b(?:replace|replacement|change|fit|fitting|swap)\b[^.\n]*\b(?:new\s+)?(?:tyre|tire|wheel)s?\b|\b(?:new\s+)?(?:tyre|tire|wheel)s?\b[^.\n]*\b(?:replace|replacement|change|fit|fitting|swap)\b|\bneed\s+(?:a\s+)?new\s+(?:tyre|tire|wheel)s?\b)/i;
 
 // A loose tyre/wheel mention combined with a service verb is enough to know
 // they want help, but not enough to skip the "what happened" question.
 const TYRE_MENTION_RE = /\b(tyre|tire|wheel|puncture|blowout|flat)s?\b/i;
 const SERVICE_VERB_RE = /\b(help|service|technician|come|send|need|require|book|fix|repair|replace|change|sort|stuck|stranded)\b/i;
 
+// Position words that, combined with a tyre/wheel mention in a substantive
+// message, indicate the customer has already pointed at the affected tyre and
+// described something concrete (e.g. "my front left tyre keeps deflating").
+const POSITION_HINT_RE = /\b(front|rear|back|left|right|nearside|offside|fl|fr|rl|rr|all\s*four|both)\b/i;
+
 export function hasIssueDetails(t: string): boolean {
   const s = t || "";
-  return INCIDENT_RE.test(s) || REPLACEMENT_RE.test(s);
+  if (INCIDENT_RE.test(s) || REPLACEMENT_RE.test(s)) return true;
+  // "front left tyre is the problem" style messages: tyre mention + a
+  // position word + reasonable length → treat as a real description.
+  if (TYRE_MENTION_RE.test(s) && POSITION_HINT_RE.test(s) && s.trim().length >= 20) return true;
+  return false;
 }
 
 export function hasTyreServiceIntent(t: string): boolean {
