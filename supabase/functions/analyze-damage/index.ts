@@ -244,7 +244,11 @@ serve(async (req) => {
       .eq("id", job_id)
       .maybeSingle();
     const prevWheels: string[] = (existing?.affected_wheels as string[]) ?? [];
-    const mergedWheels = Array.from(new Set([...prevWheels, ...(parsed.affected_wheels ?? [])]));
+    // Trust the customer's explicit wheel selection. Only fall back to the
+    // AI-detected wheels if the customer hasn't told us which tyres are affected.
+    const mergedWheels = prevWheels.length > 0
+      ? prevWheels
+      : (parsed.affected_wheels ?? []);
 
     const { error: updateError } = await supabase
       .from("jobs")
