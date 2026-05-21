@@ -55,6 +55,41 @@ async function sendWhatsApp(to: string, body: string, media_urls?: string[]): Pr
   }
 }
 
+async function sendWhatsAppTemplate(
+  to: string,
+  template: {
+    name: string;
+    language: string;
+    body_params: string[];
+    header_image_url?: string;
+  },
+): Promise<SendAttempt> {
+  try {
+    const r = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/whatsapp-meta-send`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+      },
+      body: JSON.stringify({ to, template }),
+    });
+    const payload = await r.json().catch(() => ({}));
+    if (!r.ok) console.error("meta template send failed", payload);
+    return {
+      ok: r.ok,
+      channel: "whatsapp",
+      error: payload?.error,
+      code: payload?.status ?? null,
+      provider: "meta",
+      from_number: null,
+      to_number: to,
+    };
+  } catch (e) {
+    console.error("sendWhatsAppTemplate failed:", e);
+    return { ok: false, channel: "whatsapp", error: String(e), provider: "meta" };
+  }
+}
+
 async function sendSMS(to: string, body: string): Promise<SendAttempt> {
   try {
     const r = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/twilio-send`, {
