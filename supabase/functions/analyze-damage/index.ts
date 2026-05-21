@@ -45,11 +45,26 @@ serve(async (req) => {
     const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(SUPABASE_URL, SERVICE_ROLE);
 
+    // Load the customer-confirmed wheels BEFORE the AI call so we can constrain
+    // the assessment to ONLY the tyres the customer reported.
+    const { data: existing } = await supabase
+      .from("jobs")
+      .select("affected_wheels, vehicle_reg, issue_description")
+      .eq("id", job_id)
+      .maybeSingle();
+    const prevWheels: string[] = (existing?.affected_wheels as string[]) ?? [];
+    const customerWheelsLine = prevWheels.length > 0
+      ? `THE CUSTOMER HAS EXPLICITLY CONFIRMED these tyres are affected: ${prevWheels.join(", ")}. ` +
+        `Your damage_summary MUST describe ONLY these tyres. Do NOT mention or speculate about any other corner of the car, even if other tyres are visible in the photos. ` +
+        `Set affected_wheels in the tool call to EXACTLY this same list — do not add or remove anything.`
+      : `The customer has not yet specified which tyres are affected — infer from the photos.`;
+
     const userContent: Array<Record<string, unknown>> = [
       {
         type: "text",
         text:
           `You are assessing tyre/wheel photos a customer just sent in.\n\n` +
+          `${customerWheelsLine}\n\n` +
           `STRICT RULES for damage_summary:\n` +
           `- Describe ONLY what you can actually see in the photos (the visible damage, tread, wheel, plate).\n` +
           `- Do NOT repeat, paraphrase or quote anything the customer said or any text from their message.\n` +
@@ -60,7 +75,7 @@ serve(async (req) => {
           `1. Damage: classify type, write the 1–2 sentence summary per the rules above, give a confidence level.\n` +
           `2. Tyre details (per visible sidewall): size (e.g. 225/45R17 94Y), brand, tyre type (summer/winter/all-season/run-flat/performance), tread condition (new/good/worn/illegal — illegal ≈ below ~1.6mm), wheel material (alloy/steel).\n` +
           `3. Vehicle registration / number plate: if ANY plate is visible in any photo, return the characters exactly as shown (uppercase). Plates may be from any country (UK, US, France, Germany etc.) — do NOT force UK formatting.\n` +
-          `4. Affected wheels: which corner(s) of the car are damaged? Use any combination of "front-left", "front-right", "rear-left", "rear-right". Infer from photo angles or visible context. If unclear, return an empty array.\n\n` +
+          `4. Affected wheels: which corner(s) of the car are damaged? Use any combination of "front-left", "front-right", "rear-left", "rear-right". ${prevWheels.length > 0 ? `MUST equal exactly: [${prevWheels.map(w => `"${w}"`).join(", ")}].` : "Infer from photo angles or visible context. If unclear, return an empty array."}\n\n` +
           `Return null for anything not legible — do NOT guess. Use the record_damage_assessment tool.`,
       },
       ...photo_urls.slice(0, 6).map((url: string) => ({
