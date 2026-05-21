@@ -1279,9 +1279,9 @@ Deno.serve(async (req) => {
       // Pin location: did this message contain coords, or do we already have a
       // fresh (still-live) pin for this technician?
       const liveUntil = tech.live_location_until ? new Date(tech.live_location_until).getTime() : 0;
-      const hasFreshPin = !!techCoords || (tech.last_lat != null && tech.last_lng != null && liveUntil > Date.now());
-      const pinLat = techCoords ? Number(techCoords[1]) : tech.last_lat;
-      const pinLng = techCoords ? Number(techCoords[2]) : tech.last_lng;
+      const hasFreshPin = !!techPin || (tech.last_lat != null && tech.last_lng != null && liveUntil > Date.now());
+      const pinLat = techPin ? techPin.lat : tech.last_lat;
+      const pinLng = techPin ? techPin.lng : tech.last_lng;
 
       const hasPrice = mergedPrice != null;
       const hasEta = mergedEta != null;
