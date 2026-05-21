@@ -20,6 +20,64 @@ function normPhone(p: string): string {
 }
 
 const COORD_RE = /\((-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\)/;
+// Plain "lat, lng" decimal pair, e.g. "51.51752, -0.14589"
+const PLAIN_LATLNG_RE = /(-?\d{1,3}\.\d+)\s*,\s*(-?\d{1,3}\.\d+)/;
+// DMS, e.g. 51°31'03.1"N 0°08'45.8"W  (also accepts curly quotes)
+const DMS_RE = /(\d{1,3})[°\s]+(\d{1,2})[\s'′]+([\d.]+)["″]?\s*([NSEW])[\s,]+(\d{1,3})[°\s]+(\d{1,2})[\s'′]+([\d.]+)["″]?\s*([NSEW])/i;
+// Google Maps share URLs (after redirect, contains @lat,lng or !3d/!4d or q=)
+const GMAPS_AT_RE = /@(-?\d{1,3}\.\d+),(-?\d{1,3}\.\d+)/;
+const GMAPS_3D4D_RE = /!3d(-?\d{1,3}\.\d+)!4d(-?\d{1,3}\.\d+)/;
+const GMAPS_Q_RE = /[?&]q=(-?\d{1,3}\.\d+),(-?\d{1,3}\.\d+)/;
+const GMAPS_URL_RE = /https?:\/\/(?:maps\.app\.goo\.gl|goo\.gl\/maps|maps\.google\.[a-z.]+|www\.google\.[a-z.]+\/maps)\/\S+/i;
+
+function dmsToDecimal(deg: string, min: string, sec: string, hem: string): number {
+  const d = Number(deg) + Number(min) / 60 + Number(sec) / 3600;
+  return /[SW]/i.test(hem) ? -d : d;
+}
+
+// Extract a (lat, lng) from free-form technician text. Handles:
+//   - "(51.5, -0.1)"  (WhatsApp pin reshape)
+//   - "51.5, -0.1"    plain decimal pair
+//   - DMS like 51°31'03.1"N 0°08'45.8"W
+//   - Google Maps share URLs (incl. shortened maps.app.goo.gl/...) by
+//     following the redirect and extracting coords from the resolved URL.
+async function extractCoords(text: string): Promise<{ lat: number; lng: number } | null> {
+  if (!text) return null;
+  const m1 = text.match(COORD_RE);
+  if (m1) {
+    const lat = Number(m1[1]), lng = Number(m1[2]);
+    if (Number.isFinite(lat) && Number.isFinite(lng)) return { lat, lng };
+  }
+  const dms = text.match(DMS_RE);
+  if (dms) {
+    const lat = dmsToDecimal(dms[1], dms[2], dms[3], dms[4]);
+    const lng = dmsToDecimal(dms[5], dms[6], dms[7], dms[8]);
+    if (Number.isFinite(lat) && Number.isFinite(lng)) return { lat, lng };
+  }
+  const m2 = text.match(PLAIN_LATLNG_RE);
+  if (m2) {
+    const lat = Number(m2[1]), lng = Number(m2[2]);
+    if (Math.abs(lat) <= 90 && Math.abs(lng) <= 180) return { lat, lng };
+  }
+  const url = text.match(GMAPS_URL_RE);
+  if (url) {
+    try {
+      const r = await fetch(url[0], { redirect: "follow" });
+      const finalUrl = r.url || "";
+      const html = await r.text().catch(() => "");
+      for (const src of [finalUrl, html]) {
+        const a = src.match(GMAPS_AT_RE) || src.match(GMAPS_3D4D_RE) || src.match(GMAPS_Q_RE);
+        if (a) {
+          const lat = Number(a[1]), lng = Number(a[2]);
+          if (Number.isFinite(lat) && Number.isFinite(lng)) return { lat, lng };
+        }
+      }
+    } catch (e) {
+      console.error("gmaps url resolve failed", e);
+    }
+  }
+  return null;
+}
 
 // Logs a single technician-onboarding routing decision for later debugging.
 // Best-effort: any failure is swallowed so we never break the webhook.
@@ -1118,30 +1176,34 @@ Deno.serve(async (req) => {
     const tech = customerHelpForTech ? null : (techMatch ?? []).find((t: any) => normPhone(t.phone) === fromN);
 
     if (tech) {
-      // If they shared a location pin (the meta webhook converts pins to
-      // text containing "(lat, lng)"), capture it as their current location.
-      const techCoords = body.match(COORD_RE);
-      if (techCoords) {
-        const lat = Number(techCoords[1]);
-        const lng = Number(techCoords[2]);
-        if (Number.isFinite(lat) && Number.isFinite(lng)) {
-          const now = new Date();
-          const expires = new Date(now.getTime() + 8 * 60 * 60 * 1000); // 8 hours
-          await supabase.from("technicians").update({
-            last_lat: lat,
-            last_lng: lng,
-            last_location_at: now.toISOString(),
-            live_location_until: expires.toISOString(),
-          }).eq("id", tech.id);
-          await supabase.from("technician_locations").insert({
-            technician_id: tech.id,
-            lat,
-            lng,
-            source: channel === "whatsapp" ? "whatsapp" : "sms",
-            expires_at: expires.toISOString(),
-          });
-          console.log("tech location updated", JSON.stringify({ tech: tech.id, lat, lng, expires: expires.toISOString() }));
-        }
+      // Capture any location the technician shared. We accept WhatsApp pins
+      // (reshaped to "(lat, lng)"), plain "lat, lng", DMS like
+      // 51°31'03.1"N 0°08'45.8"W, and Google Maps share links (incl. the
+      // shortened maps.app.goo.gl/... URLs — we follow the redirect).
+      const techPin = await extractCoords(body);
+      if (techPin) {
+        const { lat, lng } = techPin;
+        const now = new Date();
+        const expires = new Date(now.getTime() + 8 * 60 * 60 * 1000); // 8 hours
+        await supabase.from("technicians").update({
+          last_lat: lat,
+          last_lng: lng,
+          last_location_at: now.toISOString(),
+          live_location_until: expires.toISOString(),
+        }).eq("id", tech.id);
+        await supabase.from("technician_locations").insert({
+          technician_id: tech.id,
+          lat,
+          lng,
+          source: channel === "whatsapp" ? "whatsapp" : "sms",
+          expires_at: expires.toISOString(),
+        });
+        // Reflect the new pin on the local tech object so the downstream
+        // hasFreshPin check sees it within this same request.
+        tech.last_lat = lat;
+        tech.last_lng = lng;
+        tech.live_location_until = expires.toISOString();
+        console.log("tech location updated", JSON.stringify({ tech: tech.id, lat, lng, expires: expires.toISOString() }));
       }
 
       // Find their most recent open allocation
@@ -1160,7 +1222,7 @@ Deno.serve(async (req) => {
 
       if (!alloc?.job_id) {
         // Pure location ping with no open job → just ack
-        if (techCoords && !body.replace(COORD_RE, "").trim()) {
+        if (techPin && !body.replace(GMAPS_URL_RE, "").replace(COORD_RE, "").replace(DMS_RE, "").replace(PLAIN_LATLNG_RE, "").trim()) {
           await sendReply(from, "Got your live location 📍 — tracking for the next 8 hours. We'll match you to nearby jobs.", channel);
         } else {
           await sendReply(from, "Thanks — no open job for you right now. We'll text when one matches.", channel);
@@ -1217,9 +1279,9 @@ Deno.serve(async (req) => {
       // Pin location: did this message contain coords, or do we already have a
       // fresh (still-live) pin for this technician?
       const liveUntil = tech.live_location_until ? new Date(tech.live_location_until).getTime() : 0;
-      const hasFreshPin = !!techCoords || (tech.last_lat != null && tech.last_lng != null && liveUntil > Date.now());
-      const pinLat = techCoords ? Number(techCoords[1]) : tech.last_lat;
-      const pinLng = techCoords ? Number(techCoords[2]) : tech.last_lng;
+      const hasFreshPin = !!techPin || (tech.last_lat != null && tech.last_lng != null && liveUntil > Date.now());
+      const pinLat = techPin ? techPin.lat : tech.last_lat;
+      const pinLng = techPin ? techPin.lng : tech.last_lng;
 
       const hasPrice = mergedPrice != null;
       const hasEta = mergedEta != null;
