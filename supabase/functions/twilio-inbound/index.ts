@@ -1295,14 +1295,13 @@ Deno.serve(async (req) => {
             Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
           },
           body: JSON.stringify({
-            event: "tech_quote_ready",
-            job_id: alloc.job_id,
-            message:
-              `🆕 New quote — job ${shortRef}\n` +
-              `👨‍🔧 ${tech.name ?? "Technician"} (${techPhone})\n` +
-              `💷 £${mergedPrice}${tyreNote}\n` +
-              `⏱️ ${mergedEta} min ETA\n` +
-              `📍 ${mapsPin}`,
+            channel: "whatsapp",
+            body:
+              `New quote — job ${shortRef}. ` +
+              `${tech.name ?? "Technician"} (${techPhone}). ` +
+              `Price £${mergedPrice}${tyreNote}. ` +
+              `ETA ${mergedEta} min. ` +
+              `Location ${mapsPin}`,
           }),
         });
       } catch (e) {
