@@ -536,7 +536,26 @@ Deno.serve(async (req) => {
     const masterNumbers: string[] = ((masterSetting?.value as any)?.numbers ?? []).map((n: string) => normPhone(n));
     const isMaster = masterNumbers.includes(fromN);
 
+    // If this phone has an active customer intake conversation in-flight, don't
+    // hijack the message into the admin branch — let the intake flow handle it.
+    // (A master admin number can also be a customer; intake context wins.)
+    let hasActiveIntake = false;
     if (isMaster) {
+      const { data: activeConv } = await supabase
+        .from("conversations")
+        .select("step, current_job_id, last_message_at")
+        .eq("customer_phone", fromN)
+        .maybeSingle();
+      if (activeConv?.current_job_id && activeConv.step && activeConv.step !== "complete") {
+        const ageMs = activeConv.last_message_at
+          ? Date.now() - new Date(activeConv.last_message_at).getTime()
+          : 0;
+        // Treat intake as active for 2 hours since last message
+        if (ageMs < 2 * 60 * 60 * 1000) hasActiveIntake = true;
+      }
+    }
+
+    if (isMaster && !hasActiveIntake) {
       const trimmed = body.trim();
 
       // HELP
