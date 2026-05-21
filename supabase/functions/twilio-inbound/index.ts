@@ -79,6 +79,15 @@ async function extractCoords(text: string): Promise<{ lat: number; lng: number }
   return null;
 }
 
+function extractCoordsFromWebhook(params: Record<string, string>): { lat: number; lng: number } | null {
+  const directLat = Number(params.Latitude ?? params.latitude ?? params.Lat ?? "");
+  const directLng = Number(params.Longitude ?? params.longitude ?? params.Lng ?? params.Long ?? "");
+  if (Number.isFinite(directLat) && Number.isFinite(directLng) && Math.abs(directLat) <= 90 && Math.abs(directLng) <= 180) {
+    return { lat: directLat, lng: directLng };
+  }
+  return null;
+}
+
 // Logs a single technician-onboarding routing decision for later debugging.
 // Best-effort: any failure is swallowed so we never break the webhook.
 async function logOnboarding(
@@ -970,13 +979,10 @@ Deno.serve(async (req) => {
       const wantsToJoin = !existingByPhone && joinPhrase;
 
       if (wantsToJoin || inIntake) {
-        // Coords (live location pin)
-        const coords = body.match(COORD_RE);
-        let pinLat: number | null = null, pinLng: number | null = null;
-        if (coords) {
-          const la = Number(coords[1]), ln = Number(coords[2]);
-          if (Number.isFinite(la) && Number.isFinite(ln)) { pinLat = la; pinLng = ln; }
-        }
+        // Coords (live location pin) can arrive either in the message body or
+        // as dedicated webhook fields from WhatsApp location shares.
+        const intakePin = extractCoordsFromWebhook(params) ?? await extractCoords(body);
+        let pinLat: number | null = intakePin?.lat ?? null, pinLng: number | null = intakePin?.lng ?? null;
 
         // Get conversation history (last 20 messages with this number)
         const { data: hist } = await supabase
@@ -1175,12 +1181,12 @@ Deno.serve(async (req) => {
       .eq("active", true);
     const tech = customerHelpForTech ? null : (techMatch ?? []).find((t: any) => normPhone(t.phone) === fromN);
 
-    if (tech) {
+      if (tech) {
       // Capture any location the technician shared. We accept WhatsApp pins
       // (reshaped to "(lat, lng)"), plain "lat, lng", DMS like
       // 51°31'03.1"N 0°08'45.8"W, and Google Maps share links (incl. the
       // shortened maps.app.goo.gl/... URLs — we follow the redirect).
-      const techPin = await extractCoords(body);
+      const techPin = extractCoordsFromWebhook(params) ?? await extractCoords(body);
       if (techPin) {
         const { lat, lng } = techPin;
         const now = new Date();
@@ -1230,7 +1236,10 @@ Deno.serve(async (req) => {
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
       }
 
-      const parsed = await aiExtractQuote(body);
+      const pinOnlyMessage = !!techPin && !body.replace(GMAPS_URL_RE, "").replace(COORD_RE, "").replace(DMS_RE, "").replace(PLAIN_LATLNG_RE, "").trim();
+      const parsed = pinOnlyMessage
+        ? { price_gbp: null, callout_fee_gbp: null, eta_minutes: null, accepts: true, tyre_included: null, tyre_condition: null, notes: "location only", confidence: "high" as const }
+        : await aiExtractQuote(body);
 
       if (!parsed.accepts) {
         await supabase
