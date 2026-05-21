@@ -1145,13 +1145,17 @@ Deno.serve(async (req) => {
       }
 
       // Find their most recent open allocation
-      const { data: allocs } = await supabase
+      // NOTE: no FK from job_allocations.job_id → jobs.id, so we cannot use
+      // PostgREST embedded select (`jobs(*)`) here — it errors silently and
+      // makes us reply "no open job" even when a broadcast exists.
+      const { data: allocs, error: allocErr } = await supabase
         .from("job_allocations")
-        .select("*, jobs(*)")
+        .select("*")
         .eq("technician_id", tech.id)
         .in("status", ["broadcast", "proposed"])
         .order("created_at", { ascending: false })
         .limit(1);
+      if (allocErr) console.error("tech alloc lookup failed", allocErr);
       const alloc: any = allocs?.[0];
 
       if (!alloc?.job_id) {
