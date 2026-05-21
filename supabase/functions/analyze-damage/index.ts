@@ -252,13 +252,6 @@ serve(async (req) => {
       affected_wheels?: string[];
     };
 
-    // Merge affected_wheels with anything already on the job (multi-photo support)
-    const { data: existing } = await supabase
-      .from("jobs")
-      .select("affected_wheels, vehicle_reg")
-      .eq("id", job_id)
-      .maybeSingle();
-    const prevWheels: string[] = (existing?.affected_wheels as string[]) ?? [];
     // Trust the customer's explicit wheel selection. Only fall back to the
     // AI-detected wheels if the customer hasn't told us which tyres are affected.
     const mergedWheels = prevWheels.length > 0
