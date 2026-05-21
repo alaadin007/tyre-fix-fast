@@ -161,23 +161,35 @@ Deno.serve(async (req) => {
       });
     }
 
-    const wheels = (job.affected_wheels ?? []).join(", ") || "—";
+    const wheels = (job.affected_wheels ?? []).join(", ") || "Not specified";
+    const photos = (job.photo_urls ?? []).filter((u: string) => !!u);
+    const photo1 = photos[0] || "https://placehold.co/600x400/png?text=No+Photo";
+    const photo2 = photos[1] || "No second photo";
     const mapsLink = (job.lat != null && job.lng != null)
-      ? `\n📍 https://maps.google.com/?q=${job.lat},${job.lng}`
-      : "";
-    const photos = (job.photo_urls ?? []).filter((u: string) => !!u).slice(0, 6);
+      ? `https://maps.google.com/?q=${job.lat},${job.lng}`
+      : "Location pending";
+    const details = (job.issue_description?.trim()) || job.issue_type || "No additional details";
+    const reg = job.vehicle_reg?.trim() || "Not provided";
+    const postcode = job.postcode?.trim() || "Not provided";
+    const jobRef = job.id.slice(0, 6);
+
+    // Template body variables (mapped to new_job_alert_to_technician):
+    // {{1}}=Job Ref, {{2}}=Vehicle Reg, {{3}}=Wheels, {{4}}=Details,
+    // {{5}}=Postcode, {{6}}=Map Link, {{7}}=Photo 1, {{8}}=Photo 2
+    const body_params = [jobRef, reg, wheels, details, postcode, mapsLink, photo1, photo2];
+
+    // Plain-text fallback for SMS / Twilio path (best-effort, not used for Meta template).
     const msg =
-      `🛞 New Tyre Fly job — ${job.postcode}\n` +
-      `Issue: ${job.issue_type ?? "tyre"}${job.tyre_size ? ` · Size: ${job.tyre_size}` : ""}\n` +
-      `Wheels: ${wheels}` +
-      (job.vehicle_reg ? ` · Reg: ${job.vehicle_reg}` : "") +
-      (job.issue_description ? `\nDetails: ${job.issue_description.slice(0, 280)}` : "") +
-      mapsLink + "\n\n" +
-      `Job ref: ${job.id.slice(0, 6)}\n` +
-      `If you can take it, reply with:\n` +
-      `1) Your 📍 live location (or postcode)\n` +
-      `2) Your price £ and ETA in minutes\n` +
-      `e.g. "Yes, £85, 25 mins" + share location pin.`;
+      `🆕 New Tyre Job Available\n` +
+      `🔖 Job Ref: ${jobRef}\n\n` +
+      `🚘 Vehicle Reg: ${reg}\n` +
+      `🛞 Wheels: ${wheels}\n\n` +
+      `📝 Details: ${details}\n\n` +
+      `📮 Postcode: ${postcode}\n` +
+      `🗺️ Map: ${mapsLink}\n\n` +
+      `📷 Photo 1: ${photo1}\n` +
+      `📷 Photo 2: ${photo2}\n\n` +
+      `Reply with: "Yes, £85, 25 mins" + share location pin.`;
 
     let sent = 0;
     const failures: string[] = [];
@@ -189,12 +201,20 @@ Deno.serve(async (req) => {
         failures.push(`${t.name ?? t.id}: no signup number saved`);
         continue;
       }
-      const wa = await sendWhatsApp(to, msg, photos);
-      const ok = wa.ok;
+      // Send via approved Meta WhatsApp template — works even outside the 24h window.
+      const wa = await sendWhatsAppTemplate(to, {
+        name: "new_job_alert_to_technician",
+        language: "en_GB",
+        body_params,
+        header_image_url: photo1,
+      });
+      // If Meta template fails, fall back to plain Twilio session message (may not deliver outside 24h).
+      const finalRes = wa.ok ? wa : await sendWhatsApp(to, msg, photos.slice(0, 6));
+      const ok = finalRes.ok;
       if (ok) sent++;
       if (!ok) {
         failures.push(
-          `${t.name ?? t.id}: WhatsApp ${wa.code ?? "fail"}${wa.error ? ` (${wa.error})` : ""}`,
+          `${t.name ?? t.id}: WhatsApp ${finalRes.code ?? "fail"}${finalRes.error ? ` (${finalRes.error})` : ""}`,
         );
       }
       allocations.push({
@@ -203,8 +223,9 @@ Deno.serve(async (req) => {
         status: ok ? "broadcast" : "send_failed",
         ai_reasoning:
           (mode === "all" ? "manual broadcast (all)" : "manual broadcast (specific)") +
-          ` · whatsapp to=${to}` +
-          ` wa=${wa.ok ? "ok" : `fail:${wa.code ?? "unknown"}`}`,
+          ` · template=new_job_alert_to_technician to=${to}` +
+          ` meta=${wa.ok ? "ok" : `fail:${wa.code ?? "unknown"}`}` +
+          (wa.ok ? "" : ` twilio=${finalRes.ok ? "ok" : `fail:${finalRes.code ?? "unknown"}`}`),
       });
     }
 
