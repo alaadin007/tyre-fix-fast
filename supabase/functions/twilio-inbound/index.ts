@@ -150,10 +150,11 @@ async function aiExtractQuote(text: string): Promise<{
         {
           role: "system",
           content:
-            "You parse mobile-tyre technician WhatsApp/SMS bids. Extract: are they accepting the job (free now?), ETA in minutes, callout/labour fee in GBP, whether they include a replacement tyre, and if so whether it's new or used and its price. Examples:\n" +
+            "You parse mobile-tyre technician WhatsApp/SMS bids. The technician may answer in multiple short messages — extract ONLY what's present in THIS message; leave anything not mentioned as null. Set accepts=false ONLY for an EXPLICIT decline (e.g. 'no', 'pass', 'sorry busy', 'can't make it'). A partial reply with just a price, just an ETA, or just a location is NOT a decline — set accepts=true in that case. Examples:\n" +
+            "'£85' → accepts true, price 85, eta null.\n" +
+            "'25 mins' → accepts true, eta 25, price null.\n" +
             "'Yes free now, 20 mins, £40 callout, no tyre' → accepts true, eta 20, callout 40, tyre_included false.\n" +
             "'Y, 25, 50 callout + 80 for new tyre' → accepts true, eta 25, callout 50, tyre_included true, tyre_condition new, price 130.\n" +
-            "'on it, 15 min, £120 all in (used tyre included)' → accepts true, eta 15, callout 120, tyre_included true, tyre_condition used, price 120.\n" +
             "'sorry busy' → accepts false.",
         },
         { role: "user", content: text },
