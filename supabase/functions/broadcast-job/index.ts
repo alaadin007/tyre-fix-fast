@@ -141,7 +141,7 @@ Deno.serve(async (req) => {
 
     const { data: job, error: jErr } = await supabase
       .from("jobs")
-      .select("id, customer_name, postcode, issue_type, issue_description, vehicle_reg, tyre_size, affected_wheels, photo_urls, lat, lng")
+      .select("id, customer_name, postcode, issue_type, issue_description, damage_summary, damage_type, tyre_size, tyre_brand, tyre_type, tread_condition, wheel_type, vehicle_reg, affected_wheels, photo_urls, lat, lng")
       .eq("id", job_id)
       .single();
     if (jErr || !job) throw new Error("Job not found");
@@ -168,7 +168,23 @@ Deno.serve(async (req) => {
     const mapsLink = (job.lat != null && job.lng != null)
       ? `https://maps.google.com/?q=${job.lat},${job.lng}`
       : "Location pending";
-    const details = (job.issue_description?.trim()) || job.issue_type || "No additional details";
+
+    // Build a rich Details block combining what the customer told us with the
+    // AI's photo-based assessment, so the technician has full context before
+    // quoting a price.
+    const customerSaid = (job.issue_description?.trim()) || job.issue_type || "";
+    const aiSaid = (job.damage_summary?.trim()) || "";
+    const tyreSpec = [job.tyre_size, job.tyre_brand, job.tyre_type, job.tread_condition, job.wheel_type]
+      .filter((v) => !!v && String(v).trim().length > 0)
+      .join(" · ");
+    const detailParts: string[] = [];
+    if (customerSaid) detailParts.push(`Customer: ${customerSaid}`);
+    if (aiSaid) detailParts.push(`AI assessment: ${aiSaid}`);
+    if (tyreSpec) detailParts.push(`Tyre: ${tyreSpec}`);
+    const details = detailParts.length > 0
+      ? detailParts.join(" — ")
+      : "No additional details";
+
     const reg = job.vehicle_reg?.trim() || "Not provided";
     const postcode = job.postcode?.trim() || "Not provided";
     const jobRef = job.id.slice(0, 6);
