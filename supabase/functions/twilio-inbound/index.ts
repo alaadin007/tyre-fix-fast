@@ -1176,30 +1176,34 @@ Deno.serve(async (req) => {
     const tech = customerHelpForTech ? null : (techMatch ?? []).find((t: any) => normPhone(t.phone) === fromN);
 
     if (tech) {
-      // If they shared a location pin (the meta webhook converts pins to
-      // text containing "(lat, lng)"), capture it as their current location.
-      const techCoords = body.match(COORD_RE);
-      if (techCoords) {
-        const lat = Number(techCoords[1]);
-        const lng = Number(techCoords[2]);
-        if (Number.isFinite(lat) && Number.isFinite(lng)) {
-          const now = new Date();
-          const expires = new Date(now.getTime() + 8 * 60 * 60 * 1000); // 8 hours
-          await supabase.from("technicians").update({
-            last_lat: lat,
-            last_lng: lng,
-            last_location_at: now.toISOString(),
-            live_location_until: expires.toISOString(),
-          }).eq("id", tech.id);
-          await supabase.from("technician_locations").insert({
-            technician_id: tech.id,
-            lat,
-            lng,
-            source: channel === "whatsapp" ? "whatsapp" : "sms",
-            expires_at: expires.toISOString(),
-          });
-          console.log("tech location updated", JSON.stringify({ tech: tech.id, lat, lng, expires: expires.toISOString() }));
-        }
+      // Capture any location the technician shared. We accept WhatsApp pins
+      // (reshaped to "(lat, lng)"), plain "lat, lng", DMS like
+      // 51°31'03.1"N 0°08'45.8"W, and Google Maps share links (incl. the
+      // shortened maps.app.goo.gl/... URLs — we follow the redirect).
+      const techPin = await extractCoords(body);
+      if (techPin) {
+        const { lat, lng } = techPin;
+        const now = new Date();
+        const expires = new Date(now.getTime() + 8 * 60 * 60 * 1000); // 8 hours
+        await supabase.from("technicians").update({
+          last_lat: lat,
+          last_lng: lng,
+          last_location_at: now.toISOString(),
+          live_location_until: expires.toISOString(),
+        }).eq("id", tech.id);
+        await supabase.from("technician_locations").insert({
+          technician_id: tech.id,
+          lat,
+          lng,
+          source: channel === "whatsapp" ? "whatsapp" : "sms",
+          expires_at: expires.toISOString(),
+        });
+        // Reflect the new pin on the local tech object so the downstream
+        // hasFreshPin check sees it within this same request.
+        tech.last_lat = lat;
+        tech.last_lng = lng;
+        tech.live_location_until = expires.toISOString();
+        console.log("tech location updated", JSON.stringify({ tech: tech.id, lat, lng, expires: expires.toISOString() }));
       }
 
       // Find their most recent open allocation
