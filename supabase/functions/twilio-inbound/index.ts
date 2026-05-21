@@ -568,28 +568,27 @@ Deno.serve(async (req) => {
           "• APPROVE <id-or-phone>\n" +
           "• REJECT <id-or-phone> [reason]\n" +
           "• JOBS — list 5 latest jobs\n" +
-          "• YES <job ref> — show nearby technicians for that job (e.g. YES E1453B)",
+          "• Broadcast <job ref> — send the job to nearby technicians (e.g. \"broadcast E1453B\" or \"yes send job E1453B to nearby techs\")",
           channel,
         );
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
       }
 
-      // YES <job ref> → list nearby technicians for that specific job.
-      // Bare "YES" is rejected so the admin must always disambiguate which job.
-      const yesMatch = trimmed.match(/^\s*y(?:es)?\b\s*(.*)$/i);
-      if (yesMatch) {
-        const ref = (yesMatch[1] || "").trim().toLowerCase().replace(/^#/, "");
-        if (!ref) {
-          await sendReply(
-            from,
-            "Which job? Please reply with the job reference, e.g. YES E1453B (the 6-character ID at the top of the job alert).",
-            channel,
-          );
-          return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
-        }
+      // Natural-language broadcast confirmation.
+      // Triggers: "yes", "broadcast", "send", "share", "dispatch", "go", "push", "blast"
+      // + any 6-char job ref appearing in the message. Anything that looks like
+      // an admin confirmation to push the job out to nearby technicians lands here.
+      const refRegex = /\b([0-9a-f]{6})\b/i;
+      const broadcastVerbRegex = /\b(broadcast|dispatch|send|share|push|blast|notify|alert|forward|go|fire|publish)\b/i;
+      const yesRegex = /^\s*(y|yes|ok|okay|sure|confirm|approved?|do it|please)\b/i;
+      const refInMsg = trimmed.match(refRegex);
+      const looksLikeBroadcast = refInMsg && (broadcastVerbRegex.test(trimmed) || yesRegex.test(trimmed));
+
+      if (looksLikeBroadcast) {
+        const ref = refInMsg[1].toLowerCase();
         const { data: jobMatches } = await supabase
           .from("jobs")
-          .select("id,customer_name,postcode,lat,lng,issue_type,created_at")
+          .select("id,customer_name,postcode,lat,lng,issue_type,status,created_at")
           .order("created_at", { ascending: false })
           .limit(500);
         const jm = (jobMatches ?? []).filter((j: any) => String(j.id).toLowerCase().startsWith(ref));
@@ -602,6 +601,9 @@ Deno.serve(async (req) => {
           return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
         }
         const job: any = jm[0];
+        const shortRef = String(job.id).slice(0, 6).toUpperCase();
+
+        // Score nearby technicians (same logic as before).
         const { data: techs } = await supabase
           .from("technicians")
           .select("id,name,phone,service_postcodes,last_lat,last_lng,travel_radius_miles")
@@ -635,17 +637,46 @@ Deno.serve(async (req) => {
           if (a.miles != null) return -1;
           if (b.miles != null) return 1;
           return 0;
-        }).slice(0, 10);
-        const shortRef = String(job.id).slice(0, 6).toUpperCase();
+        });
+
         if (scored.length === 0) {
-          await sendReply(from, `Job ${shortRef} (${job.postcode}) — no approved technicians found nearby.`, channel);
+          await sendReply(from, `Job ${shortRef} (${job.postcode}) — no approved technicians found nearby. Nothing broadcast.`, channel);
+          return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+        }
+
+        const technician_ids = scored.map((x: any) => x.t.id);
+
+        // Call broadcast-job which sends the approved `new_job_alert_to_technician`
+        // Meta template (with header image + body params + photo links).
+        const bRes = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/broadcast-job`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+          },
+          body: JSON.stringify({ job_id: job.id, mode: "specific", technician_ids }),
+        });
+        const bJson: any = await bRes.json().catch(() => ({}));
+        const sent = bJson?.sent ?? 0;
+        const total = bJson?.total ?? technician_ids.length;
+        const previewLines = scored.slice(0, 5).map(({ t, miles }: any) => {
+          const dist = miles != null ? ` · ${miles.toFixed(1)} mi` : "";
+          return `• ${t.name}${dist}`;
+        }).join("\n");
+        const more = scored.length > 5 ? `\n…and ${scored.length - 5} more` : "";
+        if (bRes.ok && sent > 0) {
+          await sendReply(
+            from,
+            `✅ Broadcast sent for job ${shortRef} (${job.postcode}) to ${sent}/${total} nearby technicians:\n${previewLines}${more}`,
+            channel,
+          );
         } else {
-          const lines = scored.map(({ t, miles }: any) => {
-            const pcs = (t.service_postcodes ?? []).join(", ") || "—";
-            const dist = miles != null ? ` · ${miles.toFixed(1)} mi` : "";
-            return `• ${t.name} — ${pcs}${dist}`;
-          }).join("\n");
-          await sendReply(from, `Nearby technicians for job ${shortRef} (${job.postcode}):\n${lines}`, channel);
+          const err = bJson?.error ? ` (${String(bJson.error).slice(0, 140)})` : "";
+          await sendReply(
+            from,
+            `⚠️ Broadcast for job ${shortRef} failed — ${sent}/${total} delivered${err}.`,
+            channel,
+          );
         }
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
       }
