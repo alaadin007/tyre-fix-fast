@@ -150,10 +150,11 @@ async function aiExtractQuote(text: string): Promise<{
         {
           role: "system",
           content:
-            "You parse mobile-tyre technician WhatsApp/SMS bids. Extract: are they accepting the job (free now?), ETA in minutes, callout/labour fee in GBP, whether they include a replacement tyre, and if so whether it's new or used and its price. Examples:\n" +
+            "You parse mobile-tyre technician WhatsApp/SMS bids. The technician may answer in multiple short messages — extract ONLY what's present in THIS message; leave anything not mentioned as null. Set accepts=false ONLY for an EXPLICIT decline (e.g. 'no', 'pass', 'sorry busy', 'can't make it'). A partial reply with just a price, just an ETA, or just a location is NOT a decline — set accepts=true in that case. Examples:\n" +
+            "'£85' → accepts true, price 85, eta null.\n" +
+            "'25 mins' → accepts true, eta 25, price null.\n" +
             "'Yes free now, 20 mins, £40 callout, no tyre' → accepts true, eta 20, callout 40, tyre_included false.\n" +
             "'Y, 25, 50 callout + 80 for new tyre' → accepts true, eta 25, callout 50, tyre_included true, tyre_condition new, price 130.\n" +
-            "'on it, 15 min, £120 all in (used tyre included)' → accepts true, eta 15, callout 120, tyre_included true, tyre_condition used, price 120.\n" +
             "'sorry busy' → accepts false.",
         },
         { role: "user", content: text },
@@ -1174,55 +1175,138 @@ Deno.serve(async (req) => {
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
       }
 
-      if (parsed.price_gbp == null || parsed.eta_minutes == null || parsed.confidence === "low") {
+      // Accumulate the three required pieces (price, ETA, pin location) across
+      // however many messages the technician sends. We keep a draft quote
+      // (status='collecting') and only flip it to 'pending' + notify admin
+      // once all three are in.
+      const shortRef = alloc.job_id.slice(0, 6);
+
+      // Find existing draft quote for this allocation, or create one.
+      const { data: existingDrafts } = await supabase
+        .from("quotes")
+        .select("*")
+        .eq("job_id", alloc.job_id)
+        .eq("technician_id", tech.id)
+        .in("status", ["collecting", "pending"])
+        .order("created_at", { ascending: false })
+        .limit(1);
+      let draft: any = existingDrafts?.[0] ?? null;
+
+      if (!draft) {
+        const { data: inserted } = await supabase.from("quotes").insert({
+          job_id: alloc.job_id,
+          technician_id: tech.id,
+          status: "collecting",
+          raw_message: body,
+          confidence: parsed.confidence,
+        }).select("*").single();
+        draft = inserted;
+      }
+
+      // Merge new fields into the draft (don't overwrite previously-collected values with null).
+      const mergedPrice = draft.price_gbp ?? parsed.price_gbp ?? null;
+      const mergedCallout = draft.callout_fee_gbp ?? parsed.callout_fee_gbp ?? null;
+      const mergedEta = draft.eta_minutes ?? parsed.eta_minutes ?? null;
+      const mergedTyreIncl = draft.tyre_included ?? parsed.tyre_included ?? null;
+      const mergedTyreCond = draft.tyre_condition ?? parsed.tyre_condition ?? null;
+
+      // Pin location: did this message contain coords, or do we already have a
+      // fresh (still-live) pin for this technician?
+      const liveUntil = tech.live_location_until ? new Date(tech.live_location_until).getTime() : 0;
+      const hasFreshPin = !!techCoords || (tech.last_lat != null && tech.last_lng != null && liveUntil > Date.now());
+      const pinLat = techCoords ? Number(techCoords[1]) : tech.last_lat;
+      const pinLng = techCoords ? Number(techCoords[2]) : tech.last_lng;
+
+      const hasPrice = mergedPrice != null;
+      const hasEta = mergedEta != null;
+      const hasPin = hasFreshPin;
+
+      // Persist whatever we've collected so far.
+      await supabase.from("quotes").update({
+        price_gbp: mergedPrice,
+        callout_fee_gbp: mergedCallout,
+        eta_minutes: mergedEta,
+        tyre_included: mergedTyreIncl,
+        tyre_condition: mergedTyreCond,
+        raw_message: ((draft.raw_message ? draft.raw_message + " | " : "") + body).slice(0, 2000),
+        confidence: parsed.confidence,
+      }).eq("id", draft.id);
+
+      if (!(hasPrice && hasEta && hasPin)) {
+        const missing: string[] = [];
+        if (!hasPrice) missing.push("💷 your price in £");
+        if (!hasEta) missing.push("⏱️ ETA in minutes");
+        if (!hasPin) missing.push("📍 your live location pin");
+        const gotParts: string[] = [];
+        if (hasPrice) gotParts.push(`price £${mergedPrice}`);
+        if (hasEta) gotParts.push(`ETA ${mergedEta} min`);
+        if (hasPin) gotParts.push("location ✅");
+        const gotLine = gotParts.length ? `Got: ${gotParts.join(", ")}.\n` : "";
         await sendReply(
           from,
-          `Almost there — for job ${alloc.job_id.slice(0, 6)} please reply with: free now? (Y/N), ETA mins, callout £, and (if blowout) new/used tyre + price. Drop a 📍pin too.`,
+          `Thanks! For job ${shortRef} I still need:\n• ${missing.join("\n• ")}\n\n${gotLine}Please send the missing detail(s) so we can put your quote to the customer.`,
           channel,
         );
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
       }
 
-      // Soft 60-second target — we still accept late quotes but flag them.
+      // All three present → finalise the quote.
       const allocCreated = new Date(alloc.created_at).getTime();
       const elapsedSec = Math.round((Date.now() - allocCreated) / 1000);
       const onTime = elapsedSec <= 60;
 
-      await supabase.from("quotes").insert({
-        job_id: alloc.job_id,
-        technician_id: tech.id,
-        price_gbp: parsed.price_gbp,
-        callout_fee_gbp: parsed.callout_fee_gbp,
-        eta_minutes: parsed.eta_minutes,
-        tyre_included: parsed.tyre_included,
-        tyre_condition: parsed.tyre_condition,
-        quote_deadline: new Date(allocCreated + 60_000).toISOString(),
-        raw_message: body,
+      await supabase.from("quotes").update({
         status: "pending",
-        confidence: parsed.confidence,
-      });
+        quote_deadline: new Date(allocCreated + 60_000).toISOString(),
+      }).eq("id", draft.id);
 
-      const tyreNote = parsed.tyre_included
-        ? ` (incl. ${parsed.tyre_condition ?? ""} tyre)`.replace("  ", " ")
-        : (parsed.tyre_included === false ? " (tyre NOT included)" : "");
+      const tyreNote = mergedTyreIncl
+        ? ` (incl. ${mergedTyreCond ?? ""} tyre)`.replace("  ", " ")
+        : (mergedTyreIncl === false ? " (tyre NOT included)" : "");
       const timeNote = onTime ? "⚡ within 60s" : `(${elapsedSec}s)`;
 
       await sendReply(
         from,
-        `Quote received ${timeNote}: £${parsed.price_gbp}, ETA ${parsed.eta_minutes} min${tyreNote}. We'll text when the customer chooses.`,
+        `Quote received ${timeNote}: £${mergedPrice}, ETA ${mergedEta} min${tyreNote}. We'll text when the customer chooses.`,
         channel,
       );
 
-      // Notify admin/operations console
-      const locNote = (tech.last_lat != null && tech.last_lng != null)
-        ? ` · 📍 https://maps.google.com/?q=${tech.last_lat},${tech.last_lng}`
-        : "";
+      // Notify admin/operations console with the full picture.
+      const mapsPin = `https://maps.google.com/?q=${pinLat},${pinLng}`;
+      const techPhone = tech.phone || tech.whatsapp || "n/a";
       await supabase.from("ops_alerts").insert({
         level: "info",
-        title: `Tech quote — ${tech.name ?? "technician"}`,
-        body: `${tech.name ?? "Tech"} quoted £${parsed.price_gbp}, ETA ${parsed.eta_minutes} min${tyreNote} for job ${alloc.job_id.slice(0, 8)}${locNote}`,
+        title: `Tech quote — ${tech.name ?? "technician"} · job ${shortRef}`,
+        body:
+          `🆕 Quote ready for job ${shortRef}\n` +
+          `👨‍🔧 ${tech.name ?? "Technician"} (${techPhone})\n` +
+          `💷 Price: £${mergedPrice}${tyreNote}\n` +
+          `⏱️ ETA: ${mergedEta} min\n` +
+          `📍 Location: ${mapsPin}`,
         job_id: alloc.job_id,
       });
+
+      // Also send a WhatsApp message to master admins so they see it in chat.
+      try {
+        await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/notify-admins`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+          },
+          body: JSON.stringify({
+            channel: "whatsapp",
+            body:
+              `New quote — job ${shortRef}. ` +
+              `${tech.name ?? "Technician"} (${techPhone}). ` +
+              `Price £${mergedPrice}${tyreNote}. ` +
+              `ETA ${mergedEta} min. ` +
+              `Location ${mapsPin}`,
+          }),
+        });
+      } catch (e) {
+        console.error("notify-admins (tech_quote_ready) failed", e);
+      }
 
       return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
     }
