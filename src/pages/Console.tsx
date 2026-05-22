@@ -161,6 +161,14 @@ export default function Console() {
         </div>
         <div className="flex items-center gap-2">
           <button
+            onClick={() => navigate("/admin/dashboard")}
+            className="inline-flex items-center gap-1.5 rounded-md border border-primary/30 bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary/20"
+            title="Open the admin dashboard"
+          >
+            <Sparkles className="h-3.5 w-3.5" />
+            Dashboard
+          </button>
+          <button
             onClick={() => setShowAddTech(true)}
             className="inline-flex items-center gap-1.5 rounded-md border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-foreground hover:bg-white/10"
             title="Manually add a technician (skips onboarding)"
