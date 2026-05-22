@@ -41,7 +41,7 @@ function clean(v: any, fallback = "—"): string {
   return s.replace(/[\r\n\t]+/g, " ").replace(/\s{4,}/g, "   ").slice(0, 200);
 }
 
-function buildJobTemplateParams(j: any, photoUrls: string[]): string[] {
+async function buildJobTemplateParams(j: any, photoUrls: string[]): Promise<string[]> {
   const shortId = String(j.id).slice(0, 6).toUpperCase();
   const customerName = clean(
     j.customer_name && String(j.customer_name).trim().toLowerCase() !== "customer"
@@ -59,8 +59,15 @@ function buildJobTemplateParams(j: any, photoUrls: string[]): string[] {
   const mi = String(created.getUTCMinutes()).padStart(2, "0");
   const ss = String(created.getUTCSeconds()).padStart(2, "0");
   const when = `${dd}/${mm}/${yyyy}, ${hh}:${mi}:${ss}`;
-  const mapsLink = (j.lat != null && j.lng != null)
+  const longMaps = (j.lat != null && j.lng != null)
     ? `https://www.google.com/maps?q=${j.lat},${j.lng}`
+    : "";
+  const mapsLink = longMaps ? await shortenUrl(longMaps, { kind: "admin_map", job_id: j.id }) : "—";
+  const photo1Short = photoUrls[1]
+    ? await shortenUrl(photoUrls[1], { kind: "admin_photo", job_id: j.id })
+    : "—";
+  const photo2Short = photoUrls[2]
+    ? await shortenUrl(photoUrls[2], { kind: "admin_photo", job_id: j.id })
     : "—";
   // Prefer postcode text; otherwise show the clickable pin link so admins
   // can open the customer's exact location directly from the template.
@@ -81,8 +88,8 @@ function buildJobTemplateParams(j: any, photoUrls: string[]): string[] {
     clean(j.vehicle_reg, "Not provided"),                             // {{11}}
     String(photoCount),                                               // {{12}}
     String(j.id),                                                     // {{13}}
-    clean(photoUrls[1], "—"),                                         // {{14}}
-    clean(photoUrls[2], "—"),                                         // {{15}}
+    photo1Short,                                                      // {{14}}
+    photo2Short,                                                      // {{15}}
     mapsLink,                                                         // {{16}}
   ];
 }
