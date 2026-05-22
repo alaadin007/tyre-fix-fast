@@ -787,11 +787,13 @@ Deno.serve(async (req) => {
         });
 
       // (A) Bare "yes" → depends on current state
+      // (A) Bare "yes" → depends on current state
       if (yesOnly) {
         if (adminState?.step === "await_broadcast_confirm" && adminState.job_id) {
           await setAdminState("await_ref_for_broadcast", adminState.job_id);
           await sendReply(from,
-            "Please enter the job reference number (with or without #).", channel);
+            "Please provide the job reference as well, so I know which job offer should be sent to the technicians (with or without #).",
+            channel);
           return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
         }
         // Default behaviour: assume admin is responding to the "Should I share
