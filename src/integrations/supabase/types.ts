@@ -14,6 +14,27 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_states: {
+        Row: {
+          job_id: string | null
+          phone: string
+          step: string
+          updated_at: string
+        }
+        Insert: {
+          job_id?: string | null
+          phone: string
+          step: string
+          updated_at?: string
+        }
+        Update: {
+          job_id?: string | null
+          phone?: string
+          step?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       app_settings: {
         Row: {
           id: string
