@@ -1349,15 +1349,36 @@ Deno.serve(async (req) => {
       // Notify admin/operations console with the full picture.
       const mapsPin = `https://maps.google.com/?q=${pinLat},${pinLng}`;
       const techPhone = tech.phone || tech.whatsapp || "n/a";
+
+      // Fetch job for vehicle reg + customer details.
+      const { data: jobRow } = await supabase
+        .from("jobs")
+        .select("vehicle_reg, customer_name, customer_phone, postcode")
+        .eq("id", alloc.job_id)
+        .maybeSingle();
+      const vehicleReg = jobRow?.vehicle_reg?.toString().trim() || "Not provided";
+      const customerLine = jobRow?.customer_name
+        ? `${jobRow.customer_name}${jobRow.customer_phone ? ` (${jobRow.customer_phone})` : ""}`
+        : (jobRow?.customer_phone ?? "—");
+
+      const adminBody =
+        `🆕 New Quote Received\n` +
+        `━━━━━━━━━━━━━━━━━━\n` +
+        `🔖 Job Ref: ${shortRef}\n` +
+        `👤 Customer: ${customerLine}\n` +
+        `🚗 Vehicle Reg: ${vehicleReg}\n` +
+        `\n` +
+        `👨‍🔧 Technician: ${tech.name ?? "Technician"}\n` +
+        `📞 Phone: ${techPhone}\n` +
+        `\n` +
+        `💷 Price: £${mergedPrice}${tyreNote}\n` +
+        `⏱️ ETA: ${mergedEta} min\n` +
+        `📍 Live Location: ${mapsPin}`;
+
       await supabase.from("ops_alerts").insert({
         level: "info",
         title: `Tech quote — ${tech.name ?? "technician"} · job ${shortRef}`,
-        body:
-          `🆕 Quote ready for job ${shortRef}\n` +
-          `👨‍🔧 ${tech.name ?? "Technician"} (${techPhone})\n` +
-          `💷 Price: £${mergedPrice}${tyreNote}\n` +
-          `⏱️ ETA: ${mergedEta} min\n` +
-          `📍 Location: ${mapsPin}`,
+        body: adminBody,
         job_id: alloc.job_id,
       });
 
@@ -1371,12 +1392,7 @@ Deno.serve(async (req) => {
           },
           body: JSON.stringify({
             channel: "whatsapp",
-            body:
-              `New quote — job ${shortRef}. ` +
-              `${tech.name ?? "Technician"} (${techPhone}). ` +
-              `Price £${mergedPrice}${tyreNote}. ` +
-              `ETA ${mergedEta} min. ` +
-              `Location ${mapsPin}`,
+            body: adminBody,
           }),
         });
       } catch (e) {
