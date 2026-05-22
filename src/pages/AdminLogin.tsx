@@ -132,6 +132,8 @@ export default function AdminLogin() {
         <p className="mt-4 text-[10px] leading-relaxed text-muted-foreground">
           Admin role required after sign-in. If you don't have access, contact an existing admin.
         </p>
+        </>
+        )}
       </div>
     </div>
   );
