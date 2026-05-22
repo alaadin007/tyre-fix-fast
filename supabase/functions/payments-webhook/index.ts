@@ -50,7 +50,7 @@ async function handleCheckoutCompleted(session: any) {
 
   const { data: job } = await supabase
     .from("jobs")
-    .select("id, customer_name, customer_phone, postcode, assigned_technician_id, platform_fee_status")
+    .select("id, customer_name, customer_phone, postcode, assigned_technician_id, platform_fee_status, issue_type, issue_description, vehicle_reg, affected_wheels")
     .eq("id", jobId)
     .single();
   if (!job) {
@@ -70,37 +70,91 @@ async function handleCheckoutCompleted(session: any) {
     status: isFullPayment ? "in_progress" : "confirmed",
   }).eq("id", jobId);
 
-  // Look up tech
-  let tech: { name?: string; phone?: string } | null = null;
+  // Look up tech (incl. live location)
+  let tech: { name?: string; phone?: string; last_lat?: number | null; last_lng?: number | null } | null = null;
   const techId = session?.metadata?.technician_id ?? job.assigned_technician_id;
   if (techId) {
     const { data } = await supabase
       .from("technicians")
-      .select("name, phone")
+      .select("name, phone, last_lat, last_lng")
       .eq("id", techId)
       .single();
     tech = data;
   }
 
-  // SMS / WhatsApp the customer with tech's number
-  if (job.customer_phone && tech?.phone) {
-    const msg = isFullPayment
-      ? `Tyre Fly: payment received ✅ ${tech.name ?? "Your technician"} is on the way. Direct line: ${tech.phone}. They'll call you to confirm ETA.`
-      : `Tyre Fly: payment received. Your technician ${tech.name ?? ""} will call you shortly. Direct line: ${tech.phone}.`;
-    await sendSms(job.customer_phone, msg);
+  const amount = formatGbp(session?.amount_total);
+  const ref = jobRef(jobId);
+  const techName = tech?.name ?? "Your technician";
+  const techPhone = tech?.phone ?? "";
+  const techLocLink = tech?.last_lat && tech?.last_lng
+    ? `https://www.google.com/maps?q=${tech.last_lat},${tech.last_lng}`
+    : "Will be shared once technician shares live location";
+
+  const issue = job.issue_description || job.issue_type || "Tyre service";
+  const wheels = Array.isArray(job.affected_wheels) && job.affected_wheels.length
+    ? job.affected_wheels.join(", ")
+    : "—";
+  const vehicleReg = job.vehicle_reg || "—";
+  const customerMapLink = job.postcode
+    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(job.postcode)}`
+    : "";
+
+  // ===== Customer message =====
+  if (job.customer_phone) {
+    const customerMsg = [
+      `✅ Payment Confirmed — £${amount}`,
+      ``,
+      `Your roadside tyre service is confirmed — Job #${ref}`,
+      ``,
+      `Here is the Technician Detail:`,
+      ``,
+      `👨‍🔧  ${techName}`,
+      `📞  ${techPhone}`,
+      `📍  ${techLocLink}`,
+      ``,
+      `They will call you shortly to confirm ETA.`,
+    ].join("\n");
+    await sendMsg(job.customer_phone, customerMsg, "whatsapp");
   }
-  // SMS / WhatsApp the technician with full job details
-  if (tech?.phone && job.customer_phone) {
-    const msg = isFullPayment
-      ? `Tyre Fly: 💷 PAID job ready.\nCustomer: ${job.customer_name ?? ""}\nPostcode: ${job.postcode ?? ""}\nCall: ${job.customer_phone}\nReply DONE when finished and we'll request a review.`
-      : `Tyre Fly: customer ${job.customer_name ?? ""} has paid the platform fee. Please call ${job.customer_phone} now to confirm ETA.`;
-    await sendSms(tech.phone, msg);
+
+  // ===== Technician message =====
+  if (techPhone && job.customer_phone) {
+    const techMsg = [
+      `🔔 Job Confirmed`,
+      ``,
+      `✅ Payment Received — £${amount}`,
+      `📋 Job Ref: #${ref}`,
+      ``,
+      `👤 Customer Details`,
+      `━━━━━━━━━━━━━━━`,
+      `👨 Name:     ${job.customer_name ?? "—"}`,
+      `📞 Phone:    ${job.customer_phone}`,
+      `📍 PostCode: ${job.postcode ?? "—"}`,
+      `🗺️ Map:      ${customerMapLink}`,
+      ``,
+      `🛞 Job Details`,
+      `━━━━━━━━━━━━━━━`,
+      `⚠️ Issue:    ${issue}`,
+      `🚗 Reg:      ${vehicleReg}`,
+      `🛞 Wheels:   ${wheels}`,
+      ``,
+      `💰 Your quoted price has been accepted & payment is now confirmed.`,
+      `📲 Please contact the customer immediately to confirm your ETA.`,
+      ``,
+      `✅ Job Completion`,
+      `━━━━━━━━━━━━━━━`,
+      `Once job is done, reply with:`,
+      `   Done ${ref}`,
+      ``,
+      `This will automatically close the job.`,
+    ].join("\n");
+    await sendMsg(techPhone, techMsg, "whatsapp");
   }
 
   await supabase.from("ops_alerts").insert({
     level: "info",
     title: isFullPayment ? "Customer paid in full" : "Platform fee paid",
-    body: `Job ${jobId.slice(0, 8)} — payment received, contact details exchanged.`,
+    body: `Job ${ref} — £${amount} received, contact details exchanged.`,
     job_id: jobId,
   });
 }
