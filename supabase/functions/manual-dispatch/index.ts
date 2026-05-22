@@ -62,7 +62,7 @@ Deno.serve(async (req) => {
     if (!tech) throw new Error("Technician not found");
 
     // Stripe Checkout — dynamic amount, Apple Pay/Google Pay enabled by default
-    const env = "sandbox" as const;
+    const env = "live" as const;
     const stripe = createStripeClient(env);
     const baseOrigin = origin?.replace(/\/$/, "") ?? "https://tyrefly.com";
 
