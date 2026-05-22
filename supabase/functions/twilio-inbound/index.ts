@@ -802,9 +802,13 @@ Deno.serve(async (req) => {
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
       }
 
-      // (B) Bare ref while waiting for list lookup → show available technicians
-      if (refOnlyMatch && adminState?.step === "await_ref_for_list") {
-        const ref = refOnlyMatch[1].toLowerCase();
+      // (B) Bare ref while waiting for list lookup, OR combined "yes <ref>" →
+      // show available technicians and immediately ask broadcast confirmation.
+      const listTrigger = (refOnlyMatch && adminState?.step === "await_ref_for_list")
+        ? refOnlyMatch[1]
+        : (yesPlusRefMatch ? yesPlusRefMatch[1] : null);
+      if (listTrigger) {
+        const ref = listTrigger.toLowerCase();
         const matches = await findJobByRef(ref);
         if (matches.length === 0) {
           await sendReply(from,
