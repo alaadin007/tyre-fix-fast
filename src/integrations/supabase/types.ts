@@ -441,6 +441,33 @@ export type Database = {
         }
         Relationships: []
       }
+      short_links: {
+        Row: {
+          code: string
+          created_at: string
+          expires_at: string | null
+          job_id: string | null
+          kind: string | null
+          target_url: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          expires_at?: string | null
+          job_id?: string | null
+          kind?: string | null
+          target_url: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          expires_at?: string | null
+          job_id?: string | null
+          kind?: string | null
+          target_url?: string
+        }
+        Relationships: []
+      }
       sms_messages: {
         Row: {
           body: string
