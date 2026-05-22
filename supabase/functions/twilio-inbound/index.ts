@@ -956,8 +956,47 @@ Deno.serve(async (req) => {
         !!adminState?.job_id &&
         String(adminState.job_id).toLowerCase().startsWith(ref.toLowerCase());
 
+      // Helper: actually push the technician's quote to the customer.
+      const runSendQuoteForJobId = async (jobIdFull: string) => {
+        const shortRef = String(jobIdFull).slice(0, 6).toUpperCase();
+        const res = await sendQuoteToCustomer(supabase, jobIdFull);
+        await clearAdminState();
+        if (res.ok) {
+          await sendReply(from,
+            `✅ Quote for job #${shortRef} sent to the customer (${res.customerPhone}).`,
+            channel);
+        } else {
+          await sendReply(from,
+            `⚠️ Could not send quote for job #${shortRef}: ${res.error ?? "unknown error"}.`,
+            channel);
+        }
+      };
+      const runSendQuoteForRef = async (ref: string) => {
+        const matches = await findJobByRef(ref);
+        if (matches.length === 0) {
+          await sendReply(from,
+            `No job found for ref #${ref.toUpperCase()}. Quote not sent.`, channel);
+          return;
+        }
+        if (matches.length > 1) {
+          await sendReply(from,
+            `Multiple jobs match #${ref.toUpperCase()} — please send the full 6-character ref.`, channel);
+          return;
+        }
+        await runSendQuoteForJobId(String(matches[0].id));
+      };
+
       // (A) Bare "yes" → depends on current state
       if (yesOnly) {
+        if (adminState?.step === "await_send_quote_confirm" && adminState.job_id) {
+          // Tech quote was just forwarded — "yes" means send it to the customer.
+          await runSendQuoteForJobId(String(adminState.job_id));
+          return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+        }
+        if (adminState?.step === "await_ref_for_send_quote" && adminState.job_id) {
+          await runSendQuoteForJobId(String(adminState.job_id));
+          return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+        }
         if (adminState?.step === "await_broadcast_confirm" && adminState.job_id) {
           // List was already shown for this job — "yes" confirms broadcast.
           await runBroadcastForRef(String(adminState.job_id).slice(0, 6));
@@ -975,11 +1014,18 @@ Deno.serve(async (req) => {
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
       }
 
-      // (A2) "yes <ref>" or bare "<ref>" while list is already shown for THAT
-      // ref → broadcast (admin is confirming the broadcast step).
+      // (A1) "yes <ref>" or bare "<ref>" while awaiting send-quote approval → send to customer.
       const refFromMsg =
         (yesPlusRefMatch ? yesPlusRefMatch[1] : null) ??
         (refOnlyMatch ? refOnlyMatch[1] : null);
+      if (refFromMsg && adminState?.step === "await_send_quote_confirm") {
+        // If ref matches the stored job, send that. Otherwise still try the ref.
+        await runSendQuoteForRef(refFromMsg);
+        return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+      }
+
+      // (A2) "yes <ref>" or bare "<ref>" while list is already shown for THAT
+      // ref → broadcast (admin is confirming the broadcast step).
       if (refFromMsg && adminState?.step === "await_broadcast_confirm" && sameJobAsState(refFromMsg)) {
         await runBroadcastForRef(refFromMsg);
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
@@ -989,6 +1035,7 @@ Deno.serve(async (req) => {
         await runBroadcastForRef(refOnlyMatch[1]);
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
       }
+
 
       // (B) Bare ref while waiting for list lookup, OR combined "yes <ref>" →
       // show available technicians and immediately ask broadcast confirmation.
