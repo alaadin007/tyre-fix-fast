@@ -213,7 +213,7 @@ Deno.serve(async (req) => {
       // back to a generic placeholder so Meta still accepts the message.
       const FALLBACK_HEADER = "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=800&h=418&fit=crop&fm=jpg";
       const header_image_url = photos[0] ?? FALLBACK_HEADER;
-      const body_params = buildJobTemplateParams(job, photos);
+      const body_params = await buildJobTemplateParams(job, photos);
 
       const results = await Promise.allSettled(
         numbers.map((to) =>
