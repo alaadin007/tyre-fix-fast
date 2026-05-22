@@ -787,7 +787,6 @@ Deno.serve(async (req) => {
         });
 
       // (A) Bare "yes" → depends on current state
-      // (A) Bare "yes" → depends on current state
       if (yesOnly) {
         if (adminState?.step === "await_broadcast_confirm" && adminState.job_id) {
           await setAdminState("await_ref_for_broadcast", adminState.job_id);
