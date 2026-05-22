@@ -738,9 +738,12 @@ Deno.serve(async (req) => {
           .eq("approval_status", "approved").eq("active", true).limit(500);
         const jobPc = String(job.postcode ?? "").toUpperCase().replace(/\s+/g, "");
         const jobOutward = jobPc.replace(/\d[A-Z]{2}$/, "");
+        const validCoord = (la: any, ln: any) =>
+          la != null && ln != null && !(Number(la) === 0 && Number(ln) === 0) &&
+          Math.abs(Number(la)) > 0.01 && Math.abs(Number(ln)) > 0.01;
         return (techs ?? []).map((t: any) => {
           let miles: number | null = null;
-          if (job.lat != null && job.lng != null && t.last_lat != null && t.last_lng != null) {
+          if (validCoord(job.lat, job.lng) && validCoord(t.last_lat, t.last_lng)) {
             miles = haversine(Number(job.lat), Number(job.lng), Number(t.last_lat), Number(t.last_lng));
           }
           const pcs: string[] = (t.service_postcodes ?? []).map((p: string) =>
@@ -748,13 +751,18 @@ Deno.serve(async (req) => {
           const pcMatch = !!jobOutward && pcs.some((p) =>
             p === jobOutward || p.startsWith(jobOutward) || jobOutward.startsWith(p));
           return { t, miles, pcMatch };
-        }).filter((x: any) => x.miles != null ? x.miles <= (x.t.travel_radius_miles ?? 15) : x.pcMatch)
-          .sort((a: any, b: any) => {
-            if (a.miles != null && b.miles != null) return a.miles - b.miles;
-            if (a.miles != null) return -1;
-            if (b.miles != null) return 1;
-            return 0;
-          });
+        }).filter((x: any) => {
+          const inRange = x.miles != null && x.miles <= (x.t.travel_radius_miles ?? 15);
+          return x.pcMatch || inRange;
+        }).sort((a: any, b: any) => {
+          // Postcode matches first, then by distance
+          if (a.pcMatch && !b.pcMatch) return -1;
+          if (b.pcMatch && !a.pcMatch) return 1;
+          if (a.miles != null && b.miles != null) return a.miles - b.miles;
+          if (a.miles != null) return -1;
+          if (b.miles != null) return 1;
+          return 0;
+        });
       };
       const findJobByRef = async (ref: string) => {
         const { data: jobMatches } = await supabase
