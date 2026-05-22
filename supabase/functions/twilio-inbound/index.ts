@@ -1457,7 +1457,8 @@ Deno.serve(async (req) => {
                 description: `Tyre Fly — job ${shortRef} — ${jobRow.postcode ?? ""}`.trim(),
               },
             });
-            payUrl = session.url;
+            const { shortenUrl } = await import("../_shared/short-link.ts");
+            payUrl = await shortenUrl(session.url!, { kind: "job_full_payment", job_id: alloc.job_id });
             await supabase.from("jobs").update({
               stripe_session_id: session.id,
               stripe_checkout_url: session.url,

@@ -16,6 +16,7 @@ import Terms from "./pages/Terms.tsx";
 import Console from "./pages/Console.tsx";
 import AreasIndex from "./pages/AreasIndex.tsx";
 import AreaPage from "./pages/AreaPage.tsx";
+import ShortLinkRedirect from "./pages/ShortLinkRedirect.tsx";
 
 const queryClient = new QueryClient();
 
@@ -38,6 +39,7 @@ const App = () => (
         <Route path="/privacy" element={<Privacy />} />
         <Route path="/terms" element={<Terms />} />
         <Route path="/console" element={<Console />} />
+        <Route path="/p/:code" element={<ShortLinkRedirect />} />
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
         <Route path="*" element={<NotFound />} />
       </Routes>

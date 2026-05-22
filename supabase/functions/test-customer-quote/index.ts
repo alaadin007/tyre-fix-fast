@@ -2,6 +2,7 @@
 // customer-quote-formatted WhatsApp message to all master admin numbers.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { createStripeClient } from "../_shared/stripe.ts";
+import { shortenUrl } from "../_shared/short-link.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -57,7 +58,7 @@ Deno.serve(async (req) => {
       `⏱ Estimated Arrival Time (ETA): ${eta} minutes\n\n` +
       `📍 Live Technician Location: ${trackingUrl}\n\n` +
       `To proceed with the service, please complete the payment using the secure Stripe link below:\n\n` +
-      `💳 Payment Link: ${session.url}\n\n` +
+      `💳 Payment Link: ${await shortenUrl(session.url!, { kind: "test_customer_quote_preview" })}\n\n` +
       `Once the payment is confirmed, the technician will proceed with the repair service at your location.\n\n` +
       `Thank you.\n— Tyre Fly`;
 
