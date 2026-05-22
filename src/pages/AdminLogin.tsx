@@ -13,15 +13,33 @@ export default function AdminLogin() {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
 
+  const [noAccess, setNoAccess] = useState(false);
+
+  const checkAndRoute = async (session: any) => {
+    if (!session?.user) return;
+    const { data: roles } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", session.user.id);
+    const isAdmin = (roles ?? []).some((r: any) => r.role === "admin");
+    if (isAdmin) {
+      navigate("/admin", { replace: true });
+    } else {
+      setNoAccess(true);
+    }
+  };
+
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) navigate("/admin", { replace: true });
-    });
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
-      if (s) navigate("/admin", { replace: true });
-    });
+    supabase.auth.getSession().then(({ data }) => checkAndRoute(data.session));
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => checkAndRoute(s));
     return () => sub.subscription.unsubscribe();
   }, [navigate]);
+
+  const signOut = async () => {
+    await supabase.auth.signOut();
+    setNoAccess(false);
+  };
+
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
