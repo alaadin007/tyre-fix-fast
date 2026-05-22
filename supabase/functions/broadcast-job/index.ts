@@ -5,6 +5,7 @@
 // Sends a job summary, records job_allocations rows, updates job status to 'broadcasting'.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { z } from "https://esm.sh/zod@3.23.8";
+import { shortenUrl } from "../_shared/short-link.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -163,11 +164,19 @@ Deno.serve(async (req) => {
 
     const wheels = (job.affected_wheels ?? []).join(", ") || "Not specified";
     const photos = (job.photo_urls ?? []).filter((u: string) => !!u);
-    const photo1 = photos[0] || "https://placehold.co/600x400/png?text=No+Photo";
-    const photo2 = photos[1] || "No second photo";
-    const mapsLink = (job.lat != null && job.lng != null)
+    const photo1Raw = photos[0] || "https://placehold.co/600x400/png?text=No+Photo";
+    const photo2Raw = photos[1] || "";
+    const mapsLinkRaw = (job.lat != null && job.lng != null)
       ? `https://maps.google.com/?q=${job.lat},${job.lng}`
-      : "Location pending";
+      : "";
+
+    // Shorten long URLs so the WhatsApp template body stays tidy.
+    const [photo1, photo2, mapsLink] = await Promise.all([
+      shortenUrl(photo1Raw, { kind: "tech_job_photo", job_id }),
+      photo2Raw ? shortenUrl(photo2Raw, { kind: "tech_job_photo", job_id }) : Promise.resolve("No second photo"),
+      mapsLinkRaw ? shortenUrl(mapsLinkRaw, { kind: "tech_job_map", job_id }) : Promise.resolve("Location pending"),
+    ]);
+
 
     // Build a rich Details block combining what the customer told us with the
     // AI's photo-based assessment, so the technician has full context before
@@ -222,7 +231,7 @@ Deno.serve(async (req) => {
         name: "new_job_alert_to_technician",
         language: "en_GB",
         body_params,
-        header_image_url: photo1,
+        header_image_url: photo1Raw,
       });
       // If Meta template fails, fall back to plain Twilio session message (may not deliver outside 24h).
       const finalRes = wa.ok ? wa : await sendWhatsApp(to, msg, photos.slice(0, 6));
