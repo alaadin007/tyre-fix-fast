@@ -6,6 +6,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { z } from "https://esm.sh/zod@3.23.8";
 import { createStripeClient } from "../_shared/stripe.ts";
+import { shortenUrl } from "../_shared/short-link.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -115,12 +116,13 @@ Deno.serve(async (req) => {
 
     // WhatsApp customer with quote + pay link
     if (job.customer_phone) {
+      const payUrl = await shortenUrl(session.url!, { kind: "job_full_payment", job_id });
       const msg =
         `Hi ${job.customer_name ?? ""} 👋 Tyre Fly here.\n\n` +
         `We've got ${tech.name} ready for you in ${job.postcode}.\n` +
         `• Quote: £${price_gbp.toFixed(2)}\n` +
         `• ETA: ~${eta_minutes} mins from payment\n\n` +
-        `Tap to pay securely (Apple Pay / Google Pay / card):\n${session.url}\n\n` +
+        `Tap to pay securely (Apple Pay / Google Pay / card):\n${payUrl}\n\n` +
         `Once paid, ${tech.name} will call you to confirm and head over.`;
       await sendMsg(job.customer_phone, msg, "whatsapp");
     }
