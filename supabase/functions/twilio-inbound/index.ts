@@ -905,7 +905,9 @@ Deno.serve(async (req) => {
       const broadcastVerbRegex = /\b(broadcast|dispatch|send|share|push|blast|notify|alert|forward|go|fire|publish)\b/i;
       const yesRegex = /^\s*(y|yes|ok|okay|sure|confirm|approved?|do it|please)\b/i;
       const refInMsg = trimmed.match(refRegex);
-      const looksLikeBroadcast = refInMsg && (broadcastVerbRegex.test(trimmed) || yesRegex.test(trimmed));
+      // Require an explicit broadcast verb here — plain "yes <ref>" is handled
+      // above as a list request, not an immediate broadcast.
+      const looksLikeBroadcast = refInMsg && broadcastVerbRegex.test(trimmed);
 
       if (looksLikeBroadcast) {
         const ref = refInMsg[1].toLowerCase();
