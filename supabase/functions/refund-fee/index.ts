@@ -38,7 +38,7 @@ Deno.serve(async (req) => {
       throw new Error("No payment intent on job — cannot refund");
     }
 
-    const stripe = createStripeClient("sandbox");
+    const stripe = createStripeClient("live");
     const refund = await stripe.refunds.create({
       payment_intent: job.stripe_payment_intent_id,
       reason: "requested_by_customer",
