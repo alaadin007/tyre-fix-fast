@@ -88,7 +88,7 @@ async function sendSMS(supabase: any, tech: Tech, job: any) {
     ? `Reply within 60s with: 1) free now? (Y/N), 2) ETA mins, 3) callout £, 4) replacement tyre? new/used + price (or none).`
     : `Reply within 60s with: 1) free now? (Y/N), 2) ETA mins, 3) callout £ (extras separate if needed).`;
 
-  const msg = `Tyre Fly job: ${job.issue_type} in ${job.postcode}.${wheelsTxt}${sizeTxt} ${blurb}${ask} Also share your 📍live location (8 hours) so we can route you and other jobs nearby. Job#${job.id.slice(0, 6)}`;
+  const msg = `Tyre Fly job: ${job.issue_type} in ${job.postcode}.${wheelsTxt}${sizeTxt} ${blurb}${ask} IMPORTANT: For THIS job you MUST share a fresh 📍live location pin right now (tap 📎 → Location → Share live location, 8 hours) — quotes without an up-to-date pin for this job will not be accepted. Job#${job.id.slice(0, 6)}`;
 
   const r = await fetch(url, {
     method: "POST",
