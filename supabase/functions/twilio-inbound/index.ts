@@ -7,6 +7,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { feeForPhone } from "../_shared/region-fee.ts";
 import { processCustomerIntake } from "../_shared/intake-state.ts";
+import { resolveQuoteLocationForAllocation } from "../_shared/quote-location.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -1781,16 +1782,36 @@ Deno.serve(async (req) => {
       const mergedTyreIncl = draft.tyre_included ?? parsed.tyre_included ?? null;
       const mergedTyreCond = draft.tyre_condition ?? parsed.tyre_condition ?? null;
 
-      // Pin location: did this message contain coords, or do we already have a
-      // fresh (still-live) pin for this technician?
-      const liveUntil = tech.live_location_until ? new Date(tech.live_location_until).getTime() : 0;
-      const hasFreshPin = !!techPin || (tech.last_lat != null && tech.last_lng != null && liveUntil > Date.now());
-      const pinLat = techPin ? techPin.lat : tech.last_lat;
-      const pinLng = techPin ? techPin.lng : tech.last_lng;
+      // Pin location for quote completion must come from THIS job's quote flow:
+      // either the current message, or a live location pin shared after this
+      // allocation was created. An older saved technician pin must NOT satisfy
+      // the quote requirement.
+      let quoteFlowPins: Array<{ lat: number; lng: number; created_at: string; expires_at: string }> = [];
+      if (alloc.created_at) {
+        const { data: recentPins, error: recentPinsErr } = await supabase
+          .from("technician_locations")
+          .select("lat,lng,created_at,expires_at")
+          .eq("technician_id", tech.id)
+          .gte("created_at", alloc.created_at)
+          .order("created_at", { ascending: false })
+          .limit(5);
+        if (recentPinsErr) {
+          console.error("quote technician_locations lookup failed", recentPinsErr);
+        } else {
+          quoteFlowPins = recentPins ?? [];
+        }
+      }
+      const quoteLocation = resolveQuoteLocationForAllocation({
+        techPin,
+        allocationCreatedAt: alloc.created_at ?? null,
+        locationRows: quoteFlowPins,
+      });
 
       const hasPrice = mergedPrice != null;
       const hasEta = mergedEta != null;
-      const hasPin = hasFreshPin;
+      const hasPin = quoteLocation.hasPin;
+      const pinLat = quoteLocation.lat;
+      const pinLng = quoteLocation.lng;
 
       // Persist whatever we've collected so far.
       await supabase.from("quotes").update({
