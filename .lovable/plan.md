@@ -1,84 +1,109 @@
-# Rewrite Customer Intake Flow + Memory
-
-## Problem (from screenshots + code)
-
-- `twilio-inbound/index.ts` is 1669 lines with multiple branches that each independently send "Step 1 of 4 — Your location". After "All done ✅" the same handler falls through and re-asks step 1.
-- No clear conversation state — the bot infers progress from `jobs` row fields, so any null field re-triggers the question.
-- No customer memory: a returning client is treated as brand new, even when we already have their name / vehicle / past jobs.
-
 ## Goal
 
-One linear, deterministic intake. Returning customers skip what we already know but always start a **new case**.
+Add a comprehensive visual Admin Dashboard for managing the entire job lifecycle, while keeping the existing WhatsApp automation flow untouched. The dashboard becomes a read/monitor + light-control layer over the same database tables (`jobs`, `quotes`, `job_allocations`, `technicians`, `sms_messages`, `scheduled_tasks`).
 
-## New conversation model
+## Scope
 
-Two tables, one state machine.
+**In scope (UI only, no business-logic changes to WhatsApp flow):**
+- New dashboard pages/sections under `/admin` (Console)
+- Visual KPIs, lists, filters, detail drawers, timelines
+- Light controls already supported by existing edge functions (rebroadcast, mark paid, refund, send quote to customer)
 
-**`customers`** (one row per phone, the long-term memory)
-- `phone` (PK), `full_name`, `default_postcode`, `vehicle_reg`, `last_seen_at`, `total_jobs`, `notes`
+**Out of scope:**
+- Any change to `twilio-inbound`, `broadcast-job`, `whatsapp-meta-send`, `payments-webhook` business logic
+- Database schema changes (existing tables already have everything we need)
 
-**`conversations`** (one row per active WhatsApp thread)
-- `id`, `customer_phone`, `current_job_id`, `step` enum, `last_message_at`, `context jsonb`
-- `step`: `idle | awaiting_location | awaiting_plate | awaiting_name | awaiting_description | awaiting_wheels | awaiting_photos | complete`
-- Conversation auto-expires after 24h of silence → next inbound starts a **new case**, but `customers` row is reused.
+## Dashboard structure
 
-## Intake state machine (single source of truth)
+New `/admin` layout with a left sidebar and these sections:
 
-```text
-inbound msg
-   │
-   ▼
-load customer (by phone) → load active conversation (<24h)
-   │
-   ├─ no active convo  → create new job + conversation, step = first missing field
-   │                     using customer memory to pre-fill name/postcode/reg
-   │
-   └─ active convo     → route by conversation.step, NOT by job fields
+1. **Overview** — KPI cards + recent activity
+   - Today / 7d / 30d counters: jobs created, broadcasts sent, quotes received, quotes accepted, jobs completed, revenue (sum of `quotes.price_gbp` where accepted/paid), platform fees collected
+   - Funnel: Created → Broadcasting → Quoted → Accepted → In Progress → Completed → Paid
+   - Live "needs attention" list (awaiting_approval, awaiting_payment, stalled jobs)
+
+2. **Jobs** — filterable table
+   - Columns: Ref, Customer, Postcode, Issue, Status (colored badge), Broadcasted to (count), Quotes (count), Assigned tech, Created
+   - Filters: status, region, date range, has_quotes, payment_status
+   - Row click → Job Detail Drawer
+
+3. **Job Detail Drawer** (the core "visual workflow" view)
+   - Header: ref, customer, postcode, status, vehicle reg, photos
+   - **Timeline** (vertical): job created → broadcast batches with technician chips → each quote arrival → admin approval → customer notification → payment → completion. Built from `jobs`, `job_allocations`, `quotes`, `sms_messages`, `scheduled_tasks`
+   - **Broadcasts panel**: list of `job_allocations` rows showing tech, status (proposed/sent/accepted/declined/expired), match_score, sent time
+   - **Quotes panel**: list of `quotes` with tech, price, ETA, status (pending/accepted/lost), "Send to customer" button (calls existing twilio-inbound-equivalent or directly updates and invokes confirmation flow)
+   - **Payment panel**: platform_fee_status, stripe_session_id link, "Mark paid" / "Refund" buttons (existing edge functions)
+   - **Messages panel**: chronological `sms_messages` for this job_id (existing `JobConversation`)
+
+4. **Technicians** — already partially exists; enhance with:
+   - Columns: name, active, rating, jobs_completed, current location age, pending quotes count, accepted jobs count
+   - Row → drawer with their conversation history, recent quotes, recent jobs, live location
+
+5. **Quotes** — flat list across all jobs
+   - Filters: status, technician, date
+   - Quick actions: forward to customer (for pending), view job
+
+6. **Payments** — list view
+   - Columns: job ref, customer, amount, platform fee, status, stripe session, paid_at, refunded_at
+   - Filters by status
+
+7. **Activity log** — unified feed of `sms_messages` + `ops_alerts` + status transitions
+
+## Technical approach
+
+- New route components under `src/pages/admin/` and `src/components/admin/dashboard/`
+- Restructure `/admin` (`Console.tsx`) into a layout with sidebar nav + nested routes
+- Reuse `useConsoleData` and extend with hooks: `useJobsWithRelations`, `useQuotesFeed`, `useAllocationsForJob`, `usePaymentsFeed`
+- All data via existing Supabase tables + realtime channels (already enabled pattern in `useConsoleData`)
+- Status badges use semantic tokens from `index.css` (define `--status-*` if needed)
+- Drawer/dialog via existing `Sheet`/`Dialog` components
+- KPI queries done client-side with date filtering (jobs table is small enough; can move to RPC later if needed)
+- "Send quote to customer" button calls a small new edge function `admin-send-quote` that reuses the same `sendQuoteToCustomer` helper from `twilio-inbound` (factored into `_shared/quote-to-customer.ts`) — this keeps WhatsApp behavior identical whether triggered by admin "YES" reply or dashboard button
+- "Rebroadcast" button calls existing `broadcast-job` function
+- "Mark paid" / "Refund" call existing `payments-webhook` mock path / `refund-fee` function
+
+## Files to create
+
+```
+src/pages/admin/
+  DashboardLayout.tsx        # sidebar + outlet
+  Overview.tsx               # KPIs + funnel + needs-attention
+  JobsPage.tsx               # filterable jobs table
+  JobDetailDrawer.tsx        # timeline + panels
+  TechniciansPage.tsx        # enhanced tech list
+  QuotesPage.tsx
+  PaymentsPage.tsx
+  ActivityPage.tsx
+src/components/admin/dashboard/
+  KpiCard.tsx
+  FunnelChart.tsx
+  StatusBadge.tsx
+  JobTimeline.tsx
+  BroadcastsPanel.tsx
+  QuotesPanel.tsx
+  PaymentPanel.tsx
+src/hooks/
+  useDashboardMetrics.ts
+  useJobDetail.ts
+supabase/functions/
+  _shared/quote-to-customer.ts   # extracted helper
+  admin-send-quote/index.ts      # thin wrapper for dashboard button
 ```
 
-Each step handler does exactly three things:
-1. Try to parse the inbound message for its field.
-2. If parsed → save to job + customer memory, advance `step`, send next prompt.
-3. If not parsed → resend *only* the current step prompt (no progress checklist spam).
+## Files to modify
 
-When `step` becomes `complete`:
-- Mark job `intake_complete` (fires dispatch trigger).
-- Send the "All done ✅" message **once**.
-- Set conversation `step = idle`. No further prompts until customer sends something new.
+- `src/App.tsx` — nest admin routes under `DashboardLayout`
+- `src/pages/Console.tsx` — keep as legacy map view, link from new dashboard, or fold into Overview
+- `supabase/functions/twilio-inbound/index.ts` — import shared helper instead of inline `sendQuoteToCustomer` (no behavior change)
 
-## Returning customer behaviour
+## Out-of-scope guarantees
 
-On new conversation, if `customers` row exists:
-- Greet by name: "Welcome back, {name} 👋 New job?"
-- Pre-fill `customer_name`, optionally `vehicle_reg` and `postcode` from memory.
-- Skip those steps; jump straight to "What happened this time?"
-- Never carry over: previous photos, previous damage, previous affected wheels, previous job status.
-- Always create a fresh `jobs` row.
+- No changes to template IDs, message wording, state-machine, or admin/tech WhatsApp flows
+- No schema migrations
+- No auth changes (existing admin role gating remains)
 
-## What gets deleted / rewritten
+## Open questions
 
-- All the duplicate "Step 1 of 4" branches in `twilio-inbound/index.ts` collapse into one `sendStepPrompt(step)` helper.
-- The post-completion fall-through that re-asks step 1 is removed.
-- `whatsapp-meta-webhook/index.ts` routed through the same state machine (shared module).
-
-## Technical section
-
-**Files**
-- `supabase/functions/_shared/intake-state.ts` (new) — pure state machine: `nextStep(conversation, job, customer, inboundText, mediaUrls) → { updates, reply }`.
-- `supabase/functions/twilio-inbound/index.ts` — thin: parse Twilio body, call shared state machine, send reply.
-- `supabase/functions/whatsapp-meta-webhook/index.ts` — same, for Meta.
-
-**Migration**
-- Create `customers` + `conversations` tables with RLS (service-role only; no end-user auth on these).
-- Backfill `customers` from existing `jobs` (group by `customer_phone`, keep latest non-null values).
-- Add index `conversations(customer_phone) where step <> 'complete'`.
-
-**Out of scope (not touching)**
-- `dispatch-agent`, `notify-admins`, technician side, admin console, payments.
-- The approved Meta template `new_job_alert_to_admin` keeps firing exactly as today once `status = intake_complete`.
-
-## Confirm before I build
-
-1. **24h window** for "same case vs new case" — OK, or do you want shorter (e.g. 2h) / longer?
-2. **What to remember** between visits — name + postcode + vehicle reg + count of past jobs. Anything else (preferred technician, last damage type)?
-3. **Returning-customer greeting** — should it confirm details ("Same car C13ATA?") or silently reuse them?
+1. Do you want the new dashboard at `/admin` (replacing current Console) with the old map view as a sub-tab, or as a separate route like `/admin/dashboard` keeping `/admin` as-is?
+2. For the "Send quote to customer" button on the dashboard — should it bypass the WhatsApp "YES" confirmation entirely, or should clicking it just trigger the same `await_send_quote_confirm` prompt the admin gets on WhatsApp?
+3. Any specific KPIs/metrics that matter most to you (e.g. avg time-to-quote, broadcast acceptance rate) that should be front-and-center on the Overview?
