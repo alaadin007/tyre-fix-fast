@@ -1838,7 +1838,15 @@ Deno.serve(async (req) => {
 
       await sendReply(
         from,
-        `Quote received ${timeNote}: £${mergedPrice}, ETA ${mergedEta} min${tyreNote}. We'll text when the customer chooses.`,
+        [
+          `✅ Quote received successfully for Job Ref #${shortRef} ${timeNote}`,
+          ``,
+          `💷 Price: £${mergedPrice}`,
+          `⏱️ ETA: ${mergedEta} min${tyreNote}`,
+          `📍 Location: shared`,
+          ``,
+          `We'll text you as soon as the customer makes a decision. Thank you!`,
+        ].join("\n"),
         channel,
       );
 
