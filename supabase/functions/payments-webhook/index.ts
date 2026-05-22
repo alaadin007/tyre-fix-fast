@@ -15,7 +15,7 @@ function getSupabase() {
   return _supabase;
 }
 
-async function sendSms(to: string, body: string) {
+async function sendMsg(to: string, body: string, channel: "sms" | "whatsapp" = "whatsapp") {
   try {
     await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/twilio-send`, {
       method: "POST",
@@ -23,11 +23,20 @@ async function sendSms(to: string, body: string) {
         "Content-Type": "application/json",
         Authorization: `Bearer ${Deno.env.get("SUPABASE_ANON_KEY")}`,
       },
-      body: JSON.stringify({ to, body, channel: "sms" }),
+      body: JSON.stringify({ to, body, channel }),
     });
   } catch (e) {
-    console.error("sendSms failed:", e);
+    console.error("sendMsg failed:", e);
   }
+}
+
+function formatGbp(amountMinor: number | null | undefined): string {
+  if (amountMinor == null) return "";
+  return (amountMinor / 100).toFixed(2);
+}
+
+function jobRef(jobId: string): string {
+  return jobId.slice(0, 8).toUpperCase();
 }
 
 async function handleCheckoutCompleted(session: any) {
