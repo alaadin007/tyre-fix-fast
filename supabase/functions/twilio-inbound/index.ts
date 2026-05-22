@@ -927,18 +927,23 @@ Deno.serve(async (req) => {
             Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
           return 2 * R * Math.asin(Math.sqrt(a));
         };
+        const validCoord2 = (la: any, ln: any) =>
+          la != null && ln != null && !(Number(la) === 0 && Number(ln) === 0) &&
+          Math.abs(Number(la)) > 0.01 && Math.abs(Number(ln)) > 0.01;
         const scored = (techs ?? []).map((t: any) => {
           let miles: number | null = null;
-          if (job.lat != null && job.lng != null && t.last_lat != null && t.last_lng != null) {
+          if (validCoord2(job.lat, job.lng) && validCoord2(t.last_lat, t.last_lng)) {
             miles = haversine(Number(job.lat), Number(job.lng), Number(t.last_lat), Number(t.last_lng));
           }
           const pcs: string[] = (t.service_postcodes ?? []).map((p: string) => String(p).toUpperCase().replace(/\s+/g, ""));
           const pcMatch = !!jobOutward && pcs.some((p) => p === jobOutward || p.startsWith(jobOutward) || jobOutward.startsWith(p));
           return { t, miles, pcMatch };
         }).filter((x: any) => {
-          if (x.miles != null) return x.miles <= (x.t.travel_radius_miles ?? 15);
-          return x.pcMatch;
+          const inRange = x.miles != null && x.miles <= (x.t.travel_radius_miles ?? 15);
+          return x.pcMatch || inRange;
         }).sort((a: any, b: any) => {
+          if (a.pcMatch && !b.pcMatch) return -1;
+          if (b.pcMatch && !a.pcMatch) return 1;
           if (a.miles != null && b.miles != null) return a.miles - b.miles;
           if (a.miles != null) return -1;
           if (b.miles != null) return 1;
