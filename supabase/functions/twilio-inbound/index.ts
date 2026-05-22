@@ -708,11 +708,18 @@ Deno.serve(async (req) => {
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
       }
 
-      // --- Stateful admin "yes → ref → list → yes → ref → broadcast" flow ---
+      // --- Stateful admin "yes → list → yes → ref → broadcast" flow ---
       // Triggered by the new_job_alert_to_admin template's CTA. State is kept in
       // public.admin_states keyed by the admin phone number.
       const refOnlyMatch = trimmed.match(/^\s*#?\s*([0-9a-f]{6})\s*$/i);
       const yesOnly = /^\s*(y|yes|ok|okay|sure|confirm|yep|yeah)\s*[.!]?\s*$/i.test(trimmed);
+      // "yes <ref>" / "yes #<ref>" / "<ref> yes" combined in one message →
+      // treat as a list request (share technicians, then ask broadcast confirm).
+      const yesPlusRefMatch = trimmed.match(
+        /^\s*(?:y|yes|ok|okay|sure|confirm|yep|yeah)[\s,:.!#-]+([0-9a-f]{6})\s*$/i,
+      ) ?? trimmed.match(
+        /^\s*#?\s*([0-9a-f]{6})[\s,:.!-]+(?:y|yes|ok|okay|sure|confirm|yep|yeah)\s*$/i,
+      );
 
       const { data: adminStateRow } = await supabase
         .from("admin_states")
@@ -784,7 +791,8 @@ Deno.serve(async (req) => {
         if (adminState?.step === "await_broadcast_confirm" && adminState.job_id) {
           await setAdminState("await_ref_for_broadcast", adminState.job_id);
           await sendReply(from,
-            "Please enter the job reference number (with or without #).", channel);
+            "Please provide the job reference as well, so I know which job offer should be sent to the technicians (with or without #).",
+            channel);
           return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
         }
         // Default behaviour: assume admin is responding to the "Should I share
@@ -795,9 +803,13 @@ Deno.serve(async (req) => {
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
       }
 
-      // (B) Bare ref while waiting for list lookup → show available technicians
-      if (refOnlyMatch && adminState?.step === "await_ref_for_list") {
-        const ref = refOnlyMatch[1].toLowerCase();
+      // (B) Bare ref while waiting for list lookup, OR combined "yes <ref>" →
+      // show available technicians and immediately ask broadcast confirmation.
+      const listTrigger = (refOnlyMatch && adminState?.step === "await_ref_for_list")
+        ? refOnlyMatch[1]
+        : (yesPlusRefMatch ? yesPlusRefMatch[1] : null);
+      if (listTrigger) {
+        const ref = listTrigger.toLowerCase();
         const matches = await findJobByRef(ref);
         if (matches.length === 0) {
           await sendReply(from,
@@ -824,9 +836,14 @@ Deno.serve(async (req) => {
         }).join("\n");
         const more = scored.length > 10 ? `\n…and ${scored.length - 10} more` : "";
         await setAdminState("await_broadcast_confirm", job.id);
+        // Send the list first, then a SEPARATE follow-up asking for broadcast
+        // confirmation — this matches the desired admin UX.
         await sendReply(from,
-          `Job #${shortRef} (${job.postcode}) — ${scored.length} available technician(s) nearby:\n${lines}${more}\n\n` +
-          `Do you want to send/broadcast this job to these technicians? Reply YES.`,
+          `Job #${shortRef} (${job.postcode}) — ${scored.length} available technician(s) nearby:\n${lines}${more}`,
+          channel,
+        );
+        await sendReply(from,
+          `Do you want to broadcast this job offer to these technicians? Reply YES to send it out.`,
           channel,
         );
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
@@ -888,7 +905,9 @@ Deno.serve(async (req) => {
       const broadcastVerbRegex = /\b(broadcast|dispatch|send|share|push|blast|notify|alert|forward|go|fire|publish)\b/i;
       const yesRegex = /^\s*(y|yes|ok|okay|sure|confirm|approved?|do it|please)\b/i;
       const refInMsg = trimmed.match(refRegex);
-      const looksLikeBroadcast = refInMsg && (broadcastVerbRegex.test(trimmed) || yesRegex.test(trimmed));
+      // Require an explicit broadcast verb here — plain "yes <ref>" is handled
+      // above as a list request, not an immediate broadcast.
+      const looksLikeBroadcast = refInMsg && broadcastVerbRegex.test(trimmed);
 
       if (looksLikeBroadcast) {
         const ref = refInMsg[1].toLowerCase();
