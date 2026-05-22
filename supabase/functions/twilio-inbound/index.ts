@@ -595,6 +595,72 @@ Deno.serve(async (req) => {
 
     const fromN = normPhone(from);
 
+    // 1a. Technician job-completion: "Done <REF>" from an approved technician.
+    // Closes the job immediately. (Review request flow not wired yet.)
+    {
+      const doneMatch = body.trim().match(/^\s*done\s+#?([0-9a-f]{6,12})\s*$/i);
+      if (doneMatch) {
+        const ref = doneMatch[1].toLowerCase();
+        const { data: tech } = await supabase
+          .from("technicians")
+          .select("id, name, phone, approval_status")
+          .eq("phone", from)
+          .maybeSingle();
+        if (tech && tech.approval_status === "approved") {
+          const { data: jobMatches } = await supabase
+            .from("jobs")
+            .select("id, status, customer_phone, customer_name, assigned_technician_id, created_at")
+            .order("created_at", { ascending: false })
+            .limit(500);
+          const jm = (jobMatches ?? []).filter((j: any) =>
+            String(j.id).toLowerCase().startsWith(ref)
+          );
+          if (jm.length === 0) {
+            await sendReply(from, `No job found for ref "${ref.toUpperCase()}". Please double-check the reference.`, channel);
+            return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+          }
+          if (jm.length > 1) {
+            await sendReply(from, `Multiple jobs match "${ref.toUpperCase()}" — please use the full reference shown in your job message.`, channel);
+            return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+          }
+          const job: any = jm[0];
+          if (job.assigned_technician_id && job.assigned_technician_id !== tech.id) {
+            await sendReply(from, `Job ${ref.toUpperCase()} isn't assigned to you. Please contact admin if this is wrong.`, channel);
+            return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+          }
+          if (job.status === "completed" || job.status === "closed" || job.status === "closed_pending_review") {
+            await sendReply(from, `Job ${ref.toUpperCase()} is already closed ✅`, channel);
+            return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+          }
+          await supabase
+            .from("jobs")
+            .update({ status: "completed", updated_at: new Date().toISOString() })
+            .eq("id", job.id);
+          await supabase.from("ops_alerts").insert({
+            level: "info",
+            title: "Job completed by technician",
+            body: `${tech.name} marked job ${ref.toUpperCase()} as done.`,
+            job_id: job.id,
+          });
+          await sendReply(
+            from,
+            `✅ Job ${ref.toUpperCase()} closed. Thanks ${tech.name}! 👏`,
+            channel,
+          );
+          if (job.customer_phone) {
+            await sendReply(
+              job.customer_phone,
+              `✅ Your tyre service is complete — Job #${ref.toUpperCase()}.\n\nThanks for choosing Tyre Fly! 🛞`,
+              "whatsapp",
+            );
+          }
+          return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+        }
+      }
+    }
+
+
+
     // 1b. Master admin? → can add technicians via SMS
     const { data: masterSetting } = await supabase
       .from("app_settings")
