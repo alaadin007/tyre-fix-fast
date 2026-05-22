@@ -81,7 +81,19 @@ export default function AdminLogin() {
           {mode === "login" ? "Sign in to continue" : "Create an admin account"}
         </p>
 
+        {noAccess ? (
+          <div className="mt-5 space-y-4">
+            <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-100">
+              Your account is signed in but doesn't have admin access yet. Ask an existing admin to grant you the admin role, then refresh this page.
+            </div>
+            <Button variant="outline" className="w-full" onClick={signOut}>
+              Sign out
+            </Button>
+          </div>
+        ) : (
+        <>
         <form onSubmit={submit} className="mt-5 grid gap-3">
+
           <div>
             <Label htmlFor="email" className="text-xs">Email</Label>
             <Input
