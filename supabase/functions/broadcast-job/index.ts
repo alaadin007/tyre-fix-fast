@@ -231,7 +231,7 @@ Deno.serve(async (req) => {
         name: "new_job_alert_to_technician",
         language: "en_GB",
         body_params,
-        header_image_url: photo1,
+        header_image_url: photo1Raw,
       });
       // If Meta template fails, fall back to plain Twilio session message (may not deliver outside 24h).
       const finalRes = wa.ok ? wa : await sendWhatsApp(to, msg, photos.slice(0, 6));
