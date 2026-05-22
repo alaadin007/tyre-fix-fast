@@ -8,6 +8,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { feeForPhone } from "../_shared/region-fee.ts";
 import { processCustomerIntake } from "../_shared/intake-state.ts";
 import { resolveQuoteLocationForAllocation } from "../_shared/quote-location.ts";
+import { extractCoordsFromWebhook } from "../_shared/webhook-location.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -76,15 +77,6 @@ async function extractCoords(text: string): Promise<{ lat: number; lng: number }
     } catch (e) {
       console.error("gmaps url resolve failed", e);
     }
-  }
-  return null;
-}
-
-function extractCoordsFromWebhook(params: Record<string, string>): { lat: number; lng: number } | null {
-  const directLat = Number(params.Latitude ?? params.latitude ?? params.Lat ?? "");
-  const directLng = Number(params.Longitude ?? params.longitude ?? params.Lng ?? params.Long ?? "");
-  if (Number.isFinite(directLat) && Number.isFinite(directLng) && Math.abs(directLat) <= 90 && Math.abs(directLng) <= 180) {
-    return { lat: directLat, lng: directLng };
   }
   return null;
 }
