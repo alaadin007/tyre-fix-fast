@@ -7,6 +7,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { createStripeClient } from "../_shared/stripe.ts";
 import { shortenUrl } from "../_shared/short-link.ts";
+import { resolveQuoteLocationForAllocation } from "../_shared/quote-location.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
