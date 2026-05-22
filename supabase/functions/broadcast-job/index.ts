@@ -5,6 +5,7 @@
 // Sends a job summary, records job_allocations rows, updates job status to 'broadcasting'.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { z } from "https://esm.sh/zod@3.23.8";
+import { shortenUrl } from "../_shared/short-link.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
