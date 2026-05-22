@@ -214,7 +214,7 @@ Deno.serve(async (req) => {
       `🗺️ Map: ${mapsLink}\n\n` +
       `📷 Photo 1: ${photo1}\n` +
       `📷 Photo 2: ${photo2}\n\n` +
-      `Reply with: "Yes, £85, 25 mins" + share location pin.`;
+      `Reply with: price (£), ETA (mins) AND a fresh 📍live location pin for THIS job (tap 📎 → Location → Share live location). All 3 are required — quotes missing the live pin for this job won't be accepted.`;
 
     let sent = 0;
     const failures: string[] = [];
