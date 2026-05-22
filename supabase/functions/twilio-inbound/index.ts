@@ -708,6 +708,170 @@ Deno.serve(async (req) => {
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
       }
 
+      // --- Stateful admin "yes → ref → list → yes → ref → broadcast" flow ---
+      // Triggered by the new_job_alert_to_admin template's CTA. State is kept in
+      // public.admin_states keyed by the admin phone number.
+      const refOnlyMatch = trimmed.match(/^\s*#?\s*([0-9a-f]{6})\s*$/i);
+      const yesOnly = /^\s*(y|yes|ok|okay|sure|confirm|yep|yeah)\s*[.!]?\s*$/i.test(trimmed);
+
+      const { data: adminStateRow } = await supabase
+        .from("admin_states")
+        .select("step, job_id, updated_at")
+        .eq("phone", fromN)
+        .maybeSingle();
+      // Expire stale state after 6h so a random "yes" months later doesn't fire.
+      const adminState = (adminStateRow && adminStateRow.updated_at &&
+        (Date.now() - new Date(adminStateRow.updated_at).getTime()) < 6 * 60 * 60 * 1000)
+        ? adminStateRow : null;
+
+      const haversine = (lat1: number, lng1: number, lat2: number, lng2: number) => {
+        const R = 3958.8, toRad = (d: number) => (d * Math.PI) / 180;
+        const dLat = toRad(lat2 - lat1), dLng = toRad(lng2 - lng1);
+        const a = Math.sin(dLat / 2) ** 2 +
+          Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+        return 2 * R * Math.asin(Math.sqrt(a));
+      };
+      const scoreNearbyTechs = async (job: any) => {
+        const { data: techs } = await supabase
+          .from("technicians")
+          .select("id,name,phone,service_postcodes,last_lat,last_lng,travel_radius_miles")
+          .eq("approval_status", "approved").eq("active", true).limit(500);
+        const jobPc = String(job.postcode ?? "").toUpperCase().replace(/\s+/g, "");
+        const jobOutward = jobPc.replace(/\d[A-Z]{2}$/, "");
+        return (techs ?? []).map((t: any) => {
+          let miles: number | null = null;
+          if (job.lat != null && job.lng != null && t.last_lat != null && t.last_lng != null) {
+            miles = haversine(Number(job.lat), Number(job.lng), Number(t.last_lat), Number(t.last_lng));
+          }
+          const pcs: string[] = (t.service_postcodes ?? []).map((p: string) =>
+            String(p).toUpperCase().replace(/\s+/g, ""));
+          const pcMatch = !!jobOutward && pcs.some((p) =>
+            p === jobOutward || p.startsWith(jobOutward) || jobOutward.startsWith(p));
+          return { t, miles, pcMatch };
+        }).filter((x: any) => x.miles != null ? x.miles <= (x.t.travel_radius_miles ?? 15) : x.pcMatch)
+          .sort((a: any, b: any) => {
+            if (a.miles != null && b.miles != null) return a.miles - b.miles;
+            if (a.miles != null) return -1;
+            if (b.miles != null) return 1;
+            return 0;
+          });
+      };
+      const findJobByRef = async (ref: string) => {
+        const { data: jobMatches } = await supabase
+          .from("jobs")
+          .select("id,customer_name,postcode,lat,lng,issue_type,status,created_at")
+          .order("created_at", { ascending: false }).limit(500);
+        return (jobMatches ?? []).filter((j: any) =>
+          String(j.id).toLowerCase().startsWith(ref.toLowerCase()));
+      };
+      const clearAdminState = () =>
+        supabase.from("admin_states").delete().eq("phone", fromN);
+      const setAdminState = (step: string, job_id: string | null) =>
+        supabase.from("admin_states").upsert({
+          phone: fromN, step, job_id, updated_at: new Date().toISOString(),
+        });
+
+      // (A) Bare "yes" → depends on current state
+      if (yesOnly) {
+        if (adminState?.step === "await_broadcast_confirm" && adminState.job_id) {
+          await setAdminState("await_ref_for_broadcast", adminState.job_id);
+          await sendReply(from,
+            "Please enter the job reference number (with or without #).", channel);
+          return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+        }
+        // Default behaviour: assume admin is responding to the "Should I share
+        // the list of available technicians…" prompt at the end of the job alert.
+        await setAdminState("await_ref_for_list", null);
+        await sendReply(from,
+          "Please provide the reference number (with or without #).", channel);
+        return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+      }
+
+      // (B) Bare ref while waiting for list lookup → show available technicians
+      if (refOnlyMatch && adminState?.step === "await_ref_for_list") {
+        const ref = refOnlyMatch[1].toLowerCase();
+        const matches = await findJobByRef(ref);
+        if (matches.length === 0) {
+          await sendReply(from,
+            `No job found for ref #${ref.toUpperCase()}. Reply JOBS to see recent jobs.`, channel);
+          return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+        }
+        if (matches.length > 1) {
+          await sendReply(from,
+            `Multiple jobs match #${ref.toUpperCase()} — please send the full 6-character ref.`, channel);
+          return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+        }
+        const job: any = matches[0];
+        const shortRef = String(job.id).slice(0, 6).toUpperCase();
+        const scored = await scoreNearbyTechs(job);
+        if (scored.length === 0) {
+          await clearAdminState();
+          await sendReply(from,
+            `Job #${shortRef} (${job.postcode}) — no approved technicians found nearby.`, channel);
+          return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+        }
+        const lines = scored.slice(0, 10).map(({ t, miles }: any) => {
+          const dist = miles != null ? ` · ${miles.toFixed(1)} mi` : "";
+          return `• ${t.name} (${t.phone})${dist}`;
+        }).join("\n");
+        const more = scored.length > 10 ? `\n…and ${scored.length - 10} more` : "";
+        await setAdminState("await_broadcast_confirm", job.id);
+        await sendReply(from,
+          `Job #${shortRef} (${job.postcode}) — ${scored.length} available technician(s) nearby:\n${lines}${more}\n\n` +
+          `Do you want to send/broadcast this job to these technicians? Reply YES.`,
+          channel,
+        );
+        return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+      }
+
+      // (C) Bare ref while waiting for broadcast confirmation → fire broadcast
+      if (refOnlyMatch && adminState?.step === "await_ref_for_broadcast") {
+        const ref = refOnlyMatch[1].toLowerCase();
+        const matches = await findJobByRef(ref);
+        if (matches.length === 0) {
+          await sendReply(from,
+            `No job found for ref #${ref.toUpperCase()}. Nothing broadcast.`, channel);
+          return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+        }
+        if (matches.length > 1) {
+          await sendReply(from,
+            `Multiple jobs match #${ref.toUpperCase()} — please send the full 6-character ref.`, channel);
+          return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+        }
+        const job: any = matches[0];
+        const shortRef = String(job.id).slice(0, 6).toUpperCase();
+        const scored = await scoreNearbyTechs(job);
+        if (scored.length === 0) {
+          await clearAdminState();
+          await sendReply(from,
+            `Job #${shortRef} — no approved technicians found nearby. Nothing broadcast.`, channel);
+          return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+        }
+        const technician_ids = scored.map((x: any) => x.t.id);
+        const bRes = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/broadcast-job`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+          },
+          body: JSON.stringify({ job_id: job.id, mode: "specific", technician_ids }),
+        });
+        const bJson: any = await bRes.json().catch(() => ({}));
+        const sent = bJson?.sent ?? 0;
+        const total = bJson?.total ?? technician_ids.length;
+        await clearAdminState();
+        if (bRes.ok && sent > 0) {
+          await sendReply(from,
+            `✅ Broadcast sent for job #${shortRef} to ${sent}/${total} nearby technicians.`, channel);
+        } else {
+          const err = bJson?.error ? ` (${String(bJson.error).slice(0, 140)})` : "";
+          await sendReply(from,
+            `⚠️ Broadcast for job #${shortRef} failed — ${sent}/${total} delivered${err}.`, channel);
+        }
+        return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+      }
+
+
       // Natural-language broadcast confirmation.
       // Triggers: "yes", "broadcast", "send", "share", "dispatch", "go", "push", "blast"
       // + any 6-char job ref appearing in the message. Anything that looks like
