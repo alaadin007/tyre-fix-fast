@@ -91,7 +91,7 @@ Deno.serve(async (req) => {
     }
 
     // Always sandbox in preview; webhook handler also keys off ?env=sandbox
-    const env = "sandbox" as const;
+    const env = "live" as const;
     const stripe = createStripeClient(env);
 
     const priceId = await resolvePriceId(stripe, fee.priceLookup);

@@ -1428,7 +1428,7 @@ Deno.serve(async (req) => {
           let payUrl: string | null = null;
           try {
             const { createStripeClient } = await import("../_shared/stripe.ts");
-            const stripe = createStripeClient("sandbox");
+            const stripe = createStripeClient("live");
             const session = await stripe.checkout.sessions.create({
               mode: "payment",
               line_items: [{
