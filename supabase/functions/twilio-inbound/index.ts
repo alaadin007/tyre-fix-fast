@@ -1350,16 +1350,22 @@ Deno.serve(async (req) => {
       const mapsPin = `https://maps.google.com/?q=${pinLat},${pinLng}`;
       const techPhone = tech.phone || tech.whatsapp || "n/a";
 
-      // Fetch job for vehicle reg + customer details.
+      // Fetch job for vehicle reg + customer + issue details.
       const { data: jobRow } = await supabase
         .from("jobs")
-        .select("vehicle_reg, customer_name, customer_phone, postcode")
+        .select("id, vehicle_reg, customer_name, customer_phone, customer_email, postcode, issue_type, issue_description, damage_summary, damage_type")
         .eq("id", alloc.job_id)
         .maybeSingle();
       const vehicleReg = jobRow?.vehicle_reg?.toString().trim() || "Not provided";
       const customerLine = jobRow?.customer_name
         ? `${jobRow.customer_name}${jobRow.customer_phone ? ` (${jobRow.customer_phone})` : ""}`
         : (jobRow?.customer_phone ?? "—");
+      const issueLine =
+        jobRow?.damage_summary?.trim() ||
+        jobRow?.issue_description?.trim() ||
+        jobRow?.damage_type?.trim() ||
+        jobRow?.issue_type?.trim() ||
+        "Tyre service required";
 
       const adminBody =
         `🆕 New Quote Received\n` +
@@ -1367,6 +1373,7 @@ Deno.serve(async (req) => {
         `🔖 Job Ref: ${shortRef}\n` +
         `👤 Customer: ${customerLine}\n` +
         `🚗 Vehicle Reg: ${vehicleReg}\n` +
+        `🔧 Issue: ${issueLine}\n` +
         `\n` +
         `👨‍🔧 Technician: ${tech.name ?? "Technician"}\n` +
         `📞 Phone: ${techPhone}\n` +
@@ -1397,6 +1404,87 @@ Deno.serve(async (req) => {
         });
       } catch (e) {
         console.error("notify-admins (tech_quote_ready) failed", e);
+      }
+
+      // ───────────────────────────────────────────────────────────────
+      // Send the full quote to the CUSTOMER with a Stripe payment link.
+      // No personal details about the technician are shared.
+      // ───────────────────────────────────────────────────────────────
+      if (jobRow?.customer_phone) {
+        try {
+          // Accept this quote, mark others as lost, assign tech, move job to awaiting_payment.
+          await supabase.from("quotes").update({ status: "accepted" }).eq("id", draft.id);
+          await supabase.from("quotes")
+            .update({ status: "lost" })
+            .eq("job_id", alloc.job_id)
+            .eq("status", "pending")
+            .neq("id", draft.id);
+          await supabase.from("jobs").update({
+            status: "awaiting_payment",
+            assigned_technician_id: tech.id,
+          }).eq("id", alloc.job_id);
+
+          // Create a Stripe Checkout session for the full job amount.
+          let payUrl: string | null = null;
+          try {
+            const { createStripeClient } = await import("../_shared/stripe.ts");
+            const stripe = createStripeClient("sandbox");
+            const session = await stripe.checkout.sessions.create({
+              mode: "payment",
+              line_items: [{
+                price_data: {
+                  currency: "gbp",
+                  product_data: {
+                    name: `Mobile tyre service — ${jobRow.postcode ?? ""}`.trim(),
+                    description: `${issueLine} · ETA ${mergedEta} min`,
+                  },
+                  unit_amount: Math.round(Number(mergedPrice) * 100),
+                },
+                quantity: 1,
+              }],
+              success_url: `https://tyrefly.com/confirmed?job=${alloc.job_id}`,
+              cancel_url: `https://tyrefly.com/job/${alloc.job_id}?canceled=1`,
+              customer_email: jobRow.customer_email ?? undefined,
+              metadata: {
+                job_id: alloc.job_id,
+                technician_id: tech.id,
+                kind: "job_full_payment",
+                price_gbp: String(mergedPrice),
+                eta_minutes: String(mergedEta),
+              },
+              payment_intent_data: {
+                metadata: { job_id: alloc.job_id, technician_id: tech.id, kind: "job_full_payment" },
+                description: `Tyre Fly — job ${shortRef} — ${jobRow.postcode ?? ""}`.trim(),
+              },
+            });
+            payUrl = session.url;
+            await supabase.from("jobs").update({
+              stripe_session_id: session.id,
+              stripe_checkout_url: session.url,
+            }).eq("id", alloc.job_id);
+          } catch (e) {
+            console.error("stripe checkout (customer quote) failed", e);
+          }
+
+          const trackingUrl = `https://tyrefly.com/job/${alloc.job_id}`;
+          const customerBody =
+            `Hello${jobRow.customer_name ? ` ${jobRow.customer_name}` : ""},\n\n` +
+            `Your vehicle issue has been inspected by our technician.\n\n` +
+            `🚗 Vehicle: ${vehicleReg}\n` +
+            `🔧 Issue Found: ${issueLine}\n` +
+            `💵 Repair Cost: £${mergedPrice}${tyreNote}\n` +
+            `⏱ Estimated Arrival Time (ETA): ${mergedEta} minutes\n\n` +
+            `📍 Live Technician Location: ${trackingUrl}\n\n` +
+            (payUrl
+              ? `To proceed with the service, please complete the payment using the secure Stripe link below:\n\n💳 Payment Link: ${payUrl}\n\n` +
+                `Once the payment is confirmed, the technician will proceed with the repair service at your location.\n\n`
+              : `We'll send your secure payment link shortly.\n\n`) +
+            `Thank you.\n— Tyre Fly`;
+
+          await sendReply(jobRow.customer_phone, customerBody, "whatsapp");
+        } catch (e) {
+          console.error("send customer quote failed", e);
+        }
       }
 
       return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
