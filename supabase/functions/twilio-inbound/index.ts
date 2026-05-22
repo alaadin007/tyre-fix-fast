@@ -835,9 +835,14 @@ Deno.serve(async (req) => {
         }).join("\n");
         const more = scored.length > 10 ? `\n…and ${scored.length - 10} more` : "";
         await setAdminState("await_broadcast_confirm", job.id);
+        // Send the list first, then a SEPARATE follow-up asking for broadcast
+        // confirmation — this matches the desired admin UX.
         await sendReply(from,
-          `Job #${shortRef} (${job.postcode}) — ${scored.length} available technician(s) nearby:\n${lines}${more}\n\n` +
-          `Do you want to send/broadcast this job to these technicians? Reply YES.`,
+          `Job #${shortRef} (${job.postcode}) — ${scored.length} available technician(s) nearby:\n${lines}${more}`,
+          channel,
+        );
+        await sendReply(from,
+          `Do you want to broadcast this job offer to these technicians? Reply YES to send it out.`,
           channel,
         );
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
