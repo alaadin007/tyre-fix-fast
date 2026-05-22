@@ -494,6 +494,122 @@ async function sendReply(to: string, body: string, channel: "sms" | "whatsapp") 
   });
 }
 
+// Send the technician's quote to the customer (after admin approval).
+// Marks the chosen quote as accepted, others as lost, creates a Stripe
+// payment link, and WhatsApps the customer-facing message.
+async function sendQuoteToCustomer(
+  supabase: any,
+  jobId: string,
+): Promise<{ ok: boolean; error?: string; price?: number; customerPhone?: string }> {
+  try {
+    const { data: jobRow } = await supabase
+      .from("jobs")
+      .select("id, vehicle_reg, customer_name, customer_phone, customer_email, postcode, issue_type, issue_description, damage_summary, damage_type")
+      .eq("id", jobId)
+      .maybeSingle();
+    if (!jobRow) return { ok: false, error: "Job not found" };
+    if (!jobRow.customer_phone) return { ok: false, error: "Customer has no phone on file" };
+
+    const { data: quoteRow } = await supabase
+      .from("quotes")
+      .select("id, technician_id, price_gbp, eta_minutes, tyre_included, tyre_condition")
+      .eq("job_id", jobId)
+      .eq("status", "pending")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (!quoteRow) return { ok: false, error: "No pending quote for this job" };
+
+    const mergedPrice = quoteRow.price_gbp;
+    const mergedEta = quoteRow.eta_minutes;
+    const tyreNote = quoteRow.tyre_included
+      ? ` (incl. ${quoteRow.tyre_condition ?? ""} tyre)`.replace("  ", " ")
+      : (quoteRow.tyre_included === false ? " (tyre NOT included)" : "");
+    const issueLine =
+      jobRow.damage_summary?.trim() ||
+      jobRow.issue_description?.trim() ||
+      jobRow.damage_type?.trim() ||
+      jobRow.issue_type?.trim() ||
+      "Tyre service required";
+    const vehicleReg = jobRow.vehicle_reg?.toString().trim() || "Not provided";
+    const shortRef = String(jobRow.id).slice(0, 6).toUpperCase();
+
+    await supabase.from("quotes").update({ status: "accepted" }).eq("id", quoteRow.id);
+    await supabase.from("quotes")
+      .update({ status: "lost" })
+      .eq("job_id", jobId)
+      .eq("status", "pending")
+      .neq("id", quoteRow.id);
+    await supabase.from("jobs").update({
+      status: "awaiting_payment",
+      assigned_technician_id: quoteRow.technician_id,
+    }).eq("id", jobId);
+
+    let payUrl: string | null = null;
+    try {
+      const { createStripeClient } = await import("../_shared/stripe.ts");
+      const stripe = createStripeClient("live");
+      const session = await stripe.checkout.sessions.create({
+        mode: "payment",
+        line_items: [{
+          price_data: {
+            currency: "gbp",
+            product_data: {
+              name: `Mobile tyre service — ${jobRow.postcode ?? ""}`.trim(),
+              description: `${issueLine} · ETA ${mergedEta} min`,
+            },
+            unit_amount: Math.round(Number(mergedPrice) * 100),
+          },
+          quantity: 1,
+        }],
+        success_url: `https://tyrefly.com/confirmed?job=${jobId}`,
+        cancel_url: `https://tyrefly.com/job/${jobId}?canceled=1`,
+        customer_email: jobRow.customer_email ?? undefined,
+        metadata: {
+          job_id: jobId,
+          technician_id: quoteRow.technician_id,
+          kind: "job_full_payment",
+          price_gbp: String(mergedPrice),
+          eta_minutes: String(mergedEta),
+        },
+        payment_intent_data: {
+          metadata: { job_id: jobId, technician_id: quoteRow.technician_id, kind: "job_full_payment" },
+          description: `Tyre Fly — job ${shortRef} — ${jobRow.postcode ?? ""}`.trim(),
+        },
+      });
+      const { shortenUrl } = await import("../_shared/short-link.ts");
+      payUrl = await shortenUrl(session.url!, { kind: "job_full_payment", job_id: jobId });
+      await supabase.from("jobs").update({
+        stripe_session_id: session.id,
+        stripe_checkout_url: session.url,
+      }).eq("id", jobId);
+    } catch (e) {
+      console.error("stripe checkout (customer quote) failed", e);
+    }
+
+    const trackingUrl = `https://tyrefly.com/job/${jobId}`;
+    const customerBody =
+      `Hello${jobRow.customer_name ? ` ${jobRow.customer_name}` : ""},\n\n` +
+      `Your vehicle issue has been inspected by our technician.\n\n` +
+      `🚗 Vehicle: ${vehicleReg}\n` +
+      `🔧 Issue Found: ${issueLine}\n` +
+      `💵 Repair Cost: £${mergedPrice}${tyreNote}\n` +
+      `⏱ Estimated Arrival Time (ETA): ${mergedEta} minutes\n\n` +
+      `📍 Live Technician Location: ${trackingUrl}\n\n` +
+      (payUrl
+        ? `To proceed with the service, please complete the payment using the secure Stripe link below:\n\n💳 Payment Link: ${payUrl}\n\n` +
+          `Once the payment is confirmed, the technician will proceed with the repair service at your location.\n\n`
+        : `We'll send your secure payment link shortly.\n\n`) +
+      `Thank you.\n— Tyre Fly`;
+
+    await sendReply(jobRow.customer_phone, customerBody, "whatsapp");
+    return { ok: true, price: Number(mergedPrice), customerPhone: jobRow.customer_phone };
+  } catch (e: any) {
+    console.error("sendQuoteToCustomer failed", e);
+    return { ok: false, error: String(e?.message ?? e) };
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
@@ -840,8 +956,47 @@ Deno.serve(async (req) => {
         !!adminState?.job_id &&
         String(adminState.job_id).toLowerCase().startsWith(ref.toLowerCase());
 
+      // Helper: actually push the technician's quote to the customer.
+      const runSendQuoteForJobId = async (jobIdFull: string) => {
+        const shortRef = String(jobIdFull).slice(0, 6).toUpperCase();
+        const res = await sendQuoteToCustomer(supabase, jobIdFull);
+        await clearAdminState();
+        if (res.ok) {
+          await sendReply(from,
+            `✅ Quote for job #${shortRef} sent to the customer (${res.customerPhone}).`,
+            channel);
+        } else {
+          await sendReply(from,
+            `⚠️ Could not send quote for job #${shortRef}: ${res.error ?? "unknown error"}.`,
+            channel);
+        }
+      };
+      const runSendQuoteForRef = async (ref: string) => {
+        const matches = await findJobByRef(ref);
+        if (matches.length === 0) {
+          await sendReply(from,
+            `No job found for ref #${ref.toUpperCase()}. Quote not sent.`, channel);
+          return;
+        }
+        if (matches.length > 1) {
+          await sendReply(from,
+            `Multiple jobs match #${ref.toUpperCase()} — please send the full 6-character ref.`, channel);
+          return;
+        }
+        await runSendQuoteForJobId(String(matches[0].id));
+      };
+
       // (A) Bare "yes" → depends on current state
       if (yesOnly) {
+        if (adminState?.step === "await_send_quote_confirm" && adminState.job_id) {
+          // Tech quote was just forwarded — "yes" means send it to the customer.
+          await runSendQuoteForJobId(String(adminState.job_id));
+          return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+        }
+        if (adminState?.step === "await_ref_for_send_quote" && adminState.job_id) {
+          await runSendQuoteForJobId(String(adminState.job_id));
+          return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+        }
         if (adminState?.step === "await_broadcast_confirm" && adminState.job_id) {
           // List was already shown for this job — "yes" confirms broadcast.
           await runBroadcastForRef(String(adminState.job_id).slice(0, 6));
@@ -859,11 +1014,18 @@ Deno.serve(async (req) => {
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
       }
 
-      // (A2) "yes <ref>" or bare "<ref>" while list is already shown for THAT
-      // ref → broadcast (admin is confirming the broadcast step).
+      // (A1) "yes <ref>" or bare "<ref>" while awaiting send-quote approval → send to customer.
       const refFromMsg =
         (yesPlusRefMatch ? yesPlusRefMatch[1] : null) ??
         (refOnlyMatch ? refOnlyMatch[1] : null);
+      if (refFromMsg && adminState?.step === "await_send_quote_confirm") {
+        // If ref matches the stored job, send that. Otherwise still try the ref.
+        await runSendQuoteForRef(refFromMsg);
+        return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+      }
+
+      // (A2) "yes <ref>" or bare "<ref>" while list is already shown for THAT
+      // ref → broadcast (admin is confirming the broadcast step).
       if (refFromMsg && adminState?.step === "await_broadcast_confirm" && sameJobAsState(refFromMsg)) {
         await runBroadcastForRef(refFromMsg);
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
@@ -873,6 +1035,7 @@ Deno.serve(async (req) => {
         await runBroadcastForRef(refOnlyMatch[1]);
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
       }
+
 
       // (B) Bare ref while waiting for list lookup, OR combined "yes <ref>" →
       // show available technicians and immediately ask broadcast confirmation.
@@ -1740,86 +1903,47 @@ Deno.serve(async (req) => {
       }
 
       // ───────────────────────────────────────────────────────────────
-      // Send the full quote to the CUSTOMER with a Stripe payment link.
-      // No personal details about the technician are shared.
+      // Ask admins for approval BEFORE sending the quote to the customer.
+      // The actual customer-send happens when an admin replies "YES" (with
+      // or without the job ref) — see the admin handler's
+      // await_send_quote_confirm branch.
       // ───────────────────────────────────────────────────────────────
-      if (jobRow?.customer_phone) {
-        try {
-          // Accept this quote, mark others as lost, assign tech, move job to awaiting_payment.
-          await supabase.from("quotes").update({ status: "accepted" }).eq("id", draft.id);
-          await supabase.from("quotes")
-            .update({ status: "lost" })
-            .eq("job_id", alloc.job_id)
-            .eq("status", "pending")
-            .neq("id", draft.id);
-          await supabase.from("jobs").update({
-            status: "awaiting_payment",
-            assigned_technician_id: tech.id,
-          }).eq("id", alloc.job_id);
-
-          // Create a Stripe Checkout session for the full job amount.
-          let payUrl: string | null = null;
-          try {
-            const { createStripeClient } = await import("../_shared/stripe.ts");
-            const stripe = createStripeClient("live");
-            const session = await stripe.checkout.sessions.create({
-              mode: "payment",
-              line_items: [{
-                price_data: {
-                  currency: "gbp",
-                  product_data: {
-                    name: `Mobile tyre service — ${jobRow.postcode ?? ""}`.trim(),
-                    description: `${issueLine} · ETA ${mergedEta} min`,
-                  },
-                  unit_amount: Math.round(Number(mergedPrice) * 100),
-                },
-                quantity: 1,
-              }],
-              success_url: `https://tyrefly.com/confirmed?job=${alloc.job_id}`,
-              cancel_url: `https://tyrefly.com/job/${alloc.job_id}?canceled=1`,
-              customer_email: jobRow.customer_email ?? undefined,
-              metadata: {
-                job_id: alloc.job_id,
-                technician_id: tech.id,
-                kind: "job_full_payment",
-                price_gbp: String(mergedPrice),
-                eta_minutes: String(mergedEta),
-              },
-              payment_intent_data: {
-                metadata: { job_id: alloc.job_id, technician_id: tech.id, kind: "job_full_payment" },
-                description: `Tyre Fly — job ${shortRef} — ${jobRow.postcode ?? ""}`.trim(),
-              },
-            });
-            const { shortenUrl } = await import("../_shared/short-link.ts");
-            payUrl = await shortenUrl(session.url!, { kind: "job_full_payment", job_id: alloc.job_id });
-            await supabase.from("jobs").update({
-              stripe_session_id: session.id,
-              stripe_checkout_url: session.url,
-            }).eq("id", alloc.job_id);
-          } catch (e) {
-            console.error("stripe checkout (customer quote) failed", e);
-          }
-
-          const trackingUrl = `https://tyrefly.com/job/${alloc.job_id}`;
-          const customerBody =
-            `Hello${jobRow.customer_name ? ` ${jobRow.customer_name}` : ""},\n\n` +
-            `Your vehicle issue has been inspected by our technician.\n\n` +
-            `🚗 Vehicle: ${vehicleReg}\n` +
-            `🔧 Issue Found: ${issueLine}\n` +
-            `💵 Repair Cost: £${mergedPrice}${tyreNote}\n` +
-            `⏱ Estimated Arrival Time (ETA): ${mergedEta} minutes\n\n` +
-            `📍 Live Technician Location: ${trackingUrl}\n\n` +
-            (payUrl
-              ? `To proceed with the service, please complete the payment using the secure Stripe link below:\n\n💳 Payment Link: ${payUrl}\n\n` +
-                `Once the payment is confirmed, the technician will proceed with the repair service at your location.\n\n`
-              : `We'll send your secure payment link shortly.\n\n`) +
-            `Thank you.\n— Tyre Fly`;
-
-          await sendReply(jobRow.customer_phone, customerBody, "whatsapp");
-        } catch (e) {
-          console.error("send customer quote failed", e);
+      try {
+        const { data: masterSetting } = await supabase
+          .from("app_settings")
+          .select("value")
+          .eq("key", "master_numbers")
+          .maybeSingle();
+        const masterNumbers: string[] = ((masterSetting?.value as any)?.numbers ?? []).filter(Boolean);
+        if (masterNumbers.length > 0) {
+          const nowIso = new Date().toISOString();
+          await supabase.from("admin_states").upsert(
+            masterNumbers.map((p) => ({
+              phone: normPhone(p),
+              step: "await_send_quote_confirm",
+              job_id: alloc.job_id,
+              updated_at: nowIso,
+            })),
+          );
         }
+
+        const promptBody =
+          `Do you want to send this quote to the customer?\n` +
+          `Job Ref: #${shortRef} · £${mergedPrice} · ETA ${mergedEta} min\n\n` +
+          `Reply YES to send it, or YES #${shortRef} if you have multiple pending quotes.`;
+        await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/notify-admins`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+          },
+          body: JSON.stringify({ channel: "whatsapp", body: promptBody }),
+        });
+      } catch (e) {
+        console.error("queue admin send-quote approval failed", e);
       }
+
+
 
       return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
     }
