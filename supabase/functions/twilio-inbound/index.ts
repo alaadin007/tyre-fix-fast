@@ -588,15 +588,44 @@ async function sendQuoteToCustomer(
       console.error("stripe checkout (customer quote) failed", e);
     }
 
-    const trackingUrl = `https://tyrefly.com/job/${jobId}`;
+    const { shortenUrl: shortenUrl2 } = await import("../_shared/short-link.ts");
+    let techLocationLink = `https://tyrefly.com/job/${jobId}`;
+    try {
+      const { data: alloc } = await supabase
+        .from("job_allocations")
+        .select("created_at")
+        .eq("job_id", jobId)
+        .eq("technician_id", quoteRow.technician_id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      const { data: locRows } = await supabase
+        .from("technician_locations")
+        .select("lat,lng,created_at,expires_at")
+        .eq("technician_id", quoteRow.technician_id)
+        .order("created_at", { ascending: false })
+        .limit(20);
+      const resolved = resolveQuoteLocationForAllocation({
+        techPin: null,
+        allocationCreatedAt: alloc?.created_at ?? null,
+        locationRows: locRows ?? [],
+      });
+      if (resolved.hasPin && resolved.lat != null && resolved.lng != null) {
+        const longUrl = `https://maps.google.com/?q=${resolved.lat},${resolved.lng}`;
+        techLocationLink = await shortenUrl2(longUrl, { kind: "tech_live_location", job_id: jobId });
+      }
+    } catch (e) {
+      console.error("resolve technician location for customer message failed", e);
+    }
+
     const customerBody =
       `Hello${jobRow.customer_name ? ` ${jobRow.customer_name}` : ""},\n\n` +
       `Your vehicle issue has been inspected by our technician.\n\n` +
-      `🚗 Vehicle: ${vehicleReg}\n` +
-      `🔧 Issue Found: ${issueLine}\n` +
-      `💵 Repair Cost: £${mergedPrice}${tyreNote}\n` +
+      `🚗 Vehicle: ${vehicleReg}\n\n` +
+      `🔧 Issue Found: ${issueLine}\n\n` +
+      `💵 Repair Cost: £${mergedPrice}${tyreNote}\n\n` +
       `⏱ Estimated Arrival Time (ETA): ${mergedEta} minutes\n\n` +
-      `📍 Live Technician Location: ${trackingUrl}\n\n` +
+      `📍 Live Technician Location: ${techLocationLink}\n\n` +
       (payUrl
         ? `To proceed with the service, please complete the payment using the secure Stripe link below:\n\n💳 Payment Link: ${payUrl}\n\n` +
           `Once the payment is confirmed, the technician will proceed with the repair service at your location.\n\n`
