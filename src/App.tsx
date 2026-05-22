@@ -17,6 +17,13 @@ import Console from "./pages/Console.tsx";
 import AreasIndex from "./pages/AreasIndex.tsx";
 import AreaPage from "./pages/AreaPage.tsx";
 import ShortLinkRedirect from "./pages/ShortLinkRedirect.tsx";
+import DashboardLayout from "./pages/admin/DashboardLayout.tsx";
+import Overview from "./pages/admin/Overview.tsx";
+import JobsPage from "./pages/admin/JobsPage.tsx";
+import QuotesPage from "./pages/admin/QuotesPage.tsx";
+import PaymentsPage from "./pages/admin/PaymentsPage.tsx";
+import TechniciansPage from "./pages/admin/TechniciansPage.tsx";
+import ActivityPage from "./pages/admin/ActivityPage.tsx";
 
 const queryClient = new QueryClient();
 
@@ -32,6 +39,14 @@ const App = () => (
         <Route path="/job/:id" element={<JobStatus />} />
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/admin" element={<Console />} />
+        <Route path="/admin/dashboard" element={<DashboardLayout />}>
+          <Route index element={<Overview />} />
+          <Route path="jobs" element={<JobsPage />} />
+          <Route path="quotes" element={<QuotesPage />} />
+          <Route path="payments" element={<PaymentsPage />} />
+          <Route path="technicians" element={<TechniciansPage />} />
+          <Route path="activity" element={<ActivityPage />} />
+        </Route>
         <Route path="/confirmed" element={<Confirmed />} />
         <Route path="/technician/login" element={<TechnicianLogin />} />
         <Route path="/technician/onboarding" element={<TechnicianOnboarding />} />
