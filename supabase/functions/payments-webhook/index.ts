@@ -117,8 +117,9 @@ async function handleCheckoutCompleted(session: any) {
     await sendMsg(to, adminSummary, "whatsapp");
     await sendMsg(to, adminPrompt, "whatsapp");
     try {
+      const normalized = to.replace(/^whatsapp:/, "").replace(/[^\d+]/g, "");
       await supabase.from("admin_states").upsert(
-        { phone: to.replace(/^whatsapp:/, ""), step: "await_share_details_confirm", job_id: jobId, updated_at: new Date().toISOString() },
+        { phone: normalized, step: "await_share_details_confirm", job_id: jobId, updated_at: new Date().toISOString() },
         { onConflict: "phone" },
       );
     } catch (e) {
