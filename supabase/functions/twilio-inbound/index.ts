@@ -754,6 +754,9 @@ async function shareContactsForJobId(
     console.error("shareContactsForJobId failed", e);
     return { ok: false, error: String(e?.message ?? e) };
   }
+}
+
+
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
