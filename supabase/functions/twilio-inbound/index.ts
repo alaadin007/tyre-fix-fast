@@ -1131,6 +1131,37 @@ Deno.serve(async (req) => {
         await runSendQuoteForJobId(String(matches[0].id));
       };
 
+      // Helper: share customer ↔ technician contact details after admin approval.
+      const runShareContactsForJobId = async (jobIdFull: string) => {
+        const shortRef = String(jobIdFull).slice(0, 6).toUpperCase();
+        const res = await shareContactsForJobId(supabase, jobIdFull);
+        await clearAdminState();
+        if (res.ok) {
+          await sendReply(from,
+            `✅ Job #${shortRef} — details shared. Customer: ${res.customerPhone}, Technician: ${res.techPhone}.`,
+            channel);
+        } else {
+          await sendReply(from,
+            `⚠️ Could not share details for job #${shortRef}: ${res.error ?? "unknown error"}.`,
+            channel);
+        }
+      };
+      const runShareContactsForRef = async (ref: string) => {
+        const matches = await findJobByRef(ref);
+        if (matches.length === 0) {
+          await sendReply(from,
+            `No job found for ref #${ref.toUpperCase()}. Details not shared.`, channel);
+          return;
+        }
+        if (matches.length > 1) {
+          await sendReply(from,
+            `Multiple jobs match #${ref.toUpperCase()} — please send the full 6-character ref.`, channel);
+          return;
+        }
+        await runShareContactsForJobId(String(matches[0].id));
+      };
+
+
       // (A) Bare "yes" → depends on current state
       if (yesOnly) {
         if (adminState?.step === "await_send_quote_confirm" && adminState.job_id) {
