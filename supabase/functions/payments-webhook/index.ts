@@ -70,91 +70,66 @@ async function handleCheckoutCompleted(session: any) {
     status: isFullPayment ? "in_progress" : "confirmed",
   }).eq("id", jobId);
 
-  // Look up tech (incl. live location)
-  let tech: { name?: string; phone?: string; last_lat?: number | null; last_lng?: number | null } | null = null;
-  const techId = session?.metadata?.technician_id ?? job.assigned_technician_id;
-  if (techId) {
-    const { data } = await supabase
-      .from("technicians")
-      .select("name, phone, last_lat, last_lng")
-      .eq("id", techId)
-      .single();
-    tech = data;
-  }
-
   const amount = formatGbp(session?.amount_total);
   const ref = jobRef(jobId);
-  const techName = tech?.name ?? "Your technician";
-  const techPhone = tech?.phone ?? "";
-  const techLocLink = tech?.last_lat && tech?.last_lng
-    ? `https://www.google.com/maps?q=${tech.last_lat},${tech.last_lng}`
-    : "Will be shared once technician shares live location";
-
-  const issue = job.issue_description || job.issue_type || "Tyre service";
-  const wheels = Array.isArray(job.affected_wheels) && job.affected_wheels.length
-    ? job.affected_wheels.join(", ")
-    : "—";
   const vehicleReg = job.vehicle_reg || "—";
-  const customerMapLink = job.postcode
-    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(job.postcode)}`
-    : "";
 
-  // ===== Customer message =====
+  // ===== Customer message (short ack only — no tech details yet) =====
   if (job.customer_phone) {
     const customerMsg = [
-      `✅ Payment Confirmed — £${amount}`,
+      `✅ Payment Received — £${amount}`,
       ``,
-      `Your roadside tyre service is confirmed — Job #${ref}`,
+      `Job Ref: #${ref}`,
       ``,
-      `Here is the Technician Detail:`,
+      `Your payment has been received successfully. We will shortly share the Technician Information with you.`,
       ``,
-      `👨‍🔧  ${techName}`,
-      `📞  ${techPhone}`,
-      `📍  ${techLocLink}`,
-      ``,
-      `They will call you shortly to confirm ETA.`,
+      `— Tyre Fly`,
     ].join("\n");
     await sendMsg(job.customer_phone, customerMsg, "whatsapp");
   }
 
-  // ===== Technician message =====
-  if (techPhone && job.customer_phone) {
-    const techMsg = [
-      `🔔 Job Confirmed`,
-      ``,
-      `✅ Payment Received — £${amount}`,
-      `📋 Job Ref: #${ref}`,
-      ``,
-      `👤 Customer Details`,
-      `━━━━━━━━━━━━━━━`,
-      `👨 Name:     ${job.customer_name ?? "—"}`,
-      `📞 Phone:    ${job.customer_phone}`,
-      `📍 PostCode: ${job.postcode ?? "—"}`,
-      `🗺️ Map:      ${customerMapLink}`,
-      ``,
-      `🛞 Job Details`,
-      `━━━━━━━━━━━━━━━`,
-      `⚠️ Issue:    ${issue}`,
-      `🚗 Reg:      ${vehicleReg}`,
-      `🛞 Wheels:   ${wheels}`,
-      ``,
-      `💰 Your quoted price has been accepted & payment is now confirmed.`,
-      `📲 Please contact the customer immediately to confirm your ETA.`,
-      ``,
-      `✅ Job Completion`,
-      `━━━━━━━━━━━━━━━`,
-      `Once job is done, reply with:`,
-      `   Done ${ref}`,
-      ``,
-      `This will automatically close the job.`,
-    ].join("\n");
-    await sendMsg(techPhone, techMsg, "whatsapp");
+  // ===== Admin notification + approval prompt =====
+  // Send to every master admin number; set per-admin state so a YES/<ref>
+  // reply triggers the contact-details exchange via twilio-inbound.
+  const { data: masterSetting } = await supabase
+    .from("app_settings")
+    .select("value")
+    .eq("key", "master_numbers")
+    .maybeSingle();
+  const masterNumbers: string[] = (((masterSetting as any)?.value?.numbers) ?? []).filter(Boolean);
+
+  const adminSummary = [
+    `💳 Payment Confirmed — £${amount}`,
+    ``,
+    `📋 Job Ref: #${ref}`,
+    ``,
+    `👤 Customer Details`,
+    `━━━━━━━━━━━━━━━`,
+    `Name:  ${job.customer_name ?? "—"}`,
+    `Phone: ${job.customer_phone ?? "—"}`,
+    `Postcode: ${job.postcode ?? "—"}`,
+    ``,
+    `🚗 Vehicle: ${vehicleReg}`,
+  ].join("\n");
+  const adminPrompt = `Do you want to share the job details with the technician now? Reply *YES ${ref}* to share both parties' details.`;
+
+  for (const to of masterNumbers) {
+    await sendMsg(to, adminSummary, "whatsapp");
+    await sendMsg(to, adminPrompt, "whatsapp");
+    try {
+      await supabase.from("admin_states").upsert(
+        { phone: to.replace(/^whatsapp:/, ""), step: "await_share_details_confirm", job_id: jobId, updated_at: new Date().toISOString() },
+        { onConflict: "phone" },
+      );
+    } catch (e) {
+      console.error("admin_states upsert failed", e);
+    }
   }
 
   await supabase.from("ops_alerts").insert({
     level: "info",
     title: isFullPayment ? "Customer paid in full" : "Platform fee paid",
-    body: `Job ${ref} — £${amount} received, contact details exchanged.`,
+    body: `Job ${ref} — £${amount} received. Awaiting admin approval to share contact details.`,
     job_id: jobId,
   });
 }
