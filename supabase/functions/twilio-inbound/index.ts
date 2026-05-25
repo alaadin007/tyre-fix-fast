@@ -632,6 +632,132 @@ async function sendQuoteToCustomer(
   }
 }
 
+// After payment succeeds, the payments-webhook only sends a brief
+// acknowledgement to the customer + a summary + approval prompt to admin.
+// When the admin replies YES <REF> (or YES while in await_share_details_confirm),
+// THIS helper fires and exchanges the technician/customer contact details.
+async function shareContactsForJobId(
+  supabase: any,
+  jobId: string,
+): Promise<{ ok: boolean; error?: string; customerPhone?: string; techPhone?: string }> {
+  try {
+    const { data: job } = await supabase
+      .from("jobs")
+      .select("id, customer_name, customer_phone, postcode, assigned_technician_id, vehicle_reg, affected_wheels, issue_type, issue_description, damage_summary, lat, lng")
+      .eq("id", jobId)
+      .maybeSingle();
+    if (!job) return { ok: false, error: "Job not found" };
+    if (!job.assigned_technician_id) return { ok: false, error: "No technician assigned" };
+
+    const { data: tech } = await supabase
+      .from("technicians")
+      .select("id, name, phone, last_lat, last_lng")
+      .eq("id", job.assigned_technician_id)
+      .maybeSingle();
+    if (!tech?.phone) return { ok: false, error: "Technician has no phone on file" };
+
+    const ref = String(jobId).slice(0, 6).toUpperCase();
+    const issue = job.damage_summary || job.issue_description || job.issue_type || "Tyre service";
+    const wheels = Array.isArray(job.affected_wheels) && job.affected_wheels.length
+      ? job.affected_wheels.join(", ") : "—";
+    const vehicleReg = job.vehicle_reg || "—";
+
+    // Customer's location link (postcode fallback to coords if available).
+    const customerMapLink = job.postcode
+      ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(job.postcode)}`
+      : (job.lat != null && job.lng != null
+          ? `https://www.google.com/maps?q=${job.lat},${job.lng}`
+          : "—");
+
+    // Technician live-location link (shortened).
+    let techLocLink = "Will be shared once technician shares live location";
+    try {
+      const { data: alloc } = await supabase
+        .from("job_allocations")
+        .select("created_at")
+        .eq("job_id", jobId)
+        .eq("technician_id", tech.id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      const { data: locRows } = await supabase
+        .from("technician_locations")
+        .select("lat,lng,created_at,expires_at")
+        .eq("technician_id", tech.id)
+        .order("created_at", { ascending: false })
+        .limit(20);
+      const resolved = resolveQuoteLocationForAllocation({
+        techPin: null,
+        allocationCreatedAt: alloc?.created_at ?? null,
+        locationRows: locRows ?? [],
+      });
+      if (resolved.hasPin && resolved.lat != null && resolved.lng != null) {
+        const { shortenUrl } = await import("../_shared/short-link.ts");
+        const longUrl = `https://maps.google.com/?q=${resolved.lat},${resolved.lng}`;
+        techLocLink = await shortenUrl(longUrl, { kind: "tech_live_location", job_id: jobId });
+      } else if (tech.last_lat != null && tech.last_lng != null) {
+        techLocLink = `https://www.google.com/maps?q=${tech.last_lat},${tech.last_lng}`;
+      }
+    } catch (e) {
+      console.error("resolve tech location for shareContacts failed", e);
+    }
+
+    // ===== Customer message: technician details =====
+    if (job.customer_phone) {
+      const customerMsg = [
+        `👨‍🔧 Your Technician Details — Job #${ref}`,
+        ``,
+        `Name:  ${tech.name ?? "—"}`,
+        `Phone: ${tech.phone}`,
+        `📍 Live Location: ${techLocLink}`,
+        ``,
+        `They will contact you shortly to confirm ETA.`,
+        ``,
+        `— Tyre Fly`,
+      ].join("\n");
+      await sendReply(job.customer_phone, customerMsg, "whatsapp");
+    }
+
+    // ===== Technician message: customer details =====
+    const techMsg = [
+      `🔔 Job Confirmed — #${ref}`,
+      ``,
+      `👤 Customer Details`,
+      `━━━━━━━━━━━━━━━`,
+      `Name:  ${job.customer_name ?? "—"}`,
+      `Phone: ${job.customer_phone ?? "—"}`,
+      `Postcode: ${job.postcode ?? "—"}`,
+      `🗺️ Map: ${customerMapLink}`,
+      ``,
+      `🛞 Job Details`,
+      `━━━━━━━━━━━━━━━`,
+      `Issue:  ${issue}`,
+      `Reg:    ${vehicleReg}`,
+      `Wheels: ${wheels}`,
+      ``,
+      `Payment is confirmed. Please contact the customer immediately to confirm your ETA.`,
+      ``,
+      `When the job is complete, reply: Done ${ref}`,
+    ].join("\n");
+    await sendReply(tech.phone, techMsg, "whatsapp");
+
+    await supabase.from("jobs").update({ status: "in_progress" }).eq("id", jobId);
+    await supabase.from("ops_alerts").insert({
+      level: "info",
+      title: "Contacts shared",
+      body: `Job ${ref} — admin approved share; customer & technician details exchanged.`,
+      job_id: jobId,
+    });
+
+    return { ok: true, customerPhone: job.customer_phone, techPhone: tech.phone };
+  } catch (e: any) {
+    console.error("shareContactsForJobId failed", e);
+    return { ok: false, error: String(e?.message ?? e) };
+  }
+}
+
+
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
@@ -1008,8 +1134,44 @@ Deno.serve(async (req) => {
         await runSendQuoteForJobId(String(matches[0].id));
       };
 
+      // Helper: share customer ↔ technician contact details after admin approval.
+      const runShareContactsForJobId = async (jobIdFull: string) => {
+        const shortRef = String(jobIdFull).slice(0, 6).toUpperCase();
+        const res = await shareContactsForJobId(supabase, jobIdFull);
+        await clearAdminState();
+        if (res.ok) {
+          await sendReply(from,
+            `✅ Job #${shortRef} — details shared. Customer: ${res.customerPhone}, Technician: ${res.techPhone}.`,
+            channel);
+        } else {
+          await sendReply(from,
+            `⚠️ Could not share details for job #${shortRef}: ${res.error ?? "unknown error"}.`,
+            channel);
+        }
+      };
+      const runShareContactsForRef = async (ref: string) => {
+        const matches = await findJobByRef(ref);
+        if (matches.length === 0) {
+          await sendReply(from,
+            `No job found for ref #${ref.toUpperCase()}. Details not shared.`, channel);
+          return;
+        }
+        if (matches.length > 1) {
+          await sendReply(from,
+            `Multiple jobs match #${ref.toUpperCase()} — please send the full 6-character ref.`, channel);
+          return;
+        }
+        await runShareContactsForJobId(String(matches[0].id));
+      };
+
+
       // (A) Bare "yes" → depends on current state
       if (yesOnly) {
+        if (adminState?.step === "await_share_details_confirm" && adminState.job_id) {
+          // Payment received — "yes" confirms sharing contacts with technician.
+          await runShareContactsForJobId(String(adminState.job_id));
+          return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+        }
         if (adminState?.step === "await_send_quote_confirm" && adminState.job_id) {
           // Tech quote was just forwarded — "yes" means send it to the customer.
           await runSendQuoteForJobId(String(adminState.job_id));
@@ -1045,6 +1207,15 @@ Deno.serve(async (req) => {
         await runSendQuoteForRef(refFromMsg);
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
       }
+
+      // (A1') "yes <ref>" or bare "<ref>" while awaiting share-details approval
+      // → share customer & technician details.
+      if (refFromMsg && adminState?.step === "await_share_details_confirm") {
+        await runShareContactsForRef(refFromMsg);
+        return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+      }
+
+
 
       // (A2) "yes <ref>" or bare "<ref>" while list is already shown for THAT
       // ref → broadcast (admin is confirming the broadcast step).
