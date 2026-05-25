@@ -1205,6 +1205,12 @@ Deno.serve(async (req) => {
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
       }
 
+      // (A1') "yes <ref>" or bare "<ref>" while awaiting share-details approval
+      // → share customer & technician details.
+      if (refFromMsg && adminState?.step === "await_share_details_confirm") {
+        await runShareContactsForRef(refFromMsg);
+        return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+
       // (A2) "yes <ref>" or bare "<ref>" while list is already shown for THAT
       // ref → broadcast (admin is confirming the broadcast step).
       if (refFromMsg && adminState?.step === "await_broadcast_confirm" && sameJobAsState(refFromMsg)) {
