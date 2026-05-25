@@ -1164,6 +1164,11 @@ Deno.serve(async (req) => {
 
       // (A) Bare "yes" → depends on current state
       if (yesOnly) {
+        if (adminState?.step === "await_share_details_confirm" && adminState.job_id) {
+          // Payment received — "yes" confirms sharing contacts with technician.
+          await runShareContactsForJobId(String(adminState.job_id));
+          return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+        }
         if (adminState?.step === "await_send_quote_confirm" && adminState.job_id) {
           // Tech quote was just forwarded — "yes" means send it to the customer.
           await runSendQuoteForJobId(String(adminState.job_id));
