@@ -5,6 +5,7 @@
 // checkout, same customer WhatsApp message. The WhatsApp flow itself
 // remains unchanged.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { isCustomerQuoteAmountValid, normalizeSuspiciousQuotePrice } from "../_shared/quote-price.ts";
 import { createStripeClient } from "../_shared/stripe.ts";
 import { shortenUrl } from "../_shared/short-link.ts";
 import { resolveQuoteLocationForAllocation } from "../_shared/quote-location.ts";
@@ -49,7 +50,7 @@ Deno.serve(async (req) => {
 
     let quoteQuery = supabase
       .from("quotes")
-      .select("id,technician_id,price_gbp,eta_minutes,tyre_included,tyre_condition")
+      .select("id,technician_id,price_gbp,eta_minutes,tyre_included,tyre_condition,raw_message")
       .eq("job_id", job_id);
     if (quote_id) quoteQuery = quoteQuery.eq("id", quote_id);
     else quoteQuery = quoteQuery.eq("status", "pending");
@@ -60,8 +61,11 @@ Deno.serve(async (req) => {
       .maybeSingle();
     if (!quoteRow) throw new Error("No quote found for this job");
 
-    const mergedPrice = quoteRow.price_gbp;
+    const mergedPrice = normalizeSuspiciousQuotePrice(quoteRow.price_gbp, quoteRow.raw_message ?? "");
     const mergedEta = quoteRow.eta_minutes;
+    if (!isCustomerQuoteAmountValid(mergedPrice)) {
+      throw new Error(`Quote for job #${shortRef} has an invalid amount (£${quoteRow.price_gbp ?? "—"}). Ask the technician to resend the price in pounds before sending it to the customer.`);
+    }
     const tyreNote = quoteRow.tyre_included
       ? ` (incl. ${quoteRow.tyre_condition ?? ""} tyre)`.replace("  ", " ")
       : (quoteRow.tyre_included === false ? " (tyre NOT included)" : "");
@@ -162,7 +166,7 @@ Deno.serve(async (req) => {
       (payUrl
         ? `To proceed with the service, please complete the payment using the secure Stripe link below:\n\n💳 Payment Link: ${payUrl}\n\n` +
           `Once the payment is confirmed, the technician will proceed with the repair service at your location.\n\n`
-        : `We'll send your secure payment link shortly.\n\n`) +
+        : `We could not generate your payment link yet. Tyre Fly will resend your quote shortly with the secure payment link.\n\n`) +
       `Thank you.\n— Tyre Fly`;
 
 
