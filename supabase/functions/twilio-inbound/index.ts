@@ -7,6 +7,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { feeForPhone } from "../_shared/region-fee.ts";
 import { processCustomerIntake } from "../_shared/intake-state.ts";
+import { isCustomerQuoteAmountValid, normalizeSuspiciousQuotePrice } from "../_shared/quote-price.ts";
 import { resolveQuoteLocationForAllocation } from "../_shared/quote-location.ts";
 import { resolveAdminJobRefAction } from "../_shared/admin-job-ref-routing.ts";
 import { extractCoordsFromWebhook } from "../_shared/webhook-location.ts";
@@ -563,7 +564,7 @@ async function sendQuoteToCustomer(
 
     const { data: quoteRow } = await supabase
       .from("quotes")
-      .select("id, technician_id, price_gbp, eta_minutes, tyre_included, tyre_condition")
+      .select("id, technician_id, price_gbp, eta_minutes, tyre_included, tyre_condition, raw_message")
       .eq("job_id", jobId)
       .eq("status", "pending")
       .order("created_at", { ascending: false })
@@ -571,8 +572,15 @@ async function sendQuoteToCustomer(
       .maybeSingle();
     if (!quoteRow) return { ok: false, error: "No pending quote for this job" };
 
-    const mergedPrice = quoteRow.price_gbp;
+    const shortRef = String(jobRow.id).slice(0, 6).toUpperCase();
+    const mergedPrice = normalizeSuspiciousQuotePrice(quoteRow.price_gbp, quoteRow.raw_message ?? "");
     const mergedEta = quoteRow.eta_minutes;
+    if (!isCustomerQuoteAmountValid(mergedPrice)) {
+      return {
+        ok: false,
+        error: `Quote for job #${shortRef} has an invalid amount (£${quoteRow.price_gbp ?? "—"}). Ask the technician to resend the price in pounds before sending it to the customer.`,
+      };
+    }
     const tyreNote = quoteRow.tyre_included
       ? ` (incl. ${quoteRow.tyre_condition ?? ""} tyre)`.replace("  ", " ")
       : (quoteRow.tyre_included === false ? " (tyre NOT included)" : "");
@@ -583,7 +591,6 @@ async function sendQuoteToCustomer(
       jobRow.issue_type?.trim() ||
       "Tyre service required";
     const vehicleReg = jobRow.vehicle_reg?.toString().trim() || "Not provided";
-    const shortRef = String(jobRow.id).slice(0, 6).toUpperCase();
 
     await supabase.from("quotes").update({ status: "accepted" }).eq("id", quoteRow.id);
     await supabase.from("quotes")
@@ -1948,7 +1955,10 @@ Deno.serve(async (req) => {
       }
 
       // Merge new fields into the draft (don't overwrite previously-collected values with null).
-      const mergedPrice = draft.price_gbp ?? parsed.price_gbp ?? null;
+      const mergedPrice = normalizeSuspiciousQuotePrice(
+        draft.price_gbp ?? parsed.price_gbp ?? null,
+        `${draft.raw_message ?? ""} | ${body}`,
+      );
       const mergedCallout = draft.callout_fee_gbp ?? parsed.callout_fee_gbp ?? null;
       const mergedEta = draft.eta_minutes ?? parsed.eta_minutes ?? null;
       const mergedTyreIncl = draft.tyre_included ?? parsed.tyre_included ?? null;
@@ -1979,7 +1989,7 @@ Deno.serve(async (req) => {
         locationRows: quoteFlowPins,
       });
 
-      const hasPrice = mergedPrice != null;
+      const hasPrice = isCustomerQuoteAmountValid(mergedPrice);
       const hasEta = mergedEta != null;
       const hasPin = quoteLocation.hasPin;
       const pinLat = quoteLocation.lat;
@@ -2002,7 +2012,7 @@ Deno.serve(async (req) => {
         if (!hasEta) missing.push("⏱️ ETA in minutes");
         if (!hasPin) missing.push("📍 your live location pin");
         const gotParts: string[] = [];
-        if (hasPrice) gotParts.push(`price £${mergedPrice}`);
+        if (mergedPrice != null) gotParts.push(`price £${mergedPrice}`);
         if (hasEta) gotParts.push(`ETA ${mergedEta} min`);
         if (hasPin) gotParts.push("location ✅");
         const gotLine = gotParts.length ? `Got: ${gotParts.join(", ")}.\n` : "";
