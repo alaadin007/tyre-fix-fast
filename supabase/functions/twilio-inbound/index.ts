@@ -566,11 +566,11 @@ async function sendQuoteToCustomer(
       .from("quotes")
       .select("id, technician_id, price_gbp, eta_minutes, tyre_included, tyre_condition, raw_message")
       .eq("job_id", jobId)
-      .eq("status", "pending")
+      .in("status", ["pending", "accepted"])
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
-    if (!quoteRow) return { ok: false, error: "No pending quote for this job" };
+    if (!quoteRow) return { ok: false, error: "No quote available for this job" };
 
     const shortRef = String(jobRow.id).slice(0, 6).toUpperCase();
     const mergedPrice = normalizeSuspiciousQuotePrice(quoteRow.price_gbp, quoteRow.raw_message ?? "");
@@ -580,6 +580,9 @@ async function sendQuoteToCustomer(
         ok: false,
         error: `Quote for job #${shortRef} has an invalid amount (£${quoteRow.price_gbp ?? "—"}). Ask the technician to resend the price in pounds before sending it to the customer.`,
       };
+    }
+    if (Number(quoteRow.price_gbp) !== Number(mergedPrice)) {
+      await supabase.from("quotes").update({ price_gbp: mergedPrice }).eq("id", quoteRow.id);
     }
     const tyreNote = quoteRow.tyre_included
       ? ` (incl. ${quoteRow.tyre_condition ?? ""} tyre)`.replace("  ", " ")
