@@ -1320,7 +1320,7 @@ Deno.serve(async (req) => {
       // Triggers: "yes", "broadcast", "send", "share", "dispatch", "go", "push", "blast"
       // + any 6-char job ref appearing in the message. Anything that looks like
       // an admin confirmation to push the job out to nearby technicians lands here.
-      const refRegex = /\b([0-9a-f]{6})\b/i;
+      const refRegex = /\b([0-9a-f]{6,8})\b/i;
       const broadcastVerbRegex = /\b(broadcast|dispatch|send|share|push|blast|notify|alert|forward|go|fire|publish)\b/i;
       const yesRegex = /^\s*(y|yes|ok|okay|sure|confirm|approved?|do it|please)\b/i;
       const refInMsg = trimmed.match(refRegex);
