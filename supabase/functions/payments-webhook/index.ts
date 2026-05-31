@@ -50,7 +50,7 @@ async function handleCheckoutCompleted(session: any) {
 
   const { data: job } = await supabase
     .from("jobs")
-    .select("id, customer_name, customer_phone, postcode, assigned_technician_id, platform_fee_status, issue_type, issue_description, vehicle_reg, affected_wheels")
+    .select("id, customer_name, customer_phone, postcode, assigned_technician_id, platform_fee_status, issue_type, issue_description, damage_summary, vehicle_reg, affected_wheels, lat, lng")
     .eq("id", jobId)
     .single();
   if (!job) {
@@ -73,24 +73,69 @@ async function handleCheckoutCompleted(session: any) {
   const amount = formatGbp(session?.amount_total);
   const ref = jobRef(jobId);
   const vehicleReg = job.vehicle_reg || "—";
+  const issue = (job as any).damage_summary || (job as any).issue_description || (job as any).issue_type || "Tyre service";
+  const wheels = Array.isArray((job as any).affected_wheels) && (job as any).affected_wheels.length
+    ? (job as any).affected_wheels.join(", ") : "—";
 
   // ===== Customer message (short ack only — no tech details yet) =====
   if (job.customer_phone) {
     const customerMsg = [
       `✅ Payment Received — £${amount}`,
       ``,
-      `Job Ref: #${ref}`,
+      `Your roadside tyre service is confirmed.`,
       ``,
-      `Your payment has been received successfully. We will shortly share the Technician Information with you.`,
+      `📋 Job #${ref}`,
       ``,
+      `We will be sharing the technician details with you shortly.`,
+      ``,
+      `Thank you.`,
       `— Tyre Fly`,
     ].join("\n");
     await sendMsg(job.customer_phone, customerMsg, "whatsapp");
   }
 
+  // ===== Fetch assigned technician + accepted quote for admin notification =====
+  let techName = "—";
+  let techPhone = "—";
+  let quotedAmount: string = amount;
+  try {
+    if (job.assigned_technician_id) {
+      const { data: tech } = await supabase
+        .from("technicians")
+        .select("name, phone")
+        .eq("id", job.assigned_technician_id)
+        .maybeSingle();
+      if (tech) {
+        techName = (tech as any).name ?? "—";
+        techPhone = (tech as any).phone ?? "—";
+      }
+      const { data: quote } = await supabase
+        .from("quotes")
+        .select("price_gbp")
+        .eq("job_id", jobId)
+        .eq("technician_id", job.assigned_technician_id)
+        .eq("status", "accepted")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (quote && (quote as any).price_gbp != null) {
+        quotedAmount = String((quote as any).price_gbp);
+      }
+    }
+  } catch (e) {
+    console.error("fetch technician/quote for admin notification failed", e);
+  }
+
+  // Customer live/map location link
+  const customerMapLink = (job as any).postcode
+    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent((job as any).postcode)}`
+    : ((job as any).lat != null && (job as any).lng != null
+        ? `https://www.google.com/maps?q=${(job as any).lat},${(job as any).lng}`
+        : "—");
+
+  const nowStr = new Date().toLocaleString("en-GB", { timeZone: "Europe/London" });
+
   // ===== Admin notification + approval prompt =====
-  // Send to every master admin number; set per-admin state so a YES/<ref>
-  // reply triggers the contact-details exchange via twilio-inbound.
   const { data: masterSetting } = await supabase
     .from("app_settings")
     .select("value")
@@ -99,19 +144,40 @@ async function handleCheckoutCompleted(session: any) {
   const masterNumbers: string[] = (((masterSetting as any)?.value?.numbers) ?? []).filter(Boolean);
 
   const adminSummary = [
-    `💳 Payment Confirmed — £${amount}`,
+    `🔔 New Payment Received`,
     ``,
+    `💰 Amount: £${amount}`,
     `📋 Job Ref: #${ref}`,
+    `🕐 Time: ${nowStr}`,
     ``,
+    `━━━━━━━━━━━━━━━`,
     `👤 Customer Details`,
     `━━━━━━━━━━━━━━━`,
-    `Name:  ${job.customer_name ?? "—"}`,
-    `Phone: ${job.customer_phone ?? "—"}`,
-    `Postcode: ${job.postcode ?? "—"}`,
     ``,
-    `🚗 Vehicle: ${vehicleReg}`,
+    `👨 Name: ${job.customer_name ?? "—"}`,
+    `📞 Phone: ${job.customer_phone ?? "—"}`,
+    `📍 Location: ${job.postcode ?? "—"}`,
+    `🗺️ Map: ${customerMapLink}`,
+    ``,
+    `━━━━━━━━━━━━━━━`,
+    `🛞 Job Details`,
+    `━━━━━━━━━━━━━━━`,
+    ``,
+    `⚠️ Issue: ${issue}`,
+    `🚗 Reg: ${vehicleReg}`,
+    `🛞 Wheels: ${wheels}`,
+    ``,
+    `━━━━━━━━━━━━━━━`,
+    `👨‍🔧 Assigned Technician`,
+    `━━━━━━━━━━━━━━━`,
+    ``,
+    `👨‍🔧 Name: ${techName}`,
+    `📞 Phone: ${techPhone}`,
+    `💵 Quoted: £${quotedAmount}`,
+    ``,
+    `━━━━━━━━━━━━━━━`,
   ].join("\n");
-  const adminPrompt = `Do you want to share the job details with the technician now? Reply *YES ${ref}* to share both parties' details.`;
+  const adminPrompt = `Would you like to send the Technician details to the Customer? Reply *YES ${ref}* to share both parties' details.`;
 
   for (const to of masterNumbers) {
     await sendMsg(to, adminSummary, "whatsapp");
@@ -126,6 +192,7 @@ async function handleCheckoutCompleted(session: any) {
       console.error("admin_states upsert failed", e);
     }
   }
+
 
   await supabase.from("ops_alerts").insert({
     level: "info",
