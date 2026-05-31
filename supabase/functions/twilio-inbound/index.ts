@@ -778,8 +778,13 @@ async function shareContactsForJobId(
     }
 
     // ===== Technician message: customer details =====
+    const paidLine = quotedAmount
+      ? `✅ Payment received: £${quotedAmount} (your quoted amount).`
+      : `✅ Payment received (your quoted amount).`;
     const techMsg = [
       `🔔 Job Confirmed — #${ref}`,
+      ``,
+      paidLine,
       ``,
       `👤 Customer Details`,
       `━━━━━━━━━━━━━━━`,
@@ -794,7 +799,7 @@ async function shareContactsForJobId(
       `Reg:    ${vehicleReg}`,
       `Wheels: ${wheels}`,
       ``,
-      `Payment is confirmed. Please contact the customer immediately to confirm your ETA.`,
+      `Please contact the customer directly now to confirm your ETA and proceed with the repair.`,
       ``,
       `When the job is complete, reply: Done ${ref}`,
     ].join("\n");
