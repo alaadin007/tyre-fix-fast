@@ -697,6 +697,24 @@ async function shareContactsForJobId(
       .maybeSingle();
     if (!tech?.phone) return { ok: false, error: "Technician has no phone on file" };
 
+    // Pull the accepted quote so we can tell the technician the exact amount
+    // that was paid (matches what the customer was charged via Stripe).
+    let quotedAmount: string | null = null;
+    try {
+      const { data: quoteRow } = await supabase
+        .from("quotes")
+        .select("price_gbp")
+        .eq("job_id", jobId)
+        .eq("technician_id", tech.id)
+        .eq("status", "accepted")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (quoteRow?.price_gbp != null) quotedAmount = String(quoteRow.price_gbp);
+    } catch (e) {
+      console.error("fetch accepted quote for shareContacts failed", e);
+    }
+
     const ref = String(jobId).slice(0, 6).toUpperCase();
     const issue = job.damage_summary || job.issue_description || job.issue_type || "Tyre service";
     const wheels = Array.isArray(job.affected_wheels) && job.affected_wheels.length
