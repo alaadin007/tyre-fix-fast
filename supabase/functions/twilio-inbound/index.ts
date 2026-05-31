@@ -488,6 +488,63 @@ async function sendReply(to: string, body: string, channel: "sms" | "whatsapp") 
   });
 }
 
+// ───────────── Open-job clarification helpers (customer side) ─────────────
+// When a customer with one or more open jobs sends a free-form message that
+// isn't a quote acceptance, review rating, or photo enrichment, we (a) list
+// their open jobs and ask whether they want a new job or are asking about an
+// existing one, and (b) on the next message either start a fresh intake (YES)
+// or answer their question with the job context via Lovable AI.
+
+function formatOpenJobsPrompt(openJobs: any[]): string {
+  const lines = openJobs.slice(0, 5).map((j: any) => {
+    const ref = String(j.id).slice(0, 6).toUpperCase();
+    const status = String(j.status || "").replace(/_/g, " ");
+    const issue = j.issue_type ? ` — ${j.issue_type}` : "";
+    return `• #${ref} (${status})${issue}`;
+  }).join("\n");
+  return [
+    "Hi 👋 You currently have the following pending job(s) open:",
+    "",
+    lines,
+    "",
+    "Reply *YES* to open a new job, or just ask any question about an existing one and we'll help.",
+    "— Tyre Fly",
+  ].join("\n");
+}
+
+async function answerCustomerJobQuestion(openJobs: any[], question: string): Promise<string> {
+  const apiKey = Deno.env.get("LOVABLE_API_KEY");
+  const summary = openJobs.slice(0, 5).map((j: any) => {
+    const ref = String(j.id).slice(0, 6).toUpperCase();
+    return `- Job #${ref}: status=${j.status}, issue=${j.issue_type ?? "n/a"}, postcode=${j.postcode ?? "n/a"}, reg=${j.vehicle_reg ?? "n/a"}${j.damage_summary ? `, damage: ${j.damage_summary}` : ""}`;
+  }).join("\n");
+  const fallback = `Here are your current open jobs:\n${summary}\n\nOur team will follow up shortly. Reply YES if you'd like to open a new job.\n— Tyre Fly`;
+  if (!apiKey) return fallback;
+  try {
+    const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "google/gemini-3-flash-preview",
+        messages: [
+          {
+            role: "system",
+            content:
+              "You are Tyre Fly's WhatsApp customer support assistant. The customer already has one or more open jobs (provided in context). Answer their question concisely (max 4 short lines) using ONLY the job context. If the answer isn't in the context or the question is unrelated, politely say a team member will follow up and remind them to reply YES to open a new job. Always end with '— Tyre Fly'.",
+          },
+          { role: "user", content: `Customer's open jobs:\n${summary}\n\nCustomer message:\n${question}` },
+        ],
+      }),
+    });
+    if (!r.ok) return fallback;
+    const j = await r.json();
+    const text = j?.choices?.[0]?.message?.content?.trim();
+    return text || fallback;
+  } catch (_e) {
+    return fallback;
+  }
+}
+
 // Send the technician's quote to the customer (after admin approval).
 // Marks the chosen quote as accepted, others as lost, creates a Stripe
 // payment link, and WhatsApps the customer-facing message.
@@ -2173,19 +2230,96 @@ Deno.serve(async (req) => {
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
       }
 
-      // 3c. Locked states: job already in payment/in-progress. Treat texts as enrichment.
-      const lockedStates = ["awaiting_payment", "accepted", "in_progress", "paid"];
-      if (lockedStates.includes(recentJob.status)) {
-        const updates: Record<string, any> = { updated_at: new Date().toISOString() };
-        if (body) updates.issue_description = [recentJob.issue_description, body].filter(Boolean).join("\n").slice(0, 2000);
-        if (mediaUrls.length > 0) updates.photo_urls = [...(recentJob.photo_urls ?? []), ...mediaUrls].slice(0, 12);
-        if (Object.keys(updates).length > 1) {
-          await supabase.from("jobs").update(updates).eq("id", recentJob.id);
-          await sendReply(from, "Thanks — added that to your job. The technician has been notified.", channel);
-          return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+      // 3b.5 Open-job clarification. The customer has at least one job that isn't
+      // closed/cancelled. Free-form messages here used to silently enrich the
+      // most recent job (so "This is a new job" became part of an in-progress
+      // job's description). Instead: list their open jobs, ask whether they want
+      // a new job (reply YES) or are asking about an existing one, and on the
+      // next message either start fresh intake or answer their question via AI.
+      const OPEN_STATUSES = [
+        "intake_complete", "broadcasting", "awaiting_approval", "pending", "quoted",
+        "awaiting_payment", "accepted", "in_progress", "paid",
+      ];
+      const { data: openJobs } = await supabase
+        .from("jobs")
+        .select("id, status, issue_type, postcode, vehicle_reg, damage_summary, created_at")
+        .eq("customer_phone", from)
+        .in("status", OPEN_STATUSES)
+        .order("created_at", { ascending: false });
+      const hasOpenJobs = (openJobs?.length ?? 0) > 0;
+
+      if (hasOpenJobs) {
+        const cutoff24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+        const { data: convRow } = await supabase
+          .from("conversations")
+          .select("*")
+          .eq("customer_phone", from)
+          .order("last_message_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        const inActiveIntake = !!convRow && (convRow as any).step !== "complete" && (convRow as any).last_message_at >= cutoff24h;
+        const ctx = ((convRow as any)?.context ?? {}) as Record<string, any>;
+        const pendingClarify = ctx.awaiting_new_or_question === true;
+        const yesIntent = /^\s*(yes|y|yeah|yep|new\s*job|new)\b/i.test(body);
+
+        if (!inActiveIntake) {
+          if (pendingClarify && yesIntent) {
+            // Customer confirmed they want a brand-new job. Clear the flag and
+            // fall through to processCustomerIntake so a fresh job is created.
+            await supabase
+              .from("conversations")
+              .update({
+                context: { ...ctx, awaiting_new_or_question: false },
+                step: "complete",
+              })
+              .eq("id", (convRow as any).id);
+            // (intentionally fall through — no return)
+          } else if (pendingClarify) {
+            // Customer is asking about their existing job(s). Answer with context.
+            const answer = await answerCustomerJobQuestion(openJobs ?? [], body);
+            await sendReply(from, answer, channel);
+            return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+          } else if (mediaUrls.length === 0) {
+            // First free-form message while jobs are open — list them and ask.
+            // (If they sent media, fall through to enrichment below.)
+            const listMsg = formatOpenJobsPrompt(openJobs ?? []);
+            if (convRow) {
+              await supabase
+                .from("conversations")
+                .update({
+                  context: { ...ctx, awaiting_new_or_question: true },
+                  last_message_at: new Date().toISOString(),
+                })
+                .eq("id", (convRow as any).id);
+            } else {
+              await supabase.from("conversations").insert({
+                customer_phone: from,
+                step: "complete",
+                context: { awaiting_new_or_question: true },
+              });
+            }
+            await sendReply(from, listMsg, channel);
+            return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+          }
         }
       }
+
+      // 3c. Locked states: job already in payment/in-progress. Treat MEDIA as
+      // enrichment (photos add to the job). Text-only messages are handled by
+      // the open-job clarification above and never silently appended here.
+      const lockedStates = ["awaiting_payment", "accepted", "in_progress", "paid"];
+      if (lockedStates.includes(recentJob.status) && mediaUrls.length > 0) {
+        const updates: Record<string, any> = {
+          updated_at: new Date().toISOString(),
+          photo_urls: [...(recentJob.photo_urls ?? []), ...mediaUrls].slice(0, 12),
+        };
+        if (body) updates.issue_description = [recentJob.issue_description, body].filter(Boolean).join("\n").slice(0, 2000);
+        await supabase.from("jobs").update(updates).eq("id", recentJob.id);
+        await sendReply(from, "Thanks — added that photo to your job. The technician has been notified.", channel);
+        return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+      }
     }
+
 
     // 4. Otherwise → route through the customer intake state machine.
     //    This is the single source of truth for the 6-step information gathering.
