@@ -36,7 +36,10 @@ function formatGbp(amountMinor: number | null | undefined): string {
 }
 
 function jobRef(jobId: string): string {
-  return jobId.slice(0, 8).toUpperCase();
+  // Keep this in sync with the 6-char short ref used everywhere else
+  // (twilio-inbound admin routing regex matches 6 hex chars). Using 8 here
+  // caused the admin's "YES <REF>" reply to fall through to customer intake.
+  return jobId.slice(0, 6).toUpperCase();
 }
 
 async function handleCheckoutCompleted(session: any) {
