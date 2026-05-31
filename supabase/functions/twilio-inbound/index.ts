@@ -1016,14 +1016,14 @@ Deno.serve(async (req) => {
       // --- Stateful admin "yes → list → yes → ref → broadcast" flow ---
       // Triggered by the new_job_alert_to_admin template's CTA. State is kept in
       // public.admin_states keyed by the admin phone number.
-      const refOnlyMatch = trimmed.match(/^\s*#?\s*([0-9a-f]{6})\s*$/i);
+      const refOnlyMatch = trimmed.match(/^\s*#?\s*([0-9a-f]{6,8})\s*$/i);
       const yesOnly = /^\s*(y|yes|ok|okay|sure|confirm|yep|yeah)\s*[.!]?\s*$/i.test(trimmed);
       // "yes <ref>" / "yes #<ref>" / "<ref> yes" combined in one message →
       // treat as a list request (share technicians, then ask broadcast confirm).
       const yesPlusRefMatch = trimmed.match(
-        /^\s*(?:y|yes|ok|okay|sure|confirm|yep|yeah)[\s,:.!#-]+([0-9a-f]{6})\s*$/i,
+        /^\s*(?:y|yes|ok|okay|sure|confirm|yep|yeah)[\s,:.!#-]+([0-9a-f]{6,8})\s*[*.!]?\s*$/i,
       ) ?? trimmed.match(
-        /^\s*#?\s*([0-9a-f]{6})[\s,:.!-]+(?:y|yes|ok|okay|sure|confirm|yep|yeah)\s*$/i,
+        /^\s*#?\s*([0-9a-f]{6,8})[\s,:.!-]+(?:y|yes|ok|okay|sure|confirm|yep|yeah)\s*$/i,
       );
 
       const { data: adminStateRow } = await supabase
