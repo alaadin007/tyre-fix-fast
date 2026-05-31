@@ -697,6 +697,24 @@ async function shareContactsForJobId(
       .maybeSingle();
     if (!tech?.phone) return { ok: false, error: "Technician has no phone on file" };
 
+    // Pull the accepted quote so we can tell the technician the exact amount
+    // that was paid (matches what the customer was charged via Stripe).
+    let quotedAmount: string | null = null;
+    try {
+      const { data: quoteRow } = await supabase
+        .from("quotes")
+        .select("price_gbp")
+        .eq("job_id", jobId)
+        .eq("technician_id", tech.id)
+        .eq("status", "accepted")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (quoteRow?.price_gbp != null) quotedAmount = String(quoteRow.price_gbp);
+    } catch (e) {
+      console.error("fetch accepted quote for shareContacts failed", e);
+    }
+
     const ref = String(jobId).slice(0, 6).toUpperCase();
     const issue = job.damage_summary || job.issue_description || job.issue_type || "Tyre service";
     const wheels = Array.isArray(job.affected_wheels) && job.affected_wheels.length
@@ -760,8 +778,13 @@ async function shareContactsForJobId(
     }
 
     // ===== Technician message: customer details =====
+    const paidLine = quotedAmount
+      ? `✅ Payment received: £${quotedAmount} (your quoted amount).`
+      : `✅ Payment received (your quoted amount).`;
     const techMsg = [
       `🔔 Job Confirmed — #${ref}`,
+      ``,
+      paidLine,
       ``,
       `👤 Customer Details`,
       `━━━━━━━━━━━━━━━`,
@@ -776,7 +799,7 @@ async function shareContactsForJobId(
       `Reg:    ${vehicleReg}`,
       `Wheels: ${wheels}`,
       ``,
-      `Payment is confirmed. Please contact the customer immediately to confirm your ETA.`,
+      `Please contact the customer directly now to confirm your ETA and proceed with the repair.`,
       ``,
       `When the job is complete, reply: Done ${ref}`,
     ].join("\n");
@@ -1016,14 +1039,14 @@ Deno.serve(async (req) => {
       // --- Stateful admin "yes → list → yes → ref → broadcast" flow ---
       // Triggered by the new_job_alert_to_admin template's CTA. State is kept in
       // public.admin_states keyed by the admin phone number.
-      const refOnlyMatch = trimmed.match(/^\s*#?\s*([0-9a-f]{6})\s*$/i);
+      const refOnlyMatch = trimmed.match(/^\s*#?\s*([0-9a-f]{6,8})\s*$/i);
       const yesOnly = /^\s*(y|yes|ok|okay|sure|confirm|yep|yeah)\s*[.!]?\s*$/i.test(trimmed);
       // "yes <ref>" / "yes #<ref>" / "<ref> yes" combined in one message →
       // treat as a list request (share technicians, then ask broadcast confirm).
       const yesPlusRefMatch = trimmed.match(
-        /^\s*(?:y|yes|ok|okay|sure|confirm|yep|yeah)[\s,:.!#-]+([0-9a-f]{6})\s*$/i,
+        /^\s*(?:y|yes|ok|okay|sure|confirm|yep|yeah)[\s,:.!#-]+([0-9a-f]{6,8})\s*[*.!]?\s*$/i,
       ) ?? trimmed.match(
-        /^\s*#?\s*([0-9a-f]{6})[\s,:.!-]+(?:y|yes|ok|okay|sure|confirm|yep|yeah)\s*$/i,
+        /^\s*#?\s*([0-9a-f]{6,8})[\s,:.!-]+(?:y|yes|ok|okay|sure|confirm|yep|yeah)\s*$/i,
       );
 
       const { data: adminStateRow } = await supabase
@@ -1320,7 +1343,7 @@ Deno.serve(async (req) => {
       // Triggers: "yes", "broadcast", "send", "share", "dispatch", "go", "push", "blast"
       // + any 6-char job ref appearing in the message. Anything that looks like
       // an admin confirmation to push the job out to nearby technicians lands here.
-      const refRegex = /\b([0-9a-f]{6})\b/i;
+      const refRegex = /\b([0-9a-f]{6,8})\b/i;
       const broadcastVerbRegex = /\b(broadcast|dispatch|send|share|push|blast|notify|alert|forward|go|fire|publish)\b/i;
       const yesRegex = /^\s*(y|yes|ok|okay|sure|confirm|approved?|do it|please)\b/i;
       const refInMsg = trimmed.match(refRegex);
