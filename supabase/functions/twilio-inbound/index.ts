@@ -8,6 +8,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { feeForPhone } from "../_shared/region-fee.ts";
 import { processCustomerIntake } from "../_shared/intake-state.ts";
 import { resolveQuoteLocationForAllocation } from "../_shared/quote-location.ts";
+import { resolveAdminJobRefAction } from "../_shared/admin-job-ref-routing.ts";
 import { extractCoordsFromWebhook } from "../_shared/webhook-location.ts";
 
 const corsHeaders = {
@@ -1095,15 +1096,6 @@ Deno.serve(async (req) => {
         }
       };
 
-      // Context-aware interpretation of admin replies. We use adminState.step to
-      // decide whether a "yes" / "yes <ref>" / "<ref>" means "show list" or
-      // "broadcast now". Key rule: once the technician list has already been
-      // shown (state = await_broadcast_confirm), any affirmation referencing the
-      // SAME job ref → broadcast (do NOT re-show the list).
-      const sameJobAsState = (ref: string) =>
-        !!adminState?.job_id &&
-        String(adminState.job_id).toLowerCase().startsWith(ref.toLowerCase());
-
       // Helper: actually push the technician's quote to the customer.
       const runSendQuoteForJobId = async (jobIdFull: string) => {
         const shortRef = String(jobIdFull).slice(0, 6).toUpperCase();
@@ -1216,55 +1208,35 @@ Deno.serve(async (req) => {
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
       }
 
-      // (A1) "yes <ref>" or bare "<ref>" while awaiting send-quote approval → send to customer.
       const refFromMsg =
         (yesPlusRefMatch ? yesPlusRefMatch[1] : null) ??
         (refOnlyMatch ? refOnlyMatch[1] : null);
-      if (refFromMsg && adminState?.step === "await_send_quote_confirm") {
-        // If ref matches the stored job, send that. Otherwise still try the ref.
-        await runSendQuoteForRef(refFromMsg);
+      const refRouting = resolveAdminJobRefAction({
+        step: adminState?.step,
+        stateJobId: adminState?.job_id,
+        yesPlusRef: yesPlusRefMatch ? yesPlusRefMatch[1] : null,
+        refOnly: refOnlyMatch ? refOnlyMatch[1] : null,
+      });
+
+      if (refRouting?.action === "send_quote") {
+        await runSendQuoteForRef(refRouting.ref);
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
       }
 
-      // (A1') "yes <ref>" or bare "<ref>" while awaiting share-details approval
-      // → share customer & technician details.
-      if (refFromMsg && adminState?.step === "await_share_details_confirm") {
-        await runShareContactsForRef(refFromMsg);
+      if (refRouting?.action === "share_details") {
+        await runShareContactsForRef(refRouting.ref);
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
       }
 
-
-
-      if (refFromMsg && adminState?.step === "await_ref_for_send_quote") {
-        await runSendQuoteForRef(refFromMsg);
+      if (refRouting?.action === "broadcast") {
+        await runBroadcastForRef(refRouting.ref);
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
       }
 
-      if (refFromMsg && adminState?.step === "await_ref_for_share_details") {
-        await runShareContactsForRef(refFromMsg);
-        return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
-      }
-
-      // (A2) "yes <ref>" or bare "<ref>" while list is already shown for THAT
-      // ref → broadcast (admin is confirming the broadcast step).
-      if (refFromMsg && adminState?.step === "await_broadcast_confirm" && sameJobAsState(refFromMsg)) {
-        await runBroadcastForRef(refFromMsg);
-        return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
-      }
-      // (A3) Bare ref while explicitly waiting for the broadcast ref → broadcast
-      if (refOnlyMatch && adminState?.step === "await_ref_for_broadcast") {
-        await runBroadcastForRef(refOnlyMatch[1]);
-        return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
-      }
-
-
-      // (B) Bare ref while waiting for list lookup, OR combined "yes <ref>" →
+      // Bare ref while waiting for list lookup, OR combined "yes <ref>" →
       // show available technicians and immediately ask broadcast confirmation.
-      const listTrigger = (refOnlyMatch && adminState?.step === "await_ref_for_list")
-        ? refOnlyMatch[1]
-        : (yesPlusRefMatch ? yesPlusRefMatch[1] : null);
-      if (listTrigger) {
-        const ref = listTrigger.toLowerCase();
+      if (refRouting?.action === "list") {
+        const ref = refRouting.ref;
         const matches = await findJobByRef(ref);
         if (matches.length === 0) {
           await sendReply(from,
@@ -1303,54 +1275,6 @@ Deno.serve(async (req) => {
         );
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
       }
-
-      // (C) Bare ref while waiting for broadcast confirmation → fire broadcast
-      if (refOnlyMatch && adminState?.step === "await_ref_for_broadcast") {
-        const ref = refOnlyMatch[1].toLowerCase();
-        const matches = await findJobByRef(ref);
-        if (matches.length === 0) {
-          await sendReply(from,
-            `No job found for ref #${ref.toUpperCase()}. Nothing broadcast.`, channel);
-          return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
-        }
-        if (matches.length > 1) {
-          await sendReply(from,
-            `Multiple jobs match #${ref.toUpperCase()} — please send the full 6-character ref.`, channel);
-          return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
-        }
-        const job: any = matches[0];
-        const shortRef = String(job.id).slice(0, 6).toUpperCase();
-        const scored = await scoreNearbyTechs(job);
-        if (scored.length === 0) {
-          await clearAdminState();
-          await sendReply(from,
-            `Job #${shortRef} — no approved technicians found nearby. Nothing broadcast.`, channel);
-          return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
-        }
-        const technician_ids = scored.map((x: any) => x.t.id);
-        const bRes = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/broadcast-job`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
-          },
-          body: JSON.stringify({ job_id: job.id, mode: "specific", technician_ids }),
-        });
-        const bJson: any = await bRes.json().catch(() => ({}));
-        const sent = bJson?.sent ?? 0;
-        const total = bJson?.total ?? technician_ids.length;
-        await clearAdminState();
-        if (bRes.ok && sent > 0) {
-          await sendReply(from,
-            `✅ Broadcast sent for job #${shortRef} to ${sent}/${total} nearby technicians.`, channel);
-        } else {
-          const err = bJson?.error ? ` (${String(bJson.error).slice(0, 140)})` : "";
-          await sendReply(from,
-            `⚠️ Broadcast for job #${shortRef} failed — ${sent}/${total} delivered${err}.`, channel);
-        }
-        return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
-      }
-
 
       // Natural-language broadcast confirmation.
       // Triggers: "yes", "broadcast", "send", "share", "dispatch", "go", "push", "blast"
