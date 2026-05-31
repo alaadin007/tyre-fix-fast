@@ -1,5 +1,20 @@
 export type AdminJobRefAction = "send_quote" | "share_details" | "broadcast" | "list";
 
+export function shouldPrioritizeAdminBranch(args: {
+  body: string;
+  hasPendingAdminStep: boolean;
+}): boolean {
+  const trimmed = args.body.trim();
+  if (args.hasPendingAdminStep) return true;
+
+  return (
+    /^\s*(?:y|yes|ok|okay|sure|confirm|yep|yeah)[\s,:.!#-]+([0-9a-f]{6,8})\s*[*.!]?\s*$/i.test(trimmed) ||
+    /^\s*#?\s*([0-9a-f]{6,8})[\s,:.!-]+(?:y|yes|ok|okay|sure|confirm|yep|yeah)\s*$/i.test(trimmed) ||
+    /^\s*(broadcast|approve|reject|pending|jobs|help)\b/i.test(trimmed) ||
+    /^\s*#?\s*([0-9a-f]{6,8})\s*$/i.test(trimmed)
+  );
+}
+
 export function resolveAdminJobRefAction(args: {
   step?: string | null;
   stateJobId?: string | null;

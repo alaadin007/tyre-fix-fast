@@ -41,6 +41,10 @@ function clean(v: any, fallback = "—"): string {
   return s.replace(/[\r\n\t]+/g, " ").replace(/\s{4,}/g, "   ").slice(0, 200);
 }
 
+function normPhone(p: string): string {
+  return (p || "").replace(/^whatsapp:/, "").replace(/[^\d+]/g, "");
+}
+
 async function buildJobTemplateParams(j: any, photoUrls: string[]): Promise<string[]> {
   const shortId = String(j.id).slice(0, 6).toUpperCase();
   const customerName = clean(
@@ -214,6 +218,38 @@ Deno.serve(async (req) => {
       const FALLBACK_HEADER = "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=800&h=418&fit=crop&fm=jpg";
       const header_image_url = photos[0] ?? FALLBACK_HEADER;
       const body_params = await buildJobTemplateParams(job, photos);
+
+      const normalizedNumbers = numbers.map(normPhone).filter(Boolean);
+      if (normalizedNumbers.length > 0) {
+        const { data: existingStates } = await supabase
+          .from("admin_states")
+          .select("phone, step, updated_at")
+          .in("phone", normalizedNumbers);
+        const existingByPhone = new Map((existingStates ?? []).map((row: any) => [row.phone, row]));
+        const nowMs = Date.now();
+        const nowIso = new Date().toISOString();
+        const seedableSteps = new Set(["await_ref_for_list", "await_broadcast_confirm", "await_ref_for_broadcast"]);
+        const stateRows = normalizedNumbers
+          .map((phone) => {
+            const current = existingByPhone.get(phone);
+            const isActive = !!(
+              current?.step &&
+              current.updated_at &&
+              (nowMs - new Date(current.updated_at).getTime()) < 6 * 60 * 60 * 1000
+            );
+            if (isActive && !seedableSteps.has(current.step)) return null;
+            return {
+              phone,
+              step: "await_ref_for_list",
+              job_id: job.id,
+              updated_at: nowIso,
+            };
+          })
+          .filter(Boolean);
+        if (stateRows.length > 0) {
+          await supabase.from("admin_states").upsert(stateRows);
+        }
+      }
 
       const results = await Promise.allSettled(
         numbers.map((to) =>
