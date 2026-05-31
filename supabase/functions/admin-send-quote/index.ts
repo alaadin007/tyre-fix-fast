@@ -53,7 +53,7 @@ Deno.serve(async (req) => {
       .select("id,technician_id,price_gbp,eta_minutes,tyre_included,tyre_condition,raw_message")
       .eq("job_id", job_id);
     if (quote_id) quoteQuery = quoteQuery.eq("id", quote_id);
-    else quoteQuery = quoteQuery.eq("status", "pending");
+    else quoteQuery = quoteQuery.in("status", ["pending", "accepted"]);
 
     const { data: quoteRow } = await quoteQuery
       .order("created_at", { ascending: false })
@@ -66,6 +66,9 @@ Deno.serve(async (req) => {
     const mergedEta = quoteRow.eta_minutes;
     if (!isCustomerQuoteAmountValid(mergedPrice)) {
       throw new Error(`Quote for job #${shortRef} has an invalid amount (£${quoteRow.price_gbp ?? "—"}). Ask the technician to resend the price in pounds before sending it to the customer.`);
+    }
+    if (Number(quoteRow.price_gbp) !== Number(mergedPrice)) {
+      await supabase.from("quotes").update({ price_gbp: mergedPrice }).eq("id", quoteRow.id);
     }
     const tyreNote = quoteRow.tyre_included
       ? ` (incl. ${quoteRow.tyre_condition ?? ""} tyre)`.replace("  ", " ")
