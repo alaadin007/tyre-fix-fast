@@ -1165,36 +1165,54 @@ Deno.serve(async (req) => {
       };
 
 
-      // (A) Bare "yes" → depends on current state
+      // (A) Bare "yes" → NEVER auto-execute a job-specific action. Always
+      // require the admin to confirm the job reference number first, to prevent
+      // accidental broadcasts / quote sends / detail shares on the wrong job.
       if (yesOnly) {
         if (adminState?.step === "await_share_details_confirm" && adminState.job_id) {
-          // Payment received — "yes" confirms sharing contacts with technician.
-          await runShareContactsForJobId(String(adminState.job_id));
+          await setAdminState("await_ref_for_share_details", String(adminState.job_id));
+          await sendReply(from,
+            "Please provide the job reference number you would like to share with the technician (e.g. #ABC123).",
+            channel);
           return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
         }
         if (adminState?.step === "await_send_quote_confirm" && adminState.job_id) {
-          // Tech quote was just forwarded — "yes" means send it to the customer.
-          await runSendQuoteForJobId(String(adminState.job_id));
-          return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
-        }
-        if (adminState?.step === "await_ref_for_send_quote" && adminState.job_id) {
-          await runSendQuoteForJobId(String(adminState.job_id));
+          await setAdminState("await_ref_for_send_quote", String(adminState.job_id));
+          await sendReply(from,
+            "Please provide the job reference number you would like to send the quote for (e.g. #ABC123).",
+            channel);
           return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
         }
         if (adminState?.step === "await_broadcast_confirm" && adminState.job_id) {
-          // List was already shown for this job — "yes" confirms broadcast.
-          await runBroadcastForRef(String(adminState.job_id).slice(0, 6));
+          await setAdminState("await_ref_for_broadcast", String(adminState.job_id));
+          await sendReply(from,
+            "Please provide the job reference number you would like to broadcast (e.g. #ABC123).",
+            channel);
           return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
         }
         if (adminState?.step === "await_ref_for_broadcast" && adminState.job_id) {
-          await runBroadcastForRef(String(adminState.job_id).slice(0, 6));
+          await sendReply(from,
+            "Please provide the job reference number you would like to broadcast (e.g. #ABC123).",
+            channel);
+          return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+        }
+        if (adminState?.step === "await_ref_for_send_quote" && adminState.job_id) {
+          await sendReply(from,
+            "Please provide the job reference number you would like to send the quote for (e.g. #ABC123).",
+            channel);
+          return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+        }
+        if (adminState?.step === "await_ref_for_share_details" && adminState.job_id) {
+          await sendReply(from,
+            "Please provide the job reference number you would like to share with the technician (e.g. #ABC123).",
+            channel);
           return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
         }
         // Default behaviour: assume admin is responding to the "Should I share
         // the list of available technicians…" prompt at the end of the job alert.
         await setAdminState("await_ref_for_list", null);
         await sendReply(from,
-          "Please provide the reference number (with or without #).", channel);
+          "Please provide the job reference number (with or without #).", channel);
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
       }
 
@@ -1216,6 +1234,16 @@ Deno.serve(async (req) => {
       }
 
 
+
+      if (refFromMsg && adminState?.step === "await_ref_for_send_quote") {
+        await runSendQuoteForRef(refFromMsg);
+        return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+      }
+
+      if (refFromMsg && adminState?.step === "await_ref_for_share_details") {
+        await runShareContactsForRef(refFromMsg);
+        return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+      }
 
       // (A2) "yes <ref>" or bare "<ref>" while list is already shown for THAT
       // ref → broadcast (admin is confirming the broadcast step).
