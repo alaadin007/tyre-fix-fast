@@ -7,6 +7,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { feeForPhone } from "../_shared/region-fee.ts";
 import { processCustomerIntake } from "../_shared/intake-state.ts";
+import { isCustomerQuoteAmountValid, normalizeSuspiciousQuotePrice } from "../_shared/quote-price.ts";
 import { resolveQuoteLocationForAllocation } from "../_shared/quote-location.ts";
 import { resolveAdminJobRefAction } from "../_shared/admin-job-ref-routing.ts";
 import { extractCoordsFromWebhook } from "../_shared/webhook-location.ts";
@@ -563,16 +564,26 @@ async function sendQuoteToCustomer(
 
     const { data: quoteRow } = await supabase
       .from("quotes")
-      .select("id, technician_id, price_gbp, eta_minutes, tyre_included, tyre_condition")
+      .select("id, technician_id, price_gbp, eta_minutes, tyre_included, tyre_condition, raw_message")
       .eq("job_id", jobId)
-      .eq("status", "pending")
+      .in("status", ["pending", "accepted"])
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
-    if (!quoteRow) return { ok: false, error: "No pending quote for this job" };
+    if (!quoteRow) return { ok: false, error: "No quote available for this job" };
 
-    const mergedPrice = quoteRow.price_gbp;
+    const shortRef = String(jobRow.id).slice(0, 6).toUpperCase();
+    const mergedPrice = normalizeSuspiciousQuotePrice(quoteRow.price_gbp, quoteRow.raw_message ?? "");
     const mergedEta = quoteRow.eta_minutes;
+    if (!isCustomerQuoteAmountValid(mergedPrice)) {
+      return {
+        ok: false,
+        error: `Quote for job #${shortRef} has an invalid amount (£${quoteRow.price_gbp ?? "—"}). Ask the technician to resend the price in pounds before sending it to the customer.`,
+      };
+    }
+    if (Number(quoteRow.price_gbp) !== Number(mergedPrice)) {
+      await supabase.from("quotes").update({ price_gbp: mergedPrice }).eq("id", quoteRow.id);
+    }
     const tyreNote = quoteRow.tyre_included
       ? ` (incl. ${quoteRow.tyre_condition ?? ""} tyre)`.replace("  ", " ")
       : (quoteRow.tyre_included === false ? " (tyre NOT included)" : "");
@@ -583,18 +594,6 @@ async function sendQuoteToCustomer(
       jobRow.issue_type?.trim() ||
       "Tyre service required";
     const vehicleReg = jobRow.vehicle_reg?.toString().trim() || "Not provided";
-    const shortRef = String(jobRow.id).slice(0, 6).toUpperCase();
-
-    await supabase.from("quotes").update({ status: "accepted" }).eq("id", quoteRow.id);
-    await supabase.from("quotes")
-      .update({ status: "lost" })
-      .eq("job_id", jobId)
-      .eq("status", "pending")
-      .neq("id", quoteRow.id);
-    await supabase.from("jobs").update({
-      status: "awaiting_payment",
-      assigned_technician_id: quoteRow.technician_id,
-    }).eq("id", jobId);
 
     let payUrl: string | null = null;
     try {
@@ -636,7 +635,22 @@ async function sendQuoteToCustomer(
       }).eq("id", jobId);
     } catch (e) {
       console.error("stripe checkout (customer quote) failed", e);
+      return {
+        ok: false,
+        error: `Could not generate the payment link for job #${shortRef}. The quote was not sent to the customer.`,
+      };
     }
+
+    await supabase.from("quotes").update({ status: "accepted" }).eq("id", quoteRow.id);
+    await supabase.from("quotes")
+      .update({ status: "lost" })
+      .eq("job_id", jobId)
+      .eq("status", "pending")
+      .neq("id", quoteRow.id);
+    await supabase.from("jobs").update({
+      status: "awaiting_payment",
+      assigned_technician_id: quoteRow.technician_id,
+    }).eq("id", jobId);
 
     const customerBody =
       `Job Reference: #${shortRef}\n\n` +
@@ -646,10 +660,8 @@ async function sendQuoteToCustomer(
       `⚠️ Issue Found: ${issueLine}\n\n` +
       `💰 Repair Cost: £${mergedPrice}${tyreNote}\n\n` +
       `⏱️ Estimated Arrival Time (ETA): ${mergedEta} minutes\n\n` +
-      (payUrl
-        ? `To proceed with the service, please complete the payment using the secure Stripe link below:\n\n💳 Payment Link: ${payUrl}\n\n` +
-          `Once the payment is confirmed, the technician will proceed with the repair service at your location.\n\n`
-        : `We'll send your secure payment link shortly.\n\n`) +
+      `To proceed with the service, please complete the payment using the secure Stripe link below:\n\n💳 Payment Link: ${payUrl}\n\n` +
+      `Once the payment is confirmed, the technician will proceed with the repair service at your location.\n\n` +
       `Thank you.\n— Tyre Fly`;
 
     await sendReply(jobRow.customer_phone, customerBody, "whatsapp");
@@ -1948,7 +1960,10 @@ Deno.serve(async (req) => {
       }
 
       // Merge new fields into the draft (don't overwrite previously-collected values with null).
-      const mergedPrice = draft.price_gbp ?? parsed.price_gbp ?? null;
+      const mergedPrice = normalizeSuspiciousQuotePrice(
+        draft.price_gbp ?? parsed.price_gbp ?? null,
+        `${draft.raw_message ?? ""} | ${body}`,
+      );
       const mergedCallout = draft.callout_fee_gbp ?? parsed.callout_fee_gbp ?? null;
       const mergedEta = draft.eta_minutes ?? parsed.eta_minutes ?? null;
       const mergedTyreIncl = draft.tyre_included ?? parsed.tyre_included ?? null;
@@ -1979,7 +1994,7 @@ Deno.serve(async (req) => {
         locationRows: quoteFlowPins,
       });
 
-      const hasPrice = mergedPrice != null;
+      const hasPrice = isCustomerQuoteAmountValid(mergedPrice);
       const hasEta = mergedEta != null;
       const hasPin = quoteLocation.hasPin;
       const pinLat = quoteLocation.lat;
@@ -2002,7 +2017,7 @@ Deno.serve(async (req) => {
         if (!hasEta) missing.push("⏱️ ETA in minutes");
         if (!hasPin) missing.push("📍 your live location pin");
         const gotParts: string[] = [];
-        if (hasPrice) gotParts.push(`price £${mergedPrice}`);
+        if (mergedPrice != null) gotParts.push(`price £${mergedPrice}`);
         if (hasEta) gotParts.push(`ETA ${mergedEta} min`);
         if (hasPin) gotParts.push("location ✅");
         const gotLine = gotParts.length ? `Got: ${gotParts.join(", ")}.\n` : "";
