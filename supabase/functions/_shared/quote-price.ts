@@ -19,6 +19,11 @@ export function normalizeSuspiciousQuotePrice(
   if (!Number.isFinite(amount)) return null;
   if (amount >= MIN_CUSTOMER_QUOTE_GBP) return roundToPence(amount);
 
+  if (amount > 0) {
+    const scaledFromSubPound = amount * 100;
+    if (scaledFromSubPound >= MIN_CUSTOMER_QUOTE_GBP) return roundToPence(scaledFromSubPound);
+  }
+
   const poundMatches = Array.from(rawMessage.matchAll(/£\s*([0-9]+(?:\.[0-9]{1,2})?)/gi))
     .map((match) => Number(match[1]))
     .filter((value) => Number.isFinite(value) && value >= MIN_CUSTOMER_QUOTE_GBP);
