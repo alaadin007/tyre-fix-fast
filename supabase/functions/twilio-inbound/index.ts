@@ -592,17 +592,6 @@ async function sendQuoteToCustomer(
       "Tyre service required";
     const vehicleReg = jobRow.vehicle_reg?.toString().trim() || "Not provided";
 
-    await supabase.from("quotes").update({ status: "accepted" }).eq("id", quoteRow.id);
-    await supabase.from("quotes")
-      .update({ status: "lost" })
-      .eq("job_id", jobId)
-      .eq("status", "pending")
-      .neq("id", quoteRow.id);
-    await supabase.from("jobs").update({
-      status: "awaiting_payment",
-      assigned_technician_id: quoteRow.technician_id,
-    }).eq("id", jobId);
-
     let payUrl: string | null = null;
     try {
       const { createStripeClient } = await import("../_shared/stripe.ts");
@@ -648,6 +637,17 @@ async function sendQuoteToCustomer(
         error: `Could not generate the payment link for job #${shortRef}. The quote was not sent to the customer.`,
       };
     }
+
+    await supabase.from("quotes").update({ status: "accepted" }).eq("id", quoteRow.id);
+    await supabase.from("quotes")
+      .update({ status: "lost" })
+      .eq("job_id", jobId)
+      .eq("status", "pending")
+      .neq("id", quoteRow.id);
+    await supabase.from("jobs").update({
+      status: "awaiting_payment",
+      assigned_technician_id: quoteRow.technician_id,
+    }).eq("id", jobId);
 
     const customerBody =
       `Job Reference: #${shortRef}\n\n` +
