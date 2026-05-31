@@ -1001,19 +1001,46 @@ Deno.serve(async (req) => {
     // If this phone has an active customer intake conversation in-flight, don't
     // hijack the message into the admin branch — let the intake flow handle it.
     // (A master admin number can also be a customer; intake context wins.)
+    // EXCEPTION: messages that clearly look like admin replies to a job alert
+    // (e.g. "Yes #799121", "broadcast E1453B", a bare job ref, or a pending
+    // admin_state) must go to the admin branch even if the same phone also has
+    // an open intake — otherwise admin replies get swallowed by intake prompts.
     let hasActiveIntake = false;
     if (isMaster) {
-      const { data: activeConv } = await supabase
-        .from("conversations")
-        .select("step, current_job_id, last_message_at")
-        .eq("customer_phone", fromN)
-        .maybeSingle();
-      if (activeConv?.current_job_id && activeConv.step && activeConv.step !== "complete") {
-        const ageMs = activeConv.last_message_at
-          ? Date.now() - new Date(activeConv.last_message_at).getTime()
-          : 0;
-        // Treat intake as active for 2 hours since last message
-        if (ageMs < 2 * 60 * 60 * 1000) hasActiveIntake = true;
+      const trimmedEarly = body.trim();
+      const looksLikeAdminReply =
+        /^\s*(?:y|yes|ok|okay|sure|confirm|yep|yeah)[\s,:.!#-]+([0-9a-f]{6,8})\s*[*.!]?\s*$/i.test(trimmedEarly) ||
+        /^\s*#?\s*([0-9a-f]{6,8})[\s,:.!-]+(?:y|yes|ok|okay|sure|confirm|yep|yeah)\s*$/i.test(trimmedEarly) ||
+        /^\s*(broadcast|approve|reject|pending|jobs|help)\b/i.test(trimmedEarly) ||
+        /^\s*#?\s*([0-9a-f]{6,8})\s*$/i.test(trimmedEarly);
+      let pendingAdminStep = false;
+      if (looksLikeAdminReply) {
+        const { data: as } = await supabase
+          .from("admin_states")
+          .select("step, updated_at")
+          .eq("phone", fromN)
+          .maybeSingle();
+        if (as?.step && as.updated_at &&
+            (Date.now() - new Date(as.updated_at).getTime()) < 6 * 60 * 60 * 1000) {
+          pendingAdminStep = true;
+        }
+      }
+      // If it looks like an admin reply, always prefer admin branch (even
+      // without a pending state — fresh "Yes #ref" after a job alert needs to
+      // land here too).
+      if (!looksLikeAdminReply && !pendingAdminStep) {
+        const { data: activeConv } = await supabase
+          .from("conversations")
+          .select("step, current_job_id, last_message_at")
+          .eq("customer_phone", fromN)
+          .maybeSingle();
+        if (activeConv?.current_job_id && activeConv.step && activeConv.step !== "complete") {
+          const ageMs = activeConv.last_message_at
+            ? Date.now() - new Date(activeConv.last_message_at).getTime()
+            : 0;
+          // Treat intake as active for 2 hours since last message
+          if (ageMs < 2 * 60 * 60 * 1000) hasActiveIntake = true;
+        }
       }
     }
 
