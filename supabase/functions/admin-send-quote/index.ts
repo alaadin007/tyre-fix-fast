@@ -61,6 +61,7 @@ Deno.serve(async (req) => {
       .maybeSingle();
     if (!quoteRow) throw new Error("No quote found for this job");
 
+    const shortRef = String(jobRow.id).slice(0, 6).toUpperCase();
     const mergedPrice = normalizeSuspiciousQuotePrice(quoteRow.price_gbp, quoteRow.raw_message ?? "");
     const mergedEta = quoteRow.eta_minutes;
     if (!isCustomerQuoteAmountValid(mergedPrice)) {
@@ -76,7 +77,6 @@ Deno.serve(async (req) => {
       jobRow.issue_type?.trim() ||
       "Tyre service required";
     const vehicleReg = jobRow.vehicle_reg?.toString().trim() || "Not provided";
-    const shortRef = String(jobRow.id).slice(0, 6).toUpperCase();
 
     await supabase.from("quotes").update({ status: "accepted" }).eq("id", quoteRow.id);
     await supabase.from("quotes")
@@ -124,6 +124,7 @@ Deno.serve(async (req) => {
       }).eq("id", job_id);
     } catch (e) {
       console.error("stripe checkout (admin-send-quote) failed", e);
+      throw new Error(`Could not generate the payment link for job #${shortRef}. The quote was not sent to the customer.`);
     }
 
     let techLocationLink = `https://tyrefly.com/job/${job_id}`;
