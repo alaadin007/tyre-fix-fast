@@ -9,7 +9,7 @@ import { feeForPhone } from "../_shared/region-fee.ts";
 import { processCustomerIntake } from "../_shared/intake-state.ts";
 import { isCustomerQuoteAmountValid, normalizeSuspiciousQuotePrice } from "../_shared/quote-price.ts";
 import { resolveQuoteLocationForAllocation } from "../_shared/quote-location.ts";
-import { resolveAdminJobRefAction } from "../_shared/admin-job-ref-routing.ts";
+import { resolveAdminJobRefAction, shouldPrioritizeAdminBranch } from "../_shared/admin-job-ref-routing.ts";
 import { extractCoordsFromWebhook } from "../_shared/webhook-location.ts";
 
 const corsHeaders = {
@@ -1007,28 +1007,23 @@ Deno.serve(async (req) => {
     // an open intake — otherwise admin replies get swallowed by intake prompts.
     let hasActiveIntake = false;
     if (isMaster) {
-      const trimmedEarly = body.trim();
-      const looksLikeAdminReply =
-        /^\s*(?:y|yes|ok|okay|sure|confirm|yep|yeah)[\s,:.!#-]+([0-9a-f]{6,8})\s*[*.!]?\s*$/i.test(trimmedEarly) ||
-        /^\s*#?\s*([0-9a-f]{6,8})[\s,:.!-]+(?:y|yes|ok|okay|sure|confirm|yep|yeah)\s*$/i.test(trimmedEarly) ||
-        /^\s*(broadcast|approve|reject|pending|jobs|help)\b/i.test(trimmedEarly) ||
-        /^\s*#?\s*([0-9a-f]{6,8})\s*$/i.test(trimmedEarly);
-      let pendingAdminStep = false;
-      if (looksLikeAdminReply) {
-        const { data: as } = await supabase
-          .from("admin_states")
-          .select("step, updated_at")
-          .eq("phone", fromN)
-          .maybeSingle();
-        if (as?.step && as.updated_at &&
-            (Date.now() - new Date(as.updated_at).getTime()) < 6 * 60 * 60 * 1000) {
-          pendingAdminStep = true;
-        }
-      }
-      // If it looks like an admin reply, always prefer admin branch (even
-      // without a pending state — fresh "Yes #ref" after a job alert needs to
-      // land here too).
-      if (!looksLikeAdminReply && !pendingAdminStep) {
+      const { data: as } = await supabase
+        .from("admin_states")
+        .select("step, updated_at")
+        .eq("phone", fromN)
+        .maybeSingle();
+      const pendingAdminStep = !!(
+        as?.step &&
+        as.updated_at &&
+        (Date.now() - new Date(as.updated_at).getTime()) < 6 * 60 * 60 * 1000
+      );
+      const prioritizeAdminBranch = shouldPrioritizeAdminBranch({
+        body,
+        hasPendingAdminStep: pendingAdminStep,
+      });
+      // If an admin workflow is already in progress, or the message clearly
+      // looks like an admin command/reply, always prefer the admin branch.
+      if (!prioritizeAdminBranch) {
         const { data: activeConv } = await supabase
           .from("conversations")
           .select("step, current_job_id, last_message_at")
