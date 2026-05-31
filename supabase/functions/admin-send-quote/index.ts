@@ -152,18 +152,19 @@ Deno.serve(async (req) => {
     }
 
     const customerBody =
+      `Job Reference: #${shortRef}\n\n` +
       `Hello${jobRow.customer_name ? ` ${jobRow.customer_name}` : ""},\n\n` +
       `Your vehicle issue has been inspected by our technician.\n\n` +
       `🚗 Vehicle: ${vehicleReg}\n\n` +
-      `🔧 Issue Found: ${issueLine}\n\n` +
-      `💵 Repair Cost: £${mergedPrice}${tyreNote}\n\n` +
-      `⏱ Estimated Arrival Time (ETA): ${mergedEta} minutes\n\n` +
-      `📍 Live Technician Location: ${techLocationLink}\n\n` +
+      `⚠️ Issue Found: ${issueLine}\n\n` +
+      `💰 Repair Cost: £${mergedPrice}${tyreNote}\n\n` +
+      `⏱️ Estimated Arrival Time (ETA): ${mergedEta} minutes\n\n` +
       (payUrl
         ? `To proceed with the service, please complete the payment using the secure Stripe link below:\n\n💳 Payment Link: ${payUrl}\n\n` +
           `Once the payment is confirmed, the technician will proceed with the repair service at your location.\n\n`
         : `We'll send your secure payment link shortly.\n\n`) +
       `Thank you.\n— Tyre Fly`;
+
 
     await sendReply(jobRow.customer_phone, customerBody, "whatsapp");
 
