@@ -24,26 +24,24 @@ export default function ShortLinkRedirect() {
         setError("This link has expired.");
         return;
       }
+      // Immediate redirect — no intermediate copy shown.
       window.location.replace(data.target_url);
     })();
     return () => { cancelled = true; };
   }, [code]);
 
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-background text-foreground">
-      <div className="text-center space-y-2">
-        {error ? (
-          <>
-            <h1 className="text-xl font-semibold">Link unavailable</h1>
-            <p className="text-muted-foreground">{error}</p>
-          </>
-        ) : (
-          <>
-            <h1 className="text-xl font-semibold">Opening secure payment…</h1>
-            <p className="text-muted-foreground">Please wait a moment.</p>
-          </>
-        )}
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background text-foreground">
+        <div className="text-center space-y-2">
+          <h1 className="text-xl font-semibold">Link unavailable</h1>
+          <p className="text-muted-foreground">{error}</p>
+        </div>
       </div>
-    </div>
-  );
+    );
+  }
+
+  // Render a blank page while the browser redirects — avoids any
+  // misleading intermediate copy (e.g. "Secure Payment") for map / photo links.
+  return <div className="min-h-screen bg-background" aria-hidden="true" />;
 }
