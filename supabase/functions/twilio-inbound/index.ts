@@ -488,6 +488,63 @@ async function sendReply(to: string, body: string, channel: "sms" | "whatsapp") 
   });
 }
 
+// ───────────── Open-job clarification helpers (customer side) ─────────────
+// When a customer with one or more open jobs sends a free-form message that
+// isn't a quote acceptance, review rating, or photo enrichment, we (a) list
+// their open jobs and ask whether they want a new job or are asking about an
+// existing one, and (b) on the next message either start a fresh intake (YES)
+// or answer their question with the job context via Lovable AI.
+
+function formatOpenJobsPrompt(openJobs: any[]): string {
+  const lines = openJobs.slice(0, 5).map((j: any) => {
+    const ref = String(j.id).slice(0, 6).toUpperCase();
+    const status = String(j.status || "").replace(/_/g, " ");
+    const issue = j.issue_type ? ` — ${j.issue_type}` : "";
+    return `• #${ref} (${status})${issue}`;
+  }).join("\n");
+  return [
+    "Hi 👋 You currently have the following pending job(s) open:",
+    "",
+    lines,
+    "",
+    "Reply *YES* to open a new job, or just ask any question about an existing one and we'll help.",
+    "— Tyre Fly",
+  ].join("\n");
+}
+
+async function answerCustomerJobQuestion(openJobs: any[], question: string): Promise<string> {
+  const apiKey = Deno.env.get("LOVABLE_API_KEY");
+  const summary = openJobs.slice(0, 5).map((j: any) => {
+    const ref = String(j.id).slice(0, 6).toUpperCase();
+    return `- Job #${ref}: status=${j.status}, issue=${j.issue_type ?? "n/a"}, postcode=${j.postcode ?? "n/a"}, reg=${j.vehicle_reg ?? "n/a"}${j.damage_summary ? `, damage: ${j.damage_summary}` : ""}`;
+  }).join("\n");
+  const fallback = `Here are your current open jobs:\n${summary}\n\nOur team will follow up shortly. Reply YES if you'd like to open a new job.\n— Tyre Fly`;
+  if (!apiKey) return fallback;
+  try {
+    const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "google/gemini-3-flash-preview",
+        messages: [
+          {
+            role: "system",
+            content:
+              "You are Tyre Fly's WhatsApp customer support assistant. The customer already has one or more open jobs (provided in context). Answer their question concisely (max 4 short lines) using ONLY the job context. If the answer isn't in the context or the question is unrelated, politely say a team member will follow up and remind them to reply YES to open a new job. Always end with '— Tyre Fly'.",
+          },
+          { role: "user", content: `Customer's open jobs:\n${summary}\n\nCustomer message:\n${question}` },
+        ],
+      }),
+    });
+    if (!r.ok) return fallback;
+    const j = await r.json();
+    const text = j?.choices?.[0]?.message?.content?.trim();
+    return text || fallback;
+  } catch (_e) {
+    return fallback;
+  }
+}
+
 // Send the technician's quote to the customer (after admin approval).
 // Marks the chosen quote as accepted, others as lost, creates a Stripe
 // payment link, and WhatsApps the customer-facing message.
