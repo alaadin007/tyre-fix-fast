@@ -1,5 +1,6 @@
 import { assertEquals } from "jsr:@std/assert";
-import { resolveAdminJobRefAction } from "../_shared/admin-job-ref-routing.ts";
+import { assertEquals } from "jsr:@std/assert";
+import { resolveAdminJobRefAction, shouldPrioritizeAdminBranch } from "../_shared/admin-job-ref-routing.ts";
 
 Deno.test("yes plus ref continues pending broadcast ref request instead of reopening technician list", () => {
   assertEquals(
@@ -34,5 +35,25 @@ Deno.test("bare ref while waiting for list lookup keeps technician preview flow"
       refOnly: "D8019D",
     }),
     { action: "list", ref: "d8019d" },
+  );
+});
+
+Deno.test("bare yes is treated as admin flow when an admin step is already pending", () => {
+  assertEquals(
+    shouldPrioritizeAdminBranch({
+      body: "yes",
+      hasPendingAdminStep: true,
+    }),
+    true,
+  );
+});
+
+Deno.test("bare yes without pending admin step is not treated as a job-ref reply by itself", () => {
+  assertEquals(
+    shouldPrioritizeAdminBranch({
+      body: "yes",
+      hasPendingAdminStep: false,
+    }),
+    false,
   );
 });
