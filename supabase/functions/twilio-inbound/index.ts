@@ -1235,6 +1235,16 @@ Deno.serve(async (req) => {
 
 
 
+      if (refFromMsg && adminState?.step === "await_ref_for_send_quote") {
+        await runSendQuoteForRef(refFromMsg);
+        return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+      }
+
+      if (refFromMsg && adminState?.step === "await_ref_for_share_details") {
+        await runShareContactsForRef(refFromMsg);
+        return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+      }
+
       // (A2) "yes <ref>" or bare "<ref>" while list is already shown for THAT
       // ref → broadcast (admin is confirming the broadcast step).
       if (refFromMsg && adminState?.step === "await_broadcast_confirm" && sameJobAsState(refFromMsg)) {
