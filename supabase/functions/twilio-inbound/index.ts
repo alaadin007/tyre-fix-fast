@@ -69,11 +69,27 @@ async function extractCoords(text: string): Promise<{ lat: number; lng: number }
   const url = text.match(GMAPS_URL_RE);
   if (url) {
     try {
-      const r = await fetch(url[0], { redirect: "follow" });
-      const finalUrl = r.url || "";
-      const html = await r.text().catch(() => "");
-      for (const src of [finalUrl, html]) {
-        const a = src.match(GMAPS_AT_RE) || src.match(GMAPS_3D4D_RE) || src.match(GMAPS_Q_RE);
+      // First, try a no-follow request so we can read the Location header from
+      // maps.app.goo.gl / goo.gl shortlinks directly — Google's redirect target
+      // usually contains the coords (e.g. /maps/search/51.5,-0.1?...).
+      const candidates: string[] = [];
+      try {
+        const head = await fetch(url[0], { redirect: "manual" });
+        const loc = head.headers.get("location");
+        if (loc) candidates.push(loc);
+      } catch (_) { /* ignore */ }
+      // Fallback: follow redirects and inspect the final URL + HTML body.
+      try {
+        const r = await fetch(url[0], { redirect: "follow" });
+        if (r.url) candidates.push(r.url);
+        const html = await r.text().catch(() => "");
+        if (html) candidates.push(html);
+      } catch (_) { /* ignore */ }
+      for (const src of candidates) {
+        const a = src.match(GMAPS_AT_RE)
+          || src.match(GMAPS_3D4D_RE)
+          || src.match(GMAPS_Q_RE)
+          || src.match(GMAPS_SEARCH_RE);
         if (a) {
           const lat = Number(a[1]), lng = Number(a[2]);
           if (Number.isFinite(lat) && Number.isFinite(lng)) return { lat, lng };
