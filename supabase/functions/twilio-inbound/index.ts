@@ -31,7 +31,10 @@ const DMS_RE = /(\d{1,3})[°\s]+(\d{1,2})[\s'′]+([\d.]+)["″]?\s*([NSEW])[\s,
 // Google Maps share URLs (after redirect, contains @lat,lng or !3d/!4d or q=)
 const GMAPS_AT_RE = /@(-?\d{1,3}\.\d+),(-?\d{1,3}\.\d+)/;
 const GMAPS_3D4D_RE = /!3d(-?\d{1,3}\.\d+)!4d(-?\d{1,3}\.\d+)/;
-const GMAPS_Q_RE = /[?&]q=(-?\d{1,3}\.\d+),(-?\d{1,3}\.\d+)/;
+const GMAPS_Q_RE = /[?&]q=(-?\d{1,3}\.\d+),\+?(-?\d{1,3}\.\d+)/;
+// Matches the Location header / final URL form returned by maps.app.goo.gl
+// shortlinks, e.g. /maps/search/51.517598,+-0.146089 or /maps/place/.../51.5,-0.1
+const GMAPS_SEARCH_RE = /\/maps\/(?:search|place|dir)\/[^/]*?(-?\d{1,3}\.\d+),\+?(-?\d{1,3}\.\d+)/;
 const GMAPS_URL_RE = /https?:\/\/(?:maps\.app\.goo\.gl|goo\.gl\/maps|maps\.google\.[a-z.]+|www\.google\.[a-z.]+\/maps)\/\S+/i;
 
 function dmsToDecimal(deg: string, min: string, sec: string, hem: string): number {
