@@ -186,6 +186,15 @@ async function reverseGeocodePostcode(lat: number, lng: number): Promise<string 
 // issue description). Regex still runs first and wins for high-confidence
 // matches; the AI only fills gaps the regex missed.
 
+type ChangeField =
+  | "customer_name"
+  | "vehicle_reg"
+  | "tyre_size"
+  | "affected_wheels"
+  | "issue_type"
+  | "issue_description"
+  | "postcode";
+
 type AiExtract = {
   customer_name?: string | null;
   vehicle_reg?: string | null;
@@ -193,6 +202,10 @@ type AiExtract = {
   affected_wheels?: string[] | null;
   issue_type?: string | null;
   issue_description?: string | null;
+  change_request?: {
+    field?: ChangeField | null;
+    value?: string | null;
+  } | null;
 };
 
 async function classifyWithAI(body: string): Promise<AiExtract> {
@@ -223,7 +236,13 @@ async function classifyWithAI(body: string): Promise<AiExtract> {
               "Customers write naturally e.g. 'vehicle reg # GB2432', 'Registration is GB1122', " +
               "'my name is Ajmal Kazmi', 'both fronts flat', '205/55 R16'. " +
               "Only return fields you are confident about. Omit unknown fields. " +
-              "Never invent a name from greetings, postcodes, or registration plates. " +
+              "Never invent a name from greetings, postcodes, or registration plates.\n\n" +
+              "ALSO detect CHANGE/EDIT/UPDATE requests for previously submitted info. Examples: " +
+              "'change vehicle registration to GB55654', 'update my name to John Smith', " +
+              "'I want to change the tyre size', 'edit reg', 'wrong plate', 'actually it's GB99 XYZ'. " +
+              "Populate change_request with target field. If they included the new value, also set value. " +
+              "If they expressed intent only (no new value), set field but leave value null. " +
+              "field options: customer_name, vehicle_reg, tyre_size, affected_wheels, issue_type, issue_description, postcode. " +
               "Respond ONLY with the tool call.",
           },
           { role: "user", content: text },
@@ -248,6 +267,17 @@ async function classifyWithAI(body: string): Promise<AiExtract> {
                   enum: ["puncture", "flat tyre", "blowout", "low pressure", "not sure"],
                 },
                 issue_description: { type: "string" },
+                change_request: {
+                  type: "object",
+                  properties: {
+                    field: {
+                      type: "string",
+                      enum: ["customer_name", "vehicle_reg", "tyre_size", "affected_wheels", "issue_type", "issue_description", "postcode"],
+                    },
+                    value: { type: "string" },
+                  },
+                  additionalProperties: false,
+                },
               },
               additionalProperties: false,
             },
@@ -269,6 +299,51 @@ async function classifyWithAI(body: string): Promise<AiExtract> {
   } catch (e) {
     console.error("ai classify error", e);
     return {};
+  }
+}
+
+const FIELD_LABELS: Record<ChangeField, string> = {
+  customer_name: "full name",
+  vehicle_reg: "vehicle registration number",
+  tyre_size: "tyre size",
+  affected_wheels: "affected tyre(s)",
+  issue_type: "nature of the issue",
+  issue_description: "issue description",
+  postcode: "location postcode",
+};
+
+function coerceFieldValue(field: ChangeField, raw: string): any | null {
+  const s = (raw || "").trim();
+  if (!s) return null;
+  switch (field) {
+    case "customer_name": {
+      const cleaned = s.replace(/\s+/g, " ").trim();
+      return isValidPersonName(cleaned) ? cleaned : null;
+    }
+    case "vehicle_reg": {
+      const reg = extractReg(s) ?? s.toUpperCase().replace(/\s+/g, " ").trim();
+      return /^[A-Z0-9 ]{4,10}$/.test(reg) ? reg : null;
+    }
+    case "tyre_size": {
+      const ts = extractTyreSize(s);
+      return ts ?? null;
+    }
+    case "affected_wheels": {
+      const w = extractWheels(s);
+      return w.length > 0 ? w : null;
+    }
+    case "issue_type": {
+      const it = guessIssueType(s);
+      if (it) return it;
+      const allowed = new Set(["puncture", "flat tyre", "blowout", "low pressure", "not sure"]);
+      return allowed.has(s.toLowerCase()) ? s.toLowerCase() : null;
+    }
+    case "issue_description":
+      return s.slice(0, 2000);
+    case "postcode": {
+      const pc = extractPostcode(s);
+      return pc ?? null;
+    }
   }
 }
 
