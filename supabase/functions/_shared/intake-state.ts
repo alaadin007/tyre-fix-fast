@@ -337,22 +337,41 @@ function isComplete(missing: Missing): boolean {
       && !missing.issue && !missing.tyreSize && !missing.photos;
 }
 
-function checklistMessage(job: any, missing: Missing): string {
-  const mark = (ok: boolean) => (ok ? "✅" : "❌");
+function progressBar(received: number, total: number): string {
+  const pct = total === 0 ? 0 : Math.round((received / total) * 100);
+  const filled = Math.max(0, Math.min(10, Math.round((received / total) * 10)));
+  const empty = 10 - filled;
+  return `${"█".repeat(filled)}${"░".repeat(empty)} ${pct}%`;
+}
+
+function checklistMessage(job: any, missing: Missing, opts: { header?: string; footer?: string } = {}): string {
+  const mark = (ok: boolean) => (ok ? "✅" : "⬜");
   const wheels = Array.isArray(job?.affected_wheels) && job.affected_wheels.length > 0
     ? job.affected_wheels.join(", ") : "—";
+  const items: Array<[boolean, string, string, string]> = [
+    [!missing.name,     "👤", "Full name",         !missing.name ? job.customer_name : "_missing_"],
+    [!missing.pin,      "📍", "Live pin location", !missing.pin ? `shared${job.postcode ? ` (${job.postcode})` : ""}` : "_missing — tap the 📎 pin icon in WhatsApp_"],
+    [!missing.reg,      "🚘", "Vehicle reg",       !missing.reg ? job.vehicle_reg : "_missing_"],
+    [!missing.wheels,   "⚙️", "Affected tyre(s)",  !missing.wheels ? wheels : "_missing — e.g. front-left / all four_"],
+    [!missing.issue,    "⚠️", "Nature of issue",   !missing.issue ? (job.issue_type || "noted") : "_missing — e.g. puncture / flat / blowout_"],
+    [!missing.tyreSize, "📏", "Tyre size",         !missing.tyreSize ? job.tyre_size : "_missing — e.g. 205/55 R16_"],
+    [!missing.photos,   "📸", "Tyre photo(s)",     !missing.photos ? `${(job.photo_urls ?? []).length} received` : "_missing — send 1–2 photos_"],
+  ];
+  const received = items.filter(([ok]) => ok).length;
+  const total = items.length;
+  const header = opts.header ?? "You've submitted the following information so far:";
+  const footer = opts.footer
+    ?? (received === total
+        ? "All set ✅ — please type *DONE* to submit your job."
+        : "Please send the missing item(s) above. You can write naturally — e.g. \"reg is GB1122\" or \"tyre size 205/55 R16\".");
   const lines = [
-    "Thanks! Here's what I've got so far:",
+    header,
     "",
-    `${mark(!missing.name)} 👤 Full name: ${!missing.name ? job.customer_name : "_missing_"}`,
-    `${mark(!missing.pin)} 📍 Live pin location: ${!missing.pin ? "shared" : "_missing — please tap the pin icon in WhatsApp_"}`,
-    `${mark(!missing.reg)} 🚘 Vehicle reg: ${!missing.reg ? job.vehicle_reg : "_missing_"}`,
-    `${mark(!missing.wheels)} ⚙️ Affected tyre(s): ${!missing.wheels ? wheels : "_missing_"}`,
-    `${mark(!missing.issue)} ⚠️ Nature of issue: ${!missing.issue ? (job.issue_type || "noted") : "_missing_"}`,
-    `${mark(!missing.tyreSize)} 📏 Tyre size: ${!missing.tyreSize ? job.tyre_size : "_missing — e.g. 205/55 R16_"}`,
-    `${mark(!missing.photos)} 📸 Tyre photo: ${!missing.photos ? `${(job.photo_urls ?? []).length} received` : "_missing — please send 1–2 photos_"}`,
+    `Progress: ${progressBar(received, total)}  (${received}/${total})`,
     "",
-    "Please send the missing item(s) above, then type *DONE* again.",
+    ...items.map(([ok, emoji, label, val]) => `${mark(ok)} ${emoji} ${label}: ${val}`),
+    "",
+    footer,
   ];
   return lines.join("\n");
 }
