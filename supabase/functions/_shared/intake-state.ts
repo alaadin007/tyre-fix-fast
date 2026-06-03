@@ -388,6 +388,47 @@ export type IntakeOutcome = {
   justCompleted: boolean;
 };
 
+// Detect a generic greeting / "I need help" message with no concrete tyre
+// details. Used to gate the intake form behind an explicit "new job" intent.
+const GREETING_ONLY_RE = /^\s*(?:hi+|hey+|hello+|hiya|yo|hola|salaam|salam|good\s+(?:morning|afternoon|evening|day))[\s!.,@:-]*(?:tyre\s*fly|tyrefly|team)?[\s!.,?-]*$/i;
+const GENERIC_HELP_RE = /^\s*(?:hi+|hey+|hello+|hiya|yo|hola|salaam|salam|good\s+(?:morning|afternoon|evening|day))?[\s!.,@:-]*(?:tyre\s*fly|tyrefly|team)?[\s!.,@:-]*(?:i\s*(?:am|'m|m)?\s*)?(?:need(?:ing)?|want(?:ing)?|require|after|looking\s+for)\s*(?:some\s+|a\s+little\s+|any\s+)?(?:help|assistance|support|service)\b[\s!.,?]*$/i;
+const NEW_JOB_CONFIRM_RE = /\b(new\s*job|new\s*tyre|start(?:\s+a)?\s+(?:new\s+)?(?:tyre\s+)?job|book(?:ing)?|create\s+(?:a\s+)?(?:new\s+)?job|yes(?:\s+please)?|yeah|yep|^y$|sure|ok(?:ay)?|please)\b/i;
+
+function looksLikeGenericHelp(body: string, mediaUrls: string[]): boolean {
+  if (mediaUrls.length > 0) return false;
+  const t = (body || "").trim();
+  if (!t) return false;
+  if (GREETING_ONLY_RE.test(t)) return true;
+  if (GENERIC_HELP_RE.test(t)) return true;
+  // Short "I need tyre help" type phrases with no concrete details.
+  if (t.length < 60
+      && /\b(?:need|want|after|require|looking\s+for)\b.*\b(?:tyre|tire|wheel)\b.*\b(?:help|service|support|assistance)\b/i.test(t)
+      && !hasIssueDetails(t)
+      && !extractCoords(t)
+      && !extractPostcode(t)
+      && !extractReg(t)
+      && !extractTyreSize(t)
+      && extractWheels(t).length === 0) {
+    return true;
+  }
+  return false;
+}
+
+function intentPromptMessage(customer: any | null, isReturning: boolean): string {
+  const firstName = isReturning && isValidPersonName(customer?.full_name)
+    ? customer!.full_name.trim().split(/\s+/)[0]
+    : null;
+  const greeting = firstName ? `Hi ${firstName} 👋` : (isReturning ? "Hi 👋" : "Hi there 👋");
+  return [
+    `${greeting} — thanks for messaging TyreFly.`,
+    "",
+    "Would you like to *create a new tyre job*, or do you need help with something else?",
+    "",
+    "• Reply *NEW JOB* to start a new tyre booking.",
+    "• Otherwise, please tell us what you need help with and we'll take care of it.",
+  ].join("\n");
+}
+
 export async function processCustomerIntake(
   supabase: Supa,
   input: { from: string; body: string; mediaUrls: string[]; channel: "sms" | "whatsapp" },
@@ -401,6 +442,55 @@ export async function processCustomerIntake(
 
   let conversation = await loadActiveConversation(supabase, from);
   let job: any = null;
+
+  // ─── Intent gate ────────────────────────────────────────────────────────
+  // If the customer's message is a generic greeting or "I need help" with no
+  // concrete tyre details, first ask whether they want to start a new tyre
+  // job, instead of dumping them into the intake form or replying with the
+  // stale "keep sending remaining details" nudge.
+  const ctxExisting: Record<string, any> = (conversation?.context ?? {}) as any;
+  const awaitingIntent = ctxExisting.awaiting_intent_confirm === true;
+  const intentConfirmed = ctxExisting.intent_confirmed === true;
+
+  // (a) We previously asked the clarification — interpret their reply.
+  if (conversation && awaitingIntent) {
+    if (NEW_JOB_CONFIRM_RE.test(body || "")) {
+      await supabase.from("conversations")
+        .update({
+          step: "complete",
+          context: { ...ctxExisting, awaiting_intent_confirm: false, intent_confirmed: true },
+        })
+        .eq("id", conversation.id);
+      conversation = null; // fall through to "new conversation" → welcome
+    } else {
+      await supabase.from("conversations")
+        .update({ last_message_at: new Date().toISOString() })
+        .eq("id", conversation.id);
+      return {
+        reply: "Thanks — could you share a bit more detail about what you need help with? If you'd like to book a new tyre job, just reply *NEW JOB* and we'll get started.",
+        job: null,
+        conversation,
+        justCompleted: false,
+      };
+    }
+  }
+
+  // (b) Fresh contact with a generic greeting/help message → ask intent first.
+  if (!conversation && looksLikeGenericHelp(body, mediaUrls)) {
+    const { data: newConv } = await supabase.from("conversations").insert({
+      customer_phone: from,
+      current_job_id: null,
+      step: COLLECTING_STEP,
+      last_message_at: new Date().toISOString(),
+      context: { awaiting_intent_confirm: true },
+    }).select().single();
+    return {
+      reply: intentPromptMessage(customer, isReturning),
+      job: null,
+      conversation: newConv,
+      justCompleted: false,
+    };
+  }
 
   // ─── New conversation: create job, send the welcome + all-questions message ───
   if (!conversation) {
@@ -429,7 +519,7 @@ export async function processCustomerIntake(
     if (jobErr) throw jobErr;
     job = newJob;
 
-    const context: Record<string, any> = {};
+    const context: Record<string, any> = { intent_confirmed: true };
     if (coords) context.location_pin_confirmed = true;
 
     const { data: newConv, error: convErr } = await supabase.from("conversations").insert({
@@ -458,6 +548,25 @@ export async function processCustomerIntake(
   if (!job) {
     await supabase.from("conversations").update({ step: "complete" }).eq("id", conversation.id);
     return processCustomerIntake(supabase, input);
+  }
+
+  // (c) Mid-intake generic greeting/help with no real progress yet → re-ask
+  //     the intent question instead of nudging "keep sending remaining details".
+  if (!intentConfirmed && looksLikeGenericHelp(body, mediaUrls)) {
+    const m = evaluateJob(job, conversation);
+    const noProgress = m.name && m.pin && m.reg && m.wheels && m.issue && m.tyreSize && m.photos;
+    if (noProgress) {
+      await supabase.from("conversations").update({
+        context: { ...ctxExisting, awaiting_intent_confirm: true },
+        last_message_at: new Date().toISOString(),
+      }).eq("id", conversation.id);
+      return {
+        reply: intentPromptMessage(customer, isReturning),
+        job,
+        conversation,
+        justCompleted: false,
+      };
+    }
   }
 
   const updates: Record<string, any> = { updated_at: new Date().toISOString() };
