@@ -443,7 +443,10 @@ export async function processCustomerIntake(
     conversation = newConv;
 
     return {
-      reply: welcomeMessage(customer, isReturning),
+      reply: welcomeMessage(customer, isReturning, {
+        name: isValidPersonName(seededName) ? seededName : null,
+        reg: seededReg,
+      }),
       job,
       conversation,
       justCompleted: false,
