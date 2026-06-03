@@ -186,6 +186,15 @@ async function reverseGeocodePostcode(lat: number, lng: number): Promise<string 
 // issue description). Regex still runs first and wins for high-confidence
 // matches; the AI only fills gaps the regex missed.
 
+type ChangeField =
+  | "customer_name"
+  | "vehicle_reg"
+  | "tyre_size"
+  | "affected_wheels"
+  | "issue_type"
+  | "issue_description"
+  | "postcode";
+
 type AiExtract = {
   customer_name?: string | null;
   vehicle_reg?: string | null;
@@ -193,6 +202,10 @@ type AiExtract = {
   affected_wheels?: string[] | null;
   issue_type?: string | null;
   issue_description?: string | null;
+  change_request?: {
+    field?: ChangeField | null;
+    value?: string | null;
+  } | null;
 };
 
 async function classifyWithAI(body: string): Promise<AiExtract> {
@@ -223,7 +236,13 @@ async function classifyWithAI(body: string): Promise<AiExtract> {
               "Customers write naturally e.g. 'vehicle reg # GB2432', 'Registration is GB1122', " +
               "'my name is Ajmal Kazmi', 'both fronts flat', '205/55 R16'. " +
               "Only return fields you are confident about. Omit unknown fields. " +
-              "Never invent a name from greetings, postcodes, or registration plates. " +
+              "Never invent a name from greetings, postcodes, or registration plates.\n\n" +
+              "ALSO detect CHANGE/EDIT/UPDATE requests for previously submitted info. Examples: " +
+              "'change vehicle registration to GB55654', 'update my name to John Smith', " +
+              "'I want to change the tyre size', 'edit reg', 'wrong plate', 'actually it's GB99 XYZ'. " +
+              "Populate change_request with target field. If they included the new value, also set value. " +
+              "If they expressed intent only (no new value), set field but leave value null. " +
+              "field options: customer_name, vehicle_reg, tyre_size, affected_wheels, issue_type, issue_description, postcode. " +
               "Respond ONLY with the tool call.",
           },
           { role: "user", content: text },
@@ -248,6 +267,17 @@ async function classifyWithAI(body: string): Promise<AiExtract> {
                   enum: ["puncture", "flat tyre", "blowout", "low pressure", "not sure"],
                 },
                 issue_description: { type: "string" },
+                change_request: {
+                  type: "object",
+                  properties: {
+                    field: {
+                      type: "string",
+                      enum: ["customer_name", "vehicle_reg", "tyre_size", "affected_wheels", "issue_type", "issue_description", "postcode"],
+                    },
+                    value: { type: "string" },
+                  },
+                  additionalProperties: false,
+                },
               },
               additionalProperties: false,
             },
@@ -269,6 +299,51 @@ async function classifyWithAI(body: string): Promise<AiExtract> {
   } catch (e) {
     console.error("ai classify error", e);
     return {};
+  }
+}
+
+const FIELD_LABELS: Record<ChangeField, string> = {
+  customer_name: "full name",
+  vehicle_reg: "vehicle registration number",
+  tyre_size: "tyre size",
+  affected_wheels: "affected tyre(s)",
+  issue_type: "nature of the issue",
+  issue_description: "issue description",
+  postcode: "location postcode",
+};
+
+function coerceFieldValue(field: ChangeField, raw: string): any | null {
+  const s = (raw || "").trim();
+  if (!s) return null;
+  switch (field) {
+    case "customer_name": {
+      const cleaned = s.replace(/\s+/g, " ").trim();
+      return isValidPersonName(cleaned) ? cleaned : null;
+    }
+    case "vehicle_reg": {
+      const reg = extractReg(s) ?? s.toUpperCase().replace(/\s+/g, " ").trim();
+      return /^[A-Z0-9 ]{4,10}$/.test(reg) ? reg : null;
+    }
+    case "tyre_size": {
+      const ts = extractTyreSize(s);
+      return ts ?? null;
+    }
+    case "affected_wheels": {
+      const w = extractWheels(s);
+      return w.length > 0 ? w : null;
+    }
+    case "issue_type": {
+      const it = guessIssueType(s);
+      if (it) return it;
+      const allowed = new Set(["puncture", "flat tyre", "blowout", "low pressure", "not sure"]);
+      return allowed.has(s.toLowerCase()) ? s.toLowerCase() : null;
+    }
+    case "issue_description":
+      return s.slice(0, 2000);
+    case "postcode": {
+      const pc = extractPostcode(s);
+      return pc ?? null;
+    }
   }
 }
 
@@ -389,18 +464,21 @@ function summaryMessage(job: any): string {
   const wheels = Array.isArray(job?.affected_wheels) && job.affected_wheels.length > 0
     ? job.affected_wheels.join(", ") : "—";
   const photos = (job?.photo_urls ?? []).length;
+  const greenBar = "🟩".repeat(10);
   return [
     "Here's everything we have for your job:",
     "",
-    `👤 Full name: ${job.customer_name}`,
-    `📍 Live pin location: shared${job.postcode ? ` (${job.postcode})` : ""}`,
-    `🚘 Vehicle reg: ${job.vehicle_reg}`,
-    `⚙️ Affected tyre(s): ${wheels}`,
-    `⚠️ Nature of issue: ${job.issue_type || "noted"}`,
-    `📏 Tyre size: ${job.tyre_size}`,
-    `📸 Tyre photo(s): ${photos} received`,
+    `✅ Full name: ${job.customer_name}`,
+    `✅ Live pin location: shared${job.postcode ? ` (${job.postcode})` : ""}`,
+    `✅ Vehicle reg: ${job.vehicle_reg}`,
+    `✅ Affected tyre(s): ${wheels}`,
+    `✅ Nature of issue: ${job.issue_type || "noted"}`,
+    `✅ Tyre size: ${job.tyre_size}`,
+    `✅ Tyre photo(s): ${photos} received`,
     "",
-    "You are submitting the following information. If anything needs to be changed, please let us know. Otherwise, please type *DONE* and we can proceed.",
+    "You are submitting the following information. If anything needs to be changed, please let us know (e.g. \"change reg to GB1122\"). Otherwise, please type *DONE* and we can proceed.",
+    "",
+    `Progress: ${greenBar} *100%* (7/7) ✅`,
   ].join("\n");
 }
 
@@ -687,6 +765,54 @@ export async function processCustomerIntake(
   const convContext: Record<string, any> = { ...(conversation.context ?? {}) };
   let contextChanged = false;
 
+  // ─── Awaiting a field-change value? Treat this message as the new value. ───
+  const awaitingField: ChangeField | undefined = convContext.awaiting_field_change;
+  if (awaitingField && !DONE_RE.test(body || "")) {
+    const coerced = coerceFieldValue(awaitingField, body || "");
+    if (coerced !== null) {
+      updates[awaitingField] = coerced;
+      delete convContext.awaiting_field_change;
+      contextChanged = true;
+      await supabase.from("jobs").update(updates).eq("id", job.id);
+      const { data: refreshed } = await supabase.from("jobs").select("*").eq("id", job.id).maybeSingle();
+      if (refreshed) job = refreshed;
+      await supabase.from("conversations").update({
+        context: convContext,
+        last_message_at: new Date().toISOString(),
+      }).eq("id", conversation.id);
+      conversation = { ...conversation, context: convContext };
+      const missing = evaluateJob(job, conversation);
+      const headerLabel = FIELD_LABELS[awaitingField];
+      if (isComplete(missing)) {
+        return {
+          reply: `Updated your ${headerLabel} ✅\n\n${summaryMessage(job)}`,
+          job,
+          conversation,
+          justCompleted: false,
+        };
+      }
+      return {
+        reply: checklistMessage(job, missing, {
+          header: `Updated your ${headerLabel} ✅\n\nHere's what we have so far:`,
+        }),
+        job,
+        conversation,
+        justCompleted: false,
+      };
+    }
+    // Could not parse — re-ask for a clearer value.
+    await supabase.from("conversations").update({
+      last_message_at: new Date().toISOString(),
+    }).eq("id", conversation.id);
+    return {
+      reply: `Sorry, I couldn't read that as a valid ${FIELD_LABELS[awaitingField]}. Please send it again.`,
+      job,
+      conversation,
+      justCompleted: false,
+    };
+  }
+
+
   // Location pin
   const coords = extractCoords(body);
   if (coords) {
@@ -775,7 +901,59 @@ export async function processCustomerIntake(
     if (ai.issue_description && updates.issue_description == null && !hasIssueDetails(job.issue_description ?? "")) {
       updates.issue_description = [job.issue_description, ai.issue_description].filter(Boolean).join("\n").slice(0, 2000);
     }
+
+    // ─── Change-request handling (overrides existing values) ───
+    const cr = ai.change_request;
+    if (cr && cr.field) {
+      const field = cr.field as ChangeField;
+      if (cr.value && String(cr.value).trim()) {
+        const coerced = coerceFieldValue(field, String(cr.value));
+        if (coerced !== null) {
+          updates[field] = coerced;
+          if (convContext.awaiting_field_change === field) {
+            delete convContext.awaiting_field_change;
+            contextChanged = true;
+          }
+          await supabase.from("jobs").update(updates).eq("id", job.id);
+          const { data: refreshed } = await supabase.from("jobs").select("*").eq("id", job.id).maybeSingle();
+          if (refreshed) job = refreshed;
+          if (contextChanged) {
+            await supabase.from("conversations").update({ context: convContext }).eq("id", conversation.id);
+            conversation = { ...conversation, context: convContext };
+          }
+          await supabase.from("conversations").update({ last_message_at: new Date().toISOString() }).eq("id", conversation.id);
+          const missing = evaluateJob(job, conversation);
+          const headerLabel = FIELD_LABELS[field];
+          if (isComplete(missing)) {
+            return {
+              reply: `Updated your ${headerLabel} ✅\n\n${summaryMessage(job)}`,
+              job, conversation, justCompleted: false,
+            };
+          }
+          return {
+            reply: checklistMessage(job, missing, {
+              header: `Updated your ${headerLabel} ✅\n\nHere's what we have so far:`,
+            }),
+            job, conversation, justCompleted: false,
+          };
+        }
+      } else {
+        // Intent only — ask for the new value.
+        convContext.awaiting_field_change = field;
+        contextChanged = true;
+        await supabase.from("conversations").update({
+          context: convContext,
+          last_message_at: new Date().toISOString(),
+        }).eq("id", conversation.id);
+        conversation = { ...conversation, context: convContext };
+        return {
+          reply: `Okay — what is the new ${FIELD_LABELS[field]}?`,
+          job, conversation, justCompleted: false,
+        };
+      }
+    }
   }
+
 
   if (Object.keys(updates).length > 1) {
     const { data: updated } = await supabase.from("jobs").update(updates).eq("id", job.id).select().single();
