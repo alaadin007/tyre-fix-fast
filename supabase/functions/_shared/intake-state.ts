@@ -241,7 +241,11 @@ async function upsertCustomer(supabase: Supa, phone: string, patch: Record<strin
 }
 
 // Build the welcome / questions message.
-function welcomeMessage(customer: any | null, isReturning: boolean): string {
+function welcomeMessage(
+  customer: any | null,
+  isReturning: boolean,
+  known: { name: string | null; reg: string | null },
+): string {
   let greeting: string;
   if (isReturning && isValidPersonName(customer?.full_name)) {
     const firstName = customer!.full_name.trim().split(/\s+/)[0];
@@ -251,15 +255,26 @@ function welcomeMessage(customer: any | null, isReturning: boolean): string {
   } else {
     greeting = "Welcome to TyreFly 🚗";
   }
-  return [
+
+  const yourDetails: string[] = ["*YOUR DETAILS*"];
+  if (known.name) {
+    yourDetails.push(`👤 Full name: ${known.name} ✅`);
+  } else {
+    yourDetails.push("👤 Full name:");
+  }
+  yourDetails.push("📍 Live location — tap the pin icon in WhatsApp");
+  if (known.reg) {
+    yourDetails.push(`🚘 Vehicle reg number: ${known.reg} ✅`);
+  } else {
+    yourDetails.push("🚘 Vehicle reg number — e.g. YC67 PGX");
+  }
+
+  const lines = [
     greeting,
     "",
     "Sorry to hear you've got a tyre problem — don't worry, we've got you covered! Just send us the details below and we'll have a technician with you as soon as possible.",
     "",
-    "*YOUR DETAILS*",
-    "👤 Full name:",
-    "📍 Live location — tap the pin icon in WhatsApp",
-    "🚘 Vehicle reg number — e.g. YC67 PGX",
+    ...yourDetails,
     "",
     "*TYRE DETAILS*",
     "⚙️ Affected tyre(s)?",
@@ -268,7 +283,30 @@ function welcomeMessage(customer: any | null, isReturning: boolean): string {
     "📏 Tyre size — found on the tyre sidewall, e.g. 205/55 R16",
     "📸 1–2 photos of the tyre",
     "",
-    "Please type *DONE* once you have provided all the information above.",
+  ];
+  if (known.name || known.reg) {
+    lines.push("_We've prefilled the details we already have on file — let us know if anything has changed._", "");
+  }
+  lines.push("Once you've shared everything above, we'll show you a summary to confirm before submitting.");
+  return lines.join("\n");
+}
+
+function summaryMessage(job: any): string {
+  const wheels = Array.isArray(job?.affected_wheels) && job.affected_wheels.length > 0
+    ? job.affected_wheels.join(", ") : "—";
+  const photos = (job?.photo_urls ?? []).length;
+  return [
+    "Here's everything we have for your job:",
+    "",
+    `👤 Full name: ${job.customer_name}`,
+    `📍 Live pin location: shared${job.postcode ? ` (${job.postcode})` : ""}`,
+    `🚘 Vehicle reg: ${job.vehicle_reg}`,
+    `⚙️ Affected tyre(s): ${wheels}`,
+    `⚠️ Nature of issue: ${job.issue_type || "noted"}`,
+    `📏 Tyre size: ${job.tyre_size}`,
+    `📸 Tyre photo(s): ${photos} received`,
+    "",
+    "You are submitting the following information. If anything needs to be changed, please let us know. Otherwise, please type *DONE* and we can proceed.",
   ].join("\n");
 }
 
