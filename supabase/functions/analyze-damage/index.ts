@@ -49,7 +49,7 @@ serve(async (req) => {
     // the assessment to ONLY the tyres the customer reported.
     const { data: existing } = await supabase
       .from("jobs")
-      .select("affected_wheels, vehicle_reg, issue_description")
+      .select("affected_wheels, vehicle_reg, issue_description, tyre_size, tyre_brand, tyre_type, tread_condition, wheel_type, tyre_details")
       .eq("id", job_id)
       .maybeSingle();
     const prevWheels: string[] = (existing?.affected_wheels as string[]) ?? [];
