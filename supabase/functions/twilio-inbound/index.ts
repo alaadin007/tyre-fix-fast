@@ -2429,6 +2429,20 @@ Deno.serve(async (req) => {
         });
         const aj = await ar.json();
         if (aj?.damage_type === "not-a-tyre") {
+          // Remove the rejected photos from the job so they don't inflate the
+          // checklist photo count.
+          try {
+            const { data: jrow } = await supabase
+              .from("jobs")
+              .select("photo_urls")
+              .eq("id", outcome.job.id)
+              .maybeSingle();
+            const bad = new Set(mediaUrls);
+            const kept = ((jrow?.photo_urls as string[]) ?? []).filter((u) => !bad.has(u));
+            await supabase.from("jobs").update({ photo_urls: kept }).eq("id", outcome.job.id);
+          } catch (e) {
+            console.error("failed to strip rejected photos", e);
+          }
           await sendReply(
             from,
             aj.damage_summary || "That doesn't look like a tyre photo 🤔 Could you send a clear photo of the tyre/wheel?",

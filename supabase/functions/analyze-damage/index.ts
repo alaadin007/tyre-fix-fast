@@ -49,7 +49,7 @@ serve(async (req) => {
     // the assessment to ONLY the tyres the customer reported.
     const { data: existing } = await supabase
       .from("jobs")
-      .select("affected_wheels, vehicle_reg, issue_description")
+      .select("affected_wheels, vehicle_reg, issue_description, tyre_size, tyre_brand, tyre_type, tread_condition, wheel_type, tyre_details")
       .eq("id", job_id)
       .maybeSingle();
     const prevWheels: string[] = (existing?.affected_wheels as string[]) ?? [];
@@ -252,28 +252,46 @@ serve(async (req) => {
       affected_wheels?: string[];
     };
 
+    // When the photo isn't a tyre at all, don't overwrite anything on the job —
+    // the caller is responsible for removing the bad photo and prompting the
+    // customer for a real tyre photo.
+    if (parsed.damage_type === "not-a-tyre") {
+      return new Response(JSON.stringify({ success: true, ...parsed }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // Trust the customer's explicit wheel selection. Only fall back to the
     // AI-detected wheels if the customer hasn't told us which tyres are affected.
     const mergedWheels = prevWheels.length > 0
       ? prevWheels
       : (parsed.affected_wheels ?? []);
 
+    // Only write fields the AI actually extracted — never wipe a previously
+    // captured value (e.g. customer-typed tyre_size) with null because the
+    // sidewall wasn't legible in the latest photo.
+    const patch: Record<string, any> = {
+      damage_type: parsed.damage_type,
+      damage_summary: parsed.damage_summary,
+      damage_confidence: parsed.damage_confidence,
+      affected_wheels: mergedWheels,
+      updated_at: new Date().toISOString(),
+    };
+    const setIfNew = (key: string, val: unknown) => {
+      if (val !== null && val !== undefined && val !== "") patch[key] = val;
+    };
+    setIfNew("tyre_size", parsed.tyre_size);
+    setIfNew("tyre_brand", parsed.tyre_brand);
+    setIfNew("tyre_type", parsed.tyre_type);
+    setIfNew("tread_condition", parsed.tread_condition);
+    setIfNew("wheel_type", parsed.wheel_type);
+    setIfNew("tyre_details", parsed.tyre_details);
+    setIfNew("vehicle_reg", parsed.vehicle_reg ?? existing?.vehicle_reg ?? null);
+
     const { error: updateError } = await supabase
       .from("jobs")
-      .update({
-        damage_type: parsed.damage_type,
-        damage_summary: parsed.damage_summary,
-        damage_confidence: parsed.damage_confidence,
-        tyre_size: parsed.tyre_size ?? null,
-        tyre_brand: parsed.tyre_brand ?? null,
-        tyre_type: parsed.tyre_type ?? null,
-        tread_condition: parsed.tread_condition ?? null,
-        wheel_type: parsed.wheel_type ?? null,
-        tyre_details: parsed.tyre_details ?? null,
-        vehicle_reg: parsed.vehicle_reg ?? existing?.vehicle_reg ?? null,
-        affected_wheels: mergedWheels,
-        updated_at: new Date().toISOString(),
-      })
+      .update(patch)
       .eq("id", job_id);
 
     if (updateError) {
