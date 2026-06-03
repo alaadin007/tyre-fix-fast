@@ -178,6 +178,100 @@ async function reverseGeocodePostcode(lat: number, lng: number): Promise<string 
   return null;
 }
 
+// ───────────────────────── AI field classifier ─────────────────────────
+//
+// Customers rarely send fields in order. This calls the Lovable AI gateway
+// to read the message in natural language and return whichever fields are
+// present (full name, vehicle reg, tyre size, affected wheels, issue type,
+// issue description). Regex still runs first and wins for high-confidence
+// matches; the AI only fills gaps the regex missed.
+
+type AiExtract = {
+  customer_name?: string | null;
+  vehicle_reg?: string | null;
+  tyre_size?: string | null;
+  affected_wheels?: string[] | null;
+  issue_type?: string | null;
+  issue_description?: string | null;
+};
+
+async function classifyWithAI(body: string): Promise<AiExtract> {
+  const text = (body || "").trim();
+  if (!text || text.length < 2) return {};
+  const apiKey = Deno.env.get("LOVABLE_API_KEY");
+  if (!apiKey) return {};
+  try {
+    const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash-lite",
+        messages: [
+          {
+            role: "system",
+            content:
+              "You extract structured fields from a UK mobile-tyre customer's WhatsApp message. " +
+              "Fields: customer_name (a person's real full name, NOT greetings/'help'/'hi'), " +
+              "vehicle_reg (UK number plate, uppercase, spaces ok, e.g. 'GB22 XYZ' or 'GB1122'), " +
+              "tyre_size (format '205/55 R16'), " +
+              "affected_wheels (array, any of: front-left, front-right, rear-left, rear-right), " +
+              "issue_type (one of: puncture, flat tyre, blowout, low pressure, not sure), " +
+              "issue_description (verbatim short phrase about the problem). " +
+              "Customers write naturally e.g. 'vehicle reg # GB2432', 'Registration is GB1122', " +
+              "'my name is Ajmal Kazmi', 'both fronts flat', '205/55 R16'. " +
+              "Only return fields you are confident about. Omit unknown fields. " +
+              "Never invent a name from greetings, postcodes, or registration plates. " +
+              "Respond ONLY with the tool call.",
+          },
+          { role: "user", content: text },
+        ],
+        tools: [{
+          type: "function",
+          function: {
+            name: "save_extracted_fields",
+            description: "Save fields parsed from the customer message.",
+            parameters: {
+              type: "object",
+              properties: {
+                customer_name: { type: "string" },
+                vehicle_reg: { type: "string" },
+                tyre_size: { type: "string" },
+                affected_wheels: {
+                  type: "array",
+                  items: { type: "string", enum: ["front-left", "front-right", "rear-left", "rear-right"] },
+                },
+                issue_type: {
+                  type: "string",
+                  enum: ["puncture", "flat tyre", "blowout", "low pressure", "not sure"],
+                },
+                issue_description: { type: "string" },
+              },
+              additionalProperties: false,
+            },
+          },
+        }],
+        tool_choice: { type: "function", function: { name: "save_extracted_fields" } },
+      }),
+    });
+    if (!r.ok) {
+      console.error("ai classify failed", r.status, await r.text().catch(() => ""));
+      return {};
+    }
+    const j = await r.json();
+    const call = j?.choices?.[0]?.message?.tool_calls?.[0];
+    const args = call?.function?.arguments;
+    if (!args) return {};
+    const parsed = typeof args === "string" ? JSON.parse(args) : args;
+    return parsed as AiExtract;
+  } catch (e) {
+    console.error("ai classify error", e);
+    return {};
+  }
+}
+
 type Supa = ReturnType<typeof createClient>;
 
 async function loadCustomer(supabase: Supa, phone: string) {
@@ -337,22 +431,41 @@ function isComplete(missing: Missing): boolean {
       && !missing.issue && !missing.tyreSize && !missing.photos;
 }
 
-function checklistMessage(job: any, missing: Missing): string {
-  const mark = (ok: boolean) => (ok ? "✅" : "❌");
+function progressBar(received: number, total: number): string {
+  const pct = total === 0 ? 0 : Math.round((received / total) * 100);
+  const filled = Math.max(0, Math.min(10, Math.round((received / total) * 10)));
+  const empty = 10 - filled;
+  return `${"█".repeat(filled)}${"░".repeat(empty)} ${pct}%`;
+}
+
+function checklistMessage(job: any, missing: Missing, opts: { header?: string; footer?: string } = {}): string {
+  const mark = (ok: boolean) => (ok ? "✅" : "⬜");
   const wheels = Array.isArray(job?.affected_wheels) && job.affected_wheels.length > 0
     ? job.affected_wheels.join(", ") : "—";
+  const items: Array<[boolean, string, string, string]> = [
+    [!missing.name,     "👤", "Full name",         !missing.name ? job.customer_name : "_missing_"],
+    [!missing.pin,      "📍", "Live pin location", !missing.pin ? `shared${job.postcode ? ` (${job.postcode})` : ""}` : "_missing — tap the 📎 pin icon in WhatsApp_"],
+    [!missing.reg,      "🚘", "Vehicle reg",       !missing.reg ? job.vehicle_reg : "_missing_"],
+    [!missing.wheels,   "⚙️", "Affected tyre(s)",  !missing.wheels ? wheels : "_missing — e.g. front-left / all four_"],
+    [!missing.issue,    "⚠️", "Nature of issue",   !missing.issue ? (job.issue_type || "noted") : "_missing — e.g. puncture / flat / blowout_"],
+    [!missing.tyreSize, "📏", "Tyre size",         !missing.tyreSize ? job.tyre_size : "_missing — e.g. 205/55 R16_"],
+    [!missing.photos,   "📸", "Tyre photo(s)",     !missing.photos ? `${(job.photo_urls ?? []).length} received` : "_missing — send 1–2 photos_"],
+  ];
+  const received = items.filter(([ok]) => ok).length;
+  const total = items.length;
+  const header = opts.header ?? "You've submitted the following information so far:";
+  const footer = opts.footer
+    ?? (received === total
+        ? "All set ✅ — please type *DONE* to submit your job."
+        : "Please send the missing item(s) above. You can write naturally — e.g. \"reg is GB1122\" or \"tyre size 205/55 R16\".");
   const lines = [
-    "Thanks! Here's what I've got so far:",
+    header,
     "",
-    `${mark(!missing.name)} 👤 Full name: ${!missing.name ? job.customer_name : "_missing_"}`,
-    `${mark(!missing.pin)} 📍 Live pin location: ${!missing.pin ? "shared" : "_missing — please tap the pin icon in WhatsApp_"}`,
-    `${mark(!missing.reg)} 🚘 Vehicle reg: ${!missing.reg ? job.vehicle_reg : "_missing_"}`,
-    `${mark(!missing.wheels)} ⚙️ Affected tyre(s): ${!missing.wheels ? wheels : "_missing_"}`,
-    `${mark(!missing.issue)} ⚠️ Nature of issue: ${!missing.issue ? (job.issue_type || "noted") : "_missing_"}`,
-    `${mark(!missing.tyreSize)} 📏 Tyre size: ${!missing.tyreSize ? job.tyre_size : "_missing — e.g. 205/55 R16_"}`,
-    `${mark(!missing.photos)} 📸 Tyre photo: ${!missing.photos ? `${(job.photo_urls ?? []).length} received` : "_missing — please send 1–2 photos_"}`,
+    `Progress: ${progressBar(received, total)}  (${received}/${total})`,
     "",
-    "Please send the missing item(s) above, then type *DONE* again.",
+    ...items.map(([ok, emoji, label, val]) => `${mark(ok)} ${emoji} ${label}: ${val}`),
+    "",
+    footer,
   ];
   return lines.join("\n");
 }
@@ -625,6 +738,44 @@ export async function processCustomerIntake(
     updates.photo_urls = [...(job.photo_urls ?? []), ...mediaUrls].slice(0, 4);
   }
 
+  // ─── AI classifier: fill gaps the regex missed ───
+  // Only run when there's textual content to interpret.
+  const trimmed = (body || "").trim();
+  const shouldAskAI = trimmed.length >= 2 && !DONE_RE.test(trimmed) && !extractCoords(trimmed);
+  if (shouldAskAI) {
+    const ai = await classifyWithAI(trimmed);
+    if (ai.customer_name && updates.customer_name == null) {
+      const nm = ai.customer_name.trim();
+      const currentName = job.customer_name;
+      if (isValidPersonName(nm) && (!currentName || currentName === "Customer" || !isValidPersonName(currentName))) {
+        updates.customer_name = nm;
+      }
+    }
+    if (ai.vehicle_reg && updates.vehicle_reg == null && !job.vehicle_reg) {
+      const reg = ai.vehicle_reg.toUpperCase().trim().replace(/\s+/g, " ");
+      if (/^[A-Z0-9 ]{4,10}$/.test(reg)) updates.vehicle_reg = reg;
+    }
+    if (ai.tyre_size && updates.tyre_size == null && !job.tyre_size) {
+      const ts = String(ai.tyre_size).trim();
+      if (TYRE_SIZE_RE.test(ts)) {
+        const m = ts.match(TYRE_SIZE_RE)!;
+        updates.tyre_size = `${m[1]}/${m[2]} R${m[3]}`;
+      }
+    }
+    if (Array.isArray(ai.affected_wheels) && ai.affected_wheels.length > 0 && updates.affected_wheels == null) {
+      const allowed = new Set(["front-left", "front-right", "rear-left", "rear-right"]);
+      const cleaned = Array.from(new Set(ai.affected_wheels.filter((w) => allowed.has(w))));
+      if (cleaned.length > 0) updates.affected_wheels = cleaned;
+    }
+    if (ai.issue_type && updates.issue_type == null && (!job.issue_type || job.issue_type === "unknown")) {
+      const allowed = new Set(["puncture", "flat tyre", "blowout", "low pressure", "not sure"]);
+      if (allowed.has(ai.issue_type)) updates.issue_type = ai.issue_type;
+    }
+    if (ai.issue_description && updates.issue_description == null && !hasIssueDetails(job.issue_description ?? "")) {
+      updates.issue_description = [job.issue_description, ai.issue_description].filter(Boolean).join("\n").slice(0, 2000);
+    }
+  }
+
   if (Object.keys(updates).length > 1) {
     const { data: updated } = await supabase.from("jobs").update(updates).eq("id", job.id).select().single();
     if (updated) job = updated;
@@ -650,16 +801,16 @@ export async function processCustomerIntake(
       };
     }
     return {
-      reply: checklistMessage(job, missing),
+      reply: checklistMessage(job, missing, {
+        header: "Almost there — here's what we have so far:",
+      }),
       job,
       conversation,
       justCompleted: false,
     };
   }
 
-  // ─── Non-DONE message: just acknowledge silently with a short nudge if we
-  //     parsed nothing, otherwise stay quiet (avoid spamming customer) by
-  //     sending a brief progress note. ───
+  // ─── Non-DONE message: send an updated progress checklist every time. ───
   const missing = evaluateJob(job, conversation);
   if (isComplete(missing)) {
     // Everything is in — show a confirmation summary before they type DONE.
@@ -670,9 +821,8 @@ export async function processCustomerIntake(
       justCompleted: false,
     };
   }
-  // Brief acknowledgement so customer knows we received the message.
   return {
-    reply: "Got it — keep sending the remaining details, then type *DONE* when finished.",
+    reply: checklistMessage(job, missing),
     job,
     conversation,
     justCompleted: false,
