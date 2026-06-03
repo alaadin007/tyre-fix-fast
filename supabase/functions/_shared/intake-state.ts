@@ -178,6 +178,100 @@ async function reverseGeocodePostcode(lat: number, lng: number): Promise<string 
   return null;
 }
 
+// ───────────────────────── AI field classifier ─────────────────────────
+//
+// Customers rarely send fields in order. This calls the Lovable AI gateway
+// to read the message in natural language and return whichever fields are
+// present (full name, vehicle reg, tyre size, affected wheels, issue type,
+// issue description). Regex still runs first and wins for high-confidence
+// matches; the AI only fills gaps the regex missed.
+
+type AiExtract = {
+  customer_name?: string | null;
+  vehicle_reg?: string | null;
+  tyre_size?: string | null;
+  affected_wheels?: string[] | null;
+  issue_type?: string | null;
+  issue_description?: string | null;
+};
+
+async function classifyWithAI(body: string): Promise<AiExtract> {
+  const text = (body || "").trim();
+  if (!text || text.length < 2) return {};
+  const apiKey = Deno.env.get("LOVABLE_API_KEY");
+  if (!apiKey) return {};
+  try {
+    const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash-lite",
+        messages: [
+          {
+            role: "system",
+            content:
+              "You extract structured fields from a UK mobile-tyre customer's WhatsApp message. " +
+              "Fields: customer_name (a person's real full name, NOT greetings/'help'/'hi'), " +
+              "vehicle_reg (UK number plate, uppercase, spaces ok, e.g. 'GB22 XYZ' or 'GB1122'), " +
+              "tyre_size (format '205/55 R16'), " +
+              "affected_wheels (array, any of: front-left, front-right, rear-left, rear-right), " +
+              "issue_type (one of: puncture, flat tyre, blowout, low pressure, not sure), " +
+              "issue_description (verbatim short phrase about the problem). " +
+              "Customers write naturally e.g. 'vehicle reg # GB2432', 'Registration is GB1122', " +
+              "'my name is Ajmal Kazmi', 'both fronts flat', '205/55 R16'. " +
+              "Only return fields you are confident about. Omit unknown fields. " +
+              "Never invent a name from greetings, postcodes, or registration plates. " +
+              "Respond ONLY with the tool call.",
+          },
+          { role: "user", content: text },
+        ],
+        tools: [{
+          type: "function",
+          function: {
+            name: "save_extracted_fields",
+            description: "Save fields parsed from the customer message.",
+            parameters: {
+              type: "object",
+              properties: {
+                customer_name: { type: "string" },
+                vehicle_reg: { type: "string" },
+                tyre_size: { type: "string" },
+                affected_wheels: {
+                  type: "array",
+                  items: { type: "string", enum: ["front-left", "front-right", "rear-left", "rear-right"] },
+                },
+                issue_type: {
+                  type: "string",
+                  enum: ["puncture", "flat tyre", "blowout", "low pressure", "not sure"],
+                },
+                issue_description: { type: "string" },
+              },
+              additionalProperties: false,
+            },
+          },
+        }],
+        tool_choice: { type: "function", function: { name: "save_extracted_fields" } },
+      }),
+    });
+    if (!r.ok) {
+      console.error("ai classify failed", r.status, await r.text().catch(() => ""));
+      return {};
+    }
+    const j = await r.json();
+    const call = j?.choices?.[0]?.message?.tool_calls?.[0];
+    const args = call?.function?.arguments;
+    if (!args) return {};
+    const parsed = typeof args === "string" ? JSON.parse(args) : args;
+    return parsed as AiExtract;
+  } catch (e) {
+    console.error("ai classify error", e);
+    return {};
+  }
+}
+
 type Supa = ReturnType<typeof createClient>;
 
 async function loadCustomer(supabase: Supa, phone: string) {
