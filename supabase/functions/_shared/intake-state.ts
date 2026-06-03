@@ -901,7 +901,59 @@ export async function processCustomerIntake(
     if (ai.issue_description && updates.issue_description == null && !hasIssueDetails(job.issue_description ?? "")) {
       updates.issue_description = [job.issue_description, ai.issue_description].filter(Boolean).join("\n").slice(0, 2000);
     }
+
+    // ─── Change-request handling (overrides existing values) ───
+    const cr = ai.change_request;
+    if (cr && cr.field) {
+      const field = cr.field as ChangeField;
+      if (cr.value && String(cr.value).trim()) {
+        const coerced = coerceFieldValue(field, String(cr.value));
+        if (coerced !== null) {
+          updates[field] = coerced;
+          if (convContext.awaiting_field_change === field) {
+            delete convContext.awaiting_field_change;
+            contextChanged = true;
+          }
+          await supabase.from("jobs").update(updates).eq("id", job.id);
+          const { data: refreshed } = await supabase.from("jobs").select("*").eq("id", job.id).maybeSingle();
+          if (refreshed) job = refreshed;
+          if (contextChanged) {
+            await supabase.from("conversations").update({ context: convContext }).eq("id", conversation.id);
+            conversation = { ...conversation, context: convContext };
+          }
+          await supabase.from("conversations").update({ last_message_at: new Date().toISOString() }).eq("id", conversation.id);
+          const missing = evaluateJob(job, conversation);
+          const headerLabel = FIELD_LABELS[field];
+          if (isComplete(missing)) {
+            return {
+              reply: `Updated your ${headerLabel} ✅\n\n${summaryMessage(job)}`,
+              job, conversation, justCompleted: false,
+            };
+          }
+          return {
+            reply: checklistMessage(job, missing, {
+              header: `Updated your ${headerLabel} ✅\n\nHere's what we have so far:`,
+            }),
+            job, conversation, justCompleted: false,
+          };
+        }
+      } else {
+        // Intent only — ask for the new value.
+        convContext.awaiting_field_change = field;
+        contextChanged = true;
+        await supabase.from("conversations").update({
+          context: convContext,
+          last_message_at: new Date().toISOString(),
+        }).eq("id", conversation.id);
+        conversation = { ...conversation, context: convContext };
+        return {
+          reply: `Okay — what is the new ${FIELD_LABELS[field]}?`,
+          job, conversation, justCompleted: false,
+        };
+      }
+    }
   }
+
 
   if (Object.keys(updates).length > 1) {
     const { data: updated } = await supabase.from("jobs").update(updates).eq("id", job.id).select().single();
