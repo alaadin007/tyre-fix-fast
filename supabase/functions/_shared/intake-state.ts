@@ -765,6 +765,54 @@ export async function processCustomerIntake(
   const convContext: Record<string, any> = { ...(conversation.context ?? {}) };
   let contextChanged = false;
 
+  // ─── Awaiting a field-change value? Treat this message as the new value. ───
+  const awaitingField: ChangeField | undefined = convContext.awaiting_field_change;
+  if (awaitingField && !DONE_RE.test(body || "")) {
+    const coerced = coerceFieldValue(awaitingField, body || "");
+    if (coerced !== null) {
+      updates[awaitingField] = coerced;
+      delete convContext.awaiting_field_change;
+      contextChanged = true;
+      await supabase.from("jobs").update(updates).eq("id", job.id);
+      const { data: refreshed } = await supabase.from("jobs").select("*").eq("id", job.id).maybeSingle();
+      if (refreshed) job = refreshed;
+      await supabase.from("conversations").update({
+        context: convContext,
+        last_message_at: new Date().toISOString(),
+      }).eq("id", conversation.id);
+      conversation = { ...conversation, context: convContext };
+      const missing = evaluateJob(job, conversation);
+      const headerLabel = FIELD_LABELS[awaitingField];
+      if (isComplete(missing)) {
+        return {
+          reply: `Updated your ${headerLabel} ✅\n\n${summaryMessage(job)}`,
+          job,
+          conversation,
+          justCompleted: false,
+        };
+      }
+      return {
+        reply: checklistMessage(job, missing, {
+          header: `Updated your ${headerLabel} ✅\n\nHere's what we have so far:`,
+        }),
+        job,
+        conversation,
+        justCompleted: false,
+      };
+    }
+    // Could not parse — re-ask for a clearer value.
+    await supabase.from("conversations").update({
+      last_message_at: new Date().toISOString(),
+    }).eq("id", conversation.id);
+    return {
+      reply: `Sorry, I couldn't read that as a valid ${FIELD_LABELS[awaitingField]}. Please send it again.`,
+      job,
+      conversation,
+      justCompleted: false,
+    };
+  }
+
+
   // Location pin
   const coords = extractCoords(body);
   if (coords) {
