@@ -464,18 +464,21 @@ function summaryMessage(job: any): string {
   const wheels = Array.isArray(job?.affected_wheels) && job.affected_wheels.length > 0
     ? job.affected_wheels.join(", ") : "—";
   const photos = (job?.photo_urls ?? []).length;
+  const greenBar = "🟩".repeat(10);
   return [
     "Here's everything we have for your job:",
     "",
-    `👤 Full name: ${job.customer_name}`,
-    `📍 Live pin location: shared${job.postcode ? ` (${job.postcode})` : ""}`,
-    `🚘 Vehicle reg: ${job.vehicle_reg}`,
-    `⚙️ Affected tyre(s): ${wheels}`,
-    `⚠️ Nature of issue: ${job.issue_type || "noted"}`,
-    `📏 Tyre size: ${job.tyre_size}`,
-    `📸 Tyre photo(s): ${photos} received`,
+    `✅ Full name: ${job.customer_name}`,
+    `✅ Live pin location: shared${job.postcode ? ` (${job.postcode})` : ""}`,
+    `✅ Vehicle reg: ${job.vehicle_reg}`,
+    `✅ Affected tyre(s): ${wheels}`,
+    `✅ Nature of issue: ${job.issue_type || "noted"}`,
+    `✅ Tyre size: ${job.tyre_size}`,
+    `✅ Tyre photo(s): ${photos} received`,
     "",
-    "You are submitting the following information. If anything needs to be changed, please let us know. Otherwise, please type *DONE* and we can proceed.",
+    "You are submitting the following information. If anything needs to be changed, please let us know (e.g. \"change reg to GB1122\"). Otherwise, please type *DONE* and we can proceed.",
+    "",
+    `Progress: ${greenBar} *100%* (7/7) ✅`,
   ].join("\n");
 }
 
