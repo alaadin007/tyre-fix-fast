@@ -462,7 +462,7 @@ function checklistMessage(job: any, missing: Missing, opts: { header?: string; f
   const lines = [
     header,
     "",
-    ...items.map(([ok, emoji, label, val]) => `${mark(ok)} ${emoji} ${label}: ${val}`),
+    ...items.map(([ok, label, val]) => `${mark(ok)} ${label}: ${val}`),
     "",
     footer,
     "",
