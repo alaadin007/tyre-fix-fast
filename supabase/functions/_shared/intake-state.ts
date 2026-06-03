@@ -288,7 +288,7 @@ function evaluateJob(job: any, conversation: any | null): Missing {
     pin: !(conversation?.context?.location_pin_confirmed && job?.lat != null && job?.lng != null),
     reg: !job?.vehicle_reg,
     wheels: !(Array.isArray(job?.affected_wheels) && job.affected_wheels.length > 0),
-    issue: !hasIncidentContext(job?.issue_description ?? "") && !job?.issue_type || job?.issue_type === "unknown",
+    issue: !hasIncidentContext(job?.issue_description ?? "") && (!job?.issue_type || job?.issue_type === "unknown"),
     tyreSize: !job?.tyre_size,
     photos: !((job?.photo_urls ?? []).length >= 1),
   };
