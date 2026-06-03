@@ -443,14 +443,14 @@ function checklistMessage(job: any, missing: Missing, opts: { header?: string; f
   const wheels = Array.isArray(job?.affected_wheels) && job.affected_wheels.length > 0
     ? job.affected_wheels.join(", ") : "—";
   const photoCount = (job?.photo_urls ?? []).length;
-  const items: Array<[boolean, string, string, string]> = [
-    [!missing.name,     "👤", "Full name",         !missing.name ? job.customer_name : "_missing_"],
-    [!missing.pin,      "📍", "Live pin location", !missing.pin ? `shared${job.postcode ? ` (${job.postcode})` : ""}` : "_missing — tap the 📎 pin icon in WhatsApp_"],
-    [!missing.reg,      "🚘", "Vehicle reg",       !missing.reg ? job.vehicle_reg : "_missing_"],
-    [!missing.wheels,   "⚙️", "Affected tyre(s)",  !missing.wheels ? wheels : "_missing — e.g. front-left / all four_"],
-    [!missing.issue,    "⚠️", "Nature of issue",   !missing.issue ? (job.issue_type || "noted") : "_missing — e.g. puncture / flat / blowout_"],
-    [!missing.tyreSize, "📏", "Tyre size",         !missing.tyreSize ? job.tyre_size : "_missing — e.g. 205/55 R16_"],
-    [!missing.photos,   "📸", "Tyre photo(s)",     !missing.photos ? `${photoCount} received` : `_${photoCount > 0 ? `${photoCount} received — need at least 2 valid tyre photos (JPEG/PNG)` : "missing — send at least 2 clear tyre photos (JPEG/PNG)"}_`],
+  const items: Array<[boolean, string, string]> = [
+    [!missing.name,     "Full name",         !missing.name ? job.customer_name : "_missing_"],
+    [!missing.pin,      "Live pin location", !missing.pin ? `shared${job.postcode ? ` (${job.postcode})` : ""}` : "_missing — tap the 📎 pin icon in WhatsApp_"],
+    [!missing.reg,      "Vehicle reg",       !missing.reg ? job.vehicle_reg : "_missing_"],
+    [!missing.wheels,   "Affected tyre(s)",  !missing.wheels ? wheels : "_missing — e.g. front-left / all four_"],
+    [!missing.issue,    "Nature of issue",   !missing.issue ? (job.issue_type || "noted") : "_missing — e.g. puncture / flat / blowout_"],
+    [!missing.tyreSize, "Tyre size",         !missing.tyreSize ? job.tyre_size : "_missing — e.g. 205/55 R16_"],
+    [!missing.photos,   "Tyre photo(s)",     !missing.photos ? `${photoCount} received` : `_${photoCount > 0 ? `${photoCount} received — need at least 2 valid tyre photos (JPEG/PNG)` : "missing — send at least 2 clear tyre photos (JPEG/PNG)"}_`],
   ];
   const received = items.filter(([ok]) => ok).length;
   const total = items.length;
@@ -462,7 +462,7 @@ function checklistMessage(job: any, missing: Missing, opts: { header?: string; f
   const lines = [
     header,
     "",
-    ...items.map(([ok, emoji, label, val]) => `${mark(ok)} ${emoji} ${label}: ${val}`),
+    ...items.map(([ok, label, val]) => `${mark(ok)} ${label}: ${val}`),
     "",
     footer,
     "",
