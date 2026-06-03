@@ -738,6 +738,44 @@ export async function processCustomerIntake(
     updates.photo_urls = [...(job.photo_urls ?? []), ...mediaUrls].slice(0, 4);
   }
 
+  // ─── AI classifier: fill gaps the regex missed ───
+  // Only run when there's textual content to interpret.
+  const trimmed = (body || "").trim();
+  const shouldAskAI = trimmed.length >= 2 && !DONE_RE.test(trimmed) && !extractCoords(trimmed);
+  if (shouldAskAI) {
+    const ai = await classifyWithAI(trimmed);
+    if (ai.customer_name && updates.customer_name == null) {
+      const nm = ai.customer_name.trim();
+      const currentName = job.customer_name;
+      if (isValidPersonName(nm) && (!currentName || currentName === "Customer" || !isValidPersonName(currentName))) {
+        updates.customer_name = nm;
+      }
+    }
+    if (ai.vehicle_reg && updates.vehicle_reg == null && !job.vehicle_reg) {
+      const reg = ai.vehicle_reg.toUpperCase().trim().replace(/\s+/g, " ");
+      if (/^[A-Z0-9 ]{4,10}$/.test(reg)) updates.vehicle_reg = reg;
+    }
+    if (ai.tyre_size && updates.tyre_size == null && !job.tyre_size) {
+      const ts = String(ai.tyre_size).trim();
+      if (TYRE_SIZE_RE.test(ts)) {
+        const m = ts.match(TYRE_SIZE_RE)!;
+        updates.tyre_size = `${m[1]}/${m[2]} R${m[3]}`;
+      }
+    }
+    if (Array.isArray(ai.affected_wheels) && ai.affected_wheels.length > 0 && updates.affected_wheels == null) {
+      const allowed = new Set(["front-left", "front-right", "rear-left", "rear-right"]);
+      const cleaned = Array.from(new Set(ai.affected_wheels.filter((w) => allowed.has(w))));
+      if (cleaned.length > 0) updates.affected_wheels = cleaned;
+    }
+    if (ai.issue_type && updates.issue_type == null && (!job.issue_type || job.issue_type === "unknown")) {
+      const allowed = new Set(["puncture", "flat tyre", "blowout", "low pressure", "not sure"]);
+      if (allowed.has(ai.issue_type)) updates.issue_type = ai.issue_type;
+    }
+    if (ai.issue_description && updates.issue_description == null && !hasIssueDetails(job.issue_description ?? "")) {
+      updates.issue_description = [job.issue_description, ai.issue_description].filter(Boolean).join("\n").slice(0, 2000);
+    }
+  }
+
   if (Object.keys(updates).length > 1) {
     const { data: updated } = await supabase.from("jobs").update(updates).eq("id", job.id).select().single();
     if (updated) job = updated;
@@ -763,16 +801,16 @@ export async function processCustomerIntake(
       };
     }
     return {
-      reply: checklistMessage(job, missing),
+      reply: checklistMessage(job, missing, {
+        header: "Almost there — here's what we have so far:",
+      }),
       job,
       conversation,
       justCompleted: false,
     };
   }
 
-  // ─── Non-DONE message: just acknowledge silently with a short nudge if we
-  //     parsed nothing, otherwise stay quiet (avoid spamming customer) by
-  //     sending a brief progress note. ───
+  // ─── Non-DONE message: send an updated progress checklist every time. ───
   const missing = evaluateJob(job, conversation);
   if (isComplete(missing)) {
     // Everything is in — show a confirmation summary before they type DONE.
@@ -783,9 +821,8 @@ export async function processCustomerIntake(
       justCompleted: false,
     };
   }
-  // Brief acknowledgement so customer knows we received the message.
   return {
-    reply: "Got it — keep sending the remaining details, then type *DONE* when finished.",
+    reply: checklistMessage(job, missing),
     job,
     conversation,
     justCompleted: false,
