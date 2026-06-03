@@ -422,7 +422,7 @@ function evaluateJob(job: any, conversation: any | null): Missing {
     wheels: !(Array.isArray(job?.affected_wheels) && job.affected_wheels.length > 0),
     issue: !hasIncidentContext(job?.issue_description ?? "") && (!job?.issue_type || job?.issue_type === "unknown"),
     tyreSize: !job?.tyre_size,
-    photos: !((job?.photo_urls ?? []).length >= 1),
+    photos: !((job?.photo_urls ?? []).length >= 2),
   };
 }
 
