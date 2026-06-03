@@ -553,9 +553,9 @@ export async function processCustomerIntake(
   //     sending a brief progress note. ───
   const missing = evaluateJob(job, conversation);
   if (isComplete(missing)) {
-    // Everything is in already — gently remind them to send DONE.
+    // Everything is in — show a confirmation summary before they type DONE.
     return {
-      reply: "Looks like you've shared everything 👌 — please type *DONE* to submit your job.",
+      reply: summaryMessage(job),
       job,
       conversation,
       justCompleted: false,
