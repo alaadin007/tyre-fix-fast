@@ -1,19 +1,23 @@
-// Customer intake state machine — single source of truth for the WhatsApp/SMS
-// information gathering flow. Driven by the `conversations` and `customers`
-// tables so we never re-ask a question we already answered.
+// Customer intake — single-message flow.
 //
-// Steps (linear, one-at-a-time):
-//   1. awaiting_location   → postcode / pin / address
-//   2. awaiting_plate      → vehicle number plate
-//   3. awaiting_name       → customer's full name
-//   4. awaiting_description→ what happened
-//   5. awaiting_wheels     → which tyres are affected
-//   6. awaiting_photos     → one photo per affected tyre
-//   7. complete            → job intake_complete (fires dispatch)
+// On first contact we send ONE welcome message listing every detail we need.
+// The customer then sends those details (across one or more messages) and
+// types "DONE" when finished. We parse every inbound message and accumulate
+// fields onto the job. On "DONE" we either:
+//   • acknowledge completion + return a job reference, OR
+//   • reply with a ✅/❌ checklist of what is still missing.
 //
-// A conversation is considered "active" if its last message was within 24h
-// AND step <> 'complete'. Anything older is treated as a brand-new case, but
-// the long-term customers table is reused (name/postcode/reg/total_jobs).
+// Required fields:
+//   1. Full name
+//   2. Live pin location (lat/lng from a shared WhatsApp pin)
+//   3. Vehicle registration
+//   4. Affected tyre(s)
+//   5. Nature of issue
+//   6. Tyre size
+//   7. At least one tyre photo
+//
+// The conversation uses a single active step ("awaiting_description") as the
+// collecting state, and "complete" when the job is submitted.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
@@ -30,36 +34,16 @@ export type IntakeStep =
   | "complete"
   | "idle";
 
-const STEP_ORDER: IntakeStep[] = [
-  "awaiting_location",
-  "awaiting_plate_confirm",
-  "awaiting_plate",
-  "awaiting_name",
-  "awaiting_description",
-  "awaiting_wheels",
-  "awaiting_photos",
-];
-
-// Photos policy: ask for images one at a time, 2 total required. At ≥2 photos
-// intake auto-completes — no DONE prompt needed.
-const MIN_REQUIRED_PHOTOS = 2;
-const TARGET_PHOTOS = 2;
-const PHOTOS_DONE_RE = /^\s*(done|finish(?:ed)?|that'?s all|no more|continue|next|good|ok(?:ay)?|enough|complete)\b/i;
+const COLLECTING_STEP: IntakeStep = "awaiting_description";
 
 // ───────────────────────── parsing helpers ─────────────────────────
 
 const POSTCODE_RE = /\b([A-Z]{1,2}\d[A-Z\d]?)\s*(\d[A-Z]{2})\b/i;
 const COORD_RE = /\((-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\)/;
-const ADDRESS_HINT_RE = /\b(street|st\b|road|rd\b|avenue|ave\b|lane|ln\b|drive|dr\b|close|crescent|way|place|pl\b|square|sq\b|terrace|court|ct\b|mews|gardens|park|hill|row)\b/i;
 const PLATE_HINT_RE = /\b(?:reg(?:istration)?|plate|number\s*plate|licen[cs]e\s*plate|tag)\s*[:\-]?\s*([A-Z0-9][A-Z0-9\s\-]{2,12}[A-Z0-9])\b/i;
-const PLATE_LOOSE_RE = /\b([A-Z0-9]{2,4}[\s\-]?[A-Z0-9]{2,5})\b/g;
-
-type ResolvedLocation = {
-  postcode: string | null;
-  lat: number | null;
-  lng: number | null;
-  hasPin: boolean;
-};
+const PLATE_LOOSE_RE = /\b([A-Z]{2}\d{2}[\s\-]?[A-Z]{3})\b/g; // UK style e.g. YC67 PGX
+const TYRE_SIZE_RE = /\b(\d{3})\s*\/\s*(\d{2,3})\s*[rR]\s*(\d{2})\b/;
+const DONE_RE = /^\s*done\b[\s.!?]*$/i;
 
 export function extractPostcode(t: string): string | null {
   const m = (t || "").match(POSTCODE_RE);
@@ -77,45 +61,52 @@ export function extractCoords(t: string): { lat: number; lng: number } | null {
 
 export function extractReg(t: string): string | null {
   if (!t) return null;
+  const upper = t.toUpperCase();
   const hinted = t.match(PLATE_HINT_RE);
-  if (hinted) return hinted[1].toUpperCase().trim().replace(/\s+/g, " ");
-  const matches = t.toUpperCase().matchAll(PLATE_LOOSE_RE);
+  if (hinted) {
+    const cand = hinted[1].toUpperCase().trim().replace(/\s+/g, " ");
+    if (!POSTCODE_RE.test(cand)) return cand;
+  }
+  const matches = upper.matchAll(PLATE_LOOSE_RE);
   for (const m of matches) {
     const raw = m[1].replace(/\s+/g, "");
-    if (!/[A-Z]/.test(raw) || !/\d/.test(raw)) continue;
     if (POSTCODE_RE.test(raw)) continue;
-    if (raw.length < 4 || raw.length > 10) continue;
-    return m[1].toUpperCase().trim();
+    return m[1].trim();
   }
   return null;
+}
+
+export function extractTyreSize(t: string): string | null {
+  const m = (t || "").match(TYRE_SIZE_RE);
+  if (!m) return null;
+  return `${m[1]}/${m[2]} R${m[3]}`;
 }
 
 export function extractWheels(t: string): string[] {
   const s = (t || "").toLowerCase();
   const out = new Set<string>();
   const has = (re: RegExp) => re.test(s);
-  if (has(/front[-\s]?left|fl\b|nearside front|front near.?side/)) out.add("front-left");
-  if (has(/front[-\s]?right|fr\b|offside front|front off.?side/)) out.add("front-right");
-  if (has(/(rear|back)[-\s]?left|rl\b|nearside rear|nearside back|rear near.?side/)) out.add("rear-left");
-  if (has(/(rear|back)[-\s]?right|rr\b|offside rear|offside back|rear off.?side/)) out.add("rear-right");
-  if (has(/\b(?:both|two|2)\s+front(?:\s+(?:tyres?|tires?|wheels?|ones?))?\b|\bfront\s+(?:both|two|2)\b|\bboth\s+front\s+ones?\b/)) {
+  if (has(/\ball\s*(four|4)\b/)) {
+    return ["front-left", "front-right", "rear-left", "rear-right"];
+  }
+  if (has(/\b(?:both|two|2)\s+front\b|\bfront\s+(?:both|two|2)\b/)) {
     out.add("front-left"); out.add("front-right");
   }
-  if (has(/\b(?:both|two|2)\s+(?:rear|back)(?:\s+(?:tyres?|tires?|wheels?|ones?))?\b|\b(?:rear|back)\s+(?:both|two|2)\b|\bboth\s+(?:rear|back)\s+ones?\b/)) {
+  if (has(/\b(?:both|two|2)\s+(?:rear|back)\b|\b(?:rear|back)\s+(?:both|two|2)\b/)) {
     out.add("rear-left"); out.add("rear-right");
   }
-  if (has(/all\s*(four|4)\b/)) {
-    ["front-left","front-right","rear-left","rear-right"].forEach((w) => out.add(w));
-  }
+  if (has(/front[-\s]?left|\bfl\b|nearside front/)) out.add("front-left");
+  if (has(/front[-\s]?right|\bfr\b|offside front/)) out.add("front-right");
+  if (has(/(rear|back)[-\s]?left|\brl\b|nearside rear/)) out.add("rear-left");
+  if (has(/(rear|back)[-\s]?right|\brr\b|offside rear/)) out.add("rear-right");
   return Array.from(out);
 }
 
-// Common greeting / filler words that must never be saved as a customer name.
 const NAME_BLOCKLIST = new Set([
   "hey","hi","hello","hiya","yo","sup","help","urgent","please","pls","thanks","thank you",
-  "ok","okay","yes","no","yeah","yep","nope","sure","mate","sir","madam","customer",
+  "ok","okay","yes","no","yeah","yep","nope","sure","mate","sir","madam","customer","done",
   "hii","hiii","heyy","heyyy","hola","hai","good","morning","evening","afternoon","night",
-  "tyre","tire","tyres","tires","wheel","flat","puncture","car","emergency",
+  "tyre","tire","tyres","tires","wheel","flat","puncture","car","emergency","name","full",
 ]);
 
 export function isValidPersonName(s: string | null | undefined): boolean {
@@ -125,10 +116,7 @@ export function isValidPersonName(s: string | null | undefined): boolean {
   if (cleaned.toLowerCase() === "customer") return false;
   const lower = cleaned.toLowerCase();
   if (NAME_BLOCKLIST.has(lower)) return false;
-  // Require letters only (with spaces, hyphens, apostrophes, dots).
   if (!/^[A-Za-z][A-Za-z .'-]{1,38}$/.test(cleaned)) return false;
-  // Reject if ANY word in the string is a blocklisted greeting/filler
-  // (catches "Hey I need help", "Hi mate", "Hello please" etc.).
   const words = cleaned.toLowerCase().split(/\s+/);
   if (words.some((w) => NAME_BLOCKLIST.has(w))) return false;
   if (words.length === 1 && words[0].length < 3) return false;
@@ -138,11 +126,18 @@ export function isValidPersonName(s: string | null | undefined): boolean {
 
 export function extractName(t: string): string | null {
   if (!t) return null;
-  const explicit = t.match(/\b(?:my name is|i am|i'm|im|this is|name[:\-])\s+([A-Za-z][A-Za-z .'-]{1,38})/i);
+  const explicit = t.match(/(?:my name is|i am|i'm|im|this is|name[:\-])\s+([A-Za-z][A-Za-z .'-]{1,38})/i);
   if (explicit) {
     const cand = explicit[1].trim().replace(/\s+/g, " ");
     return isValidPersonName(cand) ? cand : null;
   }
+  // Look for a "Name: X" style line
+  const lines = t.split(/\n+/);
+  for (const line of lines) {
+    const m = line.match(/^\s*(?:full\s*name|name)\s*[:\-]\s*([A-Za-z][A-Za-z .'-]{1,38})\s*$/i);
+    if (m && isValidPersonName(m[1])) return m[1].trim().replace(/\s+/g, " ");
+  }
+  // Bare short message that looks like a name
   const s = t.trim();
   if (/^[A-Za-z][A-Za-z .'-]{1,38}$/.test(s) && s.split(/\s+/).length <= 4) {
     return isValidPersonName(s) ? s : null;
@@ -150,53 +145,24 @@ export function extractName(t: string): string | null {
   return null;
 }
 
-// Separate "this person wants tyre help" from "this message already explains
-// the actual issue". Generic openers like "I need tyre help" should start the
-// workflow, but they should NOT be treated as a completed incident description.
-const INCIDENT_RE = /(nail|screw|slow\s+puncture|flat|puncture|blow[- ]?out|blew|burst|bust(?:ed)?|popp(?:ed|ing)|shred|ripped|rip\b|gash|gouge|leak|leaking|losing\s+air|loose\s+air|going\s+down|gone\s+down|down\s+to\s+\d|psi|valve|damage|damaged|broken|snapp(?:ed|ing)|tear|tore|torn|cut|slash|deflat|pressure|bulge|bulging|split|crack|cracked|sidewall|kerb|curb|pothole|hit|stuck|stranded|roadside|emergency|urgent|hiss(?:ing)?|noise|noisy|vibrat(?:e|ing|ion)|wobbl(?:e|ing|y)|shak(?:e|ing|y)|soft|spongy|squishy|warning\s+light|tpms|won'?t\s+inflate|keeps\s+going\s+flat|no idea|not sure|don'?t know|dont know|dunno|unsure|no clue)/i;
-const REPLACEMENT_RE = /(?:\b(?:replace|replacement|change|fit|fitting|swap)\b[^.\n]*\b(?:new\s+)?(?:tyre|tire|wheel)s?\b|\b(?:new\s+)?(?:tyre|tire|wheel)s?\b[^.\n]*\b(?:replace|replacement|change|fit|fitting|swap)\b|\bneed\s+(?:a\s+)?new\s+(?:tyre|tire|wheel)s?\b)/i;
-
-// A loose tyre/wheel mention combined with a service verb is enough to know
-// they want help, but not enough to skip the "what happened" question.
-const TYRE_MENTION_RE = /\b(tyre|tire|wheel|puncture|blowout|flat)s?\b/i;
-const SERVICE_VERB_RE = /\b(help|service|technician|come|send|need|require|book|fix|repair|replace|change|sort|stuck|stranded)\b/i;
-
-// Position words that, combined with a tyre/wheel mention in a substantive
-// message, indicate the customer has already pointed at the affected tyre and
-// described something concrete (e.g. "my front left tyre keeps deflating").
-const POSITION_HINT_RE = /\b(front|rear|back|left|right|nearside|offside|fl|fr|rl|rr|all\s*four|both)\b/i;
+const INCIDENT_RE = /(nail|screw|slow\s+puncture|flat|puncture|blow[- ]?out|blew|burst|bust(?:ed)?|popp(?:ed|ing)|shred|ripped|gash|leak|leaking|losing\s+air|going\s+down|psi|valve|damage|damaged|broken|snapp(?:ed|ing)|tear|tore|torn|cut|slash|deflat|low\s+pressure|pressure|bulge|split|crack|cracked|sidewall|kerb|curb|pothole|hit|stuck|stranded|hiss(?:ing)?|vibrat|wobbl|soft|spongy|tpms|not\s+sure|don'?t\s+know|unsure)/i;
 
 export function hasIssueDetails(t: string): boolean {
-  const s = t || "";
-  if (INCIDENT_RE.test(s) || REPLACEMENT_RE.test(s)) return true;
-  // "front left tyre is the problem" style messages: tyre mention + a
-  // position word + reasonable length → treat as a real description.
-  if (TYRE_MENTION_RE.test(s) && POSITION_HINT_RE.test(s) && s.trim().length >= 20) return true;
-  return false;
+  return INCIDENT_RE.test(t || "");
 }
-
 export function hasTyreServiceIntent(t: string): boolean {
-  const s = t || "";
-  if (hasIssueDetails(s)) return true;
-  if (TYRE_MENTION_RE.test(s) && SERVICE_VERB_RE.test(s)) return true;
-  return false;
+  if (hasIssueDetails(t)) return true;
+  return /\b(tyre|tire|wheel|puncture|blowout|flat)s?\b.*\b(help|service|technician|come|send|need|book|fix|repair|replace|change|stuck|stranded)\b/i.test(t || "");
 }
-
-export function hasIncidentContext(t: string): boolean {
-  return hasIssueDetails(t);
-}
+export function hasIncidentContext(t: string): boolean { return hasIssueDetails(t); }
 
 export function guessIssueType(t: string): string | null {
   const s = (t || "").toLowerCase();
   if (/blow.?out|burst|busted|shred|exploded/.test(s)) return "blowout";
-  if (/lock|locking/.test(s)) return "locked wheel";
+  if (/low\s+pressure|psi/.test(s)) return "low pressure";
   if (/flat|deflat/.test(s)) return "flat tyre";
   if (/punct|nail|screw/.test(s)) return "puncture";
-  if (/sidewall|bulge|buckl/.test(s)) return "sidewall damage";
-  if (/kerb|curb|pothole|hit|impact|crash|bump/.test(s)) return "impact damage";
-  if (/leak|valve|pressure|going down|deflating|losing air/.test(s)) return "slow leak";
-  if (/replace|new\s+(tyre|tire)|change\s+(my\s+)?(tyre|tire|wheel)|fit(ting)?\s+(a\s+)?(new\s+)?(tyre|tire)/.test(s)) return "tyre replacement";
-  if (/damage|damaged|repair|fix/.test(s)) return "tyre damage";
+  if (/not\s+sure|unsure|don'?t\s+know/.test(s)) return "not sure";
   return null;
 }
 
@@ -210,63 +176,6 @@ async function reverseGeocodePostcode(lat: number, lng: number): Promise<string 
     }
   } catch (e) { console.error("reverseGeocode failed", e); }
   return null;
-}
-
-async function geocodeAddressToLocation(address: string): Promise<{ postcode: string | null; lat: number | null; lng: number | null }> {
-  const q = (address || "").trim();
-  if (q.length < 4) return { postcode: null, lat: null, lng: null };
-  try {
-    const r = await fetch(
-      `https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=1&countrycodes=gb&q=${encodeURIComponent(q)}`,
-      { headers: { "User-Agent": "tyre-fix-fast/1.0" } },
-    );
-    if (!r.ok) return { postcode: null, lat: null, lng: null };
-    const arr = await r.json();
-    const hit = Array.isArray(arr) ? arr[0] : null;
-    if (!hit) return { postcode: null, lat: null, lng: null };
-    let pc: string | null = hit?.address?.postcode ?? null;
-    const lat = Number(hit.lat);
-    const lng = Number(hit.lon);
-    if (pc) {
-      return {
-        postcode: pc.trim().toUpperCase(),
-        lat: Number.isFinite(lat) ? lat : null,
-        lng: Number.isFinite(lng) ? lng : null,
-      };
-    }
-    if (Number.isFinite(lat) && Number.isFinite(lng)) {
-      pc = await reverseGeocodePostcode(lat, lng);
-      return { postcode: pc, lat, lng };
-    }
-  } catch (e) { console.error("geocodeAddress failed", e); }
-  return { postcode: null, lat: null, lng: null };
-}
-
-async function resolveLocation(body: string): Promise<ResolvedLocation> {
-  const location: ResolvedLocation = {
-    postcode: extractPostcode(body),
-    lat: null,
-    lng: null,
-    hasPin: false,
-  };
-  const coords = extractCoords(body);
-  if (coords) {
-    location.lat = coords.lat;
-    location.lng = coords.lng;
-    location.hasPin = true;
-    location.postcode = location.postcode ?? await reverseGeocodePostcode(coords.lat, coords.lng);
-    return location;
-  }
-  if (ADDRESS_HINT_RE.test(body)) {
-    const geocoded = await geocodeAddressToLocation(body);
-    return {
-      postcode: location.postcode ?? geocoded.postcode,
-      lat: geocoded.lat,
-      lng: geocoded.lng,
-      hasPin: false,
-    };
-  }
-  return location;
 }
 
 type Supa = ReturnType<typeof createClient>;
@@ -283,31 +192,20 @@ async function loadRecentJobMemory(supabase: Supa, phone: string) {
     .eq("customer_phone", phone)
     .order("created_at", { ascending: false })
     .limit(10);
-
   const jobs = Array.isArray(data) ? data : [];
   if (jobs.length === 0) return null;
   const fallbackName = jobs.find((job: any) => isValidPersonName(job?.customer_name))?.customer_name ?? null;
   const fallbackReg = jobs.find((job: any) => job?.vehicle_reg)?.vehicle_reg ?? null;
-  const fallbackPostcode = jobs.find((job: any) => job?.postcode)?.postcode ?? null;
-
-  return {
-    full_name: fallbackName,
-    vehicle_reg: fallbackReg,
-    default_postcode: fallbackPostcode,
-    total_jobs: jobs.length,
-  };
+  return { full_name: fallbackName, vehicle_reg: fallbackReg, total_jobs: jobs.length };
 }
 
-function mergeCustomerMemory(customer: any | null, recentJob: any | null) {
-  const fallbackName = isValidPersonName(recentJob?.full_name) ? recentJob.full_name : null;
-  const fallbackReg = recentJob?.vehicle_reg ?? null;
-  const fallbackPostcode = recentJob?.default_postcode ?? null;
+function mergeCustomerMemory(customer: any | null, recent: any | null) {
+  const fallbackName = isValidPersonName(recent?.full_name) ? recent.full_name : null;
   return {
     ...(customer ?? {}),
     full_name: isValidPersonName(customer?.full_name) ? customer.full_name : fallbackName,
-    vehicle_reg: customer?.vehicle_reg ?? fallbackReg,
-    default_postcode: customer?.default_postcode ?? fallbackPostcode,
-    total_jobs: Math.max(Number(customer?.total_jobs ?? 0), Number(recentJob?.total_jobs ?? 0)),
+    vehicle_reg: customer?.vehicle_reg ?? recent?.vehicle_reg ?? null,
+    total_jobs: Math.max(Number(customer?.total_jobs ?? 0), Number(recent?.total_jobs ?? 0)),
   };
 }
 
@@ -332,147 +230,118 @@ async function loadJob(supabase: Supa, id: string) {
 
 async function upsertCustomer(supabase: Supa, phone: string, patch: Record<string, any>) {
   const existing = await loadCustomer(supabase, phone);
+  const clean = Object.fromEntries(
+    Object.entries(patch).filter(([_, v]) => v !== null && v !== undefined && v !== "")
+  );
   if (existing) {
-    const merged: Record<string, any> = { last_seen_at: new Date().toISOString() };
-    for (const [k, v] of Object.entries(patch)) {
-      if (v !== null && v !== undefined && v !== "") merged[k] = v;
-    }
-    await supabase.from("customers").update(merged).eq("phone", phone);
+    await supabase.from("customers").update({ last_seen_at: new Date().toISOString(), ...clean }).eq("phone", phone);
   } else {
-    await supabase.from("customers").insert({
-      phone,
-      last_seen_at: new Date().toISOString(),
-      total_jobs: 0,
-      ...Object.fromEntries(Object.entries(patch).filter(([_, v]) => v !== null && v !== undefined && v !== "")),
-    });
+    await supabase.from("customers").insert({ phone, last_seen_at: new Date().toISOString(), total_jobs: 0, ...clean });
   }
 }
 
-function photosSatisfied(job: any, conversation: any | null): boolean {
-  const have = (job?.photo_urls ?? []).length;
-  // Reached the optional 3rd photo — auto-complete.
-  if (have >= TARGET_PHOTOS) return true;
-  // Customer explicitly said "done" after providing at least the minimum (2).
-  if (!!conversation?.context?.photos_done && have >= MIN_REQUIRED_PHOTOS) return true;
-  return false;
-}
-
-function firstMissingStep(job: any, customer: any, conversation: any | null): IntakeStep {
-  if (!conversation?.context?.location_pin_confirmed || job.lat == null || job.lng == null) return "awaiting_location";
-  if (!job.vehicle_reg) {
-    // Returning customer with a plate on file: confirm before reusing.
-    if (customer?.vehicle_reg && !conversation?.context?.plate_confirm_done) {
-      return "awaiting_plate_confirm";
-    }
-    return "awaiting_plate";
+// Build the welcome / questions message.
+function welcomeMessage(customer: any | null, isReturning: boolean): string {
+  let greeting: string;
+  if (isReturning && isValidPersonName(customer?.full_name)) {
+    const firstName = customer!.full_name.trim().split(/\s+/)[0];
+    greeting = `Welcome back, ${firstName} 👋`;
+  } else if (isReturning) {
+    greeting = "Welcome back 👋";
+  } else {
+    greeting = "Welcome to TyreFly 🚗";
   }
-  if (!job.customer_name || job.customer_name === "Customer") return "awaiting_name";
-  if (!hasIncidentContext(job.issue_description ?? "")) return "awaiting_description";
-  if (!Array.isArray(job.affected_wheels) || job.affected_wheels.length === 0) return "awaiting_wheels";
-  if (!photosSatisfied(job, conversation)) return "awaiting_photos";
-  return "complete";
+  return [
+    greeting,
+    "",
+    "Sorry to hear you've got a tyre problem — don't worry, we've got you covered! Just send us the details below and we'll have a technician with you as soon as possible.",
+    "",
+    "*YOUR DETAILS*",
+    "👤 Full name:",
+    "📍 Live location — tap the pin icon in WhatsApp",
+    "🚘 Vehicle reg number — e.g. YC67 PGX",
+    "",
+    "*TYRE DETAILS*",
+    "⚙️ Affected tyre(s)?",
+    "Front-left / front-right / rear-left / rear-right / both front / both rear / all four",
+    "⚠️ Nature of issue: puncture / flat / blowout / low pressure / not sure",
+    "📏 Tyre size — found on the tyre sidewall, e.g. 205/55 R16",
+    "📸 1–2 photos of the tyre",
+    "",
+    "Please type *DONE* once you have provided all the information above.",
+  ].join("\n");
 }
 
-function isStepSatisfied(s: IntakeStep, job: any, conversation: any | null): boolean {
-  switch (s) {
-    case "awaiting_location":
-      return !!conversation?.context?.location_pin_confirmed && job?.lat != null && job?.lng != null;
-    case "awaiting_plate_confirm":
-      return !!conversation?.context?.plate_confirm_done;
-    case "awaiting_plate":
-      return !!job?.vehicle_reg;
-    case "awaiting_name":
-      return !!job?.customer_name && job.customer_name !== "Customer";
-    case "awaiting_description":
-      return hasIncidentContext(job?.issue_description ?? "");
-    case "awaiting_wheels":
-      return Array.isArray(job?.affected_wheels) && job.affected_wheels.length > 0;
-    case "awaiting_photos":
-      return photosSatisfied(job, conversation);
-    default:
-      return false;
-  }
+type Missing = {
+  name: boolean;
+  pin: boolean;
+  reg: boolean;
+  wheels: boolean;
+  issue: boolean;
+  tyreSize: boolean;
+  photos: boolean;
+};
+
+function evaluateJob(job: any, conversation: any | null): Missing {
+  return {
+    name: !(job?.customer_name && job.customer_name !== "Customer" && isValidPersonName(job.customer_name)),
+    pin: !(conversation?.context?.location_pin_confirmed && job?.lat != null && job?.lng != null),
+    reg: !job?.vehicle_reg,
+    wheels: !(Array.isArray(job?.affected_wheels) && job.affected_wheels.length > 0),
+    issue: !hasIncidentContext(job?.issue_description ?? "") && (!job?.issue_type || job?.issue_type === "unknown"),
+    tyreSize: !job?.tyre_size,
+    photos: !((job?.photo_urls ?? []).length >= 1),
+  };
 }
 
-// Build the ordered list of steps the user will still need to answer, based on
-// a snapshot of the job + customer at this moment. Used once at conversation
-// creation to lock the "Step N of M" denominator so it doesn't drift mid-flow.
-export function buildStepPlan(
-  job: any | null,
-  customer: any | null,
-  conversation: any | null,
-): IntakeStep[] {
-  const knowsName = isValidPersonName(customer?.full_name);
-  const hasStoredReg = !!(customer?.vehicle_reg);
-  const structural = STEP_ORDER.filter((s) => {
-    if (s === "awaiting_name" && knowsName) return false;
-    // Only ONE of the two plate steps is ever shown per conversation.
-    if (s === "awaiting_plate_confirm" && !hasStoredReg) return false;
-    if (s === "awaiting_plate" && hasStoredReg) return false;
-    return true;
+function isComplete(missing: Missing): boolean {
+  return !missing.name && !missing.pin && !missing.reg && !missing.wheels
+      && !missing.issue && !missing.tyreSize && !missing.photos;
+}
+
+function checklistMessage(job: any, missing: Missing): string {
+  const mark = (ok: boolean) => (ok ? "✅" : "❌");
+  const wheels = Array.isArray(job?.affected_wheels) && job.affected_wheels.length > 0
+    ? job.affected_wheels.join(", ") : "—";
+  const lines = [
+    "Thanks! Here's what I've got so far:",
+    "",
+    `${mark(!missing.name)} 👤 Full name: ${!missing.name ? job.customer_name : "_missing_"}`,
+    `${mark(!missing.pin)} 📍 Live pin location: ${!missing.pin ? "shared" : "_missing — please tap the pin icon in WhatsApp_"}`,
+    `${mark(!missing.reg)} 🚘 Vehicle reg: ${!missing.reg ? job.vehicle_reg : "_missing_"}`,
+    `${mark(!missing.wheels)} ⚙️ Affected tyre(s): ${!missing.wheels ? wheels : "_missing_"}`,
+    `${mark(!missing.issue)} ⚠️ Nature of issue: ${!missing.issue ? (job.issue_type || "noted") : "_missing_"}`,
+    `${mark(!missing.tyreSize)} 📏 Tyre size: ${!missing.tyreSize ? job.tyre_size : "_missing — e.g. 205/55 R16_"}`,
+    `${mark(!missing.photos)} 📸 Tyre photo: ${!missing.photos ? `${(job.photo_urls ?? []).length} received` : "_missing — please send 1–2 photos_"}`,
+    "",
+    "Please send the missing item(s) above, then type *DONE* again.",
+  ];
+  return lines.join("\n");
+}
+
+function completionMessage(job: any): string {
+  const ref = String(job.id).slice(0, 6).toUpperCase();
+  return [
+    "We have all of the information ✅",
+    "",
+    "We'll find you a nearby technician and send you a price and estimated arrival time — usually within minutes. Thank you!",
+    "",
+    `Your job reference: *#${ref}*`,
+  ].join("\n");
+}
+
+async function bumpCustomer(supabase: Supa, phone: string, job: any) {
+  const existing = await loadCustomer(supabase, phone);
+  await upsertCustomer(supabase, phone, {
+    full_name: isValidPersonName(job.customer_name) ? job.customer_name : existing?.full_name ?? null,
+    default_postcode: job.postcode || existing?.default_postcode || null,
+    vehicle_reg: job.vehicle_reg || existing?.vehicle_reg || null,
+    total_jobs: ((existing?.total_jobs ?? 0) as number) + 1,
   });
-  return structural.filter((s) => !isStepSatisfied(s, job, conversation));
 }
 
-function stepNumberAndTotal(
-  step: IntakeStep,
-  customer: any | null,
-  job: any | null,
-  conversation: any | null,
-): { n: number; total: number } | null {
-  if (step === "complete" || step === "idle") return null;
-  // Prefer the locked plan stored on the conversation so the denominator stays
-  // stable across the whole intake.
-  const stored = conversation?.context?.step_plan;
-  let plan: IntakeStep[] = Array.isArray(stored) && stored.length > 0
-    ? (stored as IntakeStep[])
-    : buildStepPlan(job, customer, conversation);
-  let idx = plan.indexOf(step);
-  if (idx === -1) {
-    // Defensive: current step wasn't in the locked plan (e.g. photo requirement
-    // appeared after wheels were chosen). Append so we still show a sensible
-    // monotonic number.
-    plan = [...plan, step];
-    idx = plan.length - 1;
-  }
-  return { n: idx + 1, total: plan.length };
-}
-
-function prompt(
-  step: IntakeStep,
-  ctx: { job: any; customer: any | null; greeting?: string; conversation?: any | null },
-): string {
-  const meta = stepNumberAndTotal(step, ctx.customer, ctx.job, ctx.conversation ?? null);
-  const head = meta ? `*Step ${meta.n} of ${meta.total}* — ` : "";
-  const greet = ctx.greeting ? ctx.greeting + "\n\n" : "";
-  switch (step) {
-    case "awaiting_location":
-      return `${greet}${head}Your *current pin location* 📍\nPlease share your live WhatsApp pin for *this* job. You can also add your postcode or address for reference, but the pin is required and we never reuse an old location.`;
-    case "awaiting_plate_confirm": {
-      const reg = ctx.customer?.vehicle_reg ?? "your vehicle";
-      return `${greet}${head}Vehicle 🚗\nWe've got *${reg}* on file for you. Reply *YES* to use the same vehicle, or send the *new number plate* if it's a different car this time.`;
-    }
-    case "awaiting_plate":
-      return `${greet}${head}Number plate 🚗\nWhat's the car's *number plate*? (text it, e.g. "C13 ATA", or send a clear photo of it).`;
-    case "awaiting_name":
-      return `${greet}${head}Your name 👤\nWhat's your *full name*? (first + last, e.g. "John Smith").`;
-    case "awaiting_description":
-      return `${greet}${head}What happened? 🛞\nA short description please — e.g. "hit a kerb last night", "slow puncture", "nail in the tyre". If you really don't know, reply *"not sure"*.`;
-    case "awaiting_wheels": {
-      return `${greet}${head}Which tyre(s)? 🛞\nReply with *front-left*, *front-right*, *rear-left*, *rear-right*, *both front*, *both rear*, or *all four*.`;
-    }
-    case "awaiting_photos": {
-      const have = (ctx.job.photo_urls ?? []).length;
-      if (have === 0) {
-        return `${greet}${head}Photos 📸 (1 of 2)\nPlease share a clear photo of the tyre (close-up of the damage works best). *Please upload one image at a time.* Image files only — no videos or PDFs.`;
-      }
-      // have === 1 → ask for the second and final image.
-      return `${greet}${head}Photos 📸 (2 of 2)\nThanks ✅ — please share *one more photo* of the tyre from a different angle. One image at a time, please.`;
-    }
-    default:
-      return "";
-  }
-}
+// Back-compat exports (unused by current callers, but kept to avoid breakage).
+export function buildStepPlan(): IntakeStep[] { return [COLLECTING_STEP]; }
 
 export type IntakeOutcome = {
   reply: string;
@@ -486,42 +355,35 @@ export async function processCustomerIntake(
   input: { from: string; body: string; mediaUrls: string[]; channel: "sms" | "whatsapp" },
 ): Promise<IntakeOutcome> {
   const { from, body, mediaUrls } = input;
-  const bodyHasIssueDetails = hasIssueDetails(body);
-  const bodyHasTyreServiceIntent = hasTyreServiceIntent(body);
   const storedCustomer = await loadCustomer(supabase, from);
   const recentJobMemory = await loadRecentJobMemory(supabase, from);
   const hasPriorJobHistory = Number(recentJobMemory?.total_jobs ?? 0) > 0;
   const customer = hasPriorJobHistory ? mergeCustomerMemory(storedCustomer, recentJobMemory) : null;
+  const isReturning = hasPriorJobHistory;
+
   let conversation = await loadActiveConversation(supabase, from);
   let job: any = null;
-  // Returning customers must have actual prior history on the same phone.
-  const isReturning = hasPriorJobHistory;
-  let isNew = false;
 
+  // ─── New conversation: create job, send the welcome + all-questions message ───
   if (!conversation) {
-    isNew = true;
-    // IMPORTANT — never reuse the customer's previous postcode. Each job must
-    // have a fresh current location. We also do NOT seed customer_name from a
-    // greeting like "hi" or "I need help" (the loose name regex matches those).
-    // For returning customers we use the stored full_name; otherwise leave it
-    // as "Customer" and ask in the awaiting_name step.
-    const resolvedLocation = await resolveLocation(body);
-    const extractedWheels = extractWheels(body);
-    const extractedDesc = bodyHasIssueDetails ? body.slice(0, 500) : null;
-    const issueType = guessIssueType(body) ?? "unknown";
+    const coords = extractCoords(body);
+    const postcode = extractPostcode(body)
+      ?? (coords ? await reverseGeocodePostcode(coords.lat, coords.lng) : null);
 
-    const initial = {
+    const seededName = isValidPersonName(customer?.full_name) ? customer!.full_name : "Customer";
+    const seededReg = customer?.vehicle_reg ?? null;
+
+    const initial: Record<string, any> = {
       customer_phone: from,
-      customer_name: isValidPersonName(customer?.full_name) ? customer!.full_name : "Customer",
-      postcode: resolvedLocation.postcode ?? "",
-      lat: resolvedLocation.lat,
-      lng: resolvedLocation.lng,
-      issue_type: issueType,
-      issue_description: extractedDesc,
+      customer_name: seededName,
+      postcode: postcode ?? "",
+      lat: coords?.lat ?? null,
+      lng: coords?.lng ?? null,
+      issue_type: "unknown",
+      issue_description: null,
       photo_urls: mediaUrls,
-      // Don't silently reuse customer.vehicle_reg — we ask via awaiting_plate_confirm.
-      vehicle_reg: null,
-      affected_wheels: extractedWheels,
+      vehicle_reg: seededReg,
+      affected_wheels: [],
       status: "intake_pending",
     };
 
@@ -529,45 +391,28 @@ export async function processCustomerIntake(
     if (jobErr) throw jobErr;
     job = newJob;
 
-    const initialContext: Record<string, any> = resolvedLocation.hasPin
-      ? { location_pin_confirmed: true }
-      : {};
-    const step = firstMissingStep(job, customer, { context: initialContext });
-    // Lock the step plan ONCE so "Step N of M" stays stable for the whole intake.
-    const planSnapshot = buildStepPlan(job, customer, { context: initialContext });
-    const lockedPlan = planSnapshot.includes(step) ? planSnapshot : [step, ...planSnapshot];
-    initialContext.step_plan = lockedPlan;
+    const context: Record<string, any> = {};
+    if (coords) context.location_pin_confirmed = true;
+
     const { data: newConv, error: convErr } = await supabase.from("conversations").insert({
       customer_phone: from,
       current_job_id: job.id,
-      step,
+      step: COLLECTING_STEP,
       last_message_at: new Date().toISOString(),
-      context: initialContext,
+      context,
     }).select().single();
     if (convErr) throw convErr;
     conversation = newConv;
 
-    let greeting: string;
-    if (isReturning && isValidPersonName(customer?.full_name)) {
-      const firstName = customer!.full_name.trim().split(/\s+/)[0];
-      greeting = `Welcome Back ${firstName} 👋`;
-    } else if (isReturning) {
-      greeting = "Welcome Back 👋";
-    } else {
-      greeting = "Hi, welcome to Tyre Fly 👋";
-    }
-
-    if (step === "complete") {
-      await supabase.from("conversations").update({ step: "complete" }).eq("id", conversation.id);
-      await supabase.from("jobs").update({ status: "intake_complete" }).eq("id", job.id);
-      await bumpCustomer(supabase, from, job);
-      const refId = String(job.id).slice(0, 6).toUpperCase();
-      return { reply: `${greeting}\n\nThank you for sharing the details 🙏 — one of our technicians will be aligned with you shortly.\nYour job posting reference *#${refId}*.`, job, conversation: { ...conversation, step: "complete" }, justCompleted: true };
-    }
-
-    return { reply: prompt(step, { job, customer, greeting, conversation }), job, conversation, justCompleted: false };
+    return {
+      reply: welcomeMessage(customer, isReturning),
+      job,
+      conversation,
+      justCompleted: false,
+    };
   }
 
+  // ─── Existing conversation: parse anything and accumulate onto the job ───
   job = await loadJob(supabase, conversation.current_job_id);
   if (!job) {
     await supabase.from("conversations").update({ step: "complete" }).eq("id", conversation.id);
@@ -577,159 +422,109 @@ export async function processCustomerIntake(
   const updates: Record<string, any> = { updated_at: new Date().toISOString() };
   const convContext: Record<string, any> = { ...(conversation.context ?? {}) };
   let contextChanged = false;
-  let parsedSomething = false;
 
-  // Special handling for the plate-confirmation step: don't fall through to the
-  // generic reg-extraction (which would only capture a brand-new plate). We
-  // need to accept short YES/NO style answers too.
-  if (conversation.step === "awaiting_plate_confirm" && !job.vehicle_reg) {
-    const reg = extractReg(body);
-    const yes = /^\s*(y|yes|yeah|yep|same|use it|use that|confirm|ok(?:ay)?|keep|correct|sure)\b/i.test(body);
-    const no = /^\s*(n|no|new|different|change|nope|nah)\b/i.test(body);
-    if (reg) {
-      updates.vehicle_reg = reg;
-      convContext.plate_confirm_done = true; contextChanged = true;
-      parsedSomething = true;
-    } else if (yes && customer?.vehicle_reg) {
-      updates.vehicle_reg = customer.vehicle_reg;
-      convContext.plate_confirm_done = true; contextChanged = true;
-      parsedSomething = true;
-    } else if (no) {
-      convContext.plate_confirm_done = true; contextChanged = true;
-      parsedSomething = true;
+  // Location pin
+  const coords = extractCoords(body);
+  if (coords) {
+    updates.lat = coords.lat;
+    updates.lng = coords.lng;
+    convContext.location_pin_confirmed = true;
+    contextChanged = true;
+    if (!job.postcode) {
+      const pc = extractPostcode(body) ?? await reverseGeocodePostcode(coords.lat, coords.lng);
+      if (pc) updates.postcode = pc;
     }
   } else {
+    const pc = extractPostcode(body);
+    if (pc && !job.postcode) updates.postcode = pc;
+  }
+
+  // Plate
+  if (!job.vehicle_reg) {
     const reg = extractReg(body);
-    if (reg && !job.vehicle_reg) { updates.vehicle_reg = reg; parsedSomething = true; }
+    if (reg) updates.vehicle_reg = reg;
   }
 
-  const resolvedLocation = await resolveLocation(body);
-  if (resolvedLocation.postcode && (!job.postcode || conversation.step === "awaiting_location")) {
-    updates.postcode = resolvedLocation.postcode;
-    parsedSomething = true;
-  }
-  if (resolvedLocation.lat != null && resolvedLocation.lng != null) {
-    updates.lat = resolvedLocation.lat;
-    updates.lng = resolvedLocation.lng;
-    if (resolvedLocation.hasPin) {
-      convContext.location_pin_confirmed = true;
-      contextChanged = true;
-    }
-    parsedSomething = true;
-  }
-
-  if ((!job.customer_name || job.customer_name === "Customer")
-      && conversation.step === "awaiting_name") {
+  // Name
+  if (!job.customer_name || job.customer_name === "Customer" || !isValidPersonName(job.customer_name)) {
     const nm = extractName(body);
-    if (nm) { updates.customer_name = nm; parsedSomething = true; }
+    if (nm) updates.customer_name = nm;
   }
 
-  if (!hasIncidentContext(job.issue_description ?? "") && bodyHasIssueDetails) {
-    updates.issue_description = body.slice(0, 500);
-    const it = guessIssueType(body); if (it) updates.issue_type = it;
-    parsedSomething = true;
+  // Issue description / type
+  if (hasIssueDetails(body)) {
+    updates.issue_description = [job.issue_description, body].filter(Boolean).join("\n").slice(0, 2000);
+    const it = guessIssueType(body);
+    if (it) updates.issue_type = it;
   }
 
+  // Wheels
   const wheels = extractWheels(body);
   if (wheels.length > 0) {
-    const explicit = /\b(just|only|actually|sorry|correction|i meant)\b/i.test(body) || /all\s*(four|4)\b/i.test(body);
-    const merged = explicit ? wheels : Array.from(new Set([...(job.affected_wheels ?? []), ...wheels]));
-    updates.affected_wheels = merged;
-    parsedSomething = true;
+    updates.affected_wheels = wheels;
   }
 
+  // Tyre size
+  if (!job.tyre_size) {
+    const ts = extractTyreSize(body);
+    if (ts) updates.tyre_size = ts;
+  }
+
+  // Photos
   if (mediaUrls.length > 0) {
-    // Cap at 2 photos total — we only request 2, one at a time.
-    updates.photo_urls = [...(job.photo_urls ?? []), ...mediaUrls].slice(0, MIN_REQUIRED_PHOTOS);
-    parsedSomething = true;
-  }
-
-  // At the photos step, accept a plain text "DONE" (or similar) reply as
-  // explicit consent to stop uploading photos once we already have >=2.
-  if (conversation.step === "awaiting_photos" && mediaUrls.length === 0) {
-    const haveNow = (updates.photo_urls ?? job.photo_urls ?? []).length;
-    if (haveNow >= MIN_REQUIRED_PHOTOS && PHOTOS_DONE_RE.test(body || "")) {
-      convContext.photos_done = true;
-      contextChanged = true;
-      parsedSomething = true;
-    }
+    updates.photo_urls = [...(job.photo_urls ?? []), ...mediaUrls].slice(0, 4);
   }
 
   if (Object.keys(updates).length > 1) {
     const { data: updated } = await supabase.from("jobs").update(updates).eq("id", job.id).select().single();
     if (updated) job = updated;
   }
-
   if (contextChanged) {
     await supabase.from("conversations").update({ context: convContext }).eq("id", conversation.id);
     conversation = { ...conversation, context: convContext };
   }
+  await supabase.from("conversations").update({ last_message_at: new Date().toISOString() }).eq("id", conversation.id);
 
-  const nextStep = firstMissingStep(job, customer, conversation);
-  const justCompleted = nextStep === "complete" && conversation.step !== "complete";
-  const tyreIntentWhileAwaitingLocation =
-    conversation.step === "awaiting_location" &&
-    !resolvedLocation.postcode &&
-    resolvedLocation.lat == null &&
-    bodyHasTyreServiceIntent;
-  await supabase.from("conversations").update({
-    step: nextStep,
-    last_message_at: new Date().toISOString(),
-  }).eq("id", conversation.id);
-  conversation = { ...conversation, step: nextStep };
-
-  if (justCompleted) {
-    await supabase.from("jobs").update({ status: "intake_complete" }).eq("id", job.id);
-    await bumpCustomer(supabase, from, job);
-    const refId = String(job.id).slice(0, 6).toUpperCase();
+  // ─── Handle DONE ───
+  if (DONE_RE.test(body || "")) {
+    const missing = evaluateJob(job, conversation);
+    if (isComplete(missing)) {
+      await supabase.from("jobs").update({ status: "intake_complete" }).eq("id", job.id);
+      await supabase.from("conversations").update({ step: "complete" }).eq("id", conversation.id);
+      await bumpCustomer(supabase, from, job);
+      return {
+        reply: completionMessage(job),
+        job,
+        conversation: { ...conversation, step: "complete" },
+        justCompleted: true,
+      };
+    }
     return {
-      reply: `Thank you for sharing the details 🙏 — one of our technicians will be aligned with you shortly.\nYour job posting reference *#${refId}*.`,
-      job, conversation, justCompleted: true,
-    };
-  }
-
-  if (tyreIntentWhileAwaitingLocation && bodyHasIssueDetails) {
-    return {
-      reply: `Got it — I've noted the tyre issue and your service request.\n\n${prompt(nextStep, { job, customer, conversation })}`,
+      reply: checklistMessage(job, missing),
       job,
       conversation,
       justCompleted: false,
     };
   }
 
-  if (tyreIntentWhileAwaitingLocation) {
-    return { reply: prompt(nextStep, { job, customer, conversation }), job, conversation, justCompleted: false };
+  // ─── Non-DONE message: just acknowledge silently with a short nudge if we
+  //     parsed nothing, otherwise stay quiet (avoid spamming customer) by
+  //     sending a brief progress note. ───
+  const missing = evaluateJob(job, conversation);
+  if (isComplete(missing)) {
+    // Everything is in already — gently remind them to send DONE.
+    return {
+      reply: "Looks like you've shared everything 👌 — please type *DONE* to submit your job.",
+      job,
+      conversation,
+      justCompleted: false,
+    };
   }
-
-  if (!parsedSomething && (body.trim().length > 0 || mediaUrls.length > 0)) {
-    const nudge = nudgeFor(conversation.step);
-    return { reply: `${nudge}\n\n${prompt(nextStep, { job, customer, conversation })}`, job, conversation, justCompleted: false };
-  }
-
-  return { reply: prompt(nextStep, { job, customer, conversation }), job, conversation, justCompleted: false };
-}
-
-function nudgeFor(step: IntakeStep): string {
-  switch (step) {
-    case "awaiting_location": return "I still need your live pin location for this job ❌";
-    case "awaiting_plate": return "I couldn't read a number plate from that ❌";
-    case "awaiting_plate_confirm": return "Please reply *YES* to reuse the plate on file, or send the new number plate ❌";
-    case "awaiting_name": return "I need your full name as text (e.g. \"John Smith\") ❌";
-    case "awaiting_description": return "I need a short description of what happened ❌";
-    case "awaiting_wheels": return "I need to know which tyre positions are affected ❌";
-    case "awaiting_photos": return "I need clear tyre photos (image files only — no videos or PDFs) ❌";
-    default: return "";
-  }
-}
-
-async function bumpCustomer(supabase: Supa, phone: string, job: any) {
-  const existing = await loadCustomer(supabase, phone);
-  const patch: Record<string, any> = {
-    full_name: isValidPersonName(job.customer_name) ? job.customer_name : (isValidPersonName(existing?.full_name) ? existing!.full_name : null),
-    default_postcode: job.postcode || existing?.default_postcode || null,
-    vehicle_reg: job.vehicle_reg || existing?.vehicle_reg || null,
-    last_seen_at: new Date().toISOString(),
-    total_jobs: ((existing?.total_jobs ?? 0) as number) + 1,
+  // Brief acknowledgement so customer knows we received the message.
+  return {
+    reply: "Got it — keep sending the remaining details, then type *DONE* when finished.",
+    job,
+    conversation,
+    justCompleted: false,
   };
-  await upsertCustomer(supabase, phone, patch);
 }
