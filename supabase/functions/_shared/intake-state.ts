@@ -245,6 +245,25 @@ CHANGE REQUESTS
 - "change reg to GB55654" → change_request { field: vehicle_reg, value: "GB55654" }
 - "I want to change my registration" → change_request { field: vehicle_reg, value: null }
 
+DIRECT SERVICE REQUESTS — START INTAKE IMMEDIATELY
+If the customer's FIRST message (or any message) directly describes a tyre issue, problem, or service need, classify intent = "new_job" and DO NOT treat it as a generic FAQ. Examples that MUST be new_job:
+- "My tyre is punctured."
+- "I need tyre repair."
+- "My car tyre has an issue."
+- "I want someone to fix my tyre."
+- "I need roadside tyre help."
+- "I want to post a tyre repair job."
+- "Flat tyre on the motorway."
+- "Blowout, need help."
+- Any natural-language variation that means "I have a tyre problem" or "I want to book a tyre service".
+
+When intent = "new_job":
+- Do NOT write a generic FAQ-style answer.
+- Do NOT ask the customer to "reply NEW JOB" — the system will start the intake flow automatically.
+- The intake flow will welcome the customer naturally ("Thanks for reaching out — I can help with that. Please share a few details…") and then ask the intake questions one by one (name, vehicle reg, postcode, affected wheels, issue type, photos, etc.).
+- Always infer intent from MEANING, not exact keywords. Casual, incomplete, or misspelled phrasing still counts as a service request.
+
+
 FAQ — SERVICE & PRICING
 If the customer asks a question that matches one of these, answer using the response below (rephrase naturally, keep it brief). After answering, gently continue intake if a job is in progress.
 - "How much does it cost?" → "Prices vary by job, tyre size and technician. Once we have your details we'll send a fixed quote before any work starts — no hidden fees."
