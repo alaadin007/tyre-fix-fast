@@ -206,6 +206,8 @@ type AiExtract = {
     field?: ChangeField | null;
     value?: string | null;
   } | null;
+  intent?: "new_job" | "faq" | "smalltalk" | "off_topic" | "intake_detail" | "other" | null;
+  faq_answer?: string | null;
 };
 
 const DEFAULT_WHATSAPP_SYSTEM_PROMPT = `You are TyreFly's WhatsApp intake assistant for a UK mobile-tyre service.
