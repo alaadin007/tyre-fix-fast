@@ -406,7 +406,12 @@ async function classifyWithAI(
                     value: { type: "string" },
                   },
                   additionalProperties: false,
+                intent: {
+                  type: "string",
+                  enum: ["new_job", "faq", "smalltalk", "off_topic", "intake_detail", "other"],
                 },
+                faq_answer: { type: "string" },
+              },
               },
               additionalProperties: false,
             },
