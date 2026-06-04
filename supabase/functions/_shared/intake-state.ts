@@ -268,6 +268,17 @@ FAQ — OFF-TOPIC & EDGE CASES
 - Abusive or offensive messages → "I'm here to help, but I'm not able to continue if messages are offensive. Please keep things respectful and I'll do my best to assist."
 - "Is this WhatsApp?" / wrong number → "You've reached TyreFly's WhatsApp service — the UK's 24/7 roadside tyre rescue! If you have a tyre problem, I can help. Otherwise, no worries at all."`;
 
+// Always appended to the editable system prompt — keeps the JSON schema
+// contract stable even if an admin rewrites the editable instructions.
+const INTENT_CLASSIFIER_SUFFIX = `OUTPUT CONTRACT (always honour these, even if the editable instructions above don't mention them):
+- Always call save_extracted_fields exactly once.
+- Always set "intent" to one of: "new_job", "faq", "smalltalk", "off_topic", "intake_detail", "other".
+- "new_job" means the customer wants to book / has a tyre problem right now (puncture, flat, blowout, replacement, "need help with my tyre", "want to post a job", "can someone fix my tyre", etc.). Match on meaning, not exact words.
+- "faq" / "smalltalk" / "off_topic" → also set "faq_answer" to a short (1–3 sentences), natural, friendly, human-sounding reply in British English. Do not write robotic boilerplate, do not paste the FAQ verbatim — rephrase for this specific customer. Do not include "Reply NEW JOB" — the system appends the right CTA.
+- "intake_detail" means they're answering an intake question (name, reg, postcode, wheels, photo description, etc.). Do not set faq_answer in that case.
+- Only extract fields you are confident about. Omit unknown fields entirely.
+- Never invent a person's name from greetings, postcodes, or registration plates.`;
+
 let CACHED_SYSTEM_PROMPT: { text: string; at: number } | null = null;
 const PROMPT_TTL_MS = 60_000;
 
