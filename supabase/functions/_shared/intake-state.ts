@@ -206,6 +206,8 @@ type AiExtract = {
     field?: ChangeField | null;
     value?: string | null;
   } | null;
+  intent?: "new_job" | "faq" | "smalltalk" | "off_topic" | "intake_detail" | "other" | null;
+  faq_answer?: string | null;
 };
 
 const DEFAULT_WHATSAPP_SYSTEM_PROMPT = `You are TyreFly's WhatsApp intake assistant for a UK mobile-tyre service.
@@ -215,7 +217,16 @@ ROLE & TONE
 - You ONLY help with mobile tyre jobs. Politely redirect anything else.
 
 WHAT YOU DO
-- Extract any of these fields that are clearly present in the customer's latest message:
+On every customer message you call the tool save_extracted_fields with:
+- intent — classify the customer's intent:
+    • "new_job"       — they want to book/post a tyre job, report a puncture/flat/blowout, or are clearly asking for help with a tyre right now. Examples: "I want to book a service", "my tyre is punctured", "need tyre repair", "can someone fix my flat", "I want to post a job", "help me with my car tyre".
+    • "faq"           — a general question about TyreFly (pricing, hours, coverage, what we do, etc.). Use the FAQ section below to write a short, natural, human-sounding answer in faq_answer.
+    • "smalltalk"     — greetings, thanks, jokes, "are you a real person", etc. Put a short friendly reply in faq_answer.
+    • "off_topic"     — they're asking about a non-tyre service (brakes, oil, engine light, full service, weather, etc.). Politely redirect in faq_answer using the off-topic FAQ.
+    • "intake_detail" — they're already in the middle of a booking and are answering one of our intake questions (name, reg, postcode, photo description, wheel selection, etc.).
+    • "other"         — anything else / unclear.
+- faq_answer — only when intent is faq, smalltalk or off_topic. A natural, friendly, conversational reply (1–3 short sentences, British English, no robotic phrasing, no emojis unless one fits). Do NOT include "Reply NEW JOB" boilerplate — the system adds the right call-to-action.
+- Extract any of these fields clearly present in the customer's latest message:
   customer_name, vehicle_reg, tyre_size, affected_wheels, issue_type, issue_description, postcode.
 - Detect change_request when the customer wants to update something already captured.
 
@@ -227,6 +238,8 @@ HARD RULES
 - affected_wheels: subset of [front-left, front-right, rear-left, rear-right].
 - issue_type: one of [puncture, flat tyre, blowout, low pressure, not sure].
 - Only return fields you are confident about — omit unknown fields.
+- Understand intent from meaning, not exact keywords. Casual / incomplete / misspelled phrasing still counts.
+- If the customer says anything that means "I have a tyre problem" or "I want to book", set intent = "new_job" even if they didn't say the words "new job".
 
 CHANGE REQUESTS
 - "change reg to GB55654" → change_request { field: vehicle_reg, value: "GB55654" }
@@ -254,6 +267,17 @@ FAQ — OFF-TOPIC & EDGE CASES
 - "How much for a full car service?" → "TyreFly focuses on mobile tyre repairs and replacements — we're not a full service garage. For a car service, a local garage would be the right place. Need help with a tyre?"
 - Abusive or offensive messages → "I'm here to help, but I'm not able to continue if messages are offensive. Please keep things respectful and I'll do my best to assist."
 - "Is this WhatsApp?" / wrong number → "You've reached TyreFly's WhatsApp service — the UK's 24/7 roadside tyre rescue! If you have a tyre problem, I can help. Otherwise, no worries at all."`;
+
+// Always appended to the editable system prompt — keeps the JSON schema
+// contract stable even if an admin rewrites the editable instructions.
+const INTENT_CLASSIFIER_SUFFIX = `OUTPUT CONTRACT (always honour these, even if the editable instructions above don't mention them):
+- Always call save_extracted_fields exactly once.
+- Always set "intent" to one of: "new_job", "faq", "smalltalk", "off_topic", "intake_detail", "other".
+- "new_job" means the customer wants to book / has a tyre problem right now (puncture, flat, blowout, replacement, "need help with my tyre", "want to post a job", "can someone fix my tyre", etc.). Match on meaning, not exact words.
+- "faq" / "smalltalk" / "off_topic" → also set "faq_answer" to a short (1–3 sentences), natural, friendly, human-sounding reply in British English. Do not write robotic boilerplate, do not paste the FAQ verbatim — rephrase for this specific customer. Do not include "Reply NEW JOB" — the system appends the right CTA.
+- "intake_detail" means they're answering an intake question (name, reg, postcode, wheels, photo description, etc.). Do not set faq_answer in that case.
+- Only extract fields you are confident about. Omit unknown fields entirely.
+- Never invent a person's name from greetings, postcodes, or registration plates.`;
 
 let CACHED_SYSTEM_PROMPT: { text: string; at: number } | null = null;
 const PROMPT_TTL_MS = 60_000;
@@ -337,7 +361,7 @@ async function classifyWithAI(
   const apiKey = Deno.env.get("LOVABLE_API_KEY");
   if (!apiKey) return {};
   try {
-    const systemPrompt = await loadSystemPrompt(supabase);
+    const systemPrompt = await loadSystemPrompt(supabase) + "\n\n" + INTENT_CLASSIFIER_SUFFIX;
     const stateBlock = buildJobStateBlock(ctx.job, ctx.customer);
     const history = await loadRecentHistory(supabase, ctx.phone, 8);
     const historyBlock = history.length
@@ -394,6 +418,11 @@ async function classifyWithAI(
                   },
                   additionalProperties: false,
                 },
+                intent: {
+                  type: "string",
+                  enum: ["new_job", "faq", "smalltalk", "off_topic", "intake_detail", "other"],
+                },
+                faq_answer: { type: "string" },
               },
               additionalProperties: false,
             },
@@ -752,17 +781,20 @@ export async function processCustomerIntake(
   let job: any = null;
 
   // ─── Intent gate ────────────────────────────────────────────────────────
-  // If the customer's message is a generic greeting or "I need help" with no
-  // concrete tyre details, first ask whether they want to start a new tyre
-  // job, instead of dumping them into the intake form or replying with the
-  // stale "keep sending remaining details" nudge.
+  // When the customer isn't yet in an active job, route their message through
+  // the AI to figure out whether they want to book, are asking a general
+  // question (FAQ), or are off-topic — and answer accordingly.
   const ctxExisting: Record<string, any> = (conversation?.context ?? {}) as any;
   const awaitingIntent = ctxExisting.awaiting_intent_confirm === true;
-  const intentConfirmed = ctxExisting.intent_confirmed === true;
 
-  // (a) We previously asked the clarification — interpret their reply.
-  if (conversation && awaitingIntent) {
-    if (NEW_JOB_CONFIRM_RE.test(body || "")) {
+  const needsIntentRouting =
+    (conversation && awaitingIntent) ||
+    (!conversation && looksLikeGenericHelp(body, mediaUrls));
+
+  if (needsIntentRouting) {
+    // Fast-path: hard "NEW JOB" / "yes please" confirmation while we were
+    // explicitly awaiting it.
+    if (conversation && awaitingIntent && NEW_JOB_CONFIRM_RE.test(body || "")) {
       await supabase.from("conversations")
         .update({
           step: "complete",
@@ -771,34 +803,73 @@ export async function processCustomerIntake(
         .eq("id", conversation.id);
       conversation = null; // fall through to "new conversation" → welcome
     } else {
-      await supabase.from("conversations")
-        .update({ last_message_at: new Date().toISOString() })
-        .eq("id", conversation.id);
-      return {
-        reply: "Thanks — could you share a bit more detail about what you need help with? If you'd like to book a new tyre job, just reply *NEW JOB* and we'll get started.",
-        job: null,
-        conversation,
-        justCompleted: false,
-      };
+      const ai = await classifyWithAI(supabase, body || "", { job: null, customer, phone: from });
+      const intent = ai.intent ?? null;
+      const faqReply = (ai.faq_answer ?? "").trim();
+
+      // Customer is asking for a tyre booking / has a tyre problem → start intake.
+      if (intent === "new_job") {
+        if (conversation && awaitingIntent) {
+          await supabase.from("conversations")
+            .update({
+              step: "complete",
+              context: { ...ctxExisting, awaiting_intent_confirm: false, intent_confirmed: true },
+            })
+            .eq("id", conversation.id);
+          conversation = null;
+        }
+        // Fall through to "new conversation" block below.
+      } else if (faqReply && (intent === "faq" || intent === "smalltalk" || intent === "off_topic")) {
+        // Natural FAQ / small-talk reply. Append a soft CTA when appropriate.
+        const cta = intent === "off_topic"
+          ? ""
+          : "\n\nIf you'd like to book a tyre job, just reply *NEW JOB* and I'll get you sorted.";
+        const conv = conversation ?? (await supabase.from("conversations").insert({
+          customer_phone: from,
+          current_job_id: null,
+          step: COLLECTING_STEP,
+          last_message_at: new Date().toISOString(),
+          context: { awaiting_intent_confirm: true },
+        }).select().single()).data;
+        if (conv) {
+          await supabase.from("conversations")
+            .update({ last_message_at: new Date().toISOString(), context: { ...(conv.context ?? {}), awaiting_intent_confirm: true } })
+            .eq("id", conv.id);
+        }
+        return {
+          reply: `${faqReply}${cta}`.trim(),
+          job: null,
+          conversation: conv,
+          justCompleted: false,
+        };
+      } else {
+        // Unclear → ask the intent question once.
+        let conv = conversation;
+        if (!conv) {
+          const { data: newConv } = await supabase.from("conversations").insert({
+            customer_phone: from,
+            current_job_id: null,
+            step: COLLECTING_STEP,
+            last_message_at: new Date().toISOString(),
+            context: { awaiting_intent_confirm: true },
+          }).select().single();
+          conv = newConv;
+        } else {
+          await supabase.from("conversations")
+            .update({ last_message_at: new Date().toISOString() })
+            .eq("id", conv.id);
+        }
+        return {
+          reply: intentPromptMessage(customer, isReturning),
+          job: null,
+          conversation: conv,
+          justCompleted: false,
+        };
+      }
     }
   }
 
-  // (b) Fresh contact with a generic greeting/help message → ask intent first.
-  if (!conversation && looksLikeGenericHelp(body, mediaUrls)) {
-    const { data: newConv } = await supabase.from("conversations").insert({
-      customer_phone: from,
-      current_job_id: null,
-      step: COLLECTING_STEP,
-      last_message_at: new Date().toISOString(),
-      context: { awaiting_intent_confirm: true },
-    }).select().single();
-    return {
-      reply: intentPromptMessage(customer, isReturning),
-      job: null,
-      conversation: newConv,
-      justCompleted: false,
-    };
-  }
+
 
   // ─── New conversation: create job, send the welcome + all-questions message ───
   if (!conversation) {
