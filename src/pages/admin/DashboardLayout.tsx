@@ -35,6 +35,7 @@ const items = [
   { title: "Payments", url: "/admin/dashboard/payments", icon: CreditCard },
   { title: "Technicians", url: "/admin/dashboard/technicians", icon: Users },
   { title: "Activity", url: "/admin/dashboard/activity", icon: Activity },
+  { title: "AI Instructions", url: "/admin/dashboard/ai-settings", icon: Sparkles },
 ];
 
 function AppSidebar() {
