@@ -24,6 +24,7 @@ import QuotesPage from "./pages/admin/QuotesPage.tsx";
 import PaymentsPage from "./pages/admin/PaymentsPage.tsx";
 import TechniciansPage from "./pages/admin/TechniciansPage.tsx";
 import ActivityPage from "./pages/admin/ActivityPage.tsx";
+import AISettingsPage from "./pages/admin/AISettingsPage.tsx";
 
 const queryClient = new QueryClient();
 
@@ -46,6 +47,7 @@ const App = () => (
           <Route path="payments" element={<PaymentsPage />} />
           <Route path="technicians" element={<TechniciansPage />} />
           <Route path="activity" element={<ActivityPage />} />
+          <Route path="ai-settings" element={<AISettingsPage />} />
         </Route>
         <Route path="/confirmed" element={<Confirmed />} />
         <Route path="/technician/login" element={<TechnicianLogin />} />

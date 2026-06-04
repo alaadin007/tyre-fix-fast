@@ -208,12 +208,126 @@ type AiExtract = {
   } | null;
 };
 
-async function classifyWithAI(body: string): Promise<AiExtract> {
+const DEFAULT_WHATSAPP_SYSTEM_PROMPT = `You are TyreFly's WhatsApp intake assistant for a UK mobile-tyre service.
+
+ROLE & TONE
+- Friendly, concise, professional. British English.
+- You ONLY help with mobile tyre jobs. Politely redirect anything else.
+
+WHAT YOU DO
+- Extract any of these fields that are clearly present in the customer's latest message:
+  customer_name, vehicle_reg, tyre_size, affected_wheels, issue_type, issue_description, postcode.
+- Detect change_request when the customer wants to update something already captured.
+
+HARD RULES
+- NEVER re-ask for information already shown in the "Current job state" block.
+- NEVER invent a person's name from greetings, postcodes, or registration plates.
+- Vehicle reg: uppercase plate (any country), e.g. "GB22 XYZ".
+- Tyre size: "205/55 R16".
+- affected_wheels: subset of [front-left, front-right, rear-left, rear-right].
+- issue_type: one of [puncture, flat tyre, blowout, low pressure, not sure].
+- Only return fields you are confident about — omit unknown fields.
+
+CHANGE REQUESTS
+- "change reg to GB55654" → change_request { field: vehicle_reg, value: "GB55654" }
+- "I want to change my registration" → change_request { field: vehicle_reg, value: null }`;
+
+let CACHED_SYSTEM_PROMPT: { text: string; at: number } | null = null;
+const PROMPT_TTL_MS = 60_000;
+
+async function loadSystemPrompt(supabase: Supa): Promise<string> {
+  if (CACHED_SYSTEM_PROMPT && Date.now() - CACHED_SYSTEM_PROMPT.at < PROMPT_TTL_MS) {
+    return CACHED_SYSTEM_PROMPT.text;
+  }
+  try {
+    const { data } = await supabase
+      .from("app_settings")
+      .select("value")
+      .eq("key", "whatsapp_system_prompt")
+      .maybeSingle();
+    const text = (data as any)?.value?.prompt;
+    const out = typeof text === "string" && text.trim().length > 0
+      ? text
+      : DEFAULT_WHATSAPP_SYSTEM_PROMPT;
+    CACHED_SYSTEM_PROMPT = { text: out, at: Date.now() };
+    return out;
+  } catch {
+    return DEFAULT_WHATSAPP_SYSTEM_PROMPT;
+  }
+}
+
+function buildJobStateBlock(job: any, customer: any | null): string {
+  const lines: string[] = ["Current job state (already captured — do NOT ask again):"];
+  const has = (v: any) => v !== null && v !== undefined && v !== "" && v !== "unknown";
+  lines.push(`- customer_name: ${has(job?.customer_name) && job.customer_name !== "Customer" ? job.customer_name : "(missing)"}`);
+  lines.push(`- vehicle_reg: ${has(job?.vehicle_reg) ? job.vehicle_reg : "(missing)"}`);
+  lines.push(`- tyre_size: ${has(job?.tyre_size) ? job.tyre_size : "(missing)"}`);
+  lines.push(`- affected_wheels: ${Array.isArray(job?.affected_wheels) && job.affected_wheels.length ? job.affected_wheels.join(", ") : "(missing)"}`);
+  lines.push(`- issue_type: ${has(job?.issue_type) ? job.issue_type : "(missing)"}`);
+  lines.push(`- postcode: ${has(job?.postcode) ? job.postcode : "(missing)"}`);
+  lines.push(`- pin location: ${job?.lat != null && job?.lng != null ? "shared" : "(missing)"}`);
+  lines.push(`- photos received: ${(job?.photo_urls ?? []).length}`);
+  if (customer) {
+    lines.push("");
+    lines.push("Customer memory (returning customer):");
+    if (has(customer.full_name)) lines.push(`- known name: ${customer.full_name}`);
+    if (has(customer.vehicle_reg)) lines.push(`- known vehicle: ${customer.vehicle_reg}`);
+    if (Number(customer.total_jobs ?? 0) > 0) lines.push(`- previous jobs: ${customer.total_jobs}`);
+  }
+  return lines.join("\n");
+}
+
+async function loadRecentHistory(supabase: Supa, phone: string, limit = 8): Promise<Array<{ role: "user" | "assistant"; content: string }>> {
+  try {
+    const { data } = await supabase
+      .from("sms_messages")
+      .select("direction, body, created_at")
+      .eq("from_number", phone)
+      .order("created_at", { ascending: false })
+      .limit(limit);
+    const { data: out } = await supabase
+      .from("sms_messages")
+      .select("direction, body, created_at")
+      .eq("to_number", phone)
+      .order("created_at", { ascending: false })
+      .limit(limit);
+    const merged = [...(data ?? []), ...(out ?? [])]
+      .filter((m: any) => m?.body)
+      .sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+      .slice(-limit);
+    return merged.map((m: any) => ({
+      role: m.direction === "inbound" ? "user" : "assistant",
+      content: String(m.body).slice(0, 500),
+    }));
+  } catch {
+    return [];
+  }
+}
+
+async function classifyWithAI(
+  supabase: Supa,
+  body: string,
+  ctx: { job: any; customer: any | null; phone: string },
+): Promise<AiExtract> {
   const text = (body || "").trim();
   if (!text || text.length < 2) return {};
   const apiKey = Deno.env.get("LOVABLE_API_KEY");
   if (!apiKey) return {};
   try {
+    const systemPrompt = await loadSystemPrompt(supabase);
+    const stateBlock = buildJobStateBlock(ctx.job, ctx.customer);
+    const history = await loadRecentHistory(supabase, ctx.phone, 8);
+    const historyBlock = history.length
+      ? "Recent conversation:\n" + history.map((h) => `${h.role === "user" ? "Customer" : "TyreFly"}: ${h.content}`).join("\n")
+      : "";
+
+    const userContent = [
+      stateBlock,
+      historyBlock,
+      `Latest customer message:\n${text}`,
+      "Call save_extracted_fields with whatever fields are clearly present in the latest message (or change_request if they want to update something).",
+    ].filter(Boolean).join("\n\n");
+
     const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -221,37 +335,16 @@ async function classifyWithAI(body: string): Promise<AiExtract> {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash-lite",
+        model: "google/gemini-3-flash-preview",
         messages: [
-          {
-            role: "system",
-            content:
-              "You extract structured fields from a UK mobile-tyre customer's WhatsApp message. " +
-              "Fields: customer_name (a person's real full name, NOT greetings/'help'/'hi'), " +
-              "vehicle_reg (UK number plate, uppercase, spaces ok, e.g. 'GB22 XYZ' or 'GB1122'), " +
-              "tyre_size (format '205/55 R16'), " +
-              "affected_wheels (array, any of: front-left, front-right, rear-left, rear-right), " +
-              "issue_type (one of: puncture, flat tyre, blowout, low pressure, not sure), " +
-              "issue_description (verbatim short phrase about the problem). " +
-              "Customers write naturally e.g. 'vehicle reg # GB2432', 'Registration is GB1122', " +
-              "'my name is Ajmal Kazmi', 'both fronts flat', '205/55 R16'. " +
-              "Only return fields you are confident about. Omit unknown fields. " +
-              "Never invent a name from greetings, postcodes, or registration plates.\n\n" +
-              "ALSO detect CHANGE/EDIT/UPDATE requests for previously submitted info. Examples: " +
-              "'change vehicle registration to GB55654', 'update my name to John Smith', " +
-              "'I want to change the tyre size', 'edit reg', 'wrong plate', 'actually it's GB99 XYZ'. " +
-              "Populate change_request with target field. If they included the new value, also set value. " +
-              "If they expressed intent only (no new value), set field but leave value null. " +
-              "field options: customer_name, vehicle_reg, tyre_size, affected_wheels, issue_type, issue_description, postcode. " +
-              "Respond ONLY with the tool call.",
-          },
-          { role: "user", content: text },
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userContent },
         ],
         tools: [{
           type: "function",
           function: {
             name: "save_extracted_fields",
-            description: "Save fields parsed from the customer message.",
+            description: "Save fields parsed from the customer's latest message.",
             parameters: {
               type: "object",
               properties: {
@@ -870,7 +963,7 @@ export async function processCustomerIntake(
   const trimmed = (body || "").trim();
   const shouldAskAI = trimmed.length >= 2 && !DONE_RE.test(trimmed) && !extractCoords(trimmed);
   if (shouldAskAI) {
-    const ai = await classifyWithAI(trimmed);
+    const ai = await classifyWithAI(supabase, trimmed, { job, customer, phone: from });
     if (ai.customer_name && updates.customer_name == null) {
       const nm = ai.customer_name.trim();
       const currentName = job.customer_name;
