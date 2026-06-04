@@ -9,6 +9,7 @@ import {
   Activity,
   Map,
   LogOut,
+  Sparkles,
 } from "lucide-react";
 import {
   Sidebar,
