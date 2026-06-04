@@ -786,6 +786,7 @@ export async function processCustomerIntake(
   // question (FAQ), or are off-topic — and answer accordingly.
   const ctxExisting: Record<string, any> = (conversation?.context ?? {}) as any;
   const awaitingIntent = ctxExisting.awaiting_intent_confirm === true;
+  const intentConfirmed = ctxExisting.intent_confirmed === true;
 
   const needsIntentRouting =
     (conversation && awaitingIntent) ||
