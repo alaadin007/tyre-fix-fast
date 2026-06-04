@@ -963,7 +963,7 @@ export async function processCustomerIntake(
   const trimmed = (body || "").trim();
   const shouldAskAI = trimmed.length >= 2 && !DONE_RE.test(trimmed) && !extractCoords(trimmed);
   if (shouldAskAI) {
-    const ai = await classifyWithAI(trimmed);
+    const ai = await classifyWithAI(supabase, trimmed, { job, customer, phone: from });
     if (ai.customer_name && updates.customer_name == null) {
       const nm = ai.customer_name.trim();
       const currentName = job.customer_name;
