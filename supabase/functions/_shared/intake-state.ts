@@ -350,7 +350,7 @@ async function classifyWithAI(
   const apiKey = Deno.env.get("LOVABLE_API_KEY");
   if (!apiKey) return {};
   try {
-    const systemPrompt = await loadSystemPrompt(supabase);
+    const systemPrompt = await loadSystemPrompt(supabase) + "\n\n" + INTENT_CLASSIFIER_SUFFIX;
     const stateBlock = buildJobStateBlock(ctx.job, ctx.customer);
     const history = await loadRecentHistory(supabase, ctx.phone, 8);
     const historyBlock = history.length
