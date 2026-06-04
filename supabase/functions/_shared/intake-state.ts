@@ -770,17 +770,20 @@ export async function processCustomerIntake(
   let job: any = null;
 
   // ─── Intent gate ────────────────────────────────────────────────────────
-  // If the customer's message is a generic greeting or "I need help" with no
-  // concrete tyre details, first ask whether they want to start a new tyre
-  // job, instead of dumping them into the intake form or replying with the
-  // stale "keep sending remaining details" nudge.
+  // When the customer isn't yet in an active job, route their message through
+  // the AI to figure out whether they want to book, are asking a general
+  // question (FAQ), or are off-topic — and answer accordingly.
   const ctxExisting: Record<string, any> = (conversation?.context ?? {}) as any;
   const awaitingIntent = ctxExisting.awaiting_intent_confirm === true;
-  const intentConfirmed = ctxExisting.intent_confirmed === true;
 
-  // (a) We previously asked the clarification — interpret their reply.
-  if (conversation && awaitingIntent) {
-    if (NEW_JOB_CONFIRM_RE.test(body || "")) {
+  const needsIntentRouting =
+    (conversation && awaitingIntent) ||
+    (!conversation && looksLikeGenericHelp(body, mediaUrls));
+
+  if (needsIntentRouting) {
+    // Fast-path: hard "NEW JOB" / "yes please" confirmation while we were
+    // explicitly awaiting it.
+    if (conversation && awaitingIntent && NEW_JOB_CONFIRM_RE.test(body || "")) {
       await supabase.from("conversations")
         .update({
           step: "complete",
@@ -789,34 +792,73 @@ export async function processCustomerIntake(
         .eq("id", conversation.id);
       conversation = null; // fall through to "new conversation" → welcome
     } else {
-      await supabase.from("conversations")
-        .update({ last_message_at: new Date().toISOString() })
-        .eq("id", conversation.id);
-      return {
-        reply: "Thanks — could you share a bit more detail about what you need help with? If you'd like to book a new tyre job, just reply *NEW JOB* and we'll get started.",
-        job: null,
-        conversation,
-        justCompleted: false,
-      };
+      const ai = await classifyWithAI(supabase, body || "", { job: null, customer, phone: from });
+      const intent = ai.intent ?? null;
+      const faqReply = (ai.faq_answer ?? "").trim();
+
+      // Customer is asking for a tyre booking / has a tyre problem → start intake.
+      if (intent === "new_job") {
+        if (conversation && awaitingIntent) {
+          await supabase.from("conversations")
+            .update({
+              step: "complete",
+              context: { ...ctxExisting, awaiting_intent_confirm: false, intent_confirmed: true },
+            })
+            .eq("id", conversation.id);
+          conversation = null;
+        }
+        // Fall through to "new conversation" block below.
+      } else if (faqReply && (intent === "faq" || intent === "smalltalk" || intent === "off_topic")) {
+        // Natural FAQ / small-talk reply. Append a soft CTA when appropriate.
+        const cta = intent === "off_topic"
+          ? ""
+          : "\n\nIf you'd like to book a tyre job, just reply *NEW JOB* and I'll get you sorted.";
+        const conv = conversation ?? (await supabase.from("conversations").insert({
+          customer_phone: from,
+          current_job_id: null,
+          step: COLLECTING_STEP,
+          last_message_at: new Date().toISOString(),
+          context: { awaiting_intent_confirm: true },
+        }).select().single()).data;
+        if (conv) {
+          await supabase.from("conversations")
+            .update({ last_message_at: new Date().toISOString(), context: { ...(conv.context ?? {}), awaiting_intent_confirm: true } })
+            .eq("id", conv.id);
+        }
+        return {
+          reply: `${faqReply}${cta}`.trim(),
+          job: null,
+          conversation: conv,
+          justCompleted: false,
+        };
+      } else {
+        // Unclear → ask the intent question once.
+        let conv = conversation;
+        if (!conv) {
+          const { data: newConv } = await supabase.from("conversations").insert({
+            customer_phone: from,
+            current_job_id: null,
+            step: COLLECTING_STEP,
+            last_message_at: new Date().toISOString(),
+            context: { awaiting_intent_confirm: true },
+          }).select().single();
+          conv = newConv;
+        } else {
+          await supabase.from("conversations")
+            .update({ last_message_at: new Date().toISOString() })
+            .eq("id", conv.id);
+        }
+        return {
+          reply: intentPromptMessage(customer, isReturning),
+          job: null,
+          conversation: conv,
+          justCompleted: false,
+        };
+      }
     }
   }
 
-  // (b) Fresh contact with a generic greeting/help message → ask intent first.
-  if (!conversation && looksLikeGenericHelp(body, mediaUrls)) {
-    const { data: newConv } = await supabase.from("conversations").insert({
-      customer_phone: from,
-      current_job_id: null,
-      step: COLLECTING_STEP,
-      last_message_at: new Date().toISOString(),
-      context: { awaiting_intent_confirm: true },
-    }).select().single();
-    return {
-      reply: intentPromptMessage(customer, isReturning),
-      job: null,
-      conversation: newConv,
-      justCompleted: false,
-    };
-  }
+
 
   // ─── New conversation: create job, send the welcome + all-questions message ───
   if (!conversation) {
