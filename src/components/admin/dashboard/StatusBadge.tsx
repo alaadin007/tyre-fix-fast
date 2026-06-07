@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { jobStatusLabel } from "@/lib/jobStatus";
 
 const STATUS_STYLES: Record<string, string> = {
   pending: "bg-sky-500/15 text-sky-300 border-sky-500/30",
@@ -11,6 +12,7 @@ const STATUS_STYLES: Record<string, string> = {
   in_progress: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
   completed: "bg-emerald-600/15 text-emerald-300 border-emerald-600/30",
   paid: "bg-emerald-600/15 text-emerald-300 border-emerald-600/30",
+  closed: "bg-white/10 text-muted-foreground border-white/15",
   cancelled: "bg-rose-500/15 text-rose-300 border-rose-500/30",
   declined: "bg-rose-500/15 text-rose-300 border-rose-500/30",
   superseded: "bg-white/10 text-muted-foreground border-white/15",
@@ -20,7 +22,7 @@ const STATUS_STYLES: Record<string, string> = {
   expired: "bg-white/10 text-muted-foreground border-white/15",
 };
 
-export function StatusBadge({ status, className }: { status: string; className?: string }) {
+export function StatusBadge({ status, className, raw }: { status: string; className?: string; raw?: boolean }) {
   const style = STATUS_STYLES[status] ?? "bg-white/10 text-foreground border-white/15";
   return (
     <span
@@ -30,7 +32,7 @@ export function StatusBadge({ status, className }: { status: string; className?:
         className,
       )}
     >
-      {status.replace(/_/g, " ")}
+      {raw ? status.replace(/_/g, " ") : jobStatusLabel(status)}
     </span>
   );
 }
