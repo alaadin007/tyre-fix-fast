@@ -65,6 +65,8 @@ export type DashTech = {
   id: string;
   name: string;
   phone: string | null;
+  whatsapp: string | null;
+  email: string | null;
   active: boolean;
   approval_status: string;
   rating: number | null;
@@ -72,8 +74,13 @@ export type DashTech = {
   last_lat: number | null;
   last_lng: number | null;
   last_location_at: string | null;
+  live_location_until: string | null;
+  availability_now: boolean;
+  available_until: string | null;
   vehicle: string | null;
   service_postcodes: string[] | null;
+  notes: string | null;
+  travel_radius_miles: number | null;
 };
 
 export function useDashboardData() {
@@ -93,7 +100,7 @@ export function useDashboardData() {
         supabase.from("quotes").select("*").order("created_at", { ascending: false }).limit(500),
         supabase.from("job_allocations").select("*").order("created_at", { ascending: false }).limit(1000),
         supabase.from("technicians").select(
-          "id,name,phone,active,approval_status,rating,jobs_completed,last_lat,last_lng,last_location_at,vehicle,service_postcodes"
+          "id,name,phone,whatsapp,email,active,approval_status,rating,jobs_completed,last_lat,last_lng,last_location_at,live_location_until,availability_now,available_until,vehicle,service_postcodes,notes,travel_radius_miles"
         ).limit(500),
       ]);
       if (!mounted) return;
