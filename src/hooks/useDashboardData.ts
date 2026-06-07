@@ -27,6 +27,13 @@ export type DashJob = {
   platform_fee_refunded_at: string | null;
   stripe_checkout_url: string | null;
   stripe_session_id: string | null;
+  affected_wheels: string[] | null;
+  tyre_size: string | null;
+  tyre_brand: string | null;
+  tyre_type: string | null;
+  tyre_details: string | null;
+  tread_condition: string | null;
+  wheel_type: string | null;
 };
 
 export type DashQuote = {
@@ -81,7 +88,7 @@ export function useDashboardData() {
     const load = async () => {
       const [{ data: j }, { data: q }, { data: a }, { data: t }] = await Promise.all([
         supabase.from("jobs").select(
-          "id,postcode,customer_name,customer_phone,customer_email,issue_type,issue_description,damage_summary,damage_type,status,created_at,updated_at,lat,lng,vehicle_reg,region,severity,photo_urls,assigned_technician_id,broadcast_count,platform_fee_status,platform_fee_paid_at,platform_fee_refunded_at,stripe_checkout_url,stripe_session_id"
+          "id,postcode,customer_name,customer_phone,customer_email,issue_type,issue_description,damage_summary,damage_type,status,created_at,updated_at,lat,lng,vehicle_reg,region,severity,photo_urls,assigned_technician_id,broadcast_count,platform_fee_status,platform_fee_paid_at,platform_fee_refunded_at,stripe_checkout_url,stripe_session_id,affected_wheels,tyre_size,tyre_brand,tyre_type,tyre_details,tread_condition,wheel_type"
         ).order("created_at", { ascending: false }).limit(500),
         supabase.from("quotes").select("*").order("created_at", { ascending: false }).limit(500),
         supabase.from("job_allocations").select("*").order("created_at", { ascending: false }).limit(1000),

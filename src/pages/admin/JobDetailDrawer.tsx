@@ -86,10 +86,19 @@ export function JobDetailDrawer({
           </SheetTitle>
         </SheetHeader>
 
-        <div className="mt-4 space-y-2 text-sm">
+        <div className="mt-4 grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
           <div className="flex items-center gap-2 text-muted-foreground">
             <MapPin className="h-4 w-4" /> {job.postcode ?? "—"} {job.region ? `· ${job.region}` : ""}
           </div>
+          {job.lat != null && job.lng != null && (
+            <a
+              href={`https://maps.google.com/?q=${job.lat},${job.lng}`}
+              target="_blank" rel="noreferrer"
+              className="flex items-center gap-2 text-primary hover:underline"
+            >
+              <ExternalLink className="h-4 w-4" /> Live location on map
+            </a>
+          )}
           {job.customer_phone && (
             <div className="flex items-center gap-2 text-muted-foreground">
               <Phone className="h-4 w-4" /> {job.customer_phone}
@@ -100,19 +109,36 @@ export function JobDetailDrawer({
               <Car className="h-4 w-4" /> {job.vehicle_reg}
             </div>
           )}
-          <div className="text-muted-foreground">
-            {job.damage_summary || job.issue_description || job.issue_type || "—"}
-          </div>
-          {job.photo_urls && job.photo_urls.length > 0 && (
-            <div className="flex flex-wrap gap-2 pt-2">
-              {job.photo_urls.slice(0, 6).map((u, i) => (
-                <a key={i} href={u} target="_blank" rel="noreferrer">
-                  <img src={u} alt="" className="h-16 w-16 rounded object-cover" />
-                </a>
-              ))}
+          {(job.affected_wheels?.length ?? 0) > 0 && (
+            <div className="text-muted-foreground">
+              <span className="text-foreground">Affected tyre(s): </span>{job.affected_wheels!.join(", ")}
             </div>
           )}
+          {(job.tyre_size || job.tyre_brand || job.tyre_type) && (
+            <div className="text-muted-foreground">
+              <span className="text-foreground">Tyre: </span>
+              {[job.tyre_size, job.tyre_brand, job.tyre_type].filter(Boolean).join(" · ")}
+            </div>
+          )}
+          <div className="text-muted-foreground">
+            <span className="text-foreground">Payment: </span>{job.platform_fee_status}
+          </div>
+          <div className="text-muted-foreground">
+            <span className="text-foreground">Created: </span>{new Date(job.created_at).toLocaleString()}
+          </div>
         </div>
+        <div className="mt-2 text-sm text-muted-foreground">
+          {job.damage_summary || job.issue_description || job.issue_type || "—"}
+        </div>
+        {job.photo_urls && job.photo_urls.length > 0 && (
+          <div className="flex flex-wrap gap-2 pt-2">
+            {job.photo_urls.slice(0, 6).map((u, i) => (
+              <a key={i} href={u} target="_blank" rel="noreferrer">
+                <img src={u} alt="Tyre photo uploaded by customer" className="h-16 w-16 rounded object-cover" />
+              </a>
+            ))}
+          </div>
+        )}
 
         <div className="mt-4 flex flex-wrap gap-2">
           <Button size="sm" variant="outline" onClick={rebroadcast} disabled={!!busy}>
