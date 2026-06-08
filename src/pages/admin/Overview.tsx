@@ -95,6 +95,7 @@ export default function Overview() {
         <KpiCard label="Pending payment" value={k.pendingPayment} icon={Clock} accent="amber" />
         <KpiCard label="Awaiting quotes" value={k.waitingForQuotes} icon={FileText} accent="amber" />
         <KpiCard label="Awaiting approval" value={k.waitingForApproval} icon={ClipboardCheck} accent="rose" />
+        <KpiCard label="Paid — awaiting details" value={k.awaitingDetailsRelease} icon={AlertCircle} accent="amber" />
         <KpiCard label="Active technicians" value={k.activeTechs} icon={Users} accent="primary" />
         <KpiCard
           label="Revenue (accepted)"
