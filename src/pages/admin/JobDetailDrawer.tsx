@@ -206,6 +206,10 @@ export function JobDetailDrawer({
             <QuotesComparisonPanel job={job} quotes={jobQuotes} techs={techs} />
           </TabsContent>
 
+          <TabsContent value="payment" className="mt-4">
+            <PaymentPanel job={job} quotes={jobQuotes} />
+          </TabsContent>
+
           <TabsContent value="messages" className="mt-4">
             <JobConversation jobId={job.id} customerPhone={job.customer_phone ?? ""} />
           </TabsContent>
