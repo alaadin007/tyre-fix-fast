@@ -25,6 +25,7 @@ import PaymentsPage from "./pages/admin/PaymentsPage.tsx";
 import TechniciansPage from "./pages/admin/TechniciansPage.tsx";
 import ActivityPage from "./pages/admin/ActivityPage.tsx";
 import AISettingsPage from "./pages/admin/AISettingsPage.tsx";
+import CommandCenter from "./pages/admin/CommandCenter.tsx";
 
 const queryClient = new QueryClient();
 
