@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { Phone, MapPin, Car, ExternalLink, Send, CreditCard } from "lucide-react";
 import { MatchingTechniciansPanel } from "@/components/admin/dashboard/MatchingTechniciansPanel";
 import { QuotesComparisonPanel } from "@/components/admin/dashboard/QuotesComparisonPanel";
+import { PaymentPanel } from "@/components/admin/dashboard/PaymentPanel";
 
 export function JobDetailDrawer({
   job, open, onOpenChange, quotes, allocations, techs,
@@ -171,6 +172,7 @@ export function JobDetailDrawer({
             <TabsTrigger value="matching">Matching technicians</TabsTrigger>
             <TabsTrigger value="broadcasts">Broadcasts ({jobAllocs.length})</TabsTrigger>
             <TabsTrigger value="quotes">Quotes ({jobQuotes.length})</TabsTrigger>
+            <TabsTrigger value="payment">Payment</TabsTrigger>
             <TabsTrigger value="messages">Messages</TabsTrigger>
           </TabsList>
 
@@ -202,6 +204,10 @@ export function JobDetailDrawer({
 
           <TabsContent value="quotes" className="mt-4">
             <QuotesComparisonPanel job={job} quotes={jobQuotes} techs={techs} />
+          </TabsContent>
+
+          <TabsContent value="payment" className="mt-4">
+            <PaymentPanel job={job} quotes={jobQuotes} />
           </TabsContent>
 
           <TabsContent value="messages" className="mt-4">
