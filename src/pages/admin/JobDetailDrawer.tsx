@@ -174,6 +174,7 @@ export function JobDetailDrawer({
             <TabsTrigger value="broadcasts">Broadcasts ({jobAllocs.length})</TabsTrigger>
             <TabsTrigger value="quotes">Quotes ({jobQuotes.length})</TabsTrigger>
             <TabsTrigger value="payment">Payment</TabsTrigger>
+            <TabsTrigger value="approval">Approval</TabsTrigger>
             <TabsTrigger value="messages">Messages</TabsTrigger>
           </TabsList>
 
@@ -209,6 +210,10 @@ export function JobDetailDrawer({
 
           <TabsContent value="payment" className="mt-4">
             <PaymentPanel job={job} quotes={jobQuotes} />
+          </TabsContent>
+
+          <TabsContent value="approval" className="mt-4">
+            <ApprovalPanel job={job} quotes={jobQuotes} techs={techs} />
           </TabsContent>
 
           <TabsContent value="messages" className="mt-4">
