@@ -12,6 +12,7 @@ import {
   LogOut,
   Sparkles,
   BarChart3,
+  Settings,
 } from "lucide-react";
 import {
   Sidebar,
