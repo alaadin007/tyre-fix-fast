@@ -31,6 +31,7 @@ import { Button } from "@/components/ui/button";
 
 const items = [
   { title: "Overview", url: "/admin/dashboard", icon: LayoutDashboard, end: true },
+  { title: "Command Center", url: "/admin/dashboard/command", icon: Radio },
   { title: "Jobs", url: "/admin/dashboard/jobs", icon: Briefcase },
   { title: "Quotes", url: "/admin/dashboard/quotes", icon: FileText },
   { title: "Payments", url: "/admin/dashboard/payments", icon: CreditCard },
