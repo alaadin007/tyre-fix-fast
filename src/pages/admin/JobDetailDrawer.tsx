@@ -167,10 +167,20 @@ export function JobDetailDrawer({
         <Tabs defaultValue="timeline" className="mt-6">
           <TabsList>
             <TabsTrigger value="timeline">Timeline</TabsTrigger>
+            <TabsTrigger value="matching">Matching technicians</TabsTrigger>
             <TabsTrigger value="broadcasts">Broadcasts ({jobAllocs.length})</TabsTrigger>
             <TabsTrigger value="quotes">Quotes ({jobQuotes.length})</TabsTrigger>
             <TabsTrigger value="messages">Messages</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="timeline" className="mt-4">
+            <JobTimeline job={job} quotes={jobQuotes} allocations={jobAllocs} techs={techs} />
+          </TabsContent>
+
+          <TabsContent value="matching" className="mt-4">
+            <MatchingTechniciansPanel job={job} techs={techs} allocations={allocations} quotes={quotes} />
+          </TabsContent>
+
 
           <TabsContent value="timeline" className="mt-4">
             <JobTimeline job={job} quotes={jobQuotes} allocations={jobAllocs} techs={techs} />
