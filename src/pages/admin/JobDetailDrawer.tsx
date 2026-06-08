@@ -10,6 +10,7 @@ import type { DashJob, DashQuote, DashAllocation, DashTech } from "@/hooks/useDa
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Phone, MapPin, Car, ExternalLink, Send, CreditCard } from "lucide-react";
+import { MatchingTechniciansPanel } from "@/components/admin/dashboard/MatchingTechniciansPanel";
 
 export function JobDetailDrawer({
   job, open, onOpenChange, quotes, allocations, techs,
@@ -166,6 +167,7 @@ export function JobDetailDrawer({
         <Tabs defaultValue="timeline" className="mt-6">
           <TabsList>
             <TabsTrigger value="timeline">Timeline</TabsTrigger>
+            <TabsTrigger value="matching">Matching technicians</TabsTrigger>
             <TabsTrigger value="broadcasts">Broadcasts ({jobAllocs.length})</TabsTrigger>
             <TabsTrigger value="quotes">Quotes ({jobQuotes.length})</TabsTrigger>
             <TabsTrigger value="messages">Messages</TabsTrigger>
@@ -174,6 +176,12 @@ export function JobDetailDrawer({
           <TabsContent value="timeline" className="mt-4">
             <JobTimeline job={job} quotes={jobQuotes} allocations={jobAllocs} techs={techs} />
           </TabsContent>
+
+          <TabsContent value="matching" className="mt-4">
+            <MatchingTechniciansPanel job={job} techs={techs} allocations={allocations} quotes={quotes} />
+          </TabsContent>
+
+
 
           <TabsContent value="broadcasts" className="mt-4 space-y-2">
             {jobAllocs.length === 0 && <div className="text-sm text-muted-foreground">No broadcasts yet.</div>}
