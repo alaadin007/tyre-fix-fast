@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Phone, MapPin, Car, ExternalLink, Send, CreditCard } from "lucide-react";
 import { MatchingTechniciansPanel } from "@/components/admin/dashboard/MatchingTechniciansPanel";
+import { QuotesComparisonPanel } from "@/components/admin/dashboard/QuotesComparisonPanel";
 
 export function JobDetailDrawer({
   job, open, onOpenChange, quotes, allocations, techs,
@@ -199,35 +200,8 @@ export function JobDetailDrawer({
             ))}
           </TabsContent>
 
-          <TabsContent value="quotes" className="mt-4 space-y-2">
-            {jobQuotes.length === 0 && <div className="text-sm text-muted-foreground">No quotes yet.</div>}
-            {jobQuotes.map((q) => (
-              <div key={q.id} className="rounded border border-white/10 bg-white/[0.03] p-3 text-sm">
-                <div className="flex items-center gap-3">
-                  <div className="flex-1">
-                    <div className="font-medium">{techName(q.technician_id)}</div>
-                    <div className="text-xs text-muted-foreground">{fmtRelative(q.created_at)}</div>
-                  </div>
-                  <div className="text-right">
-                    <div className="font-semibold">£{q.price_gbp ?? "—"}</div>
-                    <div className="text-xs text-muted-foreground">ETA {q.eta_minutes ?? "—"} min</div>
-                  </div>
-                  <StatusBadge status={q.status} />
-                </div>
-                {q.tyre_included != null && (
-                  <div className="mt-1 text-xs text-muted-foreground">
-                    {q.tyre_included ? `Includes tyre${q.tyre_condition ? ` (${q.tyre_condition})` : ""}` : "Tyre NOT included"}
-                  </div>
-                )}
-                {q.status === "pending" && (
-                  <div className="mt-2 flex justify-end">
-                    <Button size="sm" onClick={() => sendQuoteToCustomer(q.id)} disabled={busy === q.id}>
-                      {busy === q.id ? "Sending…" : "Send to customer"}
-                    </Button>
-                  </div>
-                )}
-              </div>
-            ))}
+          <TabsContent value="quotes" className="mt-4">
+            <QuotesComparisonPanel job={job} quotes={jobQuotes} techs={techs} />
           </TabsContent>
 
           <TabsContent value="messages" className="mt-4">
