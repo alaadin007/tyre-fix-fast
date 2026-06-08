@@ -53,6 +53,7 @@ const App = () => (
           <Route path="ai-settings" element={<AISettingsPage />} />
           <Route path="command" element={<CommandCenter />} />
           <Route path="reports" element={<ReportsPage />} />
+          <Route path="settings" element={<SettingsPage />} />
         </Route>
         <Route path="/confirmed" element={<Confirmed />} />
         <Route path="/technician/login" element={<TechnicianLogin />} />
