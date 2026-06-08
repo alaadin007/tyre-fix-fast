@@ -8,6 +8,7 @@ import {
   CreditCard,
   Activity,
   Map,
+  Radio,
   LogOut,
   Sparkles,
 } from "lucide-react";
