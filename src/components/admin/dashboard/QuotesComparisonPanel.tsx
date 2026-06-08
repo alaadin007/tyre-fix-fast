@@ -25,7 +25,7 @@ export function QuotesComparisonPanel({
         const tech = techs.find((t) => t.id === q.technician_id) ?? null;
         const dist =
           job.lat != null && job.lng != null && tech?.last_lat != null && tech?.last_lng != null
-            ? distanceMiles(job.lat, job.lng, tech.last_lat!, tech.last_lng!)
+            ? distanceMiles({ lat: job.lat, lng: job.lng }, { lat: tech.last_lat, lng: tech.last_lng })
             : null;
         return { q, tech, dist };
       })
