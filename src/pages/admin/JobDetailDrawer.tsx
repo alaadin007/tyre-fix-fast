@@ -172,6 +172,7 @@ export function JobDetailDrawer({
             <TabsTrigger value="matching">Matching technicians</TabsTrigger>
             <TabsTrigger value="broadcasts">Broadcasts ({jobAllocs.length})</TabsTrigger>
             <TabsTrigger value="quotes">Quotes ({jobQuotes.length})</TabsTrigger>
+            <TabsTrigger value="payment">Payment</TabsTrigger>
             <TabsTrigger value="messages">Messages</TabsTrigger>
           </TabsList>
 
