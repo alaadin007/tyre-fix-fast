@@ -33,6 +33,8 @@ export default function QuotesPage() {
     } catch (e: any) {
       toast.error(e.message ?? "Failed");
     } finally { setBusy(null); }
+  };
+
   const reject = async (quoteId: string) => {
     setBusy(quoteId);
     try {
