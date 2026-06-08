@@ -60,25 +60,54 @@
   }
 
   .dark {
-    --background: 222 47% 6%;
-    --foreground: 0 0% 98%;
-    --card: 222 47% 8%;
-    --card-foreground: 0 0% 98%;
-    --popover: 222 47% 8%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 222 47% 11%;
-    --secondary: 217 33% 14%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 217 33% 14%;
-    --muted-foreground: 215 20% 70%;
-    --accent: 18 100% 55%;
+    /* Command-center: near-black surfaces, neon orange primary, vivid status accents */
+    --background: 222 40% 5%;
+    --foreground: 30 25% 92%;
+
+    --card: 222 35% 8%;
+    --card-foreground: 30 25% 92%;
+
+    --popover: 222 35% 8%;
+    --popover-foreground: 30 25% 92%;
+
+    /* Primary = electric orange (TyreFly brand) */
+    --primary: 22 100% 56%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 222 30% 12%;
+    --secondary-foreground: 30 25% 92%;
+
+    --muted: 222 28% 11%;
+    --muted-foreground: 215 16% 62%;
+
+    --accent: 22 100% 56%;
     --accent-foreground: 0 0% 100%;
-    --destructive: 0 63% 40%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 217 33% 18%;
-    --input: 217 33% 18%;
-    --ring: 18 100% 55%;
+    --accent-glow: 28 100% 64%;
+
+    --success: 152 76% 46%;
+    --success-foreground: 0 0% 8%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --warning: 42 100% 58%;
+    --warning-foreground: 0 0% 8%;
+
+    --info: 210 100% 62%;
+    --info-foreground: 0 0% 100%;
+
+    --border: 222 25% 16%;
+    --input: 222 25% 14%;
+    --ring: 22 100% 56%;
+
+    --sidebar-background: 222 42% 6%;
+    --sidebar-foreground: 215 16% 70%;
+    --sidebar-primary: 22 100% 56%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 222 30% 12%;
+    --sidebar-accent-foreground: 30 25% 92%;
+    --sidebar-border: 222 25% 14%;
+    --sidebar-ring: 22 100% 56%;
   }
 }
 
