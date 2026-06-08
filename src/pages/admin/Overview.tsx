@@ -30,6 +30,11 @@ export default function Overview() {
     ).length;
     const waitingForApproval = jobs.filter((j) => j.status === "awaiting_approval").length;
 
+    const awaitingDetailsRelease = jobs.filter(
+      (j) => j.platform_fee_status === "paid" &&
+        !["in_progress", "completed", "paid", "closed", "cancelled"].includes(j.status),
+    ).length;
+
     const activeTechs = techs.filter((t) => t.active && t.approval_status === "approved").length;
 
     const revenue = quotes
@@ -38,7 +43,7 @@ export default function Overview() {
 
     return {
       openJobs, closedJobs, paidJobs, pendingPayment,
-      waitingForQuotes, waitingForApproval, activeTechs, revenue,
+      waitingForQuotes, waitingForApproval, awaitingDetailsRelease, activeTechs, revenue,
     };
   }, [jobs, quotes, techs]);
 
