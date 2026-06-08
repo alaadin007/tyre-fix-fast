@@ -12,6 +12,7 @@ import {
   LogOut,
   Sparkles,
   BarChart3,
+  Settings,
 } from "lucide-react";
 import {
   Sidebar,
@@ -40,6 +41,7 @@ const items = [
   { title: "Activity", url: "/admin/dashboard/activity", icon: Activity },
   { title: "Reports", url: "/admin/dashboard/reports", icon: BarChart3 },
   { title: "AI Instructions", url: "/admin/dashboard/ai-settings", icon: Sparkles },
+  { title: "Settings", url: "/admin/dashboard/settings", icon: Settings },
 ];
 
 function AppSidebar() {
