@@ -182,9 +182,6 @@ export function JobDetailDrawer({
           </TabsContent>
 
 
-          <TabsContent value="timeline" className="mt-4">
-            <JobTimeline job={job} quotes={jobQuotes} allocations={jobAllocs} techs={techs} />
-          </TabsContent>
 
           <TabsContent value="broadcasts" className="mt-4 space-y-2">
             {jobAllocs.length === 0 && <div className="text-sm text-muted-foreground">No broadcasts yet.</div>}
