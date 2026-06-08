@@ -100,9 +100,14 @@ export default function QuotesPage() {
                   <TableCell className="text-xs text-muted-foreground">{fmtRelative(q.created_at)}</TableCell>
                   <TableCell className="text-right">
                     {q.status === "pending" && q.job_id && (
-                      <Button size="sm" onClick={() => send(q.job_id!, q.id)} disabled={busy === q.id}>
-                        {busy === q.id ? "Sending…" : "Send to customer"}
-                      </Button>
+                      <div className="flex justify-end gap-1">
+                        <Button size="sm" onClick={() => send(q.job_id!, q.id)} disabled={busy === q.id}>
+                          {busy === q.id ? "Sending…" : "Forward"}
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => reject(q.id)} disabled={busy === q.id}>
+                          Reject
+                        </Button>
+                      </div>
                     )}
                   </TableCell>
                 </TableRow>
