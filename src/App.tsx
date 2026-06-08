@@ -49,6 +49,7 @@ const App = () => (
           <Route path="technicians" element={<TechniciansPage />} />
           <Route path="activity" element={<ActivityPage />} />
           <Route path="ai-settings" element={<AISettingsPage />} />
+          <Route path="command" element={<CommandCenter />} />
         </Route>
         <Route path="/confirmed" element={<Confirmed />} />
         <Route path="/technician/login" element={<TechnicianLogin />} />
