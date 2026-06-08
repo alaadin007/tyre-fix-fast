@@ -140,31 +140,33 @@ export default function DashboardLayout() {
   }
 
   return (
-    <SidebarProvider>
-      <div className="flex min-h-screen w-full bg-background text-foreground">
-        <AppSidebar />
-        <div className="flex flex-1 flex-col">
-          <header className="sticky top-0 z-30 flex h-12 items-center gap-2 border-b border-white/10 bg-background/80 px-3 backdrop-blur">
-            <SidebarTrigger />
-            <div className="ml-2 text-sm font-medium text-muted-foreground">Admin</div>
-            <div className="ml-auto">
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={async () => {
-                  await supabase.auth.signOut();
-                  navigate("/admin/login");
-                }}
-              >
-                <LogOut className="mr-1 h-4 w-4" /> Sign out
-              </Button>
-            </div>
-          </header>
-          <main className="flex-1 p-4 md:p-6">
-            <Outlet />
-          </main>
+    <div className="dark">
+      <SidebarProvider>
+        <div className="flex min-h-screen w-full bg-background text-foreground">
+          <AppSidebar />
+          <div className="flex flex-1 flex-col">
+            <header className="sticky top-0 z-30 flex h-12 items-center gap-2 border-b border-border/60 bg-background/80 px-3 backdrop-blur">
+              <SidebarTrigger />
+              <div className="ml-2 text-sm font-medium text-muted-foreground">Admin</div>
+              <div className="ml-auto">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={async () => {
+                    await supabase.auth.signOut();
+                    navigate("/admin/login");
+                  }}
+                >
+                  <LogOut className="mr-1 h-4 w-4" /> Sign out
+                </Button>
+              </div>
+            </header>
+            <main className="flex-1 p-4 md:p-6">
+              <Outlet />
+            </main>
+          </div>
         </div>
-      </div>
-    </SidebarProvider>
+      </SidebarProvider>
+    </div>
   );
 }
