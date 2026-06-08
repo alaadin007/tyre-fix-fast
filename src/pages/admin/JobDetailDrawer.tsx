@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Phone, MapPin, Car, ExternalLink, Send, CreditCard } from "lucide-react";
 import { MatchingTechniciansPanel } from "@/components/admin/dashboard/MatchingTechniciansPanel";
+import { QuotesComparisonPanel } from "@/components/admin/dashboard/QuotesComparisonPanel";
 
 export function JobDetailDrawer({
   job, open, onOpenChange, quotes, allocations, techs,
