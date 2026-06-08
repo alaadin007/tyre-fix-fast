@@ -127,7 +127,14 @@ export default function TechnicianLiveMap() {
       const live = isLive(t);
       const m = L.marker([Number(t.last_lat), Number(t.last_lng)], {
         icon: live ? techIcon : staleIcon,
-      }).bindPopup(
+      })
+        .bindTooltip(t.name, {
+          permanent: true,
+          direction: "top",
+          offset: [0, -10],
+          className: "tf-tech-label",
+        })
+        .bindPopup(
         `<div style="font-family:system-ui;font-size:13px;color:#111;min-width:160px">
           <div style="font-weight:600">${t.name}</div>
           <div style="opacity:.7">${t.phone ?? ""}</div>

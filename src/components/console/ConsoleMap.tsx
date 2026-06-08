@@ -69,6 +69,12 @@ export default function ConsoleMap({ jobs, techs, onJobClick }: Props) {
     for (const t of techs) {
       if (t.last_lat == null || t.last_lng == null) continue;
       L.marker([Number(t.last_lat), Number(t.last_lng)], { icon: techIcon })
+        .bindTooltip(t.name, {
+          permanent: true,
+          direction: "top",
+          offset: [0, -10],
+          className: "tf-tech-label",
+        })
         .bindPopup(
           `<div style="font-family:system-ui;font-size:13px;color:#111;min-width:160px">
             <div style="font-weight:600">${t.name}</div>
