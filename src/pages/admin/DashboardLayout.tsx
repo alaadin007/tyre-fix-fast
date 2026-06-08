@@ -11,6 +11,7 @@ import {
   Radio,
   LogOut,
   Sparkles,
+  BarChart3,
 } from "lucide-react";
 import {
   Sidebar,
@@ -37,6 +38,7 @@ const items = [
   { title: "Payments", url: "/admin/dashboard/payments", icon: CreditCard },
   { title: "Technicians", url: "/admin/dashboard/technicians", icon: Users },
   { title: "Activity", url: "/admin/dashboard/activity", icon: Activity },
+  { title: "Reports", url: "/admin/dashboard/reports", icon: BarChart3 },
   { title: "AI Instructions", url: "/admin/dashboard/ai-settings", icon: Sparkles },
 ];
 
