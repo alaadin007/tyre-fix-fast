@@ -17,6 +17,7 @@ export function MatchingTechniciansPanel({
   quotes: DashQuote[];
 }) {
   const matches = useMemo(() => rankMatches(job, techs, allocations, quotes), [job, techs, allocations, quotes]);
+  const intakeIncomplete = job.status === "pending" || job.status === "intake_pending" || job.status === "unknown";
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [showAll, setShowAll] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -33,6 +34,10 @@ export function MatchingTechniciansPanel({
   };
 
   const broadcast = async () => {
+    if (intakeIncomplete) {
+      toast.error("Customer hasn't finished the job intake yet");
+      return;
+    }
     if (selected.size === 0) {
       toast.error("Select at least one technician");
       return;
@@ -64,6 +69,12 @@ export function MatchingTechniciansPanel({
           {showAll ? "Show matching only" : "Show all technicians"}
         </Button>
       </div>
+
+      {intakeIncomplete && (
+        <div className="rounded border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-200">
+          Broadcasting is disabled until the customer finishes the WhatsApp intake and the job posting is complete.
+        </div>
+      )}
 
       {visible.length === 0 && (
         <div className="rounded border border-white/10 bg-white/[0.03] p-4 text-sm text-muted-foreground">
@@ -133,7 +144,7 @@ export function MatchingTechniciansPanel({
 
       <div className="flex items-center justify-between gap-2 pt-2">
         <div className="text-xs text-muted-foreground">{selected.size} selected</div>
-        <Button size="sm" onClick={broadcast} disabled={busy || selected.size === 0}>
+        <Button size="sm" onClick={broadcast} disabled={busy || selected.size === 0 || intakeIncomplete} title={intakeIncomplete ? "Waiting for customer to finish intake" : undefined}>
           <Send className="mr-1 h-3.5 w-3.5" />
           {busy ? "Broadcasting…" : "Broadcast to selected"}
         </Button>
