@@ -63,6 +63,7 @@ export type DashAllocation = {
 
 export type DashTech = {
   id: string;
+  tech_code: string | null;
   name: string;
   phone: string | null;
   whatsapp: string | null;
