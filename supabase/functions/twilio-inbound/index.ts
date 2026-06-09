@@ -2305,8 +2305,10 @@ Deno.serve(async (req) => {
             : `Booked! ${sym}${cheapest.price_gbp} total, ETA ${cheapest.eta_minutes} min. We'll text the ${feeDisp} booking fee link shortly (deducted from final bill).`;
           await sendReply(from, confirmMsg, "whatsapp");
           await sendReply(from, confirmMsg, "sms");
+          return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
         }
-        return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+        // No pending quote to accept — fall through so the open-job
+        // clarification (3b.5) can handle "YES = start a new job".
       }
 
       // 3b.5 Open-job clarification. The customer has at least one job that isn't
