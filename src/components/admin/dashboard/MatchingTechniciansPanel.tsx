@@ -96,6 +96,9 @@ export function MatchingTechniciansPanel({
               />
               <div className="flex-1 min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
+                  {t.tech_code && (
+                    <Badge variant="outline" className="font-mono text-[10px]">{t.tech_code}</Badge>
+                  )}
                   <span className="font-medium">{t.name}</span>
                   {m.covers && <Badge variant="secondary" className="text-xs">Covers area</Badge>}
                   {m.available ? (
