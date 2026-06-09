@@ -2311,79 +2311,15 @@ Deno.serve(async (req) => {
         // clarification (3b.5) can handle "YES = start a new job".
       }
 
-      // 3b.5 Open-job clarification. The customer has at least one job that isn't
-      // closed/cancelled. Free-form messages here used to silently enrich the
-      // most recent job (so "This is a new job" became part of an in-progress
-      // job's description). Instead: list their open jobs, ask whether they want
-      // a new job (reply YES) or are asking about an existing one, and on the
-      // next message either start fresh intake or answer their question via AI.
-      const OPEN_STATUSES = [
-        "intake_complete", "broadcasting", "awaiting_approval", "pending", "quoted",
-        "awaiting_payment", "accepted", "in_progress", "paid",
-      ];
-      const { data: openJobs } = await supabase
-        .from("jobs")
-        .select("id, status, issue_type, postcode, vehicle_reg, damage_summary, created_at")
-        .eq("customer_phone", from)
-        .in("status", OPEN_STATUSES)
-        .order("created_at", { ascending: false });
-      const hasOpenJobs = (openJobs?.length ?? 0) > 0;
-
-      if (hasOpenJobs) {
-        const cutoff24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-        const { data: convRow } = await supabase
-          .from("conversations")
-          .select("*")
-          .eq("customer_phone", from)
-          .order("last_message_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
-        const inActiveIntake = !!convRow && (convRow as any).step !== "complete" && (convRow as any).last_message_at >= cutoff24h;
-        const ctx = ((convRow as any)?.context ?? {}) as Record<string, any>;
-        const pendingClarify = ctx.awaiting_new_or_question === true;
-        const yesIntent = /^\s*(yes|y|yeah|yep|new\s*job|new)\b/i.test(body);
-
-        if (!inActiveIntake) {
-          if (pendingClarify && yesIntent) {
-            // Customer confirmed they want a brand-new job. Clear the flag and
-            // fall through to processCustomerIntake so a fresh job is created.
-            await supabase
-              .from("conversations")
-              .update({
-                context: { ...ctx, awaiting_new_or_question: false },
-                step: "complete",
-              })
-              .eq("id", (convRow as any).id);
-            // (intentionally fall through — no return)
-          } else if (pendingClarify) {
-            // Customer is asking about their existing job(s). Answer with context.
-            const answer = await answerCustomerJobQuestion(openJobs ?? [], body);
-            await sendReply(from, answer, channel);
-            return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
-          } else if (mediaUrls.length === 0) {
-            // First free-form message while jobs are open — list them and ask.
-            // (If they sent media, fall through to enrichment below.)
-            const listMsg = formatOpenJobsPrompt(openJobs ?? []);
-            if (convRow) {
-              await supabase
-                .from("conversations")
-                .update({
-                  context: { ...ctx, awaiting_new_or_question: true },
-                  last_message_at: new Date().toISOString(),
-                })
-                .eq("id", (convRow as any).id);
-            } else {
-              await supabase.from("conversations").insert({
-                customer_phone: from,
-                step: "complete",
-                context: { awaiting_new_or_question: true },
-              });
-            }
-            await sendReply(from, listMsg, channel);
-            return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
-          }
-        }
-      }
+      // 3b.5 Open-job clarification — DISABLED by product decision.
+      // Customers should never see old pending / awaiting-approval / in-progress
+      // / completed jobs when they message us. Any free-form message from a
+      // customer falls straight through to fresh intake (processCustomerIntake),
+      // which creates a brand-new job and returns a new reference number.
+      // Quote acceptance (3b above) and review rating (3a above) still work
+      // because those require an explicit YES / 1-5 reply on a job that is
+      // actually awaiting that exact response.
+    }
 
       // 3c. Locked states: job already in payment/in-progress. Treat MEDIA as
       // enrichment (photos add to the job). Text-only messages are handled by
