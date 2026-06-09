@@ -2360,22 +2360,9 @@ Deno.serve(async (req) => {
         job_id: alloc.job_id,
       });
 
-      // Also send a WhatsApp message to master admins so they see it in chat.
-      try {
-        await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/notify-admins`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
-          },
-          body: JSON.stringify({
-            channel: "whatsapp",
-            body: adminBody,
-          }),
-        });
-      } catch (e) {
-        console.error("notify-admins (tech_quote_ready) failed", e);
-      }
+      // NOTE: Per-quote WhatsApp notifications to admins are intentionally
+      // disabled. Admins receive a single consolidated summary of every quote
+      // for this job from finalize-broadcast once the 1.5-minute window ends.
 
       // ───────────────────────────────────────────────────────────────
       // Ask admins for approval BEFORE sending the quote to the customer.
