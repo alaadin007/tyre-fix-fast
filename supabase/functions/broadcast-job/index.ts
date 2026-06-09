@@ -183,13 +183,9 @@ Deno.serve(async (req) => {
     // quoting a price.
     const customerSaid = (job.issue_description?.trim()) || job.issue_type || "";
     const aiSaid = (job.damage_summary?.trim()) || "";
-    const tyreSpec = [job.tyre_size, job.tyre_brand, job.tyre_type, job.tread_condition, job.wheel_type]
-      .filter((v) => !!v && String(v).trim().length > 0)
-      .join(" · ");
     const detailParts: string[] = [];
-    if (customerSaid) detailParts.push(`Customer: ${customerSaid}`);
-    if (aiSaid) detailParts.push(`AI assessment: ${aiSaid}`);
-    if (tyreSpec) detailParts.push(`Tyre: ${tyreSpec}`);
+    if (customerSaid) detailParts.push(`Nature of Issue: ${customerSaid}`);
+    if (aiSaid) detailParts.push(`AI Image Assessment: ${aiSaid}`);
     const details = detailParts.length > 0
       ? detailParts.join(" — ")
       : "No additional details";
