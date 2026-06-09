@@ -1504,7 +1504,8 @@ Deno.serve(async (req) => {
         }
         const lines = scored.slice(0, 10).map(({ t, miles }: any) => {
           const dist = miles != null ? ` · ${miles.toFixed(1)} mi` : "";
-          return `• ${t.name} (${t.phone})${dist}`;
+          const code = t.tech_code ? `[${t.tech_code}] ` : "";
+          return `• ${code}${t.name} (${t.phone})${dist}`;
         }).join("\n");
         const more = scored.length > 10 ? `\n…and ${scored.length - 10} more` : "";
         await setAdminState("await_broadcast_confirm", job.id);
