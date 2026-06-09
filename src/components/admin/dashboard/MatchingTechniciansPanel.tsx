@@ -34,8 +34,11 @@ export function MatchingTechniciansPanel({
   };
 
   const broadcast = async () => {
+    if (intakeIncomplete) {
+      toast.error("Customer hasn't finished the job intake yet");
+      return;
+    }
     if (selected.size === 0) {
-      toast.error("Select at least one technician");
       return;
     }
     setBusy(true);
