@@ -878,24 +878,37 @@ function DispatchModal({ job, allTechs, onClose, onDispatch }: DispatchModalProp
           </div>
           {filteredTechs.length > 0 && (
             <div className="mt-2 space-y-1 rounded-lg border border-white/10 bg-white/[0.03] p-1">
-              {filteredTechs.map((t) => (
-                <button
-                  key={t.id}
-                  onClick={() => { setTechId(t.id); setSearch(""); }}
-                  className={`flex w-full items-center justify-between rounded px-3 py-2 text-left text-sm hover:bg-white/[0.06] ${
-                    techId === t.id ? "bg-primary/10 text-primary" : ""
-                  }`}
-                >
-                  <span>{t.name}</span>
-                  <span className="text-xs text-muted-foreground">{t.vehicle ?? ""}</span>
-                </button>
-              ))}
+              {filteredTechs.map((t) => {
+                const q = techQuotes[t.id];
+                return (
+                  <button
+                    key={t.id}
+                    onClick={() => { selectTech(t.id); setSearch(""); }}
+                    className={`flex w-full items-center justify-between rounded px-3 py-2 text-left text-sm hover:bg-white/[0.06] ${
+                      techId === t.id ? "bg-primary/10 text-primary" : ""
+                    }`}
+                  >
+                    <span className="flex items-center gap-2">
+                      {t.name}
+                      {q && (
+                        <span className="rounded-full border border-emerald-400/30 bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-300">
+                          £{q.price?.toFixed(0) ?? "—"} · {q.eta ?? "?"}m
+                        </span>
+                      )}
+                    </span>
+                    <span className="text-xs text-muted-foreground">{t.vehicle ?? ""}</span>
+                  </button>
+                );
+              })}
             </div>
           )}
           {selectedTech && (
             <p className="mt-2 text-xs text-muted-foreground">
               Selected: <span className="font-semibold text-foreground">{selectedTech.name}</span>
               {selectedTech.vehicle ? ` · ${selectedTech.vehicle}` : ""}
+              {techQuotes[selectedTech.id]?.price != null && (
+                <> · tech submitted £{techQuotes[selectedTech.id]!.price!.toFixed(2)} / {techQuotes[selectedTech.id]!.eta ?? "?"}m</>
+              )}
             </p>
           )}
         </div>
