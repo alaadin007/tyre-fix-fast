@@ -144,7 +144,7 @@ export function MatchingTechniciansPanel({
 
       <div className="flex items-center justify-between gap-2 pt-2">
         <div className="text-xs text-muted-foreground">{selected.size} selected</div>
-        <Button size="sm" onClick={broadcast} disabled={busy || selected.size === 0}>
+        <Button size="sm" onClick={broadcast} disabled={busy || selected.size === 0 || intakeIncomplete} title={intakeIncomplete ? "Waiting for customer to finish intake" : undefined}>
           <Send className="mr-1 h-3.5 w-3.5" />
           {busy ? "Broadcasting…" : "Broadcast to selected"}
         </Button>
