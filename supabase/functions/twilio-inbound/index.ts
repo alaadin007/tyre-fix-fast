@@ -2319,22 +2319,11 @@ Deno.serve(async (req) => {
       // Quote acceptance (3b above) and review rating (3a above) still work
       // because those require an explicit YES / 1-5 reply on a job that is
       // actually awaiting that exact response.
-    }
 
-      // 3c. Locked states: job already in payment/in-progress. Treat MEDIA as
-      // enrichment (photos add to the job). Text-only messages are handled by
-      // the open-job clarification above and never silently appended here.
-      const lockedStates = ["awaiting_payment", "accepted", "in_progress", "paid"];
-      if (lockedStates.includes(recentJob.status) && mediaUrls.length > 0) {
-        const updates: Record<string, any> = {
-          updated_at: new Date().toISOString(),
-          photo_urls: [...(recentJob.photo_urls ?? []), ...mediaUrls].slice(0, 12),
-        };
-        if (body) updates.issue_description = [recentJob.issue_description, body].filter(Boolean).join("\n").slice(0, 2000);
-        await supabase.from("jobs").update(updates).eq("id", recentJob.id);
-        await sendReply(from, "Thanks — added that photo to your job. The technician has been notified.", channel);
-        return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
-      }
+      // 3c. Locked-state photo enrichment — DISABLED by product decision.
+      // Once a customer has received a reference number, the job is the
+      // technician's responsibility. Any subsequent message starts a brand-new
+      // intake instead of being silently appended to the old job.
     }
 
 
