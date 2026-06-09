@@ -70,6 +70,12 @@ export function MatchingTechniciansPanel({
         </Button>
       </div>
 
+      {intakeIncomplete && (
+        <div className="rounded border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-200">
+          Broadcasting is disabled until the customer finishes the WhatsApp intake and the job posting is complete.
+        </div>
+      )}
+
       {visible.length === 0 && (
         <div className="rounded border border-white/10 bg-white/[0.03] p-4 text-sm text-muted-foreground">
           No technicians match this postcode area yet.
