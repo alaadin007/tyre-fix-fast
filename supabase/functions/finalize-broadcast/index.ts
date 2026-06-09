@@ -65,6 +65,13 @@ Deno.serve(async (req) => {
       .eq("job_id", job_id)
       .order("price_gbp", { ascending: true, nullsFirst: false });
 
+    // Fetch job details for customer + vehicle context in the summary.
+    const { data: jobFull } = await supabase
+      .from("jobs")
+      .select("customer_name, customer_phone, vehicle_reg")
+      .eq("id", job_id)
+      .maybeSingle();
+
     const techIds = Array.from(new Set((quotes ?? []).map((q) => q.technician_id).filter(Boolean))) as string[];
 
     let techsById = new Map<string, any>();
