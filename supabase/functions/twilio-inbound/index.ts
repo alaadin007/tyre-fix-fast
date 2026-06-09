@@ -2468,6 +2468,87 @@ Deno.serve(async (req) => {
     }
 
 
+    // ─── Intent gate ─────────────────────────────────────────────────────
+    // Before falling through to intake, classify the customer's intent.
+    // The intake flow must ONLY trigger when the customer clearly describes
+    // a tyre/vehicle problem (or is mid-intake answering our questions).
+    // Mid-intake = an in-progress (non-complete) conversation in the last
+    // 30 minutes. Photos always pass through (likely tyre images).
+    let midIntake = false;
+    try {
+      const cutoff = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+      const { data: conv } = await supabase
+        .from("conversations")
+        .select("id,step,last_message_at")
+        .eq("customer_phone", from)
+        .neq("step", "complete")
+        .gte("last_message_at", cutoff)
+        .order("last_message_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      midIntake = !!conv;
+    } catch (_) { /* best-effort */ }
+
+    if (!midIntake && mediaUrls.length === 0 && body) {
+      const intent = await classifyCustomerIntent(body);
+      console.log("intent classify", { from, body: body.slice(0, 80), intent });
+
+      // Pull customer name + active job for contextual replies.
+      const { data: custRow } = await supabase
+        .from("customers").select("full_name").eq("phone", from).maybeSingle();
+      const firstName = firstNameOf((custRow as any)?.full_name);
+      const activeJob = recentJob && ACTIVE_JOB_STATUSES.has(String(recentJob.status))
+        ? recentJob : null;
+
+      const shouldStartIntake =
+        intent.intent === "INTENT_JOB_REQUEST" || intent.has_vehicle_issue === true;
+
+      if (!shouldStartIntake) {
+        let reply = "";
+        switch (intent.intent) {
+          case "INTENT_GREETING":
+            reply = firstName
+              ? `Hi ${firstName}! 👋 Welcome back to TyreFly. How can I help you today?`
+              : `Hi there! 👋 Welcome to TyreFly, your 24/7 roadside tyre service. How can I help you today?`;
+            break;
+          case "INTENT_GRATITUDE":
+            reply = activeJob
+              ? `You're welcome${firstName ? `, ${firstName}` : ""}! 😊 We've received your job (Ref: ${jobRefOf(activeJob)}) and are taking care of it. We'll update you shortly.`
+              : `You're welcome${firstName ? `, ${firstName}` : ""}! If you ever need tyre assistance, we're available 24/7. 🚗`;
+            break;
+          case "INTENT_ACKNOWLEDGEMENT":
+            reply = activeJob
+              ? `Got it${firstName ? `, ${firstName}` : ""} 👍 We'll keep you updated on job ${jobRefOf(activeJob)}.`
+              : `Great! If you need anything else, just message us anytime. 🚗`;
+            break;
+          case "INTENT_JOB_STATUS_ENQUIRY":
+            reply = activeJob
+              ? `Your job ${jobRefOf(activeJob)} is currently *${String(activeJob.status).replace(/_/g, " ")}*. We'll send you an update as soon as there's progress.`
+              : `I don't see an active job for your number. Would you like to report a tyre issue?`;
+            break;
+          case "INTENT_PAYMENT_ENQUIRY":
+            reply = activeJob
+              ? `Thanks${firstName ? `, ${firstName}` : ""} — let me check the payment status on job ${jobRefOf(activeJob)} and a team member will confirm shortly.`
+              : `I don't see an active job for your number. If you've made a payment, please send the reference and we'll look into it.`;
+            break;
+          case "INTENT_CANCELLATION":
+            reply = activeJob
+              ? `Just to confirm — do you want to cancel job ${jobRefOf(activeJob)}? Reply *YES CANCEL* to confirm.`
+              : `No problem — you don't have any active job with us right now. 🙂`;
+            break;
+          case "INTENT_COMPLAINT_OR_QUESTION":
+            reply = `Happy to help! TyreFly is a 24/7 mobile tyre repair & replacement service. Could you share a bit more detail about what you'd like to know?`;
+            break;
+          default:
+            reply = `I want to make sure I help you properly — could you tell me a bit more about what you need? 😊`;
+        }
+        await sendReply(from, reply, channel);
+        return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+      }
+      // Intent says job request / vehicle issue → fall through to intake.
+    }
+
+
     // 4. Otherwise → route through the customer intake state machine.
     //    This is the single source of truth for the 6-step information gathering.
     //    It handles brand-new customers, returning customers (with memory pre-fill),
