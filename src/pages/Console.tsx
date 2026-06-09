@@ -822,35 +822,44 @@ function DispatchModal({ job, allTechs, onClose, onDispatch }: DispatchModalProp
             <Sparkles className="h-3 w-3 text-primary" /> AI suggestions
           </h3>
           <div className="space-y-2">
-            {suggested.map(({ tech, distanceKm, etaMin }) => (
-              <button
-                key={tech.id}
-                onClick={() => { setTechId(tech.id); setEta(String(etaMin)); }}
-                className={`flex w-full items-center justify-between gap-3 rounded-lg border p-3 text-left transition ${
-                  techId === tech.id
-                    ? "border-primary bg-primary/10"
-                    : "border-white/10 bg-white/[0.04] hover:border-primary/40"
-                }`}
-              >
-                <div>
-                  <div className="font-semibold">{tech.name}</div>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-                    {(tech.rating ?? 5).toFixed(1)} · {distanceKm.toFixed(1)} km · ETA {etaMin}m
-                    {tech.vehicle ? ` · ${tech.vehicle}` : ""}
+            {suggested.map(({ tech, distanceKm, etaMin }) => {
+              const q = techQuotes[tech.id];
+              return (
+                <button
+                  key={tech.id}
+                  onClick={() => selectTech(tech.id, etaMin)}
+                  className={`flex w-full items-center justify-between gap-3 rounded-lg border p-3 text-left transition ${
+                    techId === tech.id
+                      ? "border-primary bg-primary/10"
+                      : "border-white/10 bg-white/[0.04] hover:border-primary/40"
+                  }`}
+                >
+                  <div className="min-w-0">
+                    <div className="font-semibold">{tech.name}</div>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                      {(tech.rating ?? 5).toFixed(1)} · {distanceKm.toFixed(1)} km · ETA {q?.eta ?? etaMin}m
+                      {tech.vehicle ? ` · ${tech.vehicle}` : ""}
+                    </div>
+                    {q && (
+                      <div className="mt-1 inline-flex items-center gap-1 rounded-full border border-emerald-400/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-emerald-300">
+                        Tech quote: £{q.price?.toFixed(2) ?? "—"} · {q.eta ?? "?"}m
+                      </div>
+                    )}
                   </div>
-                </div>
-                {techId === tech.id && (
-                  <span className="rounded-full bg-primary px-2 py-0.5 text-[10px] font-semibold uppercase text-primary-foreground">
-                    Selected
-                  </span>
-                )}
-              </button>
-            ))}
+                  {techId === tech.id && (
+                    <span className="rounded-full bg-primary px-2 py-0.5 text-[10px] font-semibold uppercase text-primary-foreground">
+                      Selected
+                    </span>
+                  )}
+                </button>
+              );
+            })}
             {suggested.length === 0 && (
               <p className="text-xs text-muted-foreground">No technicians with a recent location.</p>
             )}
           </div>
+
         </div>
 
         {/* Manual tech search */}
