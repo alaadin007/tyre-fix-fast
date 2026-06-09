@@ -916,8 +916,18 @@ function DispatchModal({ job, allTechs, onClose, onDispatch }: DispatchModalProp
         {/* Quote */}
         <div className="mt-5 grid grid-cols-2 gap-3">
           <div>
-            <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-              Price (£)
+            <label className="mb-1 flex items-center justify-between text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              <span>Price (£)</span>
+              {techId && techQuotes[techId]?.price != null && (
+                <button
+                  type="button"
+                  onClick={() => setPrice(String(techQuotes[techId]!.price))}
+                  className="rounded px-1.5 py-0.5 text-[10px] font-semibold normal-case tracking-normal text-emerald-300 hover:bg-emerald-500/10"
+                  title="Use technician's submitted price"
+                >
+                  Tech: £{techQuotes[techId]!.price!.toFixed(2)}
+                </button>
+              )}
             </label>
             <Input
               type="number"
@@ -928,8 +938,18 @@ function DispatchModal({ job, allTechs, onClose, onDispatch }: DispatchModalProp
             />
           </div>
           <div>
-            <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-              ETA (mins)
+            <label className="mb-1 flex items-center justify-between text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              <span>ETA (mins)</span>
+              {techId && techQuotes[techId]?.eta != null && (
+                <button
+                  type="button"
+                  onClick={() => setEta(String(techQuotes[techId]!.eta))}
+                  className="rounded px-1.5 py-0.5 text-[10px] font-semibold normal-case tracking-normal text-emerald-300 hover:bg-emerald-500/10"
+                  title="Use technician's submitted ETA"
+                >
+                  Tech: {techQuotes[techId]!.eta}m
+                </button>
+              )}
             </label>
             <Input
               type="number"
