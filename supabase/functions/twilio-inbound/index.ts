@@ -1838,6 +1838,22 @@ Deno.serve(async (req) => {
         }
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
       }
+
+      // Admin catchall — never let an admin message fall through to the
+      // customer intake flow. If nothing above matched, send the command menu.
+      await sendReply(
+        from,
+        "Hi! Here's what I can help you with:\n" +
+        "• Technician list   → 'techs for #JOBREF'\n" +
+        "• Broadcast to all  → 'broadcast #JOBREF'\n" +
+        "• Send quote        → 'yes #JOBREF' (after quotes arrive)\n" +
+        "• Assign technician → 'assign #JOBREF' (after payment)\n" +
+        "• Recent jobs       → 'JOBS'\n" +
+        "• Pending applicants→ 'PENDING'\n" +
+        "• Full command help → 'HELP'",
+        channel,
+      );
+      return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
     }
 
     // 1c. Technician onboarding via WhatsApp/SMS
