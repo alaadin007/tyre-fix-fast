@@ -2389,18 +2389,10 @@ Deno.serve(async (req) => {
           );
         }
 
-        const promptBody =
-          `Do you want to send this quote to the customer?\n` +
-          `Job Ref: #${shortRef} · £${mergedPrice} · ETA ${mergedEta} min\n\n` +
-          `Reply YES to send it, or YES #${shortRef} if you have multiple pending quotes.`;
-        await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/notify-admins`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
-          },
-          body: JSON.stringify({ channel: "whatsapp", body: promptBody }),
-        });
+        // Do NOT send the per-quote "Do you want to send this quote?" prompt
+        // here. The consolidated finalize-broadcast summary (sent after the
+        // 1.5-minute window) instructs admins to reply YES #ref to forward
+        // any specific quote to the customer.
       } catch (e) {
         console.error("queue admin send-quote approval failed", e);
       }
