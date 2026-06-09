@@ -78,7 +78,7 @@ Deno.serve(async (req) => {
     if (techIds.length > 0) {
       const { data: techs } = await supabase
         .from("technicians")
-        .select("id, tech_code, name, last_lat, last_lng")
+        .select("id, tech_code, name, phone, last_lat, last_lng")
         .in("id", techIds);
       techsById = new Map((techs ?? []).map((t: any) => [t.id, t]));
     }
