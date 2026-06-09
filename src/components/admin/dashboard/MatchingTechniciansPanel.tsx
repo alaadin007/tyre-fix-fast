@@ -17,6 +17,7 @@ export function MatchingTechniciansPanel({
   quotes: DashQuote[];
 }) {
   const matches = useMemo(() => rankMatches(job, techs, allocations, quotes), [job, techs, allocations, quotes]);
+  const intakeIncomplete = job.status === "pending" || job.status === "intake_pending" || job.status === "unknown";
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [showAll, setShowAll] = useState(false);
   const [busy, setBusy] = useState(false);
