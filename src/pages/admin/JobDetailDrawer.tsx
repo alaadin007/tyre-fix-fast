@@ -79,157 +79,184 @@ export function JobDetailDrawer({
     } catch (e: any) { toast.error(e.message); } finally { setBusy(null); }
   };
 
+  const intakeIncomplete = job.status === "pending" || job.status === "intake_pending" || job.status === "unknown";
+  const intakeTitle = intakeIncomplete ? "Waiting for customer to finish intake" : undefined;
+  const initials = (job.customer_name ?? "?")
+    .split(/\s+/).filter(Boolean).slice(0, 2).map(s => s[0]?.toUpperCase()).join("") || "?";
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full overflow-y-auto bg-background sm:max-w-2xl">
-        <SheetHeader>
-          <SheetTitle className="flex items-center gap-3">
-            <span className="font-mono text-sm text-muted-foreground">#{shortRef(job.id)}</span>
-            <span>{job.customer_name ?? "Unknown customer"}</span>
-            <StatusBadge status={job.status} />
-          </SheetTitle>
-        </SheetHeader>
-
-        <div className="mt-4 grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <MapPin className="h-4 w-4" /> {job.postcode ?? "—"} {job.region ? `· ${job.region}` : ""}
-          </div>
-          {job.lat != null && job.lng != null && (
-            <a
-              href={`https://maps.google.com/?q=${job.lat},${job.lng}`}
-              target="_blank" rel="noreferrer"
-              className="flex items-center gap-2 text-primary hover:underline"
-            >
-              <ExternalLink className="h-4 w-4" /> Live location on map
-            </a>
-          )}
-          {job.customer_phone && (
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <Phone className="h-4 w-4" /> {job.customer_phone}
-            </div>
-          )}
-          {job.vehicle_reg && (
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <Car className="h-4 w-4" /> {job.vehicle_reg}
-            </div>
-          )}
-          {(job.affected_wheels?.length ?? 0) > 0 && (
-            <div className="text-muted-foreground">
-              <span className="text-foreground">Affected tyre(s): </span>{job.affected_wheels!.join(", ")}
-            </div>
-          )}
-          {(job.tyre_size || job.tyre_brand || job.tyre_type) && (
-            <div className="text-muted-foreground">
-              <span className="text-foreground">Tyre: </span>
-              {[job.tyre_size, job.tyre_brand, job.tyre_type].filter(Boolean).join(" · ")}
-            </div>
-          )}
-          <div className="text-muted-foreground">
-            <span className="text-foreground">Payment: </span>{job.platform_fee_status}
-          </div>
-          <div className="text-muted-foreground">
-            <span className="text-foreground">Created: </span>{new Date(job.created_at).toLocaleString()}
-          </div>
-        </div>
-        <div className="mt-2 text-sm text-muted-foreground">
-          {job.damage_summary || job.issue_description || job.issue_type || "—"}
-        </div>
-        {job.photo_urls && job.photo_urls.length > 0 && (
-          <div className="flex flex-wrap gap-2 pt-2">
-            {job.photo_urls.slice(0, 6).map((u, i) => (
-              <a key={i} href={u} target="_blank" rel="noreferrer">
-                <img src={u} alt="Tyre photo uploaded by customer" className="h-16 w-16 rounded object-cover" />
-              </a>
-            ))}
-          </div>
-        )}
-
-        {(() => null)()}
-        <div className="mt-4 flex flex-wrap gap-2">
-          {(() => {
-            const intakeIncomplete = job.status === "pending" || job.status === "intake_pending" || job.status === "unknown";
-            const intakeTitle = intakeIncomplete ? "Waiting for customer to finish intake" : undefined;
-            return (
-              <>
-                <Button size="sm" variant="outline" onClick={rebroadcast} disabled={!!busy || intakeIncomplete} title={intakeTitle}>
-                  <Send className="mr-1 h-3.5 w-3.5" /> Rebroadcast
-                </Button>
-                {job.platform_fee_status !== "paid" && (
-                  <Button size="sm" variant="outline" onClick={markPaid} disabled={!!busy || intakeIncomplete} title={intakeTitle}>
-                    <CreditCard className="mr-1 h-3.5 w-3.5" /> Mark paid
-                  </Button>
-                )}
-                {job.status !== "completed" && job.status !== "paid" && (
-                  <Button size="sm" variant="outline" onClick={markCompleted} disabled={!!busy || intakeIncomplete} title={intakeTitle}>
-                    Mark completed
-                  </Button>
-                )}
-              </>
-            );
-          })()}
-          {job.stripe_checkout_url && (
-            <a href={job.stripe_checkout_url} target="_blank" rel="noreferrer">
-              <Button size="sm" variant="ghost">
-                <ExternalLink className="mr-1 h-3.5 w-3.5" /> Checkout
-              </Button>
-            </a>
-          )}
-        </div>
-
-        <Tabs defaultValue="timeline" className="mt-6">
-          <TabsList>
-            <TabsTrigger value="timeline">Timeline</TabsTrigger>
-            <TabsTrigger value="matching">Matching technicians</TabsTrigger>
-            <TabsTrigger value="broadcasts">Broadcasts ({jobAllocs.length})</TabsTrigger>
-            <TabsTrigger value="quotes">Quotes ({jobQuotes.length})</TabsTrigger>
-            <TabsTrigger value="payment">Payment</TabsTrigger>
-            <TabsTrigger value="approval">Approval</TabsTrigger>
-            <TabsTrigger value="messages">Messages</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="timeline" className="mt-4">
-            <JobTimeline job={job} quotes={jobQuotes} allocations={jobAllocs} techs={techs} />
-          </TabsContent>
-
-          <TabsContent value="matching" className="mt-4">
-            <MatchingTechniciansPanel job={job} techs={techs} allocations={allocations} quotes={quotes} />
-          </TabsContent>
-
-
-
-          <TabsContent value="broadcasts" className="mt-4 space-y-2">
-            {jobAllocs.length === 0 && <div className="text-sm text-muted-foreground">No broadcasts yet.</div>}
-            {jobAllocs.map((a) => (
-              <div key={a.id} className="flex items-center gap-3 rounded border border-white/10 bg-white/[0.03] p-3 text-sm">
-                <div className="flex-1">
-                  <div className="font-medium">{techName(a.technician_id)}</div>
-                  <div className="text-xs text-muted-foreground">{fmtRelative(a.created_at)}</div>
-                </div>
-                {a.match_score != null && (
-                  <div className="text-xs text-muted-foreground">Score {Number(a.match_score).toFixed(2)}</div>
-                )}
-                <StatusBadge status={a.status} />
+      <SheetContent className="dark w-full overflow-y-auto border-l border-border/60 bg-background p-0 text-foreground sm:max-w-2xl">
+        {/* Sticky header */}
+        <div className="sticky top-0 z-10 border-b border-border/60 bg-card/80 px-6 py-4 backdrop-blur">
+          <SheetHeader className="space-y-0">
+            <div className="flex items-start gap-3">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-sm font-semibold text-primary">
+                {initials}
               </div>
-            ))}
-          </TabsContent>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-mono text-xs font-semibold text-primary">#{shortRef(job.id)}</span>
+                  <StatusBadge status={job.status} />
+                </div>
+                <SheetTitle className="mt-0.5 truncate text-base font-semibold">
+                  {job.customer_name ?? "Unknown customer"}
+                </SheetTitle>
+                <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                  {job.customer_phone && (
+                    <span className="inline-flex items-center gap-1"><Phone className="h-3 w-3" />{job.customer_phone}</span>
+                  )}
+                  <span>Created {fmtRelative(job.created_at)}</span>
+                </div>
+              </div>
+            </div>
+          </SheetHeader>
 
-          <TabsContent value="quotes" className="mt-4">
-            <QuotesComparisonPanel job={job} quotes={jobQuotes} techs={techs} />
-          </TabsContent>
+          {/* Actions */}
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button size="sm" variant="outline" onClick={rebroadcast} disabled={!!busy || intakeIncomplete} title={intakeTitle}>
+              <Send className="mr-1.5 h-3.5 w-3.5" /> Rebroadcast
+            </Button>
+            {job.platform_fee_status !== "paid" && (
+              <Button size="sm" variant="outline" onClick={markPaid} disabled={!!busy || intakeIncomplete} title={intakeTitle}>
+                <CreditCard className="mr-1.5 h-3.5 w-3.5" /> Mark paid
+              </Button>
+            )}
+            {job.status !== "completed" && job.status !== "paid" && (
+              <Button size="sm" variant="outline" onClick={markCompleted} disabled={!!busy || intakeIncomplete} title={intakeTitle}>
+                Mark completed
+              </Button>
+            )}
+            {job.stripe_checkout_url && (
+              <a href={job.stripe_checkout_url} target="_blank" rel="noreferrer">
+                <Button size="sm" variant="ghost">
+                  <ExternalLink className="mr-1.5 h-3.5 w-3.5" /> Checkout
+                </Button>
+              </a>
+            )}
+          </div>
+          {intakeIncomplete && (
+            <div className="mt-2 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-[11px] text-amber-300">
+              Waiting for the customer to finish the WhatsApp intake before actions are available.
+            </div>
+          )}
+        </div>
 
-          <TabsContent value="payment" className="mt-4">
-            <PaymentPanel job={job} quotes={jobQuotes} />
-          </TabsContent>
+        {/* Body */}
+        <div className="space-y-5 px-6 py-5">
+          {/* Info cards */}
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <InfoTile icon={MapPin} label="Location"
+              value={job.postcode ? `${job.postcode}${job.region ? ` · ${job.region}` : ""}` : "—"}
+              action={job.lat != null && job.lng != null ? (
+                <a href={`https://maps.google.com/?q=${job.lat},${job.lng}`} target="_blank" rel="noreferrer"
+                  className="inline-flex items-center gap-1 text-xs text-primary hover:underline">
+                  <ExternalLink className="h-3 w-3" /> Map
+                </a>
+              ) : null}
+            />
+            <InfoTile icon={Car} label="Vehicle" value={job.vehicle_reg || "—"} />
+            <InfoTile
+              icon={Car}
+              label="Tyre"
+              value={[job.tyre_size, job.tyre_brand, job.tyre_type].filter(Boolean).join(" · ") || "—"}
+              sub={job.affected_wheels?.length ? `Wheels: ${job.affected_wheels.join(", ")}` : undefined}
+            />
+            <InfoTile icon={CreditCard} label="Payment" value={job.platform_fee_status ?? "—"} />
+          </div>
 
-          <TabsContent value="approval" className="mt-4">
-            <ApprovalPanel job={job} quotes={jobQuotes} techs={techs} />
-          </TabsContent>
+          {(job.damage_summary || job.issue_description || job.issue_type) && (
+            <div className="rounded-lg border border-border/60 bg-card/40 p-3">
+              <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Issue</div>
+              <div className="mt-1 text-sm text-foreground">
+                {job.damage_summary || job.issue_description || job.issue_type}
+              </div>
+            </div>
+          )}
 
-          <TabsContent value="messages" className="mt-4">
-            <JobConversation jobId={job.id} customerPhone={job.customer_phone ?? ""} />
-          </TabsContent>
-        </Tabs>
+          {job.photo_urls && job.photo_urls.length > 0 && (
+            <div>
+              <div className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Photos ({job.photo_urls.length})
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {job.photo_urls.slice(0, 6).map((u, i) => (
+                  <a key={i} href={u} target="_blank" rel="noreferrer" className="group relative">
+                    <img src={u} alt="Tyre photo uploaded by customer"
+                      className="h-20 w-20 rounded-lg border border-border/60 object-cover transition-opacity group-hover:opacity-80" />
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <Tabs defaultValue="timeline" className="pt-1">
+            <TabsList className="h-auto w-full justify-start gap-1 overflow-x-auto bg-muted/40 p-1">
+              <TabsTrigger value="timeline">Timeline</TabsTrigger>
+              <TabsTrigger value="matching">Matching</TabsTrigger>
+              <TabsTrigger value="broadcasts">Broadcasts ({jobAllocs.length})</TabsTrigger>
+              <TabsTrigger value="quotes">Quotes ({jobQuotes.length})</TabsTrigger>
+              <TabsTrigger value="payment">Payment</TabsTrigger>
+              <TabsTrigger value="approval">Approval</TabsTrigger>
+              <TabsTrigger value="messages">Messages</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="timeline" className="mt-4">
+              <JobTimeline job={job} quotes={jobQuotes} allocations={jobAllocs} techs={techs} />
+            </TabsContent>
+            <TabsContent value="matching" className="mt-4">
+              <MatchingTechniciansPanel job={job} techs={techs} allocations={allocations} quotes={quotes} />
+            </TabsContent>
+            <TabsContent value="broadcasts" className="mt-4 space-y-2">
+              {jobAllocs.length === 0 && <div className="text-sm text-muted-foreground">No broadcasts yet.</div>}
+              {jobAllocs.map((a) => (
+                <div key={a.id} className="flex items-center gap-3 rounded-lg border border-border/60 bg-card/40 p-3 text-sm">
+                  <div className="flex-1">
+                    <div className="font-medium">{techName(a.technician_id)}</div>
+                    <div className="text-xs text-muted-foreground">{fmtRelative(a.created_at)}</div>
+                  </div>
+                  {a.match_score != null && (
+                    <div className="text-xs text-muted-foreground">Score {Number(a.match_score).toFixed(2)}</div>
+                  )}
+                  <StatusBadge status={a.status} />
+                </div>
+              ))}
+            </TabsContent>
+            <TabsContent value="quotes" className="mt-4">
+              <QuotesComparisonPanel job={job} quotes={jobQuotes} techs={techs} />
+            </TabsContent>
+            <TabsContent value="payment" className="mt-4">
+              <PaymentPanel job={job} quotes={jobQuotes} />
+            </TabsContent>
+            <TabsContent value="approval" className="mt-4">
+              <ApprovalPanel job={job} quotes={jobQuotes} techs={techs} />
+            </TabsContent>
+            <TabsContent value="messages" className="mt-4">
+              <JobConversation jobId={job.id} customerPhone={job.customer_phone ?? ""} />
+            </TabsContent>
+          </Tabs>
+        </div>
       </SheetContent>
     </Sheet>
+  );
+}
+
+function InfoTile({
+  icon: Icon, label, value, sub, action,
+}: { icon: any; label: string; value: string; sub?: string; action?: React.ReactNode }) {
+  return (
+    <div className="flex items-start gap-3 rounded-lg border border-border/60 bg-card/40 p-3">
+      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+        <Icon className="h-4 w-4" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center justify-between gap-2">
+          <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</div>
+          {action}
+        </div>
+        <div className="truncate text-sm font-medium text-foreground">{value}</div>
+        {sub && <div className="mt-0.5 truncate text-xs text-muted-foreground">{sub}</div>}
+      </div>
+    </div>
   );
 }
