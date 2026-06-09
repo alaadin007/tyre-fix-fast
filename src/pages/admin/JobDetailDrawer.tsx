@@ -191,7 +191,7 @@ export function JobDetailDrawer({
           )}
 
           <Tabs defaultValue="timeline" className="pt-1">
-            <TabsList className="h-auto w-full justify-start gap-1 overflow-x-auto bg-muted/40 p-1">
+            <TabsList className="scrollbar-thin h-auto w-full justify-start gap-1 overflow-x-auto bg-muted/40 p-1">
               <TabsTrigger value="timeline">Timeline</TabsTrigger>
               <TabsTrigger value="matching">Matching</TabsTrigger>
               <TabsTrigger value="broadcasts">Broadcasts ({jobAllocs.length})</TabsTrigger>
