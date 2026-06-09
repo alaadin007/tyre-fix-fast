@@ -2111,9 +2111,38 @@ Deno.serve(async (req) => {
         .order("created_at", { ascending: false })
         .limit(1);
       if (allocErr) console.error("tech alloc lookup failed", allocErr);
-      const alloc: any = allocs?.[0];
+      let alloc: any = allocs?.[0];
 
       if (!alloc?.job_id) {
+        // No open allocation — check if the technician's most recent allocation
+        // was just expired (timed out). If so, tell them which job ref timed out
+        // instead of the generic "no open job" message.
+        const { data: recentAllocs } = await supabase
+          .from("job_allocations")
+          .select("*")
+          .eq("technician_id", tech.id)
+          .order("created_at", { ascending: false })
+          .limit(1);
+        const recent: any = recentAllocs?.[0];
+        const recentExpired =
+          recent &&
+          recent.status === "expired" &&
+          recent.job_id &&
+          // Only treat as a timeout reply if the expiry happened recently
+          // (within the last 10 minutes) so old expired jobs don't keep
+          // surfacing the same message.
+          recent.created_at &&
+          Date.now() - new Date(recent.created_at).getTime() < 10 * 60_000;
+
+        if (recentExpired) {
+          await sendReply(
+            from,
+            `⏰ You have timed out for Job Reference #${recent.job_id.slice(0, 6)}. The 1.5-minute quote window has ended and this job is no longer accepting quotes.`,
+            channel,
+          );
+          return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+        }
+
         // Pure location ping with no open job → just ack
         if (techPin && !body.replace(GMAPS_URL_RE, "").replace(COORD_RE, "").replace(DMS_RE, "").replace(PLAIN_LATLNG_RE, "").trim()) {
           await sendReply(from, "Got your live location 📍 — tracking for the next 8 hours. We'll match you to nearby jobs.", channel);
@@ -2122,6 +2151,7 @@ Deno.serve(async (req) => {
         }
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
       }
+
 
       // Enforce the 1.5-minute quote window. Any reply after the window
       // closes — or once an allocation has been expired by the finalizer —
