@@ -182,7 +182,18 @@ async function handleCheckoutCompleted(session: any) {
   ].join("\n");
   const adminPrompt = `Would you like to send the Technician details to the Customer? Reply *YES ${ref}* to share both parties' details.`;
 
+  const formatF = [
+    `💳 Payment Confirmed — Job #${ref}`,
+    `👤 Customer: ${job.customer_name ?? "—"}`,
+    `💷 Amount Paid: £${amount}`,
+    `🔧 Technician: ${techName}${techPhone !== "—" ? ` (${techPhone})` : ""}`,
+    ``,
+    `Ready to connect the customer and technician.`,
+    `Reply "assign #${ref}" to send contact details to both parties now.`,
+  ].join("\n");
+
   for (const to of masterNumbers) {
+    await sendMsg(to, formatF, "whatsapp");
     await sendMsg(to, adminSummary, "whatsapp");
     await sendMsg(to, adminPrompt, "whatsapp");
     try {

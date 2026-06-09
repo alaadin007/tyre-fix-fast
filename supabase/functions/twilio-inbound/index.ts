@@ -11,6 +11,7 @@ import { isCustomerQuoteAmountValid, normalizeSuspiciousQuotePrice } from "../_s
 import { resolveQuoteLocationForAllocation } from "../_shared/quote-location.ts";
 import { resolveAdminJobRefAction, shouldPrioritizeAdminBranch } from "../_shared/admin-job-ref-routing.ts";
 import { extractCoordsFromWebhook } from "../_shared/webhook-location.ts";
+import { adminMenuText, classifyAdminMessage, type AdminLanguage } from "../_shared/admin-intent.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -1331,9 +1332,15 @@ Deno.serve(async (req) => {
         const sent = bJson?.sent ?? 0;
         const total = bJson?.total ?? technician_ids.length;
         await clearAdminState();
+        await supabase.from("jobs").update({ status: "broadcasting" }).eq("id", job.id);
         if (bRes.ok && sent > 0) {
+          const notifiedLines = scored.slice(0, sent).map(({ t }: any) =>
+            `   — ${t.name}${t.tech_code ? ` (${t.tech_code})` : ""}`
+          ).join("\n");
           await sendReply(from,
-            `✅ Broadcast sent for job #${shortRef} to ${sent}/${total} nearby technicians.`, channel);
+            `✅ Broadcast sent — Job #${shortRef}\n📍 Service Area: ${job.postcode ?? "—"}\n👷 Technicians Notified: ${sent}\n${notifiedLines}\n\nWaiting for quotes to come in...`,
+            channel,
+          );
         } else {
           const err = bJson?.error ? ` (${String(bJson.error).slice(0, 140)})` : "";
           await sendReply(from,
@@ -1502,21 +1509,15 @@ Deno.serve(async (req) => {
             `Job #${shortRef} (${job.postcode}) — no approved technicians found nearby.`, channel);
           return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
         }
-        const lines = scored.slice(0, 10).map(({ t, miles }: any) => {
-          const dist = miles != null ? ` · ${miles.toFixed(1)} mi` : "";
-          const code = t.tech_code ? `[${t.tech_code}] ` : "";
-          return `• ${code}${t.name} (${t.phone})${dist}`;
+        const lines = scored.slice(0, 10).map(({ t, miles }: any, idx: number) => {
+          const dist = miles != null ? `${miles.toFixed(1)} mi away` : "distance unknown";
+          const code = t.tech_code ?? "TECH-????";
+          return `${idx + 1}. 🔧 ${code} · ${t.name}\n   📞 ${t.phone} · ${dist}`;
         }).join("\n");
         const more = scored.length > 10 ? `\n…and ${scored.length - 10} more` : "";
         await setAdminState("await_broadcast_confirm", job.id);
-        // Send the list first, then a SEPARATE follow-up asking for broadcast
-        // confirmation — this matches the desired admin UX.
         await sendReply(from,
-          `Job #${shortRef} (${job.postcode}) — ${scored.length} available technician(s) nearby:\n${lines}${more}`,
-          channel,
-        );
-        await sendReply(from,
-          `Do you want to broadcast this job offer to these technicians? Reply YES to send it out.`,
+          `📋 Job #${shortRef} — Available Technicians (${job.postcode ?? "—"})\n\n${lines}${more}\n\nTotal: ${scored.length} technician(s) available in this area.\n\nTo broadcast to all, reply: "broadcast #${shortRef}"\nTo send to one only, reply: "#${shortRef} send to <name or TECH-ID>"`,
           channel,
         );
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
@@ -1549,19 +1550,15 @@ Deno.serve(async (req) => {
             await sendReply(from, `Job #${shortRef} (${job.postcode}) — no approved technicians found nearby.`, channel);
             return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
           }
-          const lines = scored.slice(0, 10).map(({ t, miles }: any) => {
-            const dist = miles != null ? ` · ${miles.toFixed(1)} mi` : "";
-            const code = t.tech_code ? `[${t.tech_code}] ` : "";
-            return `• ${code}${t.name} (${t.phone})${dist}`;
+          const lines = scored.slice(0, 10).map(({ t, miles }: any, idx: number) => {
+            const dist = miles != null ? `${miles.toFixed(1)} mi away` : "distance unknown";
+            const code = t.tech_code ?? "TECH-????";
+            return `${idx + 1}. 🔧 ${code} · ${t.name}\n   📞 ${t.phone} · ${dist}`;
           }).join("\n");
           const more = scored.length > 10 ? `\n…and ${scored.length - 10} more` : "";
           await setAdminState("await_broadcast_confirm", job.id);
           await sendReply(from,
-            `📋 Job #${shortRef} (${job.postcode}) — ${scored.length} available technician(s):\n${lines}${more}`,
-            channel,
-          );
-          await sendReply(from,
-            `To broadcast to all, reply: broadcast #${shortRef}\nTo send to one only, reply: #${shortRef} send to <name or TECH-ID>`,
+            `📋 Job #${shortRef} — Available Technicians (${job.postcode ?? "—"})\n\n${lines}${more}\n\nTotal: ${scored.length} technician(s) available in this area.\n\nTo broadcast to all, reply: "broadcast #${shortRef}"\nTo send to one only, reply: "#${shortRef} send to <name or TECH-ID>"`,
             channel,
           );
           return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
@@ -1660,15 +1657,14 @@ Deno.serve(async (req) => {
         const bJson: any = await bRes.json().catch(() => ({}));
         const sent = bJson?.sent ?? 0;
         const total = bJson?.total ?? technician_ids.length;
-        const previewLines = scored.slice(0, 5).map(({ t, miles }: any) => {
-          const dist = miles != null ? ` · ${miles.toFixed(1)} mi` : "";
-          return `• ${t.name}${dist}`;
-        }).join("\n");
-        const more = scored.length > 5 ? `\n…and ${scored.length - 5} more` : "";
         if (bRes.ok && sent > 0) {
+          const notifiedLines = scored.slice(0, sent).map(({ t }: any) =>
+            `   — ${t.name}${t.tech_code ? ` (${t.tech_code})` : ""}`
+          ).join("\n");
+          await supabase.from("jobs").update({ status: "broadcasting" }).eq("id", job.id);
           await sendReply(
             from,
-            `✅ Broadcast sent for job ${shortRef} (${job.postcode}) to ${sent}/${total} nearby technicians:\n${previewLines}${more}`,
+            `✅ Broadcast sent — Job #${shortRef}\n📍 Service Area: ${job.postcode ?? "—"}\n👷 Technicians Notified: ${sent}\n${notifiedLines}\n\nWaiting for quotes to come in...`,
             channel,
           );
         } else {
@@ -1839,20 +1835,420 @@ Deno.serve(async (req) => {
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
       }
 
+      // =================================================================
+      // Intent handlers (Intents 3, 6, 7, 8) and LLM classifier fallback.
+      // Reached only when none of the fast-path regexes above matched.
+      // =================================================================
+
+      // ---- Shared helpers ----
+      const refRegexBoundary = /\b([0-9a-f]{6,8})\b/i;
+      const ACTIVE_STATUSES = ["new", "intake_complete", "matching", "broadcasting", "quoting", "quoted", "fee_pending", "confirmed"];
+      const formatRelative = (iso: string) => {
+        const d = Date.now() - new Date(iso).getTime();
+        const mins = Math.round(d / 60000);
+        if (mins < 1) return "just now";
+        if (mins < 60) return `${mins} min ago`;
+        const hrs = Math.round(mins / 60);
+        if (hrs < 24) return `${hrs}h ago`;
+        return `${Math.round(hrs / 24)}d ago`;
+      };
+      const statusBadge = (s: string) => {
+        const map: Record<string, string> = {
+          new: "🔴 NEW", intake_complete: "🔴 NEW",
+          matching: "🟡 MATCHING", broadcasting: "🟡 BROADCASTED", quoting: "🟡 QUOTING",
+          quoted: "🟠 QUOTED",
+          fee_pending: "🟣 AWAITING PAYMENT",
+          confirmed: "🟢 ASSIGNED", in_progress: "🟢 IN PROGRESS",
+          completed: "✅ COMPLETED", cancelled: "⚫ CANCELLED",
+        };
+        return map[s] ?? s.toUpperCase();
+      };
+      const lookupJobByRef = async (ref: string) => {
+        const { data } = await supabase
+          .from("jobs")
+          .select("*")
+          .order("created_at", { ascending: false })
+          .limit(500);
+        return (data ?? []).filter((j: any) => String(j.id).toLowerCase().startsWith(ref.toLowerCase()));
+      };
+
+      // ---- Intent 6 — JOB_STATUS_CHECK ----
+      const runStatusForRef = async (ref: string) => {
+        const matches = await lookupJobByRef(ref);
+        if (matches.length === 0) {
+          await sendReply(from, `No job found for ref #${ref.toUpperCase()}.`, channel);
+          return;
+        }
+        if (matches.length > 1) {
+          await sendReply(from, `Multiple jobs match #${ref.toUpperCase()} — please send the full 6-character ref.`, channel);
+          return;
+        }
+        const job: any = matches[0];
+        const shortRef = String(job.id).slice(0, 6).toUpperCase();
+        const wheels = Array.isArray(job.affected_wheels) && job.affected_wheels.length
+          ? job.affected_wheels.join(", ") : "—";
+        const issueLine = `${job.vehicle_reg ?? "—"} · ${wheels} · ${job.issue_type ?? "—"}`;
+        const { data: quotes } = await supabase
+          .from("quotes")
+          .select("price_gbp, eta_minutes, technician_id, status, created_at")
+          .eq("job_id", job.id)
+          .order("price_gbp", { ascending: true });
+        const qList = quotes ?? [];
+        let bestLine = "—";
+        if (qList.length > 0) {
+          const best: any = qList[0];
+          let techName = "";
+          if (best.technician_id) {
+            const { data: t } = await supabase
+              .from("technicians").select("name").eq("id", best.technician_id).maybeSingle();
+            techName = (t as any)?.name ?? "";
+          }
+          bestLine = `£${best.price_gbp} · ${techName || "—"} · ${best.eta_minutes ?? "?"} min ETA`;
+        }
+        const payment = job.platform_fee_status === "paid" ? "✅ Paid"
+          : job.platform_fee_status === "refunded" ? "↩️ Refunded"
+          : "Pending";
+        const msg = [
+          `📊 Job #${shortRef} — Current Status`,
+          ``,
+          `👤 Customer: ${job.customer_name ?? "—"} (${job.customer_phone ?? "—"})`,
+          `🚗 Vehicle: ${issueLine}`,
+          `📍 Location: ${job.postcode ?? "—"}`,
+          `🕐 Posted: ${formatRelative(job.created_at)}`,
+          `📌 Current Status: ${statusBadge(job.status ?? "new")}`,
+          `💬 Quotes Received: ${qList.length}`,
+          `💷 Best Quote: ${bestLine}`,
+          `💳 Payment: ${payment}`,
+        ].join("\n");
+        await sendReply(from, msg, channel);
+      };
+
+      // ---- Intent 7 — LIST_ALL_ACTIVE_JOBS ----
+      const runListActiveJobs = async () => {
+        const { data: jobs } = await supabase
+          .from("jobs")
+          .select("id, customer_name, postcode, status, created_at")
+          .in("status", ACTIVE_STATUSES)
+          .order("created_at", { ascending: false })
+          .limit(50);
+        if (!jobs || jobs.length === 0) {
+          await sendReply(from, "📋 No active jobs right now.", channel);
+          return;
+        }
+        const groups: Record<string, any[]> = {};
+        for (const j of jobs) {
+          const key = statusBadge(j.status ?? "new");
+          (groups[key] ||= []).push(j);
+        }
+        const order = ["🔴 NEW", "🟡 MATCHING", "🟡 BROADCASTED", "🟡 QUOTING", "🟠 QUOTED", "🟣 AWAITING PAYMENT", "🟢 ASSIGNED"];
+        const sections: string[] = [];
+        for (const k of [...order, ...Object.keys(groups).filter((g) => !order.includes(g))]) {
+          const arr = groups[k];
+          if (!arr || !arr.length) continue;
+          const lines = arr.slice(0, 10).map((j: any) =>
+            `   • #${String(j.id).slice(0, 6).toUpperCase()} · ${j.postcode ?? "—"} · ${j.customer_name ?? "—"} · ${formatRelative(j.created_at)}`
+          ).join("\n");
+          sections.push(`${k} (${arr.length})\n${lines}`);
+        }
+        const msg = [
+          `📋 Active Jobs Overview — ${jobs.length} Open`,
+          ``,
+          sections.join("\n\n"),
+          ``,
+          `Reply "status #JOBREF" for full details on any job.`,
+        ].join("\n");
+        await sendReply(from, msg, channel);
+      };
+
+      // ---- Intent 8 — CANCEL_JOB ----
+      const runCancelPrompt = async (ref: string) => {
+        const matches = await lookupJobByRef(ref);
+        if (matches.length === 0) {
+          await sendReply(from, `No job found for ref #${ref.toUpperCase()}.`, channel);
+          return;
+        }
+        if (matches.length > 1) {
+          await sendReply(from, `Multiple jobs match #${ref.toUpperCase()} — please send the full 6-character ref.`, channel);
+          return;
+        }
+        const job: any = matches[0];
+        const shortRef = String(job.id).slice(0, 6).toUpperCase();
+        await setAdminState("await_cancel_confirm", job.id);
+        await sendReply(from,
+          `⚠️ Are you sure you want to cancel job #${shortRef}?\nReply: CONFIRM CANCEL #${shortRef} to proceed.`,
+          channel,
+        );
+      };
+      const runCancelConfirm = async (ref: string) => {
+        const matches = await lookupJobByRef(ref);
+        if (matches.length === 0) {
+          await sendReply(from, `No job found for ref #${ref.toUpperCase()}.`, channel);
+          return;
+        }
+        const job: any = matches[0];
+        const shortRef = String(job.id).slice(0, 6).toUpperCase();
+        await supabase.from("jobs").update({ status: "cancelled", updated_at: new Date().toISOString() }).eq("id", job.id);
+        await clearAdminState();
+        if (job.customer_phone) {
+          await sendReply(
+            job.customer_phone,
+            `We're sorry — your tyre service request (Job #${shortRef}) has been cancelled by our team. If this is unexpected, please reply and we'll help right away.\n— Tyre Fly`,
+            "whatsapp",
+          );
+        }
+        await sendReply(from, `✅ Job #${shortRef} cancelled. Customer has been notified.`, channel);
+      };
+
+      // ---- Intent 3 — BROADCAST_JOB_TO_ONE_TECHNICIAN ----
+      const runBroadcastToOne = async (ref: string, identifier: string) => {
+        const matches = await lookupJobByRef(ref);
+        if (matches.length === 0) {
+          await sendReply(from, `No job found for ref #${ref.toUpperCase()}.`, channel);
+          return;
+        }
+        if (matches.length > 1) {
+          await sendReply(from, `Multiple jobs match #${ref.toUpperCase()} — please send the full 6-character ref.`, channel);
+          return;
+        }
+        const job: any = matches[0];
+        const shortRef = String(job.id).slice(0, 6).toUpperCase();
+
+        // Resolve technician
+        const idTrim = identifier.trim();
+        const isPhone = /^\+?\d{6,}$/.test(idTrim.replace(/\s+/g, ""));
+        const isCode = /^tech-?\d+$/i.test(idTrim.replace(/\s+/g, ""));
+        let candidates: any[] = [];
+        if (isPhone) {
+          const norm = idTrim.startsWith("+") ? idTrim : `+${idTrim.replace(/\D/g, "")}`;
+          const { data } = await supabase
+            .from("technicians")
+            .select("id, name, phone, tech_code")
+            .eq("phone", norm)
+            .eq("approval_status", "approved")
+            .eq("active", true);
+          candidates = data ?? [];
+        } else if (isCode) {
+          const code = idTrim.toUpperCase().replace(/^TECH/, "TECH-").replace("TECH--", "TECH-");
+          const { data } = await supabase
+            .from("technicians")
+            .select("id, name, phone, tech_code")
+            .ilike("tech_code", code)
+            .eq("approval_status", "approved")
+            .eq("active", true);
+          candidates = data ?? [];
+        } else {
+          const { data } = await supabase
+            .from("technicians")
+            .select("id, name, phone, tech_code")
+            .ilike("name", `%${idTrim}%`)
+            .eq("approval_status", "approved")
+            .eq("active", true);
+          candidates = data ?? [];
+        }
+
+        if (candidates.length === 0) {
+          await sendReply(from, `No approved technician found matching "${idTrim}".`, channel);
+          return;
+        }
+        if (candidates.length > 1) {
+          const lines = candidates.slice(0, 5).map((t: any) =>
+            `— ${t.tech_code ?? "TECH-????"} ${t.name} (${t.phone})`
+          ).join("\n");
+          await sendReply(from,
+            `Multiple technicians found matching "${idTrim}":\n${lines}\n\nWhich one should receive job #${shortRef}? Reply with the technician ID, e.g. "#${shortRef} send to ${candidates[0].tech_code ?? "TECH-XXXX"}".`,
+            channel,
+          );
+          return;
+        }
+        const tech = candidates[0];
+
+        const bRes = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/broadcast-job`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+          },
+          body: JSON.stringify({ job_id: job.id, mode: "specific", technician_ids: [tech.id] }),
+        });
+        const bJson: any = await bRes.json().catch(() => ({}));
+        const sent = bJson?.sent ?? 0;
+        if (bRes.ok && sent > 0) {
+          await supabase.from("jobs").update({ status: "broadcasting" }).eq("id", job.id);
+          await sendReply(from,
+            `✅ Broadcast sent — Job #${shortRef}\n📍 Service Area: ${job.postcode ?? "—"}\n👷 Technician Notified: 1\n   — ${tech.name}${tech.tech_code ? ` (${tech.tech_code})` : ""}\n\nWaiting for their quote...`,
+            channel,
+          );
+        } else {
+          const err = bJson?.error ? ` (${String(bJson.error).slice(0, 140)})` : "";
+          await sendReply(from, `⚠️ Failed to send job #${shortRef} to ${tech.name}${err}.`, channel);
+        }
+      };
+
+      // ---- Fast-path regexes for new intents ----
+      const refMatchAny = trimmed.match(refRegexBoundary);
+
+      // Intent 8 confirmation: "CONFIRM CANCEL #REF" / "confirm cancel REF"
+      const confirmCancelMatch = trimmed.match(/^\s*confirm\s+cancel\s+#?\s*([0-9a-f]{6,8})\s*$/i);
+      if (confirmCancelMatch) {
+        await runCancelConfirm(confirmCancelMatch[1]);
+        return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+      }
+      // Or admin already in await_cancel_confirm and just sends "yes"
+      if (adminState?.step === "await_cancel_confirm" && adminState.job_id &&
+          /^\s*(y|yes|ok|confirm|do it)\s*[.!]?\s*$/i.test(trimmed)) {
+        await runCancelConfirm(String(adminState.job_id).slice(0, 6));
+        return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+      }
+
+      // Intent 8 prompt: "cancel #REF" / "close #REF"
+      const cancelMatch = trimmed.match(/\b(cancel|close|abort|kill)\b.*?\b([0-9a-f]{6,8})\b/i)
+        ?? trimmed.match(/\b([0-9a-f]{6,8})\b.*?\b(cancel|close)\b/i);
+      if (cancelMatch) {
+        const ref = (cancelMatch[1].length >= 6 ? cancelMatch[1] : cancelMatch[2]).toLowerCase();
+        await runCancelPrompt(ref);
+        return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+      }
+
+      // Intent 6: "status #REF" / "status of REF" / "what is the status of REF"
+      const statusMatch = trimmed.match(/\bstatus\b.*?\b([0-9a-f]{6,8})\b/i)
+        ?? trimmed.match(/\b(?:where\s+is|update\s+on|what(?:'s|\s+is)\s+happening\s+with)\b.*?\b([0-9a-f]{6,8})\b/i);
+      if (statusMatch) {
+        await runStatusForRef(statusMatch[1].toLowerCase());
+        return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+      }
+
+      // Intent 7: "show active jobs" / "open jobs" / "how many jobs"
+      if (/\b(active|open|all)\s+jobs?\b/i.test(trimmed) ||
+          /\bhow\s+many\s+jobs?\b/i.test(trimmed) ||
+          /\bgive\s+me.*overview.*jobs?\b/i.test(trimmed) ||
+          /\b(list|show)\s+(?:all\s+)?(?:active|open|current)\s+jobs?\b/i.test(trimmed)) {
+        await runListActiveJobs();
+        return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+      }
+
+      // Intent 3: "#REF send to X" / "only send #REF to X" / "send #REF to X only"
+      const oneTechMatch =
+        trimmed.match(/#?\s*([0-9a-f]{6,8})\s+(?:send|broadcast|push|dispatch)\s+to\s+(.+?)(?:\s+only)?\s*[.!]?\s*$/i) ??
+        trimmed.match(/\b(?:only\s+)?(?:send|broadcast|push|dispatch)\s+#?\s*([0-9a-f]{6,8})\s+to\s+(.+?)(?:\s+only)?\s*[.!]?\s*$/i) ??
+        trimmed.match(/\b(?:send|broadcast)\s+(.+?)\s+(?:job|ref)?\s*#?\s*([0-9a-f]{6,8})\s+only\s*[.!]?\s*$/i);
+      if (oneTechMatch) {
+        // Detect which capture group is the ref (6-8 hex)
+        const a = oneTechMatch[1];
+        const b = oneTechMatch[2];
+        const ref = /^[0-9a-f]{6,8}$/i.test(a) ? a : b;
+        const identifier = /^[0-9a-f]{6,8}$/i.test(a) ? b : a;
+        await runBroadcastToOne(ref.toLowerCase(), identifier);
+        return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+      }
+
+      // ---- LLM classifier fallback (handles NL, typos, Urdu, Roman Urdu) ----
+      const classification = await classifyAdminMessage(trimmed);
+      const replyLang: AdminLanguage = classification?.language ?? "en";
+
+      if (classification && classification.confidence === "high" && classification.intent !== "UNKNOWN") {
+        const ref = classification.job_reference;
+        const techId = classification.technician_identifier;
+
+        // Rule 1 & 2: if ref missing for a per-job intent, count active jobs.
+        const needsRef = ["SHOW_TECHNICIAN_LIST", "BROADCAST_ALL", "BROADCAST_ONE", "FORWARD_QUOTE", "ASSIGN", "STATUS", "CANCEL", "CONFIRM_CANCEL"].includes(classification.intent);
+        if (needsRef && !ref) {
+          const { data: openJobs } = await supabase
+            .from("jobs")
+            .select("id, status, postcode, customer_name, created_at")
+            .in("status", ACTIVE_STATUSES)
+            .order("created_at", { ascending: false })
+            .limit(10);
+          const list = openJobs ?? [];
+          if (list.length === 0) {
+            await sendReply(from, `There are no active jobs right now.`, channel);
+            return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+          }
+          if (list.length > 1) {
+            await sendReply(from,
+              `There are currently ${list.length} active jobs. Please include the job reference number so I know which one to action. Example: "broadcast #${String(list[0].id).slice(0, 6).toUpperCase()}"`,
+              channel,
+            );
+            return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+          }
+          // Single active job — confirm with admin first.
+          const onlyJob = list[0];
+          const sr = String(onlyJob.id).slice(0, 6).toUpperCase();
+          await setAdminState("await_single_job_confirm", onlyJob.id);
+          await sendReply(from,
+            `Just to confirm — you would like me to action job #${sr}. Is that correct? Reply YES to proceed.`,
+            channel,
+          );
+          return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+        }
+
+        switch (classification.intent) {
+          case "SHOW_TECHNICIAN_LIST":
+            // Reuse the existing list flow via a fake bare-ref by setting state
+            // and delegating to the list path — simplest is to inline:
+            await sendReply(from, `Fetching technicians for #${ref!.toUpperCase()}…`, channel);
+            // Use the same scoring/output as the list block above.
+            {
+              const matches = await findJobByRef(ref!);
+              if (matches.length === 0) {
+                await sendReply(from, `No job found for ref #${ref!.toUpperCase()}.`, channel);
+              } else if (matches.length > 1) {
+                await sendReply(from, `Multiple jobs match #${ref!.toUpperCase()} — please send the full 6-character ref.`, channel);
+              } else {
+                const job: any = matches[0];
+                const shortRef = String(job.id).slice(0, 6).toUpperCase();
+                const scored = await scoreNearbyTechs(job);
+                if (scored.length === 0) {
+                  await sendReply(from, `Job #${shortRef} (${job.postcode}) — no approved technicians found nearby.`, channel);
+                } else {
+                  const lines = scored.slice(0, 10).map(({ t, miles }: any, idx: number) => {
+                    const dist = miles != null ? `${miles.toFixed(1)} mi away` : "distance unknown";
+                    const code = t.tech_code ?? "TECH-????";
+                    return `${idx + 1}. 🔧 ${code} · ${t.name}\n   📞 ${t.phone} · ${dist}`;
+                  }).join("\n");
+                  const more = scored.length > 10 ? `\n…and ${scored.length - 10} more` : "";
+                  await setAdminState("await_broadcast_confirm", job.id);
+                  await sendReply(from,
+                    `📋 Job #${shortRef} — Available Technicians (${job.postcode ?? "—"})\n\n${lines}${more}\n\nTotal: ${scored.length} technician(s) available in this area.\n\nTo broadcast to all, reply: "broadcast #${shortRef}"\nTo send to one only, reply: "#${shortRef} send to <name or TECH-ID>"`,
+                    channel,
+                  );
+                }
+              }
+            }
+            return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+          case "BROADCAST_ALL":
+            await runBroadcastForRef(ref!);
+            return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+          case "BROADCAST_ONE":
+            if (!techId) {
+              await sendReply(from, `Which technician should receive job #${ref!.toUpperCase()}? Reply with their name, TECH-ID, or phone.`, channel);
+            } else {
+              await runBroadcastToOne(ref!, techId);
+            }
+            return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+          case "FORWARD_QUOTE":
+            await runSendQuoteForRef(ref!);
+            return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+          case "ASSIGN":
+            await runShareContactsForRef(ref!);
+            return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+          case "STATUS":
+            await runStatusForRef(ref!);
+            return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+          case "LIST_ACTIVE":
+            await runListActiveJobs();
+            return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+          case "CANCEL":
+            await runCancelPrompt(ref!);
+            return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+          case "CONFIRM_CANCEL":
+            await runCancelConfirm(ref!);
+            return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+        }
+      }
+
       // Admin catchall — never let an admin message fall through to the
-      // customer intake flow. If nothing above matched, send the command menu.
-      await sendReply(
-        from,
-        "Hi! Here's what I can help you with:\n" +
-        "• Technician list   → 'techs for #JOBREF'\n" +
-        "• Broadcast to all  → 'broadcast #JOBREF'\n" +
-        "• Send quote        → 'yes #JOBREF' (after quotes arrive)\n" +
-        "• Assign technician → 'assign #JOBREF' (after payment)\n" +
-        "• Recent jobs       → 'JOBS'\n" +
-        "• Pending applicants→ 'PENDING'\n" +
-        "• Full command help → 'HELP'",
-        channel,
-      );
+      // customer intake flow. Sent in the admin's detected language.
+      await sendReply(from, adminMenuText(replyLang), channel);
       return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
     }
 
