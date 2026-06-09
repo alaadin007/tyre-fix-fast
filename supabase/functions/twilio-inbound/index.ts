@@ -1522,6 +1522,52 @@ Deno.serve(async (req) => {
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
       }
 
+      // Natural-language "show me technicians for #REF" / "techs for REF" /
+      // "who is available for REF" / "available technician list for REF".
+      // Triggers the same list flow as a bare ref reply.
+      {
+        const techListVerbRegex = /\b(tech(?:nician)?s?|tech list|technician list|available|who(?:'?s| is) available|nearby|near\s+me|matching)\b/i;
+        const refMatchNL = trimmed.match(/\b([0-9a-f]{6,8})\b/i);
+        const looksLikeListReq = !!refMatchNL && techListVerbRegex.test(trimmed) &&
+          !/\b(broadcast|dispatch|send|share|push|blast|forward|publish|cancel|status|assign|quote|pay|paid)\b/i.test(trimmed);
+        if (looksLikeListReq) {
+          const ref = refMatchNL[1].toLowerCase();
+          const matches = await findJobByRef(ref);
+          if (matches.length === 0) {
+            await sendReply(from, `No job found for ref #${ref.toUpperCase()}. Reply JOBS to see recent jobs.`, channel);
+            return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+          }
+          if (matches.length > 1) {
+            await sendReply(from, `Multiple jobs match #${ref.toUpperCase()} — please send the full 6-character ref.`, channel);
+            return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+          }
+          const job: any = matches[0];
+          const shortRef = String(job.id).slice(0, 6).toUpperCase();
+          const scored = await scoreNearbyTechs(job);
+          if (scored.length === 0) {
+            await clearAdminState();
+            await sendReply(from, `Job #${shortRef} (${job.postcode}) — no approved technicians found nearby.`, channel);
+            return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+          }
+          const lines = scored.slice(0, 10).map(({ t, miles }: any) => {
+            const dist = miles != null ? ` · ${miles.toFixed(1)} mi` : "";
+            const code = t.tech_code ? `[${t.tech_code}] ` : "";
+            return `• ${code}${t.name} (${t.phone})${dist}`;
+          }).join("\n");
+          const more = scored.length > 10 ? `\n…and ${scored.length - 10} more` : "";
+          await setAdminState("await_broadcast_confirm", job.id);
+          await sendReply(from,
+            `📋 Job #${shortRef} (${job.postcode}) — ${scored.length} available technician(s):\n${lines}${more}`,
+            channel,
+          );
+          await sendReply(from,
+            `To broadcast to all, reply: broadcast #${shortRef}\nTo send to one only, reply: #${shortRef} send to <name or TECH-ID>`,
+            channel,
+          );
+          return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+        }
+      }
+
       // Natural-language broadcast confirmation.
       // Triggers: "yes", "broadcast", "send", "share", "dispatch", "go", "push", "blast"
       // + any 6-char job ref appearing in the message. Anything that looks like
@@ -1792,6 +1838,22 @@ Deno.serve(async (req) => {
         }
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
       }
+
+      // Admin catchall — never let an admin message fall through to the
+      // customer intake flow. If nothing above matched, send the command menu.
+      await sendReply(
+        from,
+        "Hi! Here's what I can help you with:\n" +
+        "• Technician list   → 'techs for #JOBREF'\n" +
+        "• Broadcast to all  → 'broadcast #JOBREF'\n" +
+        "• Send quote        → 'yes #JOBREF' (after quotes arrive)\n" +
+        "• Assign technician → 'assign #JOBREF' (after payment)\n" +
+        "• Recent jobs       → 'JOBS'\n" +
+        "• Pending applicants→ 'PENDING'\n" +
+        "• Full command help → 'HELP'",
+        channel,
+      );
+      return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
     }
 
     // 1c. Technician onboarding via WhatsApp/SMS
