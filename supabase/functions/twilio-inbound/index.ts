@@ -2122,6 +2122,29 @@ Deno.serve(async (req) => {
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
       }
 
+      // Enforce the 1.5-minute quote window. Any reply after the window
+      // closes — or once an allocation has been expired by the finalizer —
+      // gets a single "job closed" notice and is not recorded as a quote.
+      const allocCreatedMs = alloc.created_at ? new Date(alloc.created_at).getTime() : 0;
+      const windowMs = 90_000;
+      const windowExpiresMs = alloc.quote_window_expires_at
+        ? new Date(alloc.quote_window_expires_at).getTime()
+        : allocCreatedMs + windowMs;
+      if (Date.now() > windowExpiresMs) {
+        if (alloc.status === "broadcast" || alloc.status === "proposed") {
+          await supabase
+            .from("job_allocations")
+            .update({ status: "expired" })
+            .eq("id", alloc.id);
+        }
+        await sendReply(
+          from,
+          `This job has been closed. The 1.5-minute quote window for Job Ref #${alloc.job_id.slice(0, 6)} has ended and it is no longer accepting quotes.`,
+          channel,
+        );
+        return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+      }
+
       const pinOnlyMessage = !!techPin && !body.replace(GMAPS_URL_RE, "").replace(COORD_RE, "").replace(DMS_RE, "").replace(PLAIN_LATLNG_RE, "").trim();
       const parsed = pinOnlyMessage
         ? { price_gbp: null, callout_fee_gbp: null, eta_minutes: null, accepts: true, tyre_included: null, tyre_condition: null, notes: "location only", confidence: "high" as const }

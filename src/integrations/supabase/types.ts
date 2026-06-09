@@ -137,6 +137,7 @@ export type Database = {
           id: string
           job_id: string | null
           match_score: number | null
+          quote_window_expires_at: string | null
           status: string
           technician_id: string | null
         }
@@ -148,6 +149,7 @@ export type Database = {
           id?: string
           job_id?: string | null
           match_score?: number | null
+          quote_window_expires_at?: string | null
           status?: string
           technician_id?: string | null
         }
@@ -159,6 +161,7 @@ export type Database = {
           id?: string
           job_id?: string | null
           match_score?: number | null
+          quote_window_expires_at?: string | null
           status?: string
           technician_id?: string | null
         }
@@ -197,6 +200,7 @@ export type Database = {
           platform_fee_refunded_at: string | null
           platform_fee_status: string
           postcode: string
+          quote_summary_sent_at: string | null
           region: string | null
           severity: string | null
           status: string
@@ -236,6 +240,7 @@ export type Database = {
           platform_fee_refunded_at?: string | null
           platform_fee_status?: string
           postcode: string
+          quote_summary_sent_at?: string | null
           region?: string | null
           severity?: string | null
           status?: string
@@ -275,6 +280,7 @@ export type Database = {
           platform_fee_refunded_at?: string | null
           platform_fee_status?: string
           postcode?: string
+          quote_summary_sent_at?: string | null
           region?: string | null
           severity?: string | null
           status?: string
@@ -681,6 +687,7 @@ export type Database = {
           rejected_reason: string | null
           service_postcodes: string[]
           skills: string[]
+          tech_code: string | null
           travel_radius_miles: number | null
           updated_at: string
           user_id: string | null
@@ -714,6 +721,7 @@ export type Database = {
           rejected_reason?: string | null
           service_postcodes?: string[]
           skills?: string[]
+          tech_code?: string | null
           travel_radius_miles?: number | null
           updated_at?: string
           user_id?: string | null
@@ -747,6 +755,7 @@ export type Database = {
           rejected_reason?: string | null
           service_postcodes?: string[]
           skills?: string[]
+          tech_code?: string | null
           travel_radius_miles?: number | null
           updated_at?: string
           user_id?: string | null
