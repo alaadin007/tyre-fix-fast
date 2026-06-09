@@ -55,9 +55,10 @@ export default function TechniciansPage() {
   const openDetail = (t: DashTech) => { setSelected(t); setDrawerOpen(true); };
 
   const toggleActive = async (t: DashTech) => {
-    const { error } = await supabase.from("technicians").update({ active: !t.active }).eq("id", t.id);
+    const next = !t.active;
+    const { error } = await supabase.from("technicians").update({ active: next }).eq("id", t.id);
     if (error) toast.error(error.message);
-    else toast.success(!t.active ? `${t.name} active` : `${t.name} inactive`);
+    else toast.success(next ? `${t.name} active` : `${t.name} inactive`);
   };
 
   return (
