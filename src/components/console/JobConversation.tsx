@@ -66,7 +66,7 @@ export function JobConversation({
         <MessageCircle className="h-3 w-3 text-primary" /> Conversation
         <span className="ml-auto font-normal normal-case text-[10px]">{messages.length} msgs</span>
       </div>
-      <div ref={scrollRef} className="max-h-72 overflow-y-auto p-3 space-y-2">
+      <div ref={scrollRef} className="scrollbar-thin max-h-72 overflow-y-auto p-3 space-y-2">
         {loading && <p className="text-xs text-muted-foreground">Loading…</p>}
         {!loading && messages.length === 0 && (
           <p className="text-xs text-muted-foreground">No messages yet.</p>
