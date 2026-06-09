@@ -480,6 +480,40 @@ type DispatchModalProps = {
 
 function DispatchModal({ job, allTechs, onClose, onDispatch }: DispatchModalProps) {
   const suggested = nearestTechs(job, allTechs, 3);
+
+  // Technician-submitted quotes for this job (price + ETA they replied with on WhatsApp).
+  const [techQuotes, setTechQuotes] = useState<
+    Record<string, { price: number | null; eta: number | null; status: string; created_at: string }>
+  >({});
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      const { data } = await supabase
+        .from("quotes")
+        .select("technician_id,price_gbp,eta_minutes,status,created_at")
+        .eq("job_id", job.id)
+        .order("created_at", { ascending: true });
+      if (cancelled || !data) return;
+      const map: Record<string, { price: number | null; eta: number | null; status: string; created_at: string }> = {};
+      for (const q of data) {
+        if (!q.technician_id) continue;
+        map[q.technician_id] = {
+          price: q.price_gbp != null ? Number(q.price_gbp) : null,
+          eta: q.eta_minutes != null ? Number(q.eta_minutes) : null,
+          status: q.status,
+          created_at: q.created_at,
+        };
+      }
+      setTechQuotes(map);
+    };
+    load();
+    const ch = supabase
+      .channel(`dispatch-quotes-${job.id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "quotes", filter: `job_id=eq.${job.id}` }, load)
+      .subscribe();
+    return () => { cancelled = true; supabase.removeChannel(ch); };
+  }, [job.id]);
+
   const [techId, setTechId] = useState<string>(suggested[0]?.tech.id ?? "");
   const [search, setSearch] = useState("");
   const [price, setPrice] = useState<string>("85");
@@ -488,6 +522,30 @@ function DispatchModal({ job, allTechs, onClose, onDispatch }: DispatchModalProp
   const [showSpecific, setShowSpecific] = useState(false);
   const [selectedTechIds, setSelectedTechIds] = useState<Set<string>>(new Set());
   const [broadcasting, setBroadcasting] = useState<null | "all" | "specific">(null);
+
+  // When quotes arrive, prefer a technician who already submitted a quote and prefill their price/eta.
+  // Only auto-switch when the user hasn't manually picked a different tech.
+  const [autoPicked, setAutoPicked] = useState(false);
+  useEffect(() => {
+    if (autoPicked) return;
+    const quotedId = Object.keys(techQuotes).find((id) => allTechs.some((t) => t.id === id));
+    if (!quotedId) return;
+    const q = techQuotes[quotedId];
+    setTechId(quotedId);
+    if (q.price != null) setPrice(String(q.price));
+    if (q.eta != null) setEta(String(q.eta));
+    setAutoPicked(true);
+  }, [techQuotes, allTechs, autoPicked]);
+
+  // Helper: select a technician and prefill price/eta from their submitted quote when available.
+  const selectTech = (id: string, fallbackEta?: number) => {
+    setTechId(id);
+    setAutoPicked(true);
+    const q = techQuotes[id];
+    if (q?.price != null) setPrice(String(q.price));
+    if (q?.eta != null) setEta(String(q.eta));
+    else if (fallbackEta != null) setEta(String(fallbackEta));
+  };
 
   // Job is "complete" — required fields gathered before broadcasting
   const wheels = ((job as any).affected_wheels ?? []) as string[];
@@ -764,35 +822,44 @@ function DispatchModal({ job, allTechs, onClose, onDispatch }: DispatchModalProp
             <Sparkles className="h-3 w-3 text-primary" /> AI suggestions
           </h3>
           <div className="space-y-2">
-            {suggested.map(({ tech, distanceKm, etaMin }) => (
-              <button
-                key={tech.id}
-                onClick={() => { setTechId(tech.id); setEta(String(etaMin)); }}
-                className={`flex w-full items-center justify-between gap-3 rounded-lg border p-3 text-left transition ${
-                  techId === tech.id
-                    ? "border-primary bg-primary/10"
-                    : "border-white/10 bg-white/[0.04] hover:border-primary/40"
-                }`}
-              >
-                <div>
-                  <div className="font-semibold">{tech.name}</div>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-                    {(tech.rating ?? 5).toFixed(1)} · {distanceKm.toFixed(1)} km · ETA {etaMin}m
-                    {tech.vehicle ? ` · ${tech.vehicle}` : ""}
+            {suggested.map(({ tech, distanceKm, etaMin }) => {
+              const q = techQuotes[tech.id];
+              return (
+                <button
+                  key={tech.id}
+                  onClick={() => selectTech(tech.id, etaMin)}
+                  className={`flex w-full items-center justify-between gap-3 rounded-lg border p-3 text-left transition ${
+                    techId === tech.id
+                      ? "border-primary bg-primary/10"
+                      : "border-white/10 bg-white/[0.04] hover:border-primary/40"
+                  }`}
+                >
+                  <div className="min-w-0">
+                    <div className="font-semibold">{tech.name}</div>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                      {(tech.rating ?? 5).toFixed(1)} · {distanceKm.toFixed(1)} km · ETA {q?.eta ?? etaMin}m
+                      {tech.vehicle ? ` · ${tech.vehicle}` : ""}
+                    </div>
+                    {q && (
+                      <div className="mt-1 inline-flex items-center gap-1 rounded-full border border-emerald-400/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-emerald-300">
+                        Tech quote: £{q.price?.toFixed(2) ?? "—"} · {q.eta ?? "?"}m
+                      </div>
+                    )}
                   </div>
-                </div>
-                {techId === tech.id && (
-                  <span className="rounded-full bg-primary px-2 py-0.5 text-[10px] font-semibold uppercase text-primary-foreground">
-                    Selected
-                  </span>
-                )}
-              </button>
-            ))}
+                  {techId === tech.id && (
+                    <span className="rounded-full bg-primary px-2 py-0.5 text-[10px] font-semibold uppercase text-primary-foreground">
+                      Selected
+                    </span>
+                  )}
+                </button>
+              );
+            })}
             {suggested.length === 0 && (
               <p className="text-xs text-muted-foreground">No technicians with a recent location.</p>
             )}
           </div>
+
         </div>
 
         {/* Manual tech search */}
@@ -811,24 +878,37 @@ function DispatchModal({ job, allTechs, onClose, onDispatch }: DispatchModalProp
           </div>
           {filteredTechs.length > 0 && (
             <div className="mt-2 space-y-1 rounded-lg border border-white/10 bg-white/[0.03] p-1">
-              {filteredTechs.map((t) => (
-                <button
-                  key={t.id}
-                  onClick={() => { setTechId(t.id); setSearch(""); }}
-                  className={`flex w-full items-center justify-between rounded px-3 py-2 text-left text-sm hover:bg-white/[0.06] ${
-                    techId === t.id ? "bg-primary/10 text-primary" : ""
-                  }`}
-                >
-                  <span>{t.name}</span>
-                  <span className="text-xs text-muted-foreground">{t.vehicle ?? ""}</span>
-                </button>
-              ))}
+              {filteredTechs.map((t) => {
+                const q = techQuotes[t.id];
+                return (
+                  <button
+                    key={t.id}
+                    onClick={() => { selectTech(t.id); setSearch(""); }}
+                    className={`flex w-full items-center justify-between rounded px-3 py-2 text-left text-sm hover:bg-white/[0.06] ${
+                      techId === t.id ? "bg-primary/10 text-primary" : ""
+                    }`}
+                  >
+                    <span className="flex items-center gap-2">
+                      {t.name}
+                      {q && (
+                        <span className="rounded-full border border-emerald-400/30 bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-300">
+                          £{q.price?.toFixed(0) ?? "—"} · {q.eta ?? "?"}m
+                        </span>
+                      )}
+                    </span>
+                    <span className="text-xs text-muted-foreground">{t.vehicle ?? ""}</span>
+                  </button>
+                );
+              })}
             </div>
           )}
           {selectedTech && (
             <p className="mt-2 text-xs text-muted-foreground">
               Selected: <span className="font-semibold text-foreground">{selectedTech.name}</span>
               {selectedTech.vehicle ? ` · ${selectedTech.vehicle}` : ""}
+              {techQuotes[selectedTech.id]?.price != null && (
+                <> · tech submitted £{techQuotes[selectedTech.id]!.price!.toFixed(2)} / {techQuotes[selectedTech.id]!.eta ?? "?"}m</>
+              )}
             </p>
           )}
         </div>
@@ -836,8 +916,18 @@ function DispatchModal({ job, allTechs, onClose, onDispatch }: DispatchModalProp
         {/* Quote */}
         <div className="mt-5 grid grid-cols-2 gap-3">
           <div>
-            <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-              Price (£)
+            <label className="mb-1 flex items-center justify-between text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              <span>Price (£)</span>
+              {techId && techQuotes[techId]?.price != null && (
+                <button
+                  type="button"
+                  onClick={() => setPrice(String(techQuotes[techId]!.price))}
+                  className="rounded px-1.5 py-0.5 text-[10px] font-semibold normal-case tracking-normal text-emerald-300 hover:bg-emerald-500/10"
+                  title="Use technician's submitted price"
+                >
+                  Tech: £{techQuotes[techId]!.price!.toFixed(2)}
+                </button>
+              )}
             </label>
             <Input
               type="number"
@@ -848,8 +938,18 @@ function DispatchModal({ job, allTechs, onClose, onDispatch }: DispatchModalProp
             />
           </div>
           <div>
-            <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-              ETA (mins)
+            <label className="mb-1 flex items-center justify-between text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              <span>ETA (mins)</span>
+              {techId && techQuotes[techId]?.eta != null && (
+                <button
+                  type="button"
+                  onClick={() => setEta(String(techQuotes[techId]!.eta))}
+                  className="rounded px-1.5 py-0.5 text-[10px] font-semibold normal-case tracking-normal text-emerald-300 hover:bg-emerald-500/10"
+                  title="Use technician's submitted ETA"
+                >
+                  Tech: {techQuotes[techId]!.eta}m
+                </button>
+              )}
             </label>
             <Input
               type="number"
