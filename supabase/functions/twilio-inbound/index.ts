@@ -1657,15 +1657,14 @@ Deno.serve(async (req) => {
         const bJson: any = await bRes.json().catch(() => ({}));
         const sent = bJson?.sent ?? 0;
         const total = bJson?.total ?? technician_ids.length;
-        const previewLines = scored.slice(0, 5).map(({ t, miles }: any) => {
-          const dist = miles != null ? ` · ${miles.toFixed(1)} mi` : "";
-          return `• ${t.name}${dist}`;
-        }).join("\n");
-        const more = scored.length > 5 ? `\n…and ${scored.length - 5} more` : "";
         if (bRes.ok && sent > 0) {
+          const notifiedLines = scored.slice(0, sent).map(({ t }: any) =>
+            `   — ${t.name}${t.tech_code ? ` (${t.tech_code})` : ""}`
+          ).join("\n");
+          await supabase.from("jobs").update({ status: "broadcasting" }).eq("id", job.id);
           await sendReply(
             from,
-            `✅ Broadcast sent for job ${shortRef} (${job.postcode}) to ${sent}/${total} nearby technicians:\n${previewLines}${more}`,
+            `✅ Broadcast sent — Job #${shortRef}\n📍 Service Area: ${job.postcode ?? "—"}\n👷 Technicians Notified: ${sent}\n${notifiedLines}\n\nWaiting for quotes to come in...`,
             channel,
           );
         } else {
