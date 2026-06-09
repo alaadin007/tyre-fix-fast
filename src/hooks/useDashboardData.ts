@@ -101,7 +101,7 @@ export function useDashboardData() {
         supabase.from("quotes").select("*").order("created_at", { ascending: false }).limit(500),
         supabase.from("job_allocations").select("*").order("created_at", { ascending: false }).limit(1000),
         supabase.from("technicians").select(
-          "id,name,phone,whatsapp,email,active,approval_status,rating,jobs_completed,last_lat,last_lng,last_location_at,live_location_until,availability_now,available_until,vehicle,service_postcodes,notes,travel_radius_miles"
+          "id,tech_code,name,phone,whatsapp,email,active,approval_status,rating,jobs_completed,last_lat,last_lng,last_location_at,live_location_until,availability_now,available_until,vehicle,service_postcodes,notes,travel_radius_miles"
         ).limit(500),
       ]);
       if (!mounted) return;
