@@ -1251,7 +1251,7 @@ Deno.serve(async (req) => {
       const scoreNearbyTechs = async (job: any) => {
         const { data: techs } = await supabase
           .from("technicians")
-          .select("id,name,phone,service_postcodes,last_lat,last_lng,travel_radius_miles")
+          .select("id,tech_code,name,phone,service_postcodes,last_lat,last_lng,travel_radius_miles")
           .eq("approval_status", "approved").eq("active", true).limit(500);
         const jobPc = String(job.postcode ?? "").toUpperCase().replace(/\s+/g, "");
         const jobOutward = jobPc.replace(/\d[A-Z]{2}$/, "");
@@ -1504,7 +1504,8 @@ Deno.serve(async (req) => {
         }
         const lines = scored.slice(0, 10).map(({ t, miles }: any) => {
           const dist = miles != null ? ` · ${miles.toFixed(1)} mi` : "";
-          return `• ${t.name} (${t.phone})${dist}`;
+          const code = t.tech_code ? `[${t.tech_code}] ` : "";
+          return `• ${code}${t.name} (${t.phone})${dist}`;
         }).join("\n");
         const more = scored.length > 10 ? `\n…and ${scored.length - 10} more` : "";
         await setAdminState("await_broadcast_confirm", job.id);
