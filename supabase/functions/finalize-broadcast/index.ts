@@ -84,13 +84,20 @@ Deno.serve(async (req) => {
     }
 
     const jobRef = String(job.id).slice(0, 6).toUpperCase();
-    const customerName = (job.customer_name && String(job.customer_name).trim()) || "—";
-    const vehicleReg = (job.vehicle_reg && String(job.vehicle_reg).trim()) || "—";
+    const customerName =
+      (jobFull?.customer_name && String(jobFull.customer_name).trim()) ||
+      (job.customer_name && String(job.customer_name).trim()) ||
+      "—";
+    const customerPhone = (jobFull?.customer_phone && String(jobFull.customer_phone).trim()) || "";
+    const vehicleReg =
+      (jobFull?.vehicle_reg && String(jobFull.vehicle_reg).trim()) ||
+      (job.vehicle_reg && String(job.vehicle_reg).trim()) ||
+      "—";
 
     const lines: string[] = [];
-    lines.push(`📊 Quotes summary — Job Ref #${jobRef}`);
-    lines.push(`👤 Customer: ${customerName}`);
-    lines.push(`🚘 Vehicle: ${vehicleReg}`);
+    lines.push(`📊 For Job Reference #${jobRef}, here are the quotes:`);
+    lines.push(`👤 Customer: ${customerName}${customerPhone ? ` (${customerPhone})` : ""}`);
+    lines.push(`🚘 Vehicle Reg: ${vehicleReg}`);
     lines.push("");
 
     if (!quotes || quotes.length === 0) {
@@ -103,15 +110,20 @@ Deno.serve(async (req) => {
         const t = q.technician_id ? techsById.get(q.technician_id) : null;
         const code = t?.tech_code ?? "—";
         const name = t?.name ?? "Unknown";
+        const phone = t?.phone ? ` (${t.phone})` : "";
         const price = q.price_gbp != null ? `£${q.price_gbp}` : "—";
         const eta = q.eta_minutes != null ? `${q.eta_minutes} min` : "—";
         const loc = (t?.last_lat != null && t?.last_lng != null)
           ? `https://maps.google.com/?q=${t.last_lat},${t.last_lng}`
           : "no live pin";
-        lines.push(`${i}. ${code} · ${name}`);
-        lines.push(`   💷 ${price}  ⏱️ ${eta}  📍 ${loc}`);
+        lines.push(`${i}. 🆔 ${code} · 👨‍🔧 ${name}${phone}`);
+        lines.push(`   🔖 Job Ref: #${jobRef}`);
+        lines.push(`   💷 Price: ${price}   ⏱️ ETA: ${eta}`);
+        lines.push(`   📍 Live Location: ${loc}`);
         i++;
       }
+      lines.push("");
+      lines.push(`Reply YES #${jobRef} to forward your preferred quote to the customer.`);
     }
     const body = lines.join("\n");
 
