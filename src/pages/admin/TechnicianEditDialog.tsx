@@ -89,6 +89,12 @@ export function TechnicianEditDialog({
           <DialogTitle>{mode === "edit" ? "Edit technician" : "Add technician"}</DialogTitle>
         </DialogHeader>
         <div className="grid gap-3">
+          {mode === "edit" && tech?.tech_code && (
+            <div className="rounded border border-white/10 bg-white/[0.03] px-3 py-2 text-xs">
+              <span className="text-muted-foreground">Technician ID</span>{" "}
+              <span className="font-mono text-foreground">{tech.tech_code}</span>
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label>Name *</Label>
