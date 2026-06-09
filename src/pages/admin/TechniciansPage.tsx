@@ -96,6 +96,7 @@ export default function TechniciansPage() {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead>Tech ID</TableHead>
               <TableHead>Name</TableHead>
               <TableHead>WhatsApp</TableHead>
               <TableHead>Postcodes</TableHead>
@@ -112,6 +113,9 @@ export default function TechniciansPage() {
           <TableBody>
             {filtered.map((t) => (
               <TableRow key={t.id} className="cursor-pointer" onClick={() => openDetail(t)}>
+                <TableCell className="text-xs font-mono">
+                  {t.tech_code ? <span className="rounded bg-primary/15 px-1.5 py-0.5 text-primary">{t.tech_code}</span> : "—"}
+                </TableCell>
                 <TableCell className="text-sm font-medium">
                   <div>{t.name}</div>
                   <div className="text-[10px] text-muted-foreground"><StatusBadge status={t.approval_status} /></div>
@@ -163,7 +167,7 @@ export default function TechniciansPage() {
             ))}
             {filtered.length === 0 && (
               <TableRow>
-                <TableCell colSpan={11} className="py-8 text-center text-sm text-muted-foreground">
+                <TableCell colSpan={12} className="py-8 text-center text-sm text-muted-foreground">
                   No technicians match.
                 </TableCell>
               </TableRow>

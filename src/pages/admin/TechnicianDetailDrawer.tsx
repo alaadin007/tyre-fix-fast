@@ -58,6 +58,9 @@ export function TechnicianDetailDrawer({
       <SheetContent className="w-full overflow-y-auto sm:max-w-2xl">
         <SheetHeader>
           <SheetTitle className="flex flex-wrap items-center gap-2">
+            {tech.tech_code && (
+              <span className="rounded bg-primary/15 px-2 py-0.5 font-mono text-xs text-primary">{tech.tech_code}</span>
+            )}
             <span>{tech.name}</span>
             <StatusBadge status={tech.approval_status} />
             {!tech.active && <span className="rounded bg-muted px-2 py-0.5 text-[10px] uppercase">inactive</span>}
