@@ -11,6 +11,7 @@ import { isCustomerQuoteAmountValid, normalizeSuspiciousQuotePrice } from "../_s
 import { resolveQuoteLocationForAllocation } from "../_shared/quote-location.ts";
 import { resolveAdminJobRefAction, shouldPrioritizeAdminBranch } from "../_shared/admin-job-ref-routing.ts";
 import { extractCoordsFromWebhook } from "../_shared/webhook-location.ts";
+import { adminMenuText, classifyAdminMessage, type AdminLanguage } from "../_shared/admin-intent.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
