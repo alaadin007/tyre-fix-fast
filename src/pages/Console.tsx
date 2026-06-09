@@ -480,6 +480,40 @@ type DispatchModalProps = {
 
 function DispatchModal({ job, allTechs, onClose, onDispatch }: DispatchModalProps) {
   const suggested = nearestTechs(job, allTechs, 3);
+
+  // Technician-submitted quotes for this job (price + ETA they replied with on WhatsApp).
+  const [techQuotes, setTechQuotes] = useState<
+    Record<string, { price: number | null; eta: number | null; status: string; created_at: string }>
+  >({});
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      const { data } = await supabase
+        .from("quotes")
+        .select("technician_id,price_gbp,eta_minutes,status,created_at")
+        .eq("job_id", job.id)
+        .order("created_at", { ascending: true });
+      if (cancelled || !data) return;
+      const map: Record<string, { price: number | null; eta: number | null; status: string; created_at: string }> = {};
+      for (const q of data) {
+        if (!q.technician_id) continue;
+        map[q.technician_id] = {
+          price: q.price_gbp != null ? Number(q.price_gbp) : null,
+          eta: q.eta_minutes != null ? Number(q.eta_minutes) : null,
+          status: q.status,
+          created_at: q.created_at,
+        };
+      }
+      setTechQuotes(map);
+    };
+    load();
+    const ch = supabase
+      .channel(`dispatch-quotes-${job.id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "quotes", filter: `job_id=eq.${job.id}` }, load)
+      .subscribe();
+    return () => { cancelled = true; supabase.removeChannel(ch); };
+  }, [job.id]);
+
   const [techId, setTechId] = useState<string>(suggested[0]?.tech.id ?? "");
   const [search, setSearch] = useState("");
   const [price, setPrice] = useState<string>("85");
@@ -488,6 +522,30 @@ function DispatchModal({ job, allTechs, onClose, onDispatch }: DispatchModalProp
   const [showSpecific, setShowSpecific] = useState(false);
   const [selectedTechIds, setSelectedTechIds] = useState<Set<string>>(new Set());
   const [broadcasting, setBroadcasting] = useState<null | "all" | "specific">(null);
+
+  // When quotes arrive, prefer a technician who already submitted a quote and prefill their price/eta.
+  // Only auto-switch when the user hasn't manually picked a different tech.
+  const [autoPicked, setAutoPicked] = useState(false);
+  useEffect(() => {
+    if (autoPicked) return;
+    const quotedId = Object.keys(techQuotes).find((id) => allTechs.some((t) => t.id === id));
+    if (!quotedId) return;
+    const q = techQuotes[quotedId];
+    setTechId(quotedId);
+    if (q.price != null) setPrice(String(q.price));
+    if (q.eta != null) setEta(String(q.eta));
+    setAutoPicked(true);
+  }, [techQuotes, allTechs, autoPicked]);
+
+  // Helper: select a technician and prefill price/eta from their submitted quote when available.
+  const selectTech = (id: string, fallbackEta?: number) => {
+    setTechId(id);
+    setAutoPicked(true);
+    const q = techQuotes[id];
+    if (q?.price != null) setPrice(String(q.price));
+    if (q?.eta != null) setEta(String(q.eta));
+    else if (fallbackEta != null) setEta(String(fallbackEta));
+  };
 
   // Job is "complete" — required fields gathered before broadcasting
   const wheels = ((job as any).affected_wheels ?? []) as string[];
