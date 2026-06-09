@@ -39,6 +39,7 @@ export function MatchingTechniciansPanel({
       return;
     }
     if (selected.size === 0) {
+      toast.error("Select at least one technician");
       return;
     }
     setBusy(true);
