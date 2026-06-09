@@ -1544,19 +1544,15 @@ Deno.serve(async (req) => {
             await sendReply(from, `Job #${shortRef} (${job.postcode}) — no approved technicians found nearby.`, channel);
             return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
           }
-          const lines = scored.slice(0, 10).map(({ t, miles }: any) => {
-            const dist = miles != null ? ` · ${miles.toFixed(1)} mi` : "";
-            const code = t.tech_code ? `[${t.tech_code}] ` : "";
-            return `• ${code}${t.name} (${t.phone})${dist}`;
+          const lines = scored.slice(0, 10).map(({ t, miles }: any, idx: number) => {
+            const dist = miles != null ? `${miles.toFixed(1)} mi away` : "distance unknown";
+            const code = t.tech_code ?? "TECH-????";
+            return `${idx + 1}. 🔧 ${code} · ${t.name}\n   📞 ${t.phone} · ${dist}`;
           }).join("\n");
           const more = scored.length > 10 ? `\n…and ${scored.length - 10} more` : "";
           await setAdminState("await_broadcast_confirm", job.id);
           await sendReply(from,
-            `📋 Job #${shortRef} (${job.postcode}) — ${scored.length} available technician(s):\n${lines}${more}`,
-            channel,
-          );
-          await sendReply(from,
-            `To broadcast to all, reply: broadcast #${shortRef}\nTo send to one only, reply: #${shortRef} send to <name or TECH-ID>`,
+            `📋 Job #${shortRef} — Available Technicians (${job.postcode ?? "—"})\n\n${lines}${more}\n\nTotal: ${scored.length} technician(s) available in this area.\n\nTo broadcast to all, reply: "broadcast #${shortRef}"\nTo send to one only, reply: "#${shortRef} send to <name or TECH-ID>"`,
             channel,
           );
           return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
