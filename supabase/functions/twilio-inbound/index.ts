@@ -1332,9 +1332,15 @@ Deno.serve(async (req) => {
         const sent = bJson?.sent ?? 0;
         const total = bJson?.total ?? technician_ids.length;
         await clearAdminState();
+        await supabase.from("jobs").update({ status: "broadcasting" }).eq("id", job.id);
         if (bRes.ok && sent > 0) {
+          const notifiedLines = scored.slice(0, sent).map(({ t }: any) =>
+            `   — ${t.name}${t.tech_code ? ` (${t.tech_code})` : ""}`
+          ).join("\n");
           await sendReply(from,
-            `✅ Broadcast sent for job #${shortRef} to ${sent}/${total} nearby technicians.`, channel);
+            `✅ Broadcast sent — Job #${shortRef}\n📍 Service Area: ${job.postcode ?? "—"}\n👷 Technicians Notified: ${sent}\n${notifiedLines}\n\nWaiting for quotes to come in...`,
+            channel,
+          );
         } else {
           const err = bJson?.error ? ` (${String(bJson.error).slice(0, 140)})` : "";
           await sendReply(from,
