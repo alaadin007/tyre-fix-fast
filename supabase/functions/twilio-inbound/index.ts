@@ -508,6 +508,147 @@ async function sendReply(to: string, body: string, channel: "sms" | "whatsapp") 
   });
 }
 
+// ───────────── Intent classifier (pre-intake gate) ─────────────
+// Classifies an inbound customer message BEFORE we route to the intake state
+// machine. We only ever start the intake flow when the customer has clearly
+// described a tyre/vehicle problem — never on greetings, thank-yous, or
+// generic acknowledgements. Mid-intake replies bypass this gate (handled by
+// the active-conversation check at the call site).
+type CustomerIntent =
+  | "INTENT_GREETING"
+  | "INTENT_GRATITUDE"
+  | "INTENT_ACKNOWLEDGEMENT"
+  | "INTENT_JOB_REQUEST"
+  | "INTENT_JOB_STATUS_ENQUIRY"
+  | "INTENT_PAYMENT_ENQUIRY"
+  | "INTENT_CANCELLATION"
+  | "INTENT_COMPLAINT_OR_QUESTION"
+  | "INTENT_UNKNOWN";
+
+type IntentResult = {
+  intent: CustomerIntent;
+  has_vehicle_issue: boolean;
+  confidence: "high" | "medium" | "low";
+};
+
+// Cheap regex fallback for the most common short messages, so we don't burn
+// an AI call on "hi" / "thanks" / "ok" and we stay robust if the AI is down.
+function quickIntent(text: string): IntentResult | null {
+  const t = (text || "").trim().toLowerCase().replace(/[!.?]+$/, "");
+  if (!t) return null;
+  if (t.length <= 40) {
+    if (/^(hi|hii+|hey+|hello+|hiya|yo|salam|assalam(u|o)?\s*(o\s*)?alaikum|aoa|namaste|good\s+(morning|afternoon|evening))\b/.test(t)) {
+      return { intent: "INTENT_GREETING", has_vehicle_issue: false, confidence: "high" };
+    }
+    if (/^(thanks?|thank\s*you|thx|ty|cheers|shukriya|jazak[ai]llah|brilliant|great|awesome|perfect|amazing|appreciate(d)?|much\s+appreciated)\b/.test(t)) {
+      return { intent: "INTENT_GRATITUDE", has_vehicle_issue: false, confidence: "high" };
+    }
+    if (/^(ok+|okay|kk|sure|alright|al?right|fine|cool|got\s*it|understood|noted|no\s*problem|np|sounds\s*good)\b/.test(t)) {
+      return { intent: "INTENT_ACKNOWLEDGEMENT", has_vehicle_issue: false, confidence: "high" };
+    }
+    if (/^(cancel|never\s*mind|nevermind|nvm|forget\s*it)\b/.test(t)) {
+      return { intent: "INTENT_CANCELLATION", has_vehicle_issue: false, confidence: "high" };
+    }
+    if (/(status|update|where('?s| is)?\s+(the\s+)?(tech|technician|guy|driver)|how\s+long|eta|when.*(come|arrive|here))/.test(t)) {
+      return { intent: "INTENT_JOB_STATUS_ENQUIRY", has_vehicle_issue: false, confidence: "medium" };
+    }
+    if (/(i\s*paid|payment\s*(done|sent|made)|sent\s+(the\s+)?(money|payment)|did\s+you\s+(get|receive).*payment)/.test(t)) {
+      return { intent: "INTENT_PAYMENT_ENQUIRY", has_vehicle_issue: false, confidence: "high" };
+    }
+  }
+  return null;
+}
+
+async function classifyCustomerIntent(text: string): Promise<IntentResult> {
+  const quick = quickIntent(text);
+  if (quick) return quick;
+  const apiKey = Deno.env.get("LOVABLE_API_KEY");
+  if (!apiKey) {
+    // Fail safe: when we genuinely can't classify, assume unknown (NOT intake).
+    return { intent: "INTENT_UNKNOWN", has_vehicle_issue: false, confidence: "low" };
+  }
+  try {
+    const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "google/gemini-3-flash-preview",
+        messages: [
+          {
+            role: "system",
+            content:
+              "You are an intent classifier for TyreFly, a 24/7 roadside tyre repair service. " +
+              "Given the customer's WhatsApp message, classify it into EXACTLY one intent. " +
+              "Intents: INTENT_GREETING, INTENT_GRATITUDE, INTENT_ACKNOWLEDGEMENT, INTENT_JOB_REQUEST, " +
+              "INTENT_JOB_STATUS_ENQUIRY, INTENT_PAYMENT_ENQUIRY, INTENT_CANCELLATION, " +
+              "INTENT_COMPLAINT_OR_QUESTION, INTENT_UNKNOWN. " +
+              "Set has_vehicle_issue=true ONLY when the customer clearly describes a tyre/vehicle problem " +
+              "(flat, puncture, blowout, low pressure, broken down, need help with tyre, etc.) or explicitly " +
+              "asks to book/report one. Greetings, thanks, and acknowledgements are NEVER vehicle issues.",
+          },
+          { role: "user", content: text || "" },
+        ],
+        tools: [{
+          type: "function",
+          function: {
+            name: "classify",
+            parameters: {
+              type: "object",
+              properties: {
+                intent: {
+                  type: "string",
+                  enum: [
+                    "INTENT_GREETING", "INTENT_GRATITUDE", "INTENT_ACKNOWLEDGEMENT",
+                    "INTENT_JOB_REQUEST", "INTENT_JOB_STATUS_ENQUIRY", "INTENT_PAYMENT_ENQUIRY",
+                    "INTENT_CANCELLATION", "INTENT_COMPLAINT_OR_QUESTION", "INTENT_UNKNOWN",
+                  ],
+                },
+                has_vehicle_issue: { type: "boolean" },
+                confidence: { type: "string", enum: ["high", "medium", "low"] },
+              },
+              required: ["intent", "has_vehicle_issue", "confidence"],
+              additionalProperties: false,
+            },
+          },
+        }],
+        tool_choice: { type: "function", function: { name: "classify" } },
+      }),
+    });
+    if (!r.ok) {
+      console.error("intent classify failed", r.status, await r.text().catch(() => ""));
+      return { intent: "INTENT_UNKNOWN", has_vehicle_issue: false, confidence: "low" };
+    }
+    const j = await r.json();
+    const args = j?.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments;
+    const parsed = typeof args === "string" ? JSON.parse(args) : args;
+    if (!parsed?.intent) return { intent: "INTENT_UNKNOWN", has_vehicle_issue: false, confidence: "low" };
+    return {
+      intent: parsed.intent,
+      has_vehicle_issue: !!parsed.has_vehicle_issue,
+      confidence: parsed.confidence ?? "medium",
+    };
+  } catch (e) {
+    console.error("intent classify error", e);
+    return { intent: "INTENT_UNKNOWN", has_vehicle_issue: false, confidence: "low" };
+  }
+}
+
+function firstNameOf(s: string | null | undefined): string {
+  if (!s) return "";
+  const n = String(s).trim().split(/\s+/)[0];
+  return n && n.toLowerCase() !== "customer" ? n : "";
+}
+
+function jobRefOf(j: any): string {
+  return j?.id ? `#${String(j.id).slice(0, 6).toUpperCase()}` : "";
+}
+
+const ACTIVE_JOB_STATUSES = new Set([
+  "intake_pending", "intake_complete", "broadcasting", "awaiting_approval",
+  "pending", "awaiting_payment", "assigned", "en_route", "on_site", "in_progress",
+]);
+
+
 // ───────────── Open-job clarification helpers (customer side) ─────────────
 // When a customer with one or more open jobs sends a free-form message that
 // isn't a quote acceptance, review rating, or photo enrichment, we (a) list
@@ -2324,6 +2465,87 @@ Deno.serve(async (req) => {
       // Once a customer has received a reference number, the job is the
       // technician's responsibility. Any subsequent message starts a brand-new
       // intake instead of being silently appended to the old job.
+    }
+
+
+    // ─── Intent gate ─────────────────────────────────────────────────────
+    // Before falling through to intake, classify the customer's intent.
+    // The intake flow must ONLY trigger when the customer clearly describes
+    // a tyre/vehicle problem (or is mid-intake answering our questions).
+    // Mid-intake = an in-progress (non-complete) conversation in the last
+    // 30 minutes. Photos always pass through (likely tyre images).
+    let midIntake = false;
+    try {
+      const cutoff = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+      const { data: conv } = await supabase
+        .from("conversations")
+        .select("id,step,last_message_at")
+        .eq("customer_phone", from)
+        .neq("step", "complete")
+        .gte("last_message_at", cutoff)
+        .order("last_message_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      midIntake = !!conv;
+    } catch (_) { /* best-effort */ }
+
+    if (!midIntake && mediaUrls.length === 0 && body) {
+      const intent = await classifyCustomerIntent(body);
+      console.log("intent classify", { from, body: body.slice(0, 80), intent });
+
+      // Pull customer name + active job for contextual replies.
+      const { data: custRow } = await supabase
+        .from("customers").select("full_name").eq("phone", from).maybeSingle();
+      const firstName = firstNameOf((custRow as any)?.full_name);
+      const activeJob = recentJob && ACTIVE_JOB_STATUSES.has(String(recentJob.status))
+        ? recentJob : null;
+
+      const shouldStartIntake =
+        intent.intent === "INTENT_JOB_REQUEST" || intent.has_vehicle_issue === true;
+
+      if (!shouldStartIntake) {
+        let reply = "";
+        switch (intent.intent) {
+          case "INTENT_GREETING":
+            reply = firstName
+              ? `Hi ${firstName}! 👋 Welcome back to TyreFly. How can I help you today?`
+              : `Hi there! 👋 Welcome to TyreFly, your 24/7 roadside tyre service. How can I help you today?`;
+            break;
+          case "INTENT_GRATITUDE":
+            reply = activeJob
+              ? `You're welcome${firstName ? `, ${firstName}` : ""}! 😊 We've received your job (Ref: ${jobRefOf(activeJob)}) and are taking care of it. We'll update you shortly.`
+              : `You're welcome${firstName ? `, ${firstName}` : ""}! If you ever need tyre assistance, we're available 24/7. 🚗`;
+            break;
+          case "INTENT_ACKNOWLEDGEMENT":
+            reply = activeJob
+              ? `Got it${firstName ? `, ${firstName}` : ""} 👍 We'll keep you updated on job ${jobRefOf(activeJob)}.`
+              : `Great! If you need anything else, just message us anytime. 🚗`;
+            break;
+          case "INTENT_JOB_STATUS_ENQUIRY":
+            reply = activeJob
+              ? `Your job ${jobRefOf(activeJob)} is currently *${String(activeJob.status).replace(/_/g, " ")}*. We'll send you an update as soon as there's progress.`
+              : `I don't see an active job for your number. Would you like to report a tyre issue?`;
+            break;
+          case "INTENT_PAYMENT_ENQUIRY":
+            reply = activeJob
+              ? `Thanks${firstName ? `, ${firstName}` : ""} — let me check the payment status on job ${jobRefOf(activeJob)} and a team member will confirm shortly.`
+              : `I don't see an active job for your number. If you've made a payment, please send the reference and we'll look into it.`;
+            break;
+          case "INTENT_CANCELLATION":
+            reply = activeJob
+              ? `Just to confirm — do you want to cancel job ${jobRefOf(activeJob)}? Reply *YES CANCEL* to confirm.`
+              : `No problem — you don't have any active job with us right now. 🙂`;
+            break;
+          case "INTENT_COMPLAINT_OR_QUESTION":
+            reply = `Happy to help! TyreFly is a 24/7 mobile tyre repair & replacement service. Could you share a bit more detail about what you'd like to know?`;
+            break;
+          default:
+            reply = `I want to make sure I help you properly — could you tell me a bit more about what you need? 😊`;
+        }
+        await sendReply(from, reply, channel);
+        return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+      }
+      // Intent says job request / vehicle issue → fall through to intake.
     }
 
 
