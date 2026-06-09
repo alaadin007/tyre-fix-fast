@@ -167,7 +167,7 @@ export default function TechniciansPage() {
             ))}
             {filtered.length === 0 && (
               <TableRow>
-                <TableCell colSpan={11} className="py-8 text-center text-sm text-muted-foreground">
+                <TableCell colSpan={12} className="py-8 text-center text-sm text-muted-foreground">
                   No technicians match.
                 </TableCell>
               </TableRow>
