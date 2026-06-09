@@ -145,7 +145,7 @@ export function JobDetailDrawer({
         )}
 
         <div className="mt-4 flex flex-wrap gap-2">
-          <Button size="sm" variant="outline" onClick={rebroadcast} disabled={!!busy}>
+          <Button size="sm" variant="outline" onClick={rebroadcast} disabled={!!busy || job.status === "pending" || job.status === "intake_pending" || job.status === "unknown"} title={(job.status === "pending" || job.status === "intake_pending" || job.status === "unknown") ? "Waiting for customer to finish intake" : undefined}>
             <Send className="mr-1 h-3.5 w-3.5" /> Rebroadcast
           </Button>
           {job.platform_fee_status !== "paid" && (
