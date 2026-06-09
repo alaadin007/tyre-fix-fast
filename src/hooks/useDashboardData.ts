@@ -117,6 +117,14 @@ export function useDashboardData() {
       .on("postgres_changes", { event: "*", schema: "public", table: "jobs" }, load)
       .on("postgres_changes", { event: "*", schema: "public", table: "quotes" }, load)
       .on("postgres_changes", { event: "*", schema: "public", table: "job_allocations" }, load)
+      .on("postgres_changes", { event: "*", schema: "public", table: "technicians" }, (payload) => {
+        const row = payload.new as Partial<DashTech> | null;
+        if (payload.eventType === "UPDATE" && row?.id) {
+          setTechs((prev) => prev.map((t) => (t.id === row.id ? { ...t, ...row } as DashTech : t)));
+        } else {
+          load();
+        }
+      })
       .subscribe();
     const id = setInterval(load, 30_000);
     return () => {
