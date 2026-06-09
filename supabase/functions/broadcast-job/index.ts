@@ -216,6 +216,10 @@ Deno.serve(async (req) => {
       `📷 Photo 2: ${photo2}\n\n` +
       `Reply with: price (£), ETA (mins) AND a fresh 📍live location pin for THIS job (tap 📎 → Location → Share live location). All 3 are required — quotes missing the live pin for this job won't be accepted.`;
 
+    // 1.5-minute window for technician quote submissions.
+    const QUOTE_WINDOW_MS = 90_000;
+    const windowExpiresIso = new Date(Date.now() + QUOTE_WINDOW_MS).toISOString();
+
     let sent = 0;
     const failures: string[] = [];
     const allocations: any[] = [];
@@ -246,6 +250,7 @@ Deno.serve(async (req) => {
         job_id,
         technician_id: t.id,
         status: ok ? "broadcast" : "send_failed",
+        quote_window_expires_at: windowExpiresIso,
         ai_reasoning:
           (mode === "all" ? "manual broadcast (all)" : "manual broadcast (specific)") +
           ` · template=new_job_alert_to_technician to=${to}` +
@@ -256,6 +261,31 @@ Deno.serve(async (req) => {
 
     if (allocations.length > 0) {
       await supabase.from("job_allocations").insert(allocations);
+    }
+
+    // Schedule a single consolidated quote summary 1.5 minutes after broadcast.
+    // EdgeRuntime.waitUntil keeps the function alive past the HTTP response.
+    if (sent > 0) {
+      const finalize = (async () => {
+        try {
+          await new Promise((r) => setTimeout(r, QUOTE_WINDOW_MS + 2_000));
+          await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/finalize-broadcast`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+            },
+            body: JSON.stringify({ job_id }),
+          });
+        } catch (e) {
+          console.error("finalize-broadcast schedule failed", e);
+        }
+      })();
+      // @ts-ignore — EdgeRuntime is provided by the Supabase runtime.
+      if (typeof EdgeRuntime !== "undefined" && (EdgeRuntime as any).waitUntil) {
+        // @ts-ignore
+        (EdgeRuntime as any).waitUntil(finalize);
+      }
     }
 
     if (sent === 0) {
