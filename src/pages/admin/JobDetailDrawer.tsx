@@ -144,20 +144,29 @@ export function JobDetailDrawer({
           </div>
         )}
 
+        {(() => null)()}
         <div className="mt-4 flex flex-wrap gap-2">
-          <Button size="sm" variant="outline" onClick={rebroadcast} disabled={!!busy || job.status === "pending" || job.status === "intake_pending" || job.status === "unknown"} title={(job.status === "pending" || job.status === "intake_pending" || job.status === "unknown") ? "Waiting for customer to finish intake" : undefined}>
-            <Send className="mr-1 h-3.5 w-3.5" /> Rebroadcast
-          </Button>
-          {job.platform_fee_status !== "paid" && (
-            <Button size="sm" variant="outline" onClick={markPaid} disabled={!!busy}>
-              <CreditCard className="mr-1 h-3.5 w-3.5" /> Mark paid
-            </Button>
-          )}
-          {job.status !== "completed" && job.status !== "paid" && (
-            <Button size="sm" variant="outline" onClick={markCompleted} disabled={!!busy}>
-              Mark completed
-            </Button>
-          )}
+          {(() => {
+            const intakeIncomplete = job.status === "pending" || job.status === "intake_pending" || job.status === "unknown";
+            const intakeTitle = intakeIncomplete ? "Waiting for customer to finish intake" : undefined;
+            return (
+              <>
+                <Button size="sm" variant="outline" onClick={rebroadcast} disabled={!!busy || intakeIncomplete} title={intakeTitle}>
+                  <Send className="mr-1 h-3.5 w-3.5" /> Rebroadcast
+                </Button>
+                {job.platform_fee_status !== "paid" && (
+                  <Button size="sm" variant="outline" onClick={markPaid} disabled={!!busy || intakeIncomplete} title={intakeTitle}>
+                    <CreditCard className="mr-1 h-3.5 w-3.5" /> Mark paid
+                  </Button>
+                )}
+                {job.status !== "completed" && job.status !== "paid" && (
+                  <Button size="sm" variant="outline" onClick={markCompleted} disabled={!!busy || intakeIncomplete} title={intakeTitle}>
+                    Mark completed
+                  </Button>
+                )}
+              </>
+            );
+          })()}
           {job.stripe_checkout_url && (
             <a href={job.stripe_checkout_url} target="_blank" rel="noreferrer">
               <Button size="sm" variant="ghost">
