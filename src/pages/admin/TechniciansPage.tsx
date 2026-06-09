@@ -96,6 +96,7 @@ export default function TechniciansPage() {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead>Tech ID</TableHead>
               <TableHead>Name</TableHead>
               <TableHead>WhatsApp</TableHead>
               <TableHead>Postcodes</TableHead>
