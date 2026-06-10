@@ -1573,9 +1573,13 @@ Deno.serve(async (req) => {
       const broadcastVerbRegex = /\b(broadcast|dispatch|send|share|push|blast|notify|alert|forward|go|fire|publish)\b/i;
       const yesRegex = /^\s*(y|yes|ok|okay|sure|confirm|approved?|do it|please)\b/i;
       const refInMsg = trimmed.match(refRegex);
+      // If the admin wrote "... to <name/TECH-ID/+phone>", this is a
+      // BROADCAST_ONE intent — do NOT fall into the broadcast-to-all branch.
+      // The dedicated one-tech matcher (further down) will handle it.
+      const targetsOneTech = /\bto\s+(?:tech[-_ ]?\d+|\+?\d[\d\s-]{5,}|[A-Za-z][A-Za-z .'-]{1,40})\s*(?:only)?\s*[.!]?\s*$/i.test(trimmed);
       // Require an explicit broadcast verb here — plain "yes <ref>" is handled
       // above as a list request, not an immediate broadcast.
-      const looksLikeBroadcast = refInMsg && broadcastVerbRegex.test(trimmed);
+      const looksLikeBroadcast = refInMsg && broadcastVerbRegex.test(trimmed) && !targetsOneTech;
 
       if (looksLikeBroadcast) {
         const ref = refInMsg[1].toLowerCase();
