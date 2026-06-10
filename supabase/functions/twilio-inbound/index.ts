@@ -1969,7 +1969,7 @@ Deno.serve(async (req) => {
         const techId = classification.technician_identifier;
 
         // Rule 1 & 2: if ref missing for a per-job intent, count active jobs.
-        const needsRef = ["SHOW_TECHNICIAN_LIST", "BROADCAST_ALL", "BROADCAST_ONE", "FORWARD_QUOTE", "ASSIGN", "STATUS", "CANCEL", "CONFIRM_CANCEL"].includes(classification.intent);
+        const needsRef = ["SHOW_TECHNICIAN_LIST", "BROADCAST_ALL", "BROADCAST_ONE", "BROADCAST_MULTIPLE_SPECIFIC", "FORWARD_QUOTE_ONE", "FORWARD_QUOTE_MULTIPLE", "FORWARD_QUOTE_UPDATED", "UPDATE_TECHNICIAN_PRICE", "ASSIGN", "STATUS", "CANCEL", "CONFIRM_CANCEL"].includes(classification.intent);
         if (needsRef && !ref) {
           const { data: openJobs } = await supabase
             .from("jobs")
