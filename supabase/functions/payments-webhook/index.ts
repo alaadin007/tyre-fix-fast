@@ -53,15 +53,28 @@ async function handleCheckoutCompleted(session: any) {
 
   const { data: job } = await supabase
     .from("jobs")
-    .select("id, customer_name, customer_phone, postcode, assigned_technician_id, platform_fee_status, issue_type, issue_description, damage_summary, vehicle_reg, affected_wheels, lat, lng")
+    .select("id, customer_name, customer_phone, postcode, assigned_technician_id, platform_fee_status, payment_notified_at, issue_type, issue_description, damage_summary, vehicle_reg, affected_wheels, lat, lng")
     .eq("id", jobId)
     .single();
   if (!job) {
     console.error("Job not found for session:", jobId);
     return;
   }
-  if (job.platform_fee_status === "paid") {
-    console.log("Job already marked paid, skipping:", jobId);
+  if ((job as any).payment_notified_at) {
+    console.log("Payment already notified, skipping:", jobId);
+    return;
+  }
+
+  // Atomic claim: only one webhook invocation proceeds past this point.
+  const { data: claimed, error: claimErr } = await supabase
+    .from("jobs")
+    .update({ payment_notified_at: new Date().toISOString() })
+    .eq("id", jobId)
+    .is("payment_notified_at", null)
+    .select("id")
+    .maybeSingle();
+  if (claimErr || !claimed) {
+    console.log("Notification already claimed by another invocation:", jobId);
     return;
   }
 
@@ -72,6 +85,7 @@ async function handleCheckoutCompleted(session: any) {
     stripe_payment_intent_id: session.payment_intent ?? null,
     status: isFullPayment ? "in_progress" : "confirmed",
   }).eq("id", jobId);
+
 
   const amount = formatGbp(session?.amount_total);
   const ref = jobRef(jobId);
@@ -146,56 +160,20 @@ async function handleCheckoutCompleted(session: any) {
     .maybeSingle();
   const masterNumbers: string[] = (((masterSetting as any)?.value?.numbers) ?? []).filter(Boolean);
 
-  const adminSummary = [
-    `🔔 New Payment Received`,
-    ``,
-    `💰 Amount: £${amount}`,
-    `📋 Job Ref: #${ref}`,
-    `🕐 Time: ${nowStr}`,
-    ``,
-    `━━━━━━━━━━━━━━━`,
-    `👤 Customer Details`,
-    `━━━━━━━━━━━━━━━`,
-    ``,
-    `👨 Name: ${job.customer_name ?? "—"}`,
-    `📞 Phone: ${job.customer_phone ?? "—"}`,
-    `📍 Location: ${job.postcode ?? "—"}`,
-    `🗺️ Map: ${customerMapLink}`,
-    ``,
-    `━━━━━━━━━━━━━━━`,
-    `🛞 Job Details`,
-    `━━━━━━━━━━━━━━━`,
-    ``,
-    `⚠️ Issue: ${issue}`,
-    `🚗 Reg: ${vehicleReg}`,
-    `🛞 Wheels: ${wheels}`,
-    ``,
-    `━━━━━━━━━━━━━━━`,
-    `👨‍🔧 Assigned Technician`,
-    `━━━━━━━━━━━━━━━`,
-    ``,
-    `👨‍🔧 Name: ${techName}`,
-    `📞 Phone: ${techPhone}`,
-    `💵 Quoted: £${quotedAmount}`,
-    ``,
-    `━━━━━━━━━━━━━━━`,
-  ].join("\n");
-  const adminPrompt = `Would you like to send the Technician details to the Customer? Reply *YES ${ref}* to share both parties' details.`;
-
-  const formatF = [
+  const compactMsg = [
     `💳 Payment Confirmed — Job #${ref}`,
+    ``,
     `👤 Customer: ${job.customer_name ?? "—"}`,
     `💷 Amount Paid: £${amount}`,
     `🔧 Technician: ${techName}${techPhone !== "—" ? ` (${techPhone})` : ""}`,
     ``,
-    `Ready to connect the customer and technician.`,
-    `Reply "assign #${ref}" to send contact details to both parties now.`,
+    `Ready to connect both parties.`,
+    `Reply YES #${ref} to preview assignment.`,
   ].join("\n");
 
   for (const to of masterNumbers) {
-    await sendMsg(to, formatF, "whatsapp");
-    await sendMsg(to, adminSummary, "whatsapp");
-    await sendMsg(to, adminPrompt, "whatsapp");
+    await sendMsg(to, compactMsg, "whatsapp");
+
     try {
       const normalized = to.replace(/^whatsapp:/, "").replace(/[^\d+]/g, "");
       await supabase.from("admin_states").upsert(
