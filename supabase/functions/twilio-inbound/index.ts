@@ -3334,8 +3334,19 @@ Deno.serve(async (req) => {
     } catch (_) { /* best-effort */ }
 
     if (!midIntake && mediaUrls.length === 0 && body) {
+      // FAQ matcher runs BEFORE intent detection. If the message is a
+      // recognised FAQ (e.g. "do you offer tyre replacement"), reply with
+      // the canned answer and STOP — never start the intake flow.
+      const faqAnswer = matchFaq(body);
+      if (faqAnswer) {
+        console.log("faq match", { from, body: body.slice(0, 80) });
+        await sendReply(from, faqAnswer, channel);
+        return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+      }
+
       const intent = await classifyCustomerIntent(body);
       console.log("intent classify", { from, body: body.slice(0, 80), intent });
+
 
       // Pull customer name + active job for contextual replies.
       const { data: custRow } = await supabase
