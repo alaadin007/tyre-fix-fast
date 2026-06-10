@@ -2028,6 +2028,21 @@ Deno.serve(async (req) => {
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
       }
 
+      // Pending price-update context: if the admin was previously asked
+      // "Please provide the new price for TECH-XXXX on job #YYYYYY" and now
+      // replies with just a bare price (e.g. "£55", "55", "65.50"), resolve
+      // it against the stored context instead of asking again.
+      if (adminState?.step?.startsWith("await_price_update:") && adminState.job_id) {
+        const bareMatch = trimmed.match(/^\s*(?:£|gbp\s*)?\s*(\d{1,4}(?:\.\d{1,2})?)\s*(?:£|gbp|pounds?)?\s*[.!]?\s*$/i);
+        if (bareMatch) {
+          const newPrice = Number(bareMatch[1]);
+          const techIdent = adminState.step.slice("await_price_update:".length);
+          const refShort = String(adminState.job_id).slice(0, 6);
+          await runUpdateTechnicianPrice(refShort, techIdent, newPrice);
+          return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+        }
+      }
+
       // ---- LLM classifier — the single source of truth for admin NL ----
       // Reads the editable prompt at app_settings.admin_intent_system_prompt.
       const classification = await classifyAdminMessage(trimmed);
