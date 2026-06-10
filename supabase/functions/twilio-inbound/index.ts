@@ -3319,14 +3319,36 @@ Deno.serve(async (req) => {
     ) {
       const recentAgeMs = Date.now() - new Date(recentJob.created_at).getTime();
       if (recentAgeMs < 2 * 60 * 60_000) {
-        const ref = jobRefOf(recentJob);
-        const statusTxt = String(recentJob.status).replace(/_/g, " ");
-        const reply =
-          `Thanks! We've already got your job *#${ref}* (${statusTxt}) on file ` +
-          `and our team is working on it — we'll be in touch shortly with a price and ETA.\n\n` +
-          `If this is a *different* tyre problem, reply *NEW JOB* to start a new booking.`;
-        await sendReply(from, reply, channel);
-        return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+        // Explicit "NEW JOB" keyword always starts a fresh intake.
+        const explicitNewJob = /^\s*(new[\s_-]?job|new\s+booking|start\s+(again|over|new)|another\s+job|different\s+(job|tyre|problem))\s*[!.?]*\s*$/i
+          .test(body || "");
+        // Otherwise let the AI decide whether this is the same job or a new one,
+        // passing the existing job state as context.
+        const relation = explicitNewJob
+          ? "new_job"
+          : await aiClassifyJobContinuity({
+              body: body || "",
+              hasMedia: mediaUrls.length > 0,
+              job: {
+                id: recentJob.id,
+                status: String(recentJob.status),
+                issue_type: (recentJob as any).issue_type ?? null,
+                postcode: (recentJob as any).postcode ?? null,
+                created_at: recentJob.created_at,
+                issue_description: (recentJob as any).issue_description ?? null,
+              },
+            });
+        if (relation === "same_job") {
+          const ref = jobRefOf(recentJob);
+          const statusTxt = String(recentJob.status).replace(/_/g, " ");
+          const reply =
+            `Thanks! We've already got your job *#${ref}* (${statusTxt}) on file ` +
+            `and our team is working on it — we'll be in touch shortly with a price and ETA.\n\n` +
+            `If this is a *different* tyre problem, reply *NEW JOB* to start a new booking.`;
+          await sendReply(from, reply, channel);
+          return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+        }
+        // relation === "new_job" → fall through to intake (starts a fresh job).
       }
     }
 
