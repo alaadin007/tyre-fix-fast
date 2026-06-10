@@ -996,7 +996,10 @@ async function shareContactsForJobId(
     ].join("\n");
     await sendReply(tech.phone, techMsg, "whatsapp");
 
-    await supabase.from("jobs").update({ status: "in_progress" }).eq("id", jobId);
+    await supabase.from("jobs").update({
+      status: "in_progress",
+      assignment_status: "details_sent",
+    }).eq("id", jobId);
     await supabase.from("ops_alerts").insert({
       level: "info",
       title: "Contacts shared",
