@@ -88,6 +88,18 @@ Deno.serve(async (req) => {
               }
             }
           }
+        } else if (t.kind === "finalize_broadcast") {
+          const { job_id } = t.payload as any;
+          if (job_id) {
+            await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/finalize-broadcast`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+              },
+              body: JSON.stringify({ job_id }),
+            });
+          }
         }
 
         await supabase.from("scheduled_tasks").update({ done: true }).eq("id", t.id);
