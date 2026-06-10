@@ -25,6 +25,7 @@ import PaymentsPage from "./pages/admin/PaymentsPage.tsx";
 import TechniciansPage from "./pages/admin/TechniciansPage.tsx";
 import ActivityPage from "./pages/admin/ActivityPage.tsx";
 import AISettingsPage from "./pages/admin/AISettingsPage.tsx";
+import AdminAIInstructionsPage from "./pages/admin/AdminAIInstructionsPage.tsx";
 import CommandCenter from "./pages/admin/CommandCenter.tsx";
 import ReportsPage from "./pages/admin/ReportsPage.tsx";
 import SettingsPage from "./pages/admin/SettingsPage.tsx";
