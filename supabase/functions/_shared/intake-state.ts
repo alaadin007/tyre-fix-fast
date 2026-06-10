@@ -701,7 +701,7 @@ function checklistMessage(job: any, missing: Missing, opts: { header?: string; f
   const footer = opts.footer
     ?? (received === total
         ? "All set ✅ — please type *DONE* to submit your job."
-        : "Please send the missing item(s) above. You can write naturally — e.g. \"reg is GB1122\" or \"front-left puncture\".");
+        : "Please send the missing item(s) above.");
   const lines = [
     header,
     "",
