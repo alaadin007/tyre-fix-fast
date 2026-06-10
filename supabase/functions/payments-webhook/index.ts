@@ -53,15 +53,28 @@ async function handleCheckoutCompleted(session: any) {
 
   const { data: job } = await supabase
     .from("jobs")
-    .select("id, customer_name, customer_phone, postcode, assigned_technician_id, platform_fee_status, issue_type, issue_description, damage_summary, vehicle_reg, affected_wheels, lat, lng")
+    .select("id, customer_name, customer_phone, postcode, assigned_technician_id, platform_fee_status, payment_notified_at, issue_type, issue_description, damage_summary, vehicle_reg, affected_wheels, lat, lng")
     .eq("id", jobId)
     .single();
   if (!job) {
     console.error("Job not found for session:", jobId);
     return;
   }
-  if (job.platform_fee_status === "paid") {
-    console.log("Job already marked paid, skipping:", jobId);
+  if ((job as any).payment_notified_at) {
+    console.log("Payment already notified, skipping:", jobId);
+    return;
+  }
+
+  // Atomic claim: only one webhook invocation proceeds past this point.
+  const { data: claimed, error: claimErr } = await supabase
+    .from("jobs")
+    .update({ payment_notified_at: new Date().toISOString() })
+    .eq("id", jobId)
+    .is("payment_notified_at", null)
+    .select("id")
+    .maybeSingle();
+  if (claimErr || !claimed) {
+    console.log("Notification already claimed by another invocation:", jobId);
     return;
   }
 
@@ -72,6 +85,7 @@ async function handleCheckoutCompleted(session: any) {
     stripe_payment_intent_id: session.payment_intent ?? null,
     status: isFullPayment ? "in_progress" : "confirmed",
   }).eq("id", jobId);
+
 
   const amount = formatGbp(session?.amount_total);
   const ref = jobRef(jobId);
