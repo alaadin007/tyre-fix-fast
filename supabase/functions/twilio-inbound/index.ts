@@ -1256,11 +1256,15 @@ Deno.serve(async (req) => {
       const yesOnly = /^\s*(y|yes|ok|okay|sure|confirm|yep|yeah)\s*[.!]?\s*$/i.test(trimmed);
       // "yes <ref>" / "yes #<ref>" / "<ref> yes" combined in one message →
       // treat as a list request (share technicians, then ask broadcast confirm).
-      const yesPlusRefMatch = trimmed.match(
+      // "YES #<REF> CONFIRM" — final confirmation for irreversible actions (assignment).
+      const yesRefConfirmMatch = trimmed.match(
+        /^\s*(?:y|yes|ok|okay|sure|yep|yeah)[\s,:.!#-]+([0-9a-f]{6,8})[\s,:.!#-]+confirm\s*[*.!]?\s*$/i,
+      );
+      const yesPlusRefMatch = !yesRefConfirmMatch && (trimmed.match(
         /^\s*(?:y|yes|ok|okay|sure|confirm|yep|yeah)[\s,:.!#-]+([0-9a-f]{6,8})\s*[*.!]?\s*$/i,
       ) ?? trimmed.match(
         /^\s*#?\s*([0-9a-f]{6,8})[\s,:.!-]+(?:y|yes|ok|okay|sure|confirm|yep|yeah)\s*$/i,
-      );
+      ));
 
       const { data: adminStateRow } = await supabase
         .from("admin_states")
