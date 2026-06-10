@@ -2480,6 +2480,7 @@ Deno.serve(async (req) => {
         .eq("job_id", alloc.job_id)
         .eq("technician_id", tech.id)
         .in("status", ["collecting", "pending"])
+        .gte("created_at", alloc.created_at)
         .order("created_at", { ascending: false })
         .limit(1);
       let draft: any = existingDrafts?.[0] ?? null;
@@ -2574,6 +2575,11 @@ Deno.serve(async (req) => {
         status: "pending",
         quote_deadline: new Date(allocCreated + 60_000).toISOString(),
       }).eq("id", draft.id);
+
+      await supabase
+        .from("job_allocations")
+        .update({ status: "quoted" })
+        .eq("id", alloc.id);
 
       const tyreNote = mergedTyreIncl
         ? ` (incl. ${mergedTyreCond ?? ""} tyre)`.replace("  ", " ")

@@ -32,7 +32,7 @@ Deno.serve(async (req) => {
     const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
 
-    // 1) Idempotency check.
+    // 1) Load job + latest broadcast round metadata.
     const { data: job, error: jErr } = await supabase
       .from("jobs")
       .select("id, customer_name, vehicle_reg, quote_summary_sent_at")
@@ -43,7 +43,35 @@ Deno.serve(async (req) => {
         status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    if (job.quote_summary_sent_at) {
+    const { data: allocations } = await supabase
+      .from("job_allocations")
+      .select("technician_id, status, created_at, quote_window_expires_at")
+      .eq("job_id", job_id)
+      .order("created_at", { ascending: false });
+
+    const latestWindowIso = (allocations ?? [])
+      .map((a: any) => a.quote_window_expires_at)
+      .filter(Boolean)
+      .sort()
+      .at(-1) ?? null;
+
+    const currentRoundAllocs = latestWindowIso
+      ? (allocations ?? []).filter((a: any) => a.quote_window_expires_at === latestWindowIso)
+      : (allocations ?? []).slice(0, 1);
+
+    const currentRoundStartIso = currentRoundAllocs
+      .map((a: any) => a.created_at)
+      .filter(Boolean)
+      .sort()
+      .at(0) ?? null;
+
+    const hasNewerRoundSinceSummary = !!(
+      job.quote_summary_sent_at &&
+      currentRoundStartIso &&
+      new Date(currentRoundStartIso).getTime() > new Date(job.quote_summary_sent_at).getTime()
+    );
+
+    if (job.quote_summary_sent_at && !hasNewerRoundSinceSummary) {
       return new Response(JSON.stringify({ ok: true, skipped: "already sent" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -58,12 +86,25 @@ Deno.serve(async (req) => {
       .in("status", ["broadcast", "proposed"])
       .lte("created_at", cutoffIso);
 
-    // 3) Collect every quote for this job (any technician, any status).
-    const { data: quotes } = await supabase
+    // 3) Collect quotes for the CURRENT broadcast round only.
+    const currentRoundTechIds = Array.from(new Set(
+      currentRoundAllocs.map((a: any) => a.technician_id).filter(Boolean),
+    )) as string[];
+
+    let quotesQuery = supabase
       .from("quotes")
       .select("technician_id, price_gbp, eta_minutes, status, created_at")
       .eq("job_id", job_id)
       .order("price_gbp", { ascending: true, nullsFirst: false });
+
+    if (currentRoundTechIds.length > 0) {
+      quotesQuery = quotesQuery.in("technician_id", currentRoundTechIds);
+    }
+    if (currentRoundStartIso) {
+      quotesQuery = quotesQuery.gte("created_at", currentRoundStartIso);
+    }
+
+    const { data: quotes } = await quotesQuery;
 
     // Fetch job details for customer + vehicle context in the summary.
     const { data: jobFull } = await supabase
