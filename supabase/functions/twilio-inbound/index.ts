@@ -1937,8 +1937,13 @@ Deno.serve(async (req) => {
         }
       };
 
-      // ---- Fast-path regexes for new intents ----
-      const refMatchAny = trimmed.match(refRegexBoundary);
+      // ---- Safety-only fast paths ----
+      // Only the explicit CONFIRM CANCEL phrase and the matching state-driven
+      // "yes" reply stay as regex — these are destructive actions and we want
+      // a zero-ambiguity trigger. Everything else (cancel/status/list active/
+      // broadcast-to-one/NL list/NL broadcast/forward quote/assign/etc.) is
+      // routed by the LLM classifier below using the Admin AI Instructions.
+      const _refMatchAny = trimmed.match(refRegexBoundary); // (kept for compatibility)
 
       // Intent 8 confirmation: "CONFIRM CANCEL #REF" / "confirm cancel REF"
       const confirmCancelMatch = trimmed.match(/^\s*confirm\s+cancel\s+#?\s*([0-9a-f]{6,8})\s*$/i);
@@ -1953,52 +1958,13 @@ Deno.serve(async (req) => {
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
       }
 
-      // Intent 8 prompt: "cancel #REF" / "close #REF"
-      const cancelMatch = trimmed.match(/\b(cancel|close|abort|kill)\b.*?\b([0-9a-f]{6,8})\b/i)
-        ?? trimmed.match(/\b([0-9a-f]{6,8})\b.*?\b(cancel|close)\b/i);
-      if (cancelMatch) {
-        const ref = (cancelMatch[1].length >= 6 ? cancelMatch[1] : cancelMatch[2]).toLowerCase();
-        await runCancelPrompt(ref);
-        return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
-      }
-
-      // Intent 6: "status #REF" / "status of REF" / "what is the status of REF"
-      const statusMatch = trimmed.match(/\bstatus\b.*?\b([0-9a-f]{6,8})\b/i)
-        ?? trimmed.match(/\b(?:where\s+is|update\s+on|what(?:'s|\s+is)\s+happening\s+with)\b.*?\b([0-9a-f]{6,8})\b/i);
-      if (statusMatch) {
-        await runStatusForRef(statusMatch[1].toLowerCase());
-        return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
-      }
-
-      // Intent 7: "show active jobs" / "open jobs" / "how many jobs"
-      if (/\b(active|open|all)\s+jobs?\b/i.test(trimmed) ||
-          /\bhow\s+many\s+jobs?\b/i.test(trimmed) ||
-          /\bgive\s+me.*overview.*jobs?\b/i.test(trimmed) ||
-          /\b(list|show)\s+(?:all\s+)?(?:active|open|current)\s+jobs?\b/i.test(trimmed)) {
-        await runListActiveJobs();
-        return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
-      }
-
-      // Intent 3: "#REF send to X" / "only send #REF to X" / "send #REF to X only"
-      const oneTechMatch =
-        trimmed.match(/#?\s*([0-9a-f]{6,8})\s+(?:send|broadcast|push|dispatch)\s+to\s+(.+?)(?:\s+only)?\s*[.!]?\s*$/i) ??
-        trimmed.match(/\b(?:only\s+)?(?:send|broadcast|push|dispatch)\s+#?\s*([0-9a-f]{6,8})\s+to\s+(.+?)(?:\s+only)?\s*[.!]?\s*$/i) ??
-        trimmed.match(/\b(?:send|broadcast)\s+(.+?)\s+(?:job|ref)?\s*#?\s*([0-9a-f]{6,8})\s+only\s*[.!]?\s*$/i);
-      if (oneTechMatch) {
-        // Detect which capture group is the ref (6-8 hex)
-        const a = oneTechMatch[1];
-        const b = oneTechMatch[2];
-        const ref = /^[0-9a-f]{6,8}$/i.test(a) ? a : b;
-        const identifier = /^[0-9a-f]{6,8}$/i.test(a) ? b : a;
-        await runBroadcastToOne(ref.toLowerCase(), identifier);
-        return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
-      }
-
-      // ---- LLM classifier fallback (handles NL, typos, Urdu, Roman Urdu) ----
+      // ---- LLM classifier — the single source of truth for admin NL ----
+      // Reads the editable prompt at app_settings.admin_intent_system_prompt.
       const classification = await classifyAdminMessage(trimmed);
       const replyLang: AdminLanguage = classification?.language ?? "en";
 
-      if (classification && classification.confidence === "high" && classification.intent !== "UNKNOWN") {
+      if (classification && classification.intent !== "UNKNOWN") {
+
         const ref = classification.job_reference;
         const techId = classification.technician_identifier;
 
