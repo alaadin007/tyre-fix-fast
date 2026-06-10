@@ -2057,9 +2057,26 @@ Deno.serve(async (req) => {
           case "FORWARD_QUOTE_ONE":
           case "FORWARD_QUOTE_MULTIPLE":
           case "FORWARD_QUOTE_UPDATED":
-          case "UPDATE_TECHNICIAN_PRICE":
             await runSendQuoteForRef(ref!);
             return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+          case "UPDATE_TECHNICIAN_PRICE": {
+            // Require an explicit new price value — otherwise prompt for it
+            // rather than silently forwarding the existing quote.
+            const priceMatch = trimmed.match(/(?:£|gbp\s*)?(\d{1,4}(?:\.\d{1,2})?)\b/i);
+            const hasPrice = !!priceMatch && /\b(to|=|@|for\s+£?\s*\d)/i.test(trimmed.replace(/#?[0-9a-f]{6,8}/gi, "").replace(/tech-?\d+/gi, ""));
+            if (!hasPrice) {
+              const refUp = ref!.toUpperCase();
+              const techLabel = techId ? techId : "the technician";
+              await sendReply(
+                from,
+                `Please provide the new price for ${techLabel} on job #${refUp}.\nExample: "update ${techId || "TECH-0001"} price for #${refUp} to £55"`,
+                channel,
+              );
+              return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+            }
+            await runSendQuoteForRef(ref!);
+            return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+          }
           case "ASSIGN":
             await runShareContactsForRef(ref!);
             return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
