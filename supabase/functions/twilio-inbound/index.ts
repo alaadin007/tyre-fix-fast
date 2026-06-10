@@ -713,6 +713,7 @@ async function answerCustomerJobQuestion(openJobs: any[], question: string): Pro
 async function sendQuoteToCustomer(
   supabase: any,
   jobId: string,
+  opts?: { quoteId?: string; technicianId?: string },
 ): Promise<{ ok: boolean; error?: string; price?: number; customerPhone?: string; paymentLinkMissing?: boolean; stripeError?: string }> {
 
   try {
@@ -724,11 +725,14 @@ async function sendQuoteToCustomer(
     if (!jobRow) return { ok: false, error: "Job not found" };
     if (!jobRow.customer_phone) return { ok: false, error: "Customer has no phone on file" };
 
-    const { data: quoteRow } = await supabase
+    let quoteQuery = supabase
       .from("quotes")
       .select("id, technician_id, price_gbp, eta_minutes, tyre_included, tyre_condition, raw_message")
-      .eq("job_id", jobId)
-      .in("status", ["pending", "accepted"])
+      .eq("job_id", jobId);
+    if (opts?.quoteId) quoteQuery = quoteQuery.eq("id", opts.quoteId);
+    else if (opts?.technicianId) quoteQuery = quoteQuery.eq("technician_id", opts.technicianId);
+    else quoteQuery = quoteQuery.in("status", ["pending", "accepted"]);
+    const { data: quoteRow } = await quoteQuery
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
