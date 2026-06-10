@@ -86,6 +86,7 @@ Deno.serve(async (req) => {
       const stripe = createStripeClient("live");
       const session = await stripe.checkout.sessions.create({
         mode: "payment",
+        ui_mode: "hosted",
         line_items: [{
           price_data: {
             currency: "gbp",
@@ -109,7 +110,9 @@ Deno.serve(async (req) => {
           description: `Tyre Fly — job ${shortRef} — ${jobRow.postcode ?? ""}`.trim(),
         },
       });
-      payUrl = await shortenUrl(session.url!, { kind: "job_full_payment", job_id });
+      if (!session?.url) throw new Error(`Stripe session ${session?.id ?? "?"} returned no checkout url`);
+      const shortened = await shortenUrl(session.url, { kind: "job_full_payment", job_id });
+      payUrl = shortened || session.url;
       await supabase.from("jobs").update({
         stripe_session_id: session.id,
         stripe_checkout_url: session.url,
