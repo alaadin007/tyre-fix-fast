@@ -1506,7 +1506,9 @@ Deno.serve(async (req) => {
           return;
         }
         const oldPrice = quoteRow.price_gbp;
-        await supabase.from("quotes").update({ price_gbp: newPrice }).eq("id", quoteRow.id);
+        await supabase.from("quotes")
+          .update({ price_gbp: newPrice, price_updated_at: new Date().toISOString() })
+          .eq("id", quoteRow.id);
         await clearAdminState();
 
         // Fetch all other quotes on the same job to build the action block.
