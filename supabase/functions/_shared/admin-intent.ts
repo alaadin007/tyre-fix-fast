@@ -107,7 +107,7 @@ export async function classifyAdminMessage(
       body: JSON.stringify({
         model,
         messages: [
-          { role: "system", content: SYSTEM_PROMPT },
+          { role: "system", content: systemPrompt },
           { role: "user", content: body },
         ],
         response_format: { type: "json_object" },
