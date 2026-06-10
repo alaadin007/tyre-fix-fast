@@ -1529,8 +1529,14 @@ Deno.serve(async (req) => {
       {
         const techListVerbRegex = /\b(tech(?:nician)?s?|tech list|technician list|available|who(?:'?s| is) available|nearby|near\s+me|matching)\b/i;
         const refMatchNL = trimmed.match(/\b([0-9a-f]{6,8})\b/i);
-        const looksLikeListReq = !!refMatchNL && techListVerbRegex.test(trimmed) &&
-          !/\b(broadcast|dispatch|send|share|push|blast|forward|publish|cancel|status|assign|quote|pay|paid)\b/i.test(trimmed);
+        // Phrases that ALWAYS mean "show me the list", even when the message
+        // also contains a verb like "share" / "send" (e.g. "share me the
+        // available list of technicians for #REF").
+        const listPhraseRegex = /\b(list of (?:available |nearby |matching )?(?:tech|technician)|available (?:tech|technician)|technician list|tech list|show (?:me )?(?:the )?(?:available |nearby |matching )?(?:tech|technician)|who(?:'?s| is) available)/i;
+        const hasListPhrase = listPhraseRegex.test(trimmed);
+        const hasConflictingVerb = /\b(broadcast|dispatch|push|blast|forward|publish|cancel|status|assign|quote|pay|paid)\b/i.test(trimmed)
+          || (/\b(send|share)\b/i.test(trimmed) && !hasListPhrase);
+        const looksLikeListReq = !!refMatchNL && (techListVerbRegex.test(trimmed) || hasListPhrase) && !hasConflictingVerb;
         if (looksLikeListReq) {
           const ref = refMatchNL[1].toLowerCase();
           const matches = await findJobByRef(ref);
