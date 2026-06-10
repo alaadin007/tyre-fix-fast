@@ -162,8 +162,13 @@ export async function classifyAdminMessage(
       ? ref.trim().toLowerCase() : null;
 
     const techId = parsed.technician_identifier;
-    const techClean = typeof techId === "string" && techId.trim()
-      ? techId.trim() : null;
+    let techClean: string | null = null;
+    if (typeof techId === "string" && techId.trim()) {
+      techClean = techId.trim();
+    } else if (Array.isArray(techId) && techId.length > 0) {
+      const joined = techId.map((x) => String(x ?? "").trim()).filter(Boolean).join(", ");
+      techClean = joined || null;
+    }
 
     let lang = String(parsed.language ?? "en").toLowerCase() as AdminLanguage;
     if (lang !== "en" && lang !== "ur" && lang !== "roman_ur") lang = "en";
