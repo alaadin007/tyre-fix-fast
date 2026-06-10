@@ -1454,10 +1454,37 @@ Deno.serve(async (req) => {
         const oldPrice = quoteRow.price_gbp;
         await supabase.from("quotes").update({ price_gbp: newPrice }).eq("id", quoteRow.id);
         await clearAdminState();
-        await sendReply(from,
-          `✅ Price updated — Job #${shortRef}\n👷 ${tech.tech_code ?? "TECH-????"} · ${tech.name}\n💷 £${oldPrice ?? "—"} → £${newPrice}\n\nReply "send updated quote for ${tech.tech_code ?? tech.name} to customer" to forward it.`,
-          channel,
-        );
+
+        // Fetch all other quotes on the same job to build the action block.
+        const { data: allQuoteRows } = await supabase.from("quotes")
+          .select("technician_id")
+          .eq("job_id", job.id);
+        const techIds = Array.from(new Set((allQuoteRows ?? []).map((q: any) => q.technician_id).filter(Boolean)));
+        const { data: techRows } = techIds.length
+          ? await supabase.from("technicians").select("id, name, tech_code").in("id", techIds)
+          : { data: [] as any[] };
+        const techCode = tech.tech_code ?? "TECH-????";
+        const techShort = (tech.name ?? "Technician").split(/\s+/)[0];
+        const others = (techRows ?? []).filter((t: any) => t.id !== tech.id);
+        const otherLines = others.length
+          ? others.map((t: any) => `- update ${(t.name ?? "").split(/\s+/)[0] || t.tech_code} price for #${shortRef} to £[amount]`).join("\n")
+          : `- update [name] price for #${shortRef} to £[amount]`;
+
+        const msg =
+          `✅ Price updated — Job #${shortRef}\n` +
+          `🧑‍🔧 ${techCode} · ${tech.name}\n` +
+          `💷 £${oldPrice ?? "—"} → £${newPrice}\n\n` +
+          `━━━━━━━━━━━━━━━━━━━━━━\n` +
+          `What would you like to do next?\n\n` +
+          `SEND UPDATED QUOTE TO CUSTOMER:\n` +
+          `- send updated quote for #${shortRef} to customer\n` +
+          `- send updated ${techShort} quote for #${shortRef} to customer\n\n` +
+          `UPDATE ANOTHER TECHNICIAN PRICE:\n` +
+          `${otherLines}\n\n` +
+          `SEND ALL QUOTES TO CUSTOMER:\n` +
+          `- send all quotes for #${shortRef} to customer\n` +
+          `━━━━━━━━━━━━━━━━━━━━━━`;
+        await sendReply(from, msg, channel);
       };
 
       // Helper: share customer ↔ technician contact details after admin approval.
@@ -2157,10 +2184,22 @@ Deno.serve(async (req) => {
             await runSendQuoteForRef(ref!);
             return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
           case "UPDATE_TECHNICIAN_PRICE": {
-            // Require an explicit new price value — otherwise store a pending
-            // context so the next bare-price reply resolves automatically.
-            const priceMatch = trimmed.match(/(?:£|gbp\s*)?(\d{1,4}(?:\.\d{1,2})?)\b/i);
-            const hasPrice = !!priceMatch && /\b(to|=|@|for\s+£?\s*\d)/i.test(trimmed.replace(/#?[0-9a-f]{6,8}/gi, "").replace(/tech-?\d+/gi, ""));
+            // Extract the NEW price from the CURRENT message only.
+            // Strip out job refs (#3EB08B) and tech codes (TECH-0001) first
+            // so their digits cannot be misread as the price.
+            const scrubbed = trimmed
+              .replace(/#\s*[0-9a-f]{6,8}\b/gi, " ")
+              .replace(/\btech[-\s]?\d+\b/gi, " ");
+            // Prefer £-prefixed amount, then "to <amount>", then "<amount> gbp/pounds".
+            let priceStr: string | null = null;
+            const mPound = scrubbed.match(/£\s*(\d{1,5}(?:\.\d{1,2})?)/i);
+            const mTo = scrubbed.match(/\b(?:to|=|@)\s*£?\s*(\d{1,5}(?:\.\d{1,2})?)/i);
+            const mSuffix = scrubbed.match(/(\d{1,5}(?:\.\d{1,2})?)\s*(?:gbp|pounds?|quid)\b/i);
+            if (mPound) priceStr = mPound[1];
+            else if (mTo) priceStr = mTo[1];
+            else if (mSuffix) priceStr = mSuffix[1];
+            const newPrice = priceStr ? Number(priceStr) : NaN;
+            const hasPrice = Number.isFinite(newPrice) && newPrice > 0;
             const refUp = ref!.toUpperCase();
             if (!hasPrice) {
               const techLabel = techId ? techId : "the technician";
@@ -2183,7 +2222,7 @@ Deno.serve(async (req) => {
               await sendReply(from, `Which technician's price should I update on job #${refUp}? Reply with the name or TECH-ID.`, channel);
               return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
             }
-            await runUpdateTechnicianPrice(ref!, techId, Number(priceMatch![1]));
+            await runUpdateTechnicianPrice(ref!, techId, newPrice);
             return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
           }
           case "ASSIGN":
