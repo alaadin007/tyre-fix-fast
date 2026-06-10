@@ -160,56 +160,20 @@ async function handleCheckoutCompleted(session: any) {
     .maybeSingle();
   const masterNumbers: string[] = (((masterSetting as any)?.value?.numbers) ?? []).filter(Boolean);
 
-  const adminSummary = [
-    `🔔 New Payment Received`,
-    ``,
-    `💰 Amount: £${amount}`,
-    `📋 Job Ref: #${ref}`,
-    `🕐 Time: ${nowStr}`,
-    ``,
-    `━━━━━━━━━━━━━━━`,
-    `👤 Customer Details`,
-    `━━━━━━━━━━━━━━━`,
-    ``,
-    `👨 Name: ${job.customer_name ?? "—"}`,
-    `📞 Phone: ${job.customer_phone ?? "—"}`,
-    `📍 Location: ${job.postcode ?? "—"}`,
-    `🗺️ Map: ${customerMapLink}`,
-    ``,
-    `━━━━━━━━━━━━━━━`,
-    `🛞 Job Details`,
-    `━━━━━━━━━━━━━━━`,
-    ``,
-    `⚠️ Issue: ${issue}`,
-    `🚗 Reg: ${vehicleReg}`,
-    `🛞 Wheels: ${wheels}`,
-    ``,
-    `━━━━━━━━━━━━━━━`,
-    `👨‍🔧 Assigned Technician`,
-    `━━━━━━━━━━━━━━━`,
-    ``,
-    `👨‍🔧 Name: ${techName}`,
-    `📞 Phone: ${techPhone}`,
-    `💵 Quoted: £${quotedAmount}`,
-    ``,
-    `━━━━━━━━━━━━━━━`,
-  ].join("\n");
-  const adminPrompt = `Would you like to send the Technician details to the Customer? Reply *YES ${ref}* to share both parties' details.`;
-
-  const formatF = [
+  const compactMsg = [
     `💳 Payment Confirmed — Job #${ref}`,
+    ``,
     `👤 Customer: ${job.customer_name ?? "—"}`,
     `💷 Amount Paid: £${amount}`,
     `🔧 Technician: ${techName}${techPhone !== "—" ? ` (${techPhone})` : ""}`,
     ``,
-    `Ready to connect the customer and technician.`,
-    `Reply "assign #${ref}" to send contact details to both parties now.`,
+    `Ready to connect both parties.`,
+    `Reply YES #${ref} to preview assignment.`,
   ].join("\n");
 
   for (const to of masterNumbers) {
-    await sendMsg(to, formatF, "whatsapp");
-    await sendMsg(to, adminSummary, "whatsapp");
-    await sendMsg(to, adminPrompt, "whatsapp");
+    await sendMsg(to, compactMsg, "whatsapp");
+
     try {
       const normalized = to.replace(/^whatsapp:/, "").replace(/[^\d+]/g, "");
       await supabase.from("admin_states").upsert(
