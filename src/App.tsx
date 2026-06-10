@@ -29,6 +29,7 @@ import AdminAIInstructionsPage from "./pages/admin/AdminAIInstructionsPage.tsx";
 import CommandCenter from "./pages/admin/CommandCenter.tsx";
 import ReportsPage from "./pages/admin/ReportsPage.tsx";
 import SettingsPage from "./pages/admin/SettingsPage.tsx";
+import Dash2 from "./pages/Dash2.tsx";
 
 const queryClient = new QueryClient();
 
@@ -65,6 +66,7 @@ const App = () => (
         <Route path="/terms" element={<Terms />} />
         <Route path="/console" element={<Console />} />
         <Route path="/p/:code" element={<ShortLinkRedirect />} />
+        <Route path="/dash2" element={<Dash2 />} />
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
         <Route path="*" element={<NotFound />} />
       </Routes>
