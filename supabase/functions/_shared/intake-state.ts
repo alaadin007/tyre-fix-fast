@@ -715,9 +715,9 @@ function checklistMessage(job: any, missing: Missing, opts: { header?: string; f
 function completionMessage(job: any): string {
   const ref = String(job.id).slice(0, 6).toUpperCase();
   return [
-    "We have all of the information ✅",
+    "Thank you for submitting the details.",
     "",
-    "We'll find you a nearby technician and send you a price and estimated arrival time — usually within minutes. Thank you!",
+    "We'll find you a nearby technician and send you a price and estimated arrival time within a few minutes.",
     "",
     `Your job reference: *#${ref}*`,
   ].join("\n");
