@@ -10,7 +10,11 @@ export type AdminIntent =
   | "SHOW_TECHNICIAN_LIST"
   | "BROADCAST_ALL"
   | "BROADCAST_ONE"
-  | "FORWARD_QUOTE"
+  | "BROADCAST_MULTIPLE_SPECIFIC"
+  | "FORWARD_QUOTE_ONE"
+  | "FORWARD_QUOTE_MULTIPLE"
+  | "FORWARD_QUOTE_UPDATED"
+  | "UPDATE_TECHNICIAN_PRICE"
   | "ASSIGN"
   | "STATUS"
   | "LIST_ACTIVE"
@@ -23,7 +27,7 @@ export type AdminLanguage = "en" | "ur" | "roman_ur";
 export interface AdminClassification {
   intent: AdminIntent;
   job_reference: string | null;        // 6-8 hex chars, normalized lowercase
-  technician_identifier: string | null; // name / TECH-id / +phone
+  technician_identifier: string | null; // name / TECH-id / +phone (comma-joined if multiple)
   language: AdminLanguage;
   confidence: "high" | "low";
 }
@@ -36,7 +40,11 @@ Possible intents:
 - SHOW_TECHNICIAN_LIST: admin wants to see available technicians for a job. e.g. "show me technicians for #X", "who is available for X", "techs for X", "X ke liye technicians dikhao".
 - BROADCAST_ALL: broadcast a job to ALL nearby technicians. e.g. "broadcast #X", "send out job X to all", "X sab ko bhej do".
 - BROADCAST_ONE: send a job to ONE named technician only. e.g. "#X send to Hassan", "only send #X to TECH-0001", "X sirf Hassan ko bhejo".
-- FORWARD_QUOTE: forward a technician quote to the customer. e.g. "send quote for X to customer", "forward the quote for X", "X ka quote customer ko bhej do".
+- BROADCAST_MULTIPLE_SPECIFIC: broadcast a job to TWO OR MORE specific named technicians (but not everyone). e.g. "#3EB08B send to Hassan and Omar only", "send job #3EB08B to TECH-0001 and TECH-0004", "broadcast 3EB08B to Hassan and Omar only".
+- FORWARD_QUOTE_ONE: forward exactly ONE technician quote (or the only quote) to the customer. e.g. "send Quote for #3EB08B to customer", "send quote for #3EB08B to customer", "send Hassan quote for #3EB08B to customer", "send TECH-0001 quote for #3EB08B to customer", "forward quote for #3EB08B", "send quote #3EB08B".
+- FORWARD_QUOTE_MULTIPLE: forward MULTIPLE technician quotes for the same job to the customer. e.g. "send all quotes for #3EB08B to customer", "send both quotes for #3EB08B to customer", "send Hassan and Omar quotes for #3EB08B to customer", "send TECH-0001 and TECH-0004 quotes for #3EB08B to customer".
+- FORWARD_QUOTE_UPDATED: forward an UPDATED (already-modified) quote to the customer, typically after a price change. e.g. "send updated quotes for #3EB08B to customer", "send updated quote for TECH-0001 to customer", "send updated Hassan and Omar quotes for #3EB08B to customer".
+- UPDATE_TECHNICIAN_PRICE: change a technician's quoted price for a job BEFORE sending. e.g. "update Hassan price for #3EB08B to £55", "update TECH-0001 to £60 for #3EB08B", "change Omar price for #3EB08B to £48", "update TECH-0001 to £60 and TECH-0004 to £48 for #3EB08B".
 - ASSIGN: confirm technician assignment after payment. e.g. "assign #X", "send details for X", "X ke details bhej do".
 - STATUS: full status check for one job. e.g. "what is the status of X", "where is X right now", "X ki kya situation hai".
 - LIST_ACTIVE: overview of all currently open jobs. e.g. "show all active jobs", "how many jobs are open right now", "kitne jobs open hain".
@@ -48,7 +56,7 @@ Language values: "en" English, "ur" Urdu in Arabic script, "roman_ur" Urdu writt
 
 Confidence "high" only if you are sure. Otherwise "low".
 
-Return ONLY a JSON object with these exact keys: intent, job_reference (lowercase hex or null), technician_identifier (string or null — preserve original spelling, may be a name, "TECH-0001", or "+923..."), language, confidence. No prose.`;
+Return ONLY a JSON object with these exact keys: intent, job_reference (lowercase hex or null), technician_identifier (string, array of strings, or null — preserve original spelling, may be a name, "TECH-0001", or "+923..."), language, confidence. No prose.`;
 
 export const ADMIN_INTENT_PROMPT_KEY = "admin_intent_system_prompt";
 
@@ -134,23 +142,21 @@ export async function classifyAdminMessage(
     }
 
     let intent = String(parsed.intent ?? "UNKNOWN").toUpperCase() as AdminIntent;
-    // Alias map — accept new intent names from custom admin system prompts
-    // and route them to the existing handlers in twilio-inbound.
-    const aliasMap: Record<string, AdminIntent> = {
-      "FORWARD_QUOTE_ONE": "FORWARD_QUOTE",
-      "FORWARD_QUOTE_MULTIPLE": "FORWARD_QUOTE",
-      "FORWARD_QUOTE_UPDATED": "FORWARD_QUOTE",
-      "SEND_QUOTE": "FORWARD_QUOTE",
-      "SEND_QUOTES": "FORWARD_QUOTE",
-      "SEND_UPDATED_QUOTES": "FORWARD_QUOTE",
-      "UPDATE_TECHNICIAN_PRICE": "FORWARD_QUOTE",
-      "UPDATE_PRICE": "FORWARD_QUOTE",
-      "BROADCAST_MULTIPLE_SPECIFIC": "BROADCAST_ONE",
-    };
-    if (aliasMap[intent as string]) intent = aliasMap[intent as string];
     const validIntents: AdminIntent[] = [
-      "SHOW_TECHNICIAN_LIST", "BROADCAST_ALL", "BROADCAST_ONE", "FORWARD_QUOTE",
-      "ASSIGN", "STATUS", "LIST_ACTIVE", "CANCEL", "CONFIRM_CANCEL", "UNKNOWN",
+      "SHOW_TECHNICIAN_LIST",
+      "BROADCAST_ALL",
+      "BROADCAST_ONE",
+      "BROADCAST_MULTIPLE_SPECIFIC",
+      "FORWARD_QUOTE_ONE",
+      "FORWARD_QUOTE_MULTIPLE",
+      "FORWARD_QUOTE_UPDATED",
+      "UPDATE_TECHNICIAN_PRICE",
+      "ASSIGN",
+      "STATUS",
+      "LIST_ACTIVE",
+      "CANCEL",
+      "CONFIRM_CANCEL",
+      "UNKNOWN",
     ];
     if (!validIntents.includes(intent)) {
       console.warn("admin-intent: unknown intent from LLM, falling back to UNKNOWN", intent);
