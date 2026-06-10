@@ -2157,10 +2157,22 @@ Deno.serve(async (req) => {
             await runSendQuoteForRef(ref!);
             return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
           case "UPDATE_TECHNICIAN_PRICE": {
-            // Require an explicit new price value — otherwise store a pending
-            // context so the next bare-price reply resolves automatically.
-            const priceMatch = trimmed.match(/(?:£|gbp\s*)?(\d{1,4}(?:\.\d{1,2})?)\b/i);
-            const hasPrice = !!priceMatch && /\b(to|=|@|for\s+£?\s*\d)/i.test(trimmed.replace(/#?[0-9a-f]{6,8}/gi, "").replace(/tech-?\d+/gi, ""));
+            // Extract the NEW price from the CURRENT message only.
+            // Strip out job refs (#3EB08B) and tech codes (TECH-0001) first
+            // so their digits cannot be misread as the price.
+            const scrubbed = trimmed
+              .replace(/#\s*[0-9a-f]{6,8}\b/gi, " ")
+              .replace(/\btech[-\s]?\d+\b/gi, " ");
+            // Prefer £-prefixed amount, then "to <amount>", then "<amount> gbp/pounds".
+            let priceStr: string | null = null;
+            const mPound = scrubbed.match(/£\s*(\d{1,5}(?:\.\d{1,2})?)/i);
+            const mTo = scrubbed.match(/\b(?:to|=|@)\s*£?\s*(\d{1,5}(?:\.\d{1,2})?)/i);
+            const mSuffix = scrubbed.match(/(\d{1,5}(?:\.\d{1,2})?)\s*(?:gbp|pounds?|quid)\b/i);
+            if (mPound) priceStr = mPound[1];
+            else if (mTo) priceStr = mTo[1];
+            else if (mSuffix) priceStr = mSuffix[1];
+            const newPrice = priceStr ? Number(priceStr) : NaN;
+            const hasPrice = Number.isFinite(newPrice) && newPrice > 0;
             const refUp = ref!.toUpperCase();
             if (!hasPrice) {
               const techLabel = techId ? techId : "the technician";
@@ -2183,7 +2195,7 @@ Deno.serve(async (req) => {
               await sendReply(from, `Which technician's price should I update on job #${refUp}? Reply with the name or TECH-ID.`, channel);
               return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
             }
-            await runUpdateTechnicianPrice(ref!, techId, Number(priceMatch![1]));
+            await runUpdateTechnicianPrice(ref!, techId, newPrice);
             return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
           }
           case "ASSIGN":
