@@ -17,6 +17,63 @@ const BodySchema = z.object({ job_id: z.string().uuid() });
 
 const QUOTE_WINDOW_MS = 90_000; // 1.5 minutes
 
+function dedupeQuotesByTechnician(quotes: any[]): any[] {
+  const latestByKey = new Map<string, any>();
+  for (const quote of quotes ?? []) {
+    const key = quote.technician_id ?? `unknown:${quote.created_at}:${quote.price_gbp ?? "na"}`;
+    const existing = latestByKey.get(key);
+    if (!existing) {
+      latestByKey.set(key, quote);
+      continue;
+    }
+    const existingMs = new Date(existing.created_at ?? 0).getTime();
+    const quoteMs = new Date(quote.created_at ?? 0).getTime();
+    if (quoteMs >= existingMs) latestByKey.set(key, quote);
+  }
+  return Array.from(latestByKey.values()).sort((a, b) => {
+    const priceA = a.price_gbp == null ? Number.POSITIVE_INFINITY : Number(a.price_gbp);
+    const priceB = b.price_gbp == null ? Number.POSITIVE_INFINITY : Number(b.price_gbp);
+    if (priceA !== priceB) return priceA - priceB;
+    return new Date(a.created_at ?? 0).getTime() - new Date(b.created_at ?? 0).getTime();
+  });
+}
+
+function firstName(name: string | null | undefined): string {
+  return (name ?? "Technician").trim().split(/\s+/).filter(Boolean)[0] ?? "Technician";
+}
+
+function buildActionSection(jobRef: string, quotes: any[], techsById: Map<string, any>): string[] {
+  const techMeta = quotes.map((q) => {
+    const tech = q.technician_id ? techsById.get(q.technician_id) : null;
+    return {
+      code: tech?.tech_code ?? "TECH",
+      fullName: tech?.name ?? "Technician",
+      shortName: firstName(tech?.name),
+    };
+  });
+  const first = techMeta[0] ?? null;
+  const second = techMeta[1] ?? null;
+
+  return [
+    "What would you like to do next?",
+    "",
+    "SEND QUOTES TO CUSTOMER:",
+    `• \"send all quotes for #${jobRef} to customer\"`,
+    `• \"send ${first?.shortName ?? "technician"} quote for #${jobRef} to customer\"`,
+    `• \"send ${first?.code ?? "TECH-0001"}${second ? ` and ${second.code}` : ""} quote${second ? "s" : ""} to customer\"`,
+    "",
+    "UPDATE A PRICE FIRST:",
+    `• \"update ${first?.shortName ?? "technician"} price for #${jobRef} to £55\"`,
+    second
+      ? `• \"update ${first?.code} to £60 and ${second.code} to £48 for #${jobRef}\"`
+      : `• \"update ${first?.code ?? "TECH-0001"} to £60 for #${jobRef}\"`,
+    "",
+    "SEND UPDATED QUOTES AFTER PRICE CHANGE:",
+    `• \"send updated quotes for #${jobRef} to customer\"`,
+    `• \"send updated quote for ${first?.code ?? "TECH-0001"} to customer\"`,
+  ];
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   try {
@@ -77,6 +134,34 @@ Deno.serve(async (req) => {
       });
     }
 
+    const summaryLockAt = new Date().toISOString();
+    let lockRows: any[] | null = null;
+    if (currentRoundStartIso) {
+      const { data, error } = await supabase
+        .from("jobs")
+        .update({ quote_summary_sent_at: summaryLockAt })
+        .eq("id", job_id)
+        .lt("quote_summary_sent_at", currentRoundStartIso)
+        .select("id");
+      if (error) throw error;
+      lockRows = data;
+    }
+    if (!lockRows || lockRows.length === 0) {
+      const { data, error } = await supabase
+        .from("jobs")
+        .update({ quote_summary_sent_at: summaryLockAt })
+        .eq("id", job_id)
+        .is("quote_summary_sent_at", null)
+        .select("id");
+      if (error) throw error;
+      lockRows = data;
+    }
+    if (!lockRows || lockRows.length === 0) {
+      return new Response(JSON.stringify({ ok: true, skipped: "already sent" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // 2) Expire any allocation that's still open and past its window.
     const cutoffIso = new Date(Date.now() - QUOTE_WINDOW_MS).toISOString();
     await supabase
@@ -105,6 +190,7 @@ Deno.serve(async (req) => {
     }
 
     const { data: quotes } = await quotesQuery;
+    const uniqueQuotes = dedupeQuotesByTechnician(quotes ?? []);
 
     // Fetch job details for customer + vehicle context in the summary.
     const { data: jobFull } = await supabase
@@ -113,7 +199,7 @@ Deno.serve(async (req) => {
       .eq("id", job_id)
       .maybeSingle();
 
-    const techIds = Array.from(new Set((quotes ?? []).map((q) => q.technician_id).filter(Boolean))) as string[];
+    const techIds = Array.from(new Set(uniqueQuotes.map((q) => q.technician_id).filter(Boolean))) as string[];
 
     let techsById = new Map<string, any>();
     if (techIds.length > 0) {
@@ -136,35 +222,37 @@ Deno.serve(async (req) => {
       "—";
 
     const lines: string[] = [];
-    lines.push(`📊 For Job Reference #${jobRef}, here are the quotes:`);
-    lines.push(`👤 Customer: ${customerName}${customerPhone ? ` (${customerPhone})` : ""}`);
-    lines.push(`🚘 Vehicle Reg: ${vehicleReg}`);
+    lines.push(`📋 Quotes Received — Job #${jobRef}`);
+    lines.push("");
+    lines.push(`👤 Customer: ${customerName}`);
+    lines.push(`🚗 Vehicle Reg: ${vehicleReg}`);
     lines.push("");
 
-    if (!quotes || quotes.length === 0) {
+    if (uniqueQuotes.length === 0) {
+      lines.push("Received 0 quote(s):");
+      lines.push("");
       lines.push("No quotes were received within the 1.5-minute window.");
     } else {
-      lines.push(`Received ${quotes.length} quote${quotes.length === 1 ? "" : "s"}:`);
+      lines.push(`Received ${uniqueQuotes.length} quote(s):`);
       lines.push("");
-      let i = 1;
-      for (const q of quotes) {
+      for (const q of uniqueQuotes) {
         const t = q.technician_id ? techsById.get(q.technician_id) : null;
         const code = t?.tech_code ?? "—";
         const name = t?.name ?? "Unknown";
-        const phone = t?.phone ? ` (${t.phone})` : "";
         const price = q.price_gbp != null ? `£${q.price_gbp}` : "—";
         const eta = q.eta_minutes != null ? `${q.eta_minutes} min` : "—";
         const loc = (t?.last_lat != null && t?.last_lng != null)
           ? `https://maps.google.com/?q=${t.last_lat},${t.last_lng}`
           : "no live pin";
-        lines.push(`${i}. 🆔 ${code} · 👨‍🔧 ${name}${phone}`);
-        lines.push(`   🔖 Job Ref: #${jobRef}`);
-        lines.push(`   💷 Price: ${price}   ⏱️ ETA: ${eta}`);
-        lines.push(`   📍 Live Location: ${loc}`);
-        i++;
+        lines.push(`🆔 ${code} · ${name}`);
+        lines.push(`💷 Price: ${price}`);
+        lines.push(`⏱ ETA: ${eta}`);
+        lines.push(`📍 Location: ${loc}`);
+        lines.push("");
       }
+      if (lines[lines.length - 1] === "") lines.pop();
       lines.push("");
-      lines.push(`Reply YES #${jobRef} to forward your preferred quote to the customer.`);
+      lines.push(...buildActionSection(jobRef, uniqueQuotes, techsById));
     }
     const body = lines.join("\n");
 
@@ -185,20 +273,16 @@ Deno.serve(async (req) => {
       console.error("notify-admins call failed", e);
     }
 
-    // 5) Mark summary as sent and log to ops_alerts for the dashboard.
-    await supabase
-      .from("jobs")
-      .update({ quote_summary_sent_at: new Date().toISOString() })
-      .eq("id", job_id);
-
+    // 5) Log to ops_alerts for the dashboard. The send lock above already
+    // marks this broadcast round as summarized, preventing duplicate sends.
     await supabase.from("ops_alerts").insert({
       level: "info",
-      title: `Quote window closed — ${quotes?.length ?? 0} quote(s)`,
+      title: `Quote window closed — ${uniqueQuotes.length} quote(s)`,
       body,
       job_id,
     });
 
-    return new Response(JSON.stringify({ ok: true, quotes: quotes?.length ?? 0, notify: notifyRes }), {
+    return new Response(JSON.stringify({ ok: true, quotes: uniqueQuotes.length, notify: notifyRes }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e: any) {
