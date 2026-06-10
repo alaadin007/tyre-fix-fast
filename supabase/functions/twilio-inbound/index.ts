@@ -2468,8 +2468,10 @@ Deno.serve(async (req) => {
             return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
           case "FORWARD_QUOTE_ONE":
           case "FORWARD_QUOTE_MULTIPLE":
+            await runSendQuoteForRef(ref!, techId);
+            return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
           case "FORWARD_QUOTE_UPDATED":
-            await runSendQuoteForRef(ref!);
+            await runSendUpdatedQuoteForRef(ref!, techId);
             return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
           case "UPDATE_TECHNICIAN_PRICE": {
             // Extract the NEW price from the CURRENT message only.
