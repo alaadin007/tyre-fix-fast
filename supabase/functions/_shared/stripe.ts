@@ -27,13 +27,16 @@ export function createStripeClient(env: StripeEnv): Stripe {
     apiVersion: "2026-03-25.dahlia",
     httpClient: Stripe.createFetchHttpClient((url: string | URL, init?: RequestInit) => {
       const gatewayUrl = url.toString().replace("https://api.stripe.com", GATEWAY_STRIPE_BASE);
+      const headers = new Headers(init?.headers);
+      // The Stripe SDK injects Authorization: Bearer <apiKey> automatically.
+      // Our connector gateway must receive only Lovable-API-Key + X-Connection-Api-Key,
+      // otherwise it rejects the request with "Multiple auth schemes provided".
+      headers.delete("authorization");
+      headers.set("X-Connection-Api-Key", connectionApiKey);
+      headers.set("Lovable-API-Key", lovableApiKey);
       return fetch(gatewayUrl, {
         ...init,
-        headers: {
-          ...Object.fromEntries(new Headers(init?.headers).entries()),
-          "X-Connection-Api-Key": connectionApiKey,
-          "Lovable-API-Key": lovableApiKey,
-        },
+        headers,
       });
     }),
   });
