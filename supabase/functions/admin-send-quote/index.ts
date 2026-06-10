@@ -86,7 +86,6 @@ Deno.serve(async (req) => {
       const stripe = createStripeClient("live");
       const session = await stripe.checkout.sessions.create({
         mode: "payment",
-        ui_mode: "hosted",
         line_items: [{
           price_data: {
             currency: "gbp",
