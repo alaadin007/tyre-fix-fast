@@ -1963,6 +1963,15 @@ Deno.serve(async (req) => {
       const classification = await classifyAdminMessage(trimmed);
       const replyLang: AdminLanguage = classification?.language ?? "en";
 
+      // Safety override: "change/chance/chnage/chagne/update ... price" must be
+      // treated as a price-update intent, never as a quote-forward.
+      if (
+        classification &&
+        /\b(change|chance|chnage|chagne|update|updte|udpate)\b[\s\S]*\bprice\b/i.test(trimmed)
+      ) {
+        classification.intent = "UPDATE_TECHNICIAN_PRICE";
+      }
+
       if (classification && classification.intent !== "UNKNOWN") {
 
         const ref = classification.job_reference;
