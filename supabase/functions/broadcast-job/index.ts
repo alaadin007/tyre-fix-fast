@@ -181,7 +181,12 @@ Deno.serve(async (req) => {
     // Build a rich Details block combining what the customer told us with the
     // AI's photo-based assessment, so the technician has full context before
     // quoting a price.
-    const customerSaid = (job.issue_description?.trim()) || job.issue_type || "";
+    // Nature of Issue = the structured issue_type captured by the intake agent
+    // (e.g. "puncture", "blowout"). We intentionally do NOT include
+    // issue_description here because that field accumulates the customer's raw
+    // chat lines (name, reg, location, etc.) and would leak the full intake
+    // transcript into the technician broadcast.
+    const customerSaid = (job.issue_type?.trim()) || "";
     const aiSaid = (job.damage_summary?.trim()) || "";
     const detailParts: string[] = [];
     if (customerSaid) detailParts.push(`Nature of Issue: ${customerSaid}`);
