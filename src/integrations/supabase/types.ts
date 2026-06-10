@@ -195,6 +195,7 @@ export type Database = {
           issue_type: string
           lat: number | null
           lng: number | null
+          payment_notified_at: string | null
           photo_urls: string[]
           platform_fee_paid_at: string | null
           platform_fee_refunded_at: string | null
@@ -235,6 +236,7 @@ export type Database = {
           issue_type: string
           lat?: number | null
           lng?: number | null
+          payment_notified_at?: string | null
           photo_urls?: string[]
           platform_fee_paid_at?: string | null
           platform_fee_refunded_at?: string | null
@@ -275,6 +277,7 @@ export type Database = {
           issue_type?: string
           lat?: number | null
           lng?: number | null
+          payment_notified_at?: string | null
           photo_urls?: string[]
           platform_fee_paid_at?: string | null
           platform_fee_refunded_at?: string | null
