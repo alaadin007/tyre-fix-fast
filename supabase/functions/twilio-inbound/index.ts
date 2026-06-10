@@ -713,7 +713,8 @@ async function answerCustomerJobQuestion(openJobs: any[], question: string): Pro
 async function sendQuoteToCustomer(
   supabase: any,
   jobId: string,
-): Promise<{ ok: boolean; error?: string; price?: number; customerPhone?: string }> {
+): Promise<{ ok: boolean; error?: string; price?: number; customerPhone?: string; paymentLinkMissing?: boolean; stripeError?: string }> {
+
   try {
     const { data: jobRow } = await supabase
       .from("jobs")
