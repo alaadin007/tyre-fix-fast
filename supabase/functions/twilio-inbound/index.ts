@@ -1041,6 +1041,24 @@ Deno.serve(async (req) => {
     const mediaUrls: string[] = [];
     let rejectedNonImageCount = 0;
 
+    // ─── Idempotency: drop duplicate webhook deliveries for the same MessageSid.
+    // Meta/Twilio retry webhooks on transient errors; without this guard, a
+    // single inbound photo can be appended to photo_urls multiple times and
+    // wrongly satisfy the "2 photos" intake requirement.
+    if (sid) {
+      const { data: prior } = await supabase
+        .from("sms_messages")
+        .select("id")
+        .eq("twilio_sid", sid)
+        .eq("direction", "inbound")
+        .limit(1)
+        .maybeSingle();
+      if (prior) {
+        console.log("twilio-inbound: duplicate webhook ignored", { sid });
+        return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+      }
+    }
+
     // Twilio media URLs require Basic Auth. Download with credentials and
     // re-upload to our public job-photos bucket so they render in the browser
     // and survive Twilio's retention window.
