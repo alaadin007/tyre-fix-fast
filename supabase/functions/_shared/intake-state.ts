@@ -661,14 +661,14 @@ function evaluateJob(job: any, conversation: any | null): Missing {
     reg: !job?.vehicle_reg,
     wheels: !(Array.isArray(job?.affected_wheels) && job.affected_wheels.length > 0),
     issue: !hasIncidentContext(job?.issue_description ?? "") && (!job?.issue_type || job?.issue_type === "unknown"),
-    tyreSize: !job?.tyre_size,
+    tyreSize: false,
     photos: !((job?.photo_urls ?? []).length >= 2),
   };
 }
 
 function isComplete(missing: Missing): boolean {
   return !missing.name && !missing.pin && !missing.reg && !missing.wheels
-      && !missing.issue && !missing.tyreSize && !missing.photos;
+      && !missing.issue && !missing.photos;
 }
 
 function progressBar(received: number, total: number): string {
