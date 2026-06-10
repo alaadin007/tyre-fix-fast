@@ -2145,13 +2145,21 @@ Deno.serve(async (req) => {
             await runSendQuoteForRef(ref!);
             return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
           case "UPDATE_TECHNICIAN_PRICE": {
-            // Require an explicit new price value — otherwise prompt for it
-            // rather than silently forwarding the existing quote.
+            // Require an explicit new price value — otherwise store a pending
+            // context so the next bare-price reply resolves automatically.
             const priceMatch = trimmed.match(/(?:£|gbp\s*)?(\d{1,4}(?:\.\d{1,2})?)\b/i);
             const hasPrice = !!priceMatch && /\b(to|=|@|for\s+£?\s*\d)/i.test(trimmed.replace(/#?[0-9a-f]{6,8}/gi, "").replace(/tech-?\d+/gi, ""));
+            const refUp = ref!.toUpperCase();
             if (!hasPrice) {
-              const refUp = ref!.toUpperCase();
               const techLabel = techId ? techId : "the technician";
+              if (techId) {
+                // Resolve job UUID so the bare-price reply has all context.
+                const jobs = await findJobByRef(ref!);
+                const jobId = jobs.length === 1 ? String(jobs[0].id) : null;
+                if (jobId) {
+                  await setAdminState(`await_price_update:${techId}`, jobId);
+                }
+              }
               await sendReply(
                 from,
                 `Please provide the new price for ${techLabel} on job #${refUp}.\nExample: "update ${techId || "TECH-0001"} price for #${refUp} to £55"`,
@@ -2159,7 +2167,11 @@ Deno.serve(async (req) => {
               );
               return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
             }
-            await runSendQuoteForRef(ref!);
+            if (!techId) {
+              await sendReply(from, `Which technician's price should I update on job #${refUp}? Reply with the name or TECH-ID.`, channel);
+              return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+            }
+            await runUpdateTechnicianPrice(ref!, techId, Number(priceMatch![1]));
             return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
           }
           case "ASSIGN":
