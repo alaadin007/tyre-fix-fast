@@ -2674,6 +2674,55 @@ Deno.serve(async (req) => {
         console.error("queue admin send-quote approval failed", e);
       }
 
+      // ───────────────────────────────────────────────────────────────
+      // Early-finalize: if every broadcast technician for this job has now
+      // submitted a quote, fire the consolidated summary to admins right
+      // away instead of waiting the full 1.5-minute window. This also
+      // guards against the EdgeRuntime.waitUntil timer in broadcast-job
+      // being dropped, which would otherwise leave admins stuck on
+      // "Waiting for their quote...".
+      try {
+        const { data: allocs } = await supabase
+          .from("job_allocations")
+          .select("technician_id, status")
+          .eq("job_id", alloc.job_id)
+          .in("status", ["broadcast", "proposed", "quoted"]);
+        const broadcastTechIds = new Set(
+          (allocs ?? []).map((a: any) => a.technician_id).filter(Boolean),
+        );
+        const { data: quotedRows } = await supabase
+          .from("quotes")
+          .select("technician_id")
+          .eq("job_id", alloc.job_id);
+        const quotedTechIds = new Set(
+          (quotedRows ?? []).map((q: any) => q.technician_id).filter(Boolean),
+        );
+        const allQuoted =
+          broadcastTechIds.size > 0 &&
+          [...broadcastTechIds].every((id) => quotedTechIds.has(id));
+
+        const { data: jobRow } = await supabase
+          .from("jobs")
+          .select("quote_summary_sent_at")
+          .eq("id", alloc.job_id)
+          .maybeSingle();
+
+        if (allQuoted && !jobRow?.quote_summary_sent_at) {
+          // Fire-and-forget — finalize-broadcast is idempotent.
+          fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/finalize-broadcast`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+            },
+            body: JSON.stringify({ job_id: alloc.job_id }),
+          }).catch((e) => console.error("early finalize-broadcast failed", e));
+        }
+      } catch (e) {
+        console.error("early-finalize check failed", e);
+      }
+
+
 
 
       return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
