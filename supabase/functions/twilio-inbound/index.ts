@@ -1523,171 +1523,13 @@ Deno.serve(async (req) => {
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
       }
 
-      // Natural-language "show me technicians for #REF" / "techs for REF" /
-      // "who is available for REF" / "available technician list for REF".
-      // Triggers the same list flow as a bare ref reply.
-      {
-        const techListVerbRegex = /\b(tech(?:nician)?s?|tech list|technician list|available|who(?:'?s| is) available|nearby|near\s+me|matching)\b/i;
-        const refMatchNL = trimmed.match(/\b([0-9a-f]{6,8})\b/i);
-        // Phrases that ALWAYS mean "show me the list", even when the message
-        // also contains a verb like "share" / "send" (e.g. "share me the
-        // available list of technicians for #REF").
-        const listPhraseRegex = /\b(list of (?:available |nearby |matching )?(?:tech|technician)|available (?:tech|technician)|technician list|tech list|show (?:me )?(?:the )?(?:available |nearby |matching )?(?:tech|technician)|who(?:'?s| is) available)/i;
-        const hasListPhrase = listPhraseRegex.test(trimmed);
-        const hasConflictingVerb = /\b(broadcast|dispatch|push|blast|forward|publish|cancel|status|assign|quote|pay|paid)\b/i.test(trimmed)
-          || (/\b(send|share)\b/i.test(trimmed) && !hasListPhrase);
-        const looksLikeListReq = !!refMatchNL && (techListVerbRegex.test(trimmed) || hasListPhrase) && !hasConflictingVerb;
-        if (looksLikeListReq) {
-          const ref = refMatchNL[1].toLowerCase();
-          const matches = await findJobByRef(ref);
-          if (matches.length === 0) {
-            await sendReply(from, `No job found for ref #${ref.toUpperCase()}. Reply JOBS to see recent jobs.`, channel);
-            return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
-          }
-          if (matches.length > 1) {
-            await sendReply(from, `Multiple jobs match #${ref.toUpperCase()} — please send the full 6-character ref.`, channel);
-            return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
-          }
-          const job: any = matches[0];
-          const shortRef = String(job.id).slice(0, 6).toUpperCase();
-          const scored = await scoreNearbyTechs(job);
-          if (scored.length === 0) {
-            await clearAdminState();
-            await sendReply(from, `Job #${shortRef} (${job.postcode}) — no approved technicians found nearby.`, channel);
-            return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
-          }
-          const lines = scored.slice(0, 10).map(({ t, miles }: any, idx: number) => {
-            const dist = miles != null ? `${miles.toFixed(1)} mi away` : "distance unknown";
-            const code = t.tech_code ?? "TECH-????";
-            return `${idx + 1}. 🔧 ${code} · ${t.name}\n   📞 ${t.phone} · ${dist}`;
-          }).join("\n");
-          const more = scored.length > 10 ? `\n…and ${scored.length - 10} more` : "";
-          await setAdminState("await_broadcast_confirm", job.id);
-          await sendReply(from,
-            `📋 Job #${shortRef} — Available Technicians (${job.postcode ?? "—"})\n\n${lines}${more}\n\nTotal: ${scored.length} technician(s) available in this area.\n\nTo broadcast to all, reply: "broadcast #${shortRef}"\nTo send to one only, reply: "#${shortRef} send to <name or TECH-ID>"`,
-            channel,
-          );
-          return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
-        }
-      }
+      // NOTE: Natural-language admin commands (show list / broadcast all /
+      // broadcast to one / status / cancel / list active / forward quote /
+      // assign / etc.) are NOT handled by hardcoded regex here. They are
+      // routed by the LLM intent classifier further down (which reads the
+      // editable prompt at app_settings.admin_intent_system_prompt). This
+      // keeps the Admin AI Instructions page as the single source of truth.
 
-      // Natural-language broadcast confirmation.
-      // Triggers: "yes", "broadcast", "send", "share", "dispatch", "go", "push", "blast"
-      // + any 6-char job ref appearing in the message. Anything that looks like
-      // an admin confirmation to push the job out to nearby technicians lands here.
-      const refRegex = /\b([0-9a-f]{6,8})\b/i;
-      const broadcastVerbRegex = /\b(broadcast|dispatch|send|share|push|blast|notify|alert|forward|go|fire|publish)\b/i;
-      const yesRegex = /^\s*(y|yes|ok|okay|sure|confirm|approved?|do it|please)\b/i;
-      const refInMsg = trimmed.match(refRegex);
-      // If the admin wrote "... to <name/TECH-ID/+phone>", this is a
-      // BROADCAST_ONE intent — do NOT fall into the broadcast-to-all branch.
-      // The dedicated one-tech matcher (further down) will handle it.
-      const targetsOneTech = /\bto\s+(?:tech[-_ ]?\d+|\+?\d[\d\s-]{5,}|[A-Za-z][A-Za-z .'-]{1,40})\s*(?:only)?\s*[.!]?\s*$/i.test(trimmed);
-      // Require an explicit broadcast verb here — plain "yes <ref>" is handled
-      // above as a list request, not an immediate broadcast.
-      const wantsListNotBroadcast = /\b(list of (?:available |nearby |matching )?(?:tech|technician)|available (?:tech|technician)|technician list|tech list|show (?:me )?(?:the )?(?:available |nearby |matching )?(?:tech|technician)|who(?:'?s| is) available)/i.test(trimmed);
-      const looksLikeBroadcast = refInMsg && broadcastVerbRegex.test(trimmed) && !targetsOneTech && !wantsListNotBroadcast;
-
-      if (looksLikeBroadcast) {
-        const ref = refInMsg[1].toLowerCase();
-        const { data: jobMatches } = await supabase
-          .from("jobs")
-          .select("id,customer_name,postcode,lat,lng,issue_type,status,created_at")
-          .order("created_at", { ascending: false })
-          .limit(500);
-        const jm = (jobMatches ?? []).filter((j: any) => String(j.id).toLowerCase().startsWith(ref));
-        if (jm.length === 0) {
-          await sendReply(from, `No job found for ref "${ref.toUpperCase()}". Reply JOBS to see recent jobs.`, channel);
-          return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
-        }
-        if (jm.length > 1) {
-          await sendReply(from, `Multiple jobs match "${ref.toUpperCase()}" — please use the full 6-character ref.`, channel);
-          return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
-        }
-        const job: any = jm[0];
-        const shortRef = String(job.id).slice(0, 6).toUpperCase();
-
-        // Score nearby technicians (same logic as before).
-        const { data: techs } = await supabase
-          .from("technicians")
-          .select("id,name,phone,service_postcodes,last_lat,last_lng,travel_radius_miles")
-          .eq("approval_status", "approved")
-          .eq("active", true)
-          .limit(500);
-        const jobPc = String(job.postcode ?? "").toUpperCase().replace(/\s+/g, "");
-        const jobOutward = jobPc.replace(/\d[A-Z]{2}$/, "");
-        const haversine = (lat1: number, lng1: number, lat2: number, lng2: number) => {
-          const R = 3958.8;
-          const toRad = (d: number) => (d * Math.PI) / 180;
-          const dLat = toRad(lat2 - lat1);
-          const dLng = toRad(lng2 - lng1);
-          const a = Math.sin(dLat / 2) ** 2 +
-            Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
-          return 2 * R * Math.asin(Math.sqrt(a));
-        };
-        const validCoord2 = (la: any, ln: any) =>
-          la != null && ln != null && !(Number(la) === 0 && Number(ln) === 0) &&
-          Math.abs(Number(la)) > 0.01 && Math.abs(Number(ln)) > 0.01;
-        const scored = (techs ?? []).map((t: any) => {
-          let miles: number | null = null;
-          if (validCoord2(job.lat, job.lng) && validCoord2(t.last_lat, t.last_lng)) {
-            miles = haversine(Number(job.lat), Number(job.lng), Number(t.last_lat), Number(t.last_lng));
-          }
-          const pcs: string[] = (t.service_postcodes ?? []).map((p: string) => String(p).toUpperCase().replace(/\s+/g, ""));
-          const pcMatch = !!jobOutward && pcs.some((p) => p === jobOutward || p.startsWith(jobOutward) || jobOutward.startsWith(p));
-          return { t, miles, pcMatch };
-        }).filter((x: any) => {
-          const inRange = x.miles != null && x.miles <= (x.t.travel_radius_miles ?? 15);
-          return x.pcMatch || inRange;
-        }).sort((a: any, b: any) => {
-          if (a.pcMatch && !b.pcMatch) return -1;
-          if (b.pcMatch && !a.pcMatch) return 1;
-          if (a.miles != null && b.miles != null) return a.miles - b.miles;
-          if (a.miles != null) return -1;
-          if (b.miles != null) return 1;
-          return 0;
-        });
-
-        if (scored.length === 0) {
-          await sendReply(from, `Job ${shortRef} (${job.postcode}) — no approved technicians found nearby. Nothing broadcast.`, channel);
-          return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
-        }
-
-        const technician_ids = scored.map((x: any) => x.t.id);
-
-        // Call broadcast-job which sends the approved `new_job_alert_to_technician`
-        // Meta template (with header image + body params + photo links).
-        const bRes = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/broadcast-job`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
-          },
-          body: JSON.stringify({ job_id: job.id, mode: "specific", technician_ids }),
-        });
-        const bJson: any = await bRes.json().catch(() => ({}));
-        const sent = bJson?.sent ?? 0;
-        const total = bJson?.total ?? technician_ids.length;
-        if (bRes.ok && sent > 0) {
-          const notifiedLines = scored.slice(0, sent).map(({ t }: any) =>
-            `   — ${t.name}${t.tech_code ? ` (${t.tech_code})` : ""}`
-          ).join("\n");
-          await supabase.from("jobs").update({ status: "broadcasting" }).eq("id", job.id);
-          await sendReply(
-            from,
-            `✅ Broadcast sent — Job #${shortRef}\n📍 Service Area: ${job.postcode ?? "—"}\n👷 Technicians Notified: ${sent}\n${notifiedLines}\n\nWaiting for quotes to come in...`,
-            channel,
-          );
-        } else {
-          const err = bJson?.error ? ` (${String(bJson.error).slice(0, 140)})` : "";
-          await sendReply(
-            from,
-            `⚠️ Broadcast for job ${shortRef} failed — ${sent}/${total} delivered${err}.`,
-            channel,
-          );
-        }
-        return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
-      }
 
       // PENDING list
       if (/^\s*pending\s*$/i.test(trimmed)) {
@@ -2095,8 +1937,13 @@ Deno.serve(async (req) => {
         }
       };
 
-      // ---- Fast-path regexes for new intents ----
-      const refMatchAny = trimmed.match(refRegexBoundary);
+      // ---- Safety-only fast paths ----
+      // Only the explicit CONFIRM CANCEL phrase and the matching state-driven
+      // "yes" reply stay as regex — these are destructive actions and we want
+      // a zero-ambiguity trigger. Everything else (cancel/status/list active/
+      // broadcast-to-one/NL list/NL broadcast/forward quote/assign/etc.) is
+      // routed by the LLM classifier below using the Admin AI Instructions.
+      const _refMatchAny = trimmed.match(refRegexBoundary); // (kept for compatibility)
 
       // Intent 8 confirmation: "CONFIRM CANCEL #REF" / "confirm cancel REF"
       const confirmCancelMatch = trimmed.match(/^\s*confirm\s+cancel\s+#?\s*([0-9a-f]{6,8})\s*$/i);
@@ -2111,52 +1958,13 @@ Deno.serve(async (req) => {
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
       }
 
-      // Intent 8 prompt: "cancel #REF" / "close #REF"
-      const cancelMatch = trimmed.match(/\b(cancel|close|abort|kill)\b.*?\b([0-9a-f]{6,8})\b/i)
-        ?? trimmed.match(/\b([0-9a-f]{6,8})\b.*?\b(cancel|close)\b/i);
-      if (cancelMatch) {
-        const ref = (cancelMatch[1].length >= 6 ? cancelMatch[1] : cancelMatch[2]).toLowerCase();
-        await runCancelPrompt(ref);
-        return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
-      }
-
-      // Intent 6: "status #REF" / "status of REF" / "what is the status of REF"
-      const statusMatch = trimmed.match(/\bstatus\b.*?\b([0-9a-f]{6,8})\b/i)
-        ?? trimmed.match(/\b(?:where\s+is|update\s+on|what(?:'s|\s+is)\s+happening\s+with)\b.*?\b([0-9a-f]{6,8})\b/i);
-      if (statusMatch) {
-        await runStatusForRef(statusMatch[1].toLowerCase());
-        return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
-      }
-
-      // Intent 7: "show active jobs" / "open jobs" / "how many jobs"
-      if (/\b(active|open|all)\s+jobs?\b/i.test(trimmed) ||
-          /\bhow\s+many\s+jobs?\b/i.test(trimmed) ||
-          /\bgive\s+me.*overview.*jobs?\b/i.test(trimmed) ||
-          /\b(list|show)\s+(?:all\s+)?(?:active|open|current)\s+jobs?\b/i.test(trimmed)) {
-        await runListActiveJobs();
-        return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
-      }
-
-      // Intent 3: "#REF send to X" / "only send #REF to X" / "send #REF to X only"
-      const oneTechMatch =
-        trimmed.match(/#?\s*([0-9a-f]{6,8})\s+(?:send|broadcast|push|dispatch)\s+to\s+(.+?)(?:\s+only)?\s*[.!]?\s*$/i) ??
-        trimmed.match(/\b(?:only\s+)?(?:send|broadcast|push|dispatch)\s+#?\s*([0-9a-f]{6,8})\s+to\s+(.+?)(?:\s+only)?\s*[.!]?\s*$/i) ??
-        trimmed.match(/\b(?:send|broadcast)\s+(.+?)\s+(?:job|ref)?\s*#?\s*([0-9a-f]{6,8})\s+only\s*[.!]?\s*$/i);
-      if (oneTechMatch) {
-        // Detect which capture group is the ref (6-8 hex)
-        const a = oneTechMatch[1];
-        const b = oneTechMatch[2];
-        const ref = /^[0-9a-f]{6,8}$/i.test(a) ? a : b;
-        const identifier = /^[0-9a-f]{6,8}$/i.test(a) ? b : a;
-        await runBroadcastToOne(ref.toLowerCase(), identifier);
-        return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
-      }
-
-      // ---- LLM classifier fallback (handles NL, typos, Urdu, Roman Urdu) ----
+      // ---- LLM classifier — the single source of truth for admin NL ----
+      // Reads the editable prompt at app_settings.admin_intent_system_prompt.
       const classification = await classifyAdminMessage(trimmed);
       const replyLang: AdminLanguage = classification?.language ?? "en";
 
-      if (classification && classification.confidence === "high" && classification.intent !== "UNKNOWN") {
+      if (classification && classification.intent !== "UNKNOWN") {
+
         const ref = classification.job_reference;
         const techId = classification.technician_identifier;
 
