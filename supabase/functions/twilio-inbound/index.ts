@@ -713,6 +713,7 @@ async function answerCustomerJobQuestion(openJobs: any[], question: string): Pro
 async function sendQuoteToCustomer(
   supabase: any,
   jobId: string,
+  opts?: { quoteId?: string; technicianId?: string },
 ): Promise<{ ok: boolean; error?: string; price?: number; customerPhone?: string; paymentLinkMissing?: boolean; stripeError?: string }> {
 
   try {
@@ -724,11 +725,14 @@ async function sendQuoteToCustomer(
     if (!jobRow) return { ok: false, error: "Job not found" };
     if (!jobRow.customer_phone) return { ok: false, error: "Customer has no phone on file" };
 
-    const { data: quoteRow } = await supabase
+    let quoteQuery = supabase
       .from("quotes")
       .select("id, technician_id, price_gbp, eta_minutes, tyre_included, tyre_condition, raw_message")
-      .eq("job_id", jobId)
-      .in("status", ["pending", "accepted"])
+      .eq("job_id", jobId);
+    if (opts?.quoteId) quoteQuery = quoteQuery.eq("id", opts.quoteId);
+    else if (opts?.technicianId) quoteQuery = quoteQuery.eq("technician_id", opts.technicianId);
+    else quoteQuery = quoteQuery.in("status", ["pending", "accepted"]);
+    const { data: quoteRow } = await quoteQuery
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -1404,9 +1408,12 @@ Deno.serve(async (req) => {
       };
 
       // Helper: actually push the technician's quote to the customer.
-      const runSendQuoteForJobId = async (jobIdFull: string) => {
+      const runSendQuoteForJobId = async (
+        jobIdFull: string,
+        opts?: { quoteId?: string; technicianId?: string },
+      ) => {
         const shortRef = String(jobIdFull).slice(0, 6).toUpperCase();
-        const res = await sendQuoteToCustomer(supabase, jobIdFull);
+        const res = await sendQuoteToCustomer(supabase, jobIdFull, opts);
         await clearAdminState();
         if (res.ok) {
           if (res.paymentLinkMissing) {
@@ -1425,7 +1432,7 @@ Deno.serve(async (req) => {
         }
       };
 
-      const runSendQuoteForRef = async (ref: string) => {
+      const runSendQuoteForRef = async (ref: string, identifier?: string | null) => {
         const matches = await findJobByRef(ref);
         if (matches.length === 0) {
           await sendReply(from,
@@ -1437,8 +1444,96 @@ Deno.serve(async (req) => {
             `Multiple jobs match #${ref.toUpperCase()} — please send the full 6-character ref.`, channel);
           return;
         }
-        await runSendQuoteForJobId(String(matches[0].id));
+        const jobIdFull = String(matches[0].id);
+        if (identifier && identifier.trim()) {
+          const techs = await resolveTechnician(identifier);
+          if (techs.length === 1) {
+            await runSendQuoteForJobId(jobIdFull, { technicianId: techs[0].id });
+            return;
+          }
+        }
+        await runSendQuoteForJobId(jobIdFull);
       };
+
+      // Helper: send the MOST RECENTLY UPDATED quote (by price_updated_at).
+      // If admin named a technician, send that tech's quote. Otherwise pick
+      // the quote with the latest price_updated_at. If multiple updates
+      // happened within 5 minutes of each other, ask admin to pick.
+      const runSendUpdatedQuoteForRef = async (ref: string, identifier?: string | null) => {
+        const matches = await findJobByRef(ref);
+        if (matches.length === 0) {
+          await sendReply(from, `No job found for ref #${ref.toUpperCase()}. Quote not sent.`, channel);
+          return;
+        }
+        if (matches.length > 1) {
+          await sendReply(from, `Multiple jobs match #${ref.toUpperCase()} — please send the full 6-character ref.`, channel);
+          return;
+        }
+        const jobIdFull = String(matches[0].id);
+        const shortRef = String(jobIdFull).slice(0, 6).toUpperCase();
+
+        // Tech-specific request → resolve and send that quote
+        if (identifier && identifier.trim()) {
+          const techs = await resolveTechnician(identifier);
+          if (techs.length === 0) {
+            await sendReply(from, `No approved technician found matching "${identifier}".`, channel);
+            return;
+          }
+          if (techs.length > 1) {
+            const lines = techs.slice(0, 5).map((t: any) => `— ${t.tech_code ?? "TECH-????"} ${t.name}`).join("\n");
+            await sendReply(from, `Multiple technicians match "${identifier}":\n${lines}\n\nPlease retry with the TECH-ID.`, channel);
+            return;
+          }
+          await runSendQuoteForJobId(jobIdFull, { technicianId: techs[0].id });
+          return;
+        }
+
+        // No technician named → use the most recently updated quote
+        const { data: updatedQuotes } = await supabase
+          .from("quotes")
+          .select("id, technician_id, price_gbp, price_updated_at")
+          .eq("job_id", jobIdFull)
+          .not("price_updated_at", "is", null)
+          .order("price_updated_at", { ascending: false });
+
+        const list = updatedQuotes ?? [];
+        if (list.length === 0) {
+          // Fall back to default behaviour (latest pending/accepted quote)
+          await runSendQuoteForJobId(jobIdFull);
+          return;
+        }
+
+        // If multiple updates happened within 5 minutes of the latest, prompt.
+        const latest = list[0];
+        const latestTs = new Date(latest.price_updated_at).getTime();
+        const closeUpdates = list.filter((q: any) =>
+          Math.abs(new Date(q.price_updated_at).getTime() - latestTs) <= 5 * 60 * 1000
+        );
+
+        if (closeUpdates.length > 1) {
+          const techIds = closeUpdates.map((q: any) => q.technician_id).filter(Boolean);
+          const { data: techRows } = await supabase
+            .from("technicians").select("id, name, tech_code").in("id", techIds);
+          const byId = new Map((techRows ?? []).map((t: any) => [t.id, t]));
+          const lines = closeUpdates.map((q: any) => {
+            const t: any = byId.get(q.technician_id) ?? {};
+            return `— ${t.tech_code ?? "TECH-????"} ${t.name ?? "Technician"}: £${q.price_gbp} (updated)`;
+          }).join("\n");
+          const examples = closeUpdates.slice(0, 2).map((q: any) => {
+            const t: any = byId.get(q.technician_id) ?? {};
+            const first = (t.name ?? "").split(/\s+/)[0] || (t.tech_code ?? "TECH");
+            return `• 'send updated ${first} quote for #${shortRef} to customer'`;
+          }).join("\n");
+          await sendReply(from,
+            `Multiple prices were updated for job #${shortRef}:\n${lines}\n\nWhich updated quote should be sent to the customer?\n${examples}\n• 'send all updated quotes for #${shortRef} to customer'`,
+            channel,
+          );
+          return;
+        }
+
+        await runSendQuoteForJobId(jobIdFull, { quoteId: latest.id });
+      };
+
 
       // Helper: update the technician's quoted price for a job (before sending).
       const resolveTechnician = async (identifier: string) => {
@@ -1502,7 +1597,9 @@ Deno.serve(async (req) => {
           return;
         }
         const oldPrice = quoteRow.price_gbp;
-        await supabase.from("quotes").update({ price_gbp: newPrice }).eq("id", quoteRow.id);
+        await supabase.from("quotes")
+          .update({ price_gbp: newPrice, price_updated_at: new Date().toISOString() })
+          .eq("id", quoteRow.id);
         await clearAdminState();
 
         // Fetch all other quotes on the same job to build the action block.
@@ -2371,8 +2468,10 @@ Deno.serve(async (req) => {
             return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
           case "FORWARD_QUOTE_ONE":
           case "FORWARD_QUOTE_MULTIPLE":
+            await runSendQuoteForRef(ref!, techId);
+            return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
           case "FORWARD_QUOTE_UPDATED":
-            await runSendQuoteForRef(ref!);
+            await runSendUpdatedQuoteForRef(ref!, techId);
             return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
           case "UPDATE_TECHNICIAN_PRICE": {
             // Extract the NEW price from the CURRENT message only.

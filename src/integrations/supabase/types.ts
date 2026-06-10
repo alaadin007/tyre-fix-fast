@@ -351,6 +351,7 @@ export type Database = {
           id: string
           job_id: string | null
           price_gbp: number | null
+          price_updated_at: string | null
           quote_deadline: string | null
           raw_message: string | null
           status: string
@@ -366,6 +367,7 @@ export type Database = {
           id?: string
           job_id?: string | null
           price_gbp?: number | null
+          price_updated_at?: string | null
           quote_deadline?: string | null
           raw_message?: string | null
           status?: string
@@ -381,6 +383,7 @@ export type Database = {
           id?: string
           job_id?: string | null
           price_gbp?: number | null
+          price_updated_at?: string | null
           quote_deadline?: string | null
           raw_message?: string | null
           status?: string
