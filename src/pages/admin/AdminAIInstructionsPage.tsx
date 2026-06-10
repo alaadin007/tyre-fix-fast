@@ -110,8 +110,9 @@ export default function AdminAIInstructionsPage() {
           <Textarea
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
-            rows={26}
-            className="font-mono text-xs"
+            rows={34}
+            spellCheck={false}
+            className="font-mono text-sm leading-6 whitespace-pre-wrap break-words p-4"
           />
           <div className="flex items-center gap-2">
             <Button onClick={save} disabled={!dirty || saving}>
