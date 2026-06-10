@@ -179,6 +179,7 @@ export type Database = {
         Row: {
           affected_wheels: string[]
           assigned_technician_id: string | null
+          assignment_status: string | null
           broadcast_count: number
           created_at: string
           customer_email: string | null
@@ -220,6 +221,7 @@ export type Database = {
         Insert: {
           affected_wheels?: string[]
           assigned_technician_id?: string | null
+          assignment_status?: string | null
           broadcast_count?: number
           created_at?: string
           customer_email?: string | null
@@ -261,6 +263,7 @@ export type Database = {
         Update: {
           affected_wheels?: string[]
           assigned_technician_id?: string | null
+          assignment_status?: string | null
           broadcast_count?: number
           created_at?: string
           customer_email?: string | null
