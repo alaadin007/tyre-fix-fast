@@ -634,6 +634,93 @@ async function classifyCustomerIntent(text: string): Promise<IntentResult> {
   }
 }
 
+// ───────────── FAQ matcher (runs BEFORE intent detection) ─────────────
+// Customer questions like "do you offer tyre replacement", "how much does
+// it cost", "do you work 24/7" must be answered as FAQs and must NOT
+// trigger the intake flow — even when the message mentions "tyre".
+// Returns an answer string if matched, otherwise null.
+function matchFaq(text: string): string | null {
+  const t = (text || "").trim().toLowerCase();
+  if (!t || t.length > 200) return null;
+
+  // Must look like a question / enquiry, not a problem statement.
+  // Heuristics: starts with question word, contains "?", or uses
+  // "do you / can you / are you / is this / how much / how long".
+  const isQuestionShape =
+    /\?/.test(t) ||
+    /^(do|does|can|could|are|is|will|would|how|what|where|when|why|who|tell\s+me|please\s+tell)/.test(t) ||
+    /\b(do you|does this|can you|are you|is this|how much|how long|how do|what (is|are|do)|tell me)\b/.test(t);
+  if (!isQuestionShape) return null;
+
+  // Problem-statement guard: if the message clearly reports a personal
+  // tyre problem ("my tyre is flat", "i have a puncture", "need help with
+  // my tyre right now"), it's NOT an FAQ — let intake handle it.
+  const isProblemStatement =
+    /\b(my|our)\s+(tyre|tire|car|van|wheel)\b/.test(t) ||
+    /\b(i\s*(have|got|need)|i'm|im|im\s+stuck|stuck|stranded|broke(n)?\s*down)\b/.test(t) ||
+    /\b(help me|need help|need a (tech|technician|fix|repair))\b/.test(t);
+  if (isProblemStatement) return null;
+
+  // ── Service & pricing FAQs ──
+  if (/\b(replace(ment)?|new\s+tyres?|fit\s+(new\s+)?tyres?|change\s+tyres?)\b/.test(t) &&
+      /\b(do|does|can|offer|provide|available|service)\b/.test(t)) {
+    return "Both — puncture repairs and full tyre replacements. The right option depends on the damage, which is why we ask for photos. Want to book a job?";
+  }
+  if (/\b(how\s+much|cost|price|charge|fee|quote|expensive|cheap)\b/.test(t) &&
+      !/\b(call[-\s]?out)\b/.test(t)) {
+    return "Prices vary by job, tyre size and technician. Once we have your details we'll send a fixed quote before any work starts — no hidden fees.";
+  }
+  if (/\bcall[-\s]?out\s+(fee|charge)\b/.test(t)) {
+    return "No fixed call-out fee. The price you receive in your quote covers everything.";
+  }
+  if (/\b(24[\s/]?7|24\s*hours?|all\s+night|weekend|sunday|bank\s+holiday|open\s+now|always\s+open)\b/.test(t)) {
+    return "Yes — we operate 24 hours a day, 7 days a week, including bank holidays.";
+  }
+  if (/\b(how\s+long|eta|how\s+fast|how\s+quick|when.*(come|arrive|get here))\b/.test(t)) {
+    return "Once booked, your technician sends an ETA. Most jobs are completed within 30–60 minutes of booking.";
+  }
+  if (/\b(repair|fix)\b/.test(t) && /\b(or|vs|versus)\b/.test(t) && /\b(replace|new)\b/.test(t)) {
+    return "Both — puncture repairs and full tyre replacements. The right option depends on the damage, which is why we ask for photos.";
+  }
+  if (/\b(motorway|highway|m\d{1,2}|hard\s+shoulder)\b/.test(t)) {
+    return "Yes, we cover motorway breakdowns. Please make sure you're in a safe position, ideally behind the barrier, before the technician arrives.";
+  }
+  if (/\b(my\s+area|cover|available|service)\b/.test(t) && /\b(area|postcode|town|city|location|uk|here)\b/.test(t)) {
+    return "We cover most of the UK. Share your live location and we'll confirm availability instantly.";
+  }
+  if (/\b(hgv|lorry|truck|van|commercial|vehicle\s+type|all\s+vehicles)\b/.test(t)) {
+    return "We cover cars, vans, and most light commercial vehicles. For HGVs or specialist vehicles, please contact our team directly.";
+  }
+
+  // ── Off-topic ──
+  if (/\bbrake/.test(t)) {
+    return "TyreFly specialises in mobile tyre repairs and replacements. For brake issues, a local garage would be your best bet. Anything tyre-related I can help with?";
+  }
+  if (/\boil\s+change\b/.test(t)) {
+    return "We're tyre specialists, so oil changes aren't something we offer. Got a tyre problem I can help with?";
+  }
+  if (/\bengine\b/.test(t) || /\bwarning\s+light\b/.test(t)) {
+    return "Worth getting checked soon! We only handle tyres here — the RAC/AA or a local garage can help with engine issues. Anything tyre-related?";
+  }
+  if (/\bweather\b/.test(t)) {
+    return "Not quite our area! We're your 24/7 tyre rescue service — if you ever have a tyre emergency, we're here.";
+  }
+  if (/\bjoke\b/.test(t)) {
+    return "I'd love to, but I'm on tyre duty 24/7! Got a puncture? I'm your guy.";
+  }
+  if (/\b(real\s+person|human|are\s+you\s+(a\s+)?(bot|ai|robot))\b/.test(t)) {
+    return "I'm Fly, TyreFly's virtual assistant — not human, but here to get you back on the road fast! For anything I can't handle, I'll connect you with our team.";
+  }
+  if (/\bfull\s+(car\s+)?service\b/.test(t)) {
+    return "TyreFly focuses on mobile tyre repairs and replacements — we're not a full service garage. Need help with a tyre?";
+  }
+  if (/\b(is\s+this\s+whatsapp|wrong\s+number)\b/.test(t)) {
+    return "You've reached TyreFly's WhatsApp service — the UK's 24/7 roadside tyre rescue! If you have a tyre problem, I can help.";
+  }
+
+  return null;
+}
+
 function firstNameOf(s: string | null | undefined): string {
   if (!s) return "";
   const n = String(s).trim().split(/\s+/)[0];
