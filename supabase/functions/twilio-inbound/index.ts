@@ -1644,11 +1644,12 @@ Deno.serve(async (req) => {
         // Re-fetch the full job row (findJobByRef returns a trimmed projection).
         const { data: fullJob } = await supabase
           .from("jobs")
-          .select("id,status,assigned_technician_id,platform_fee_status,customer_name")
+          .select("id,status,assignment_status,assigned_technician_id,platform_fee_status,customer_name")
           .eq("id", jobMatches[0].id)
           .maybeSingle();
         const job: any = fullJob ?? jobMatches[0];
         const status = String(job.status ?? "").toLowerCase();
+        const assignmentStatus = String(job.assignment_status ?? "").toLowerCase();
         const feePaid = String(job.platform_fee_status ?? "").toLowerCase() === "paid";
 
         // Terminal states
@@ -1663,32 +1664,24 @@ Deno.serve(async (req) => {
           return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
         }
 
-        // Already assigned / in progress
-        if (status === "accepted" || status === "in_progress") {
-          let techName = "the assigned technician";
-          if (job.assigned_technician_id) {
-            const { data: t } = await supabase
-              .from("technicians")
-              .select("name,tech_code")
-              .eq("id", job.assigned_technician_id)
-              .maybeSingle();
-            if (t?.name) techName = t.name;
-          }
+        // Details ALREADY exchanged → genuinely done.
+        if (assignmentStatus === "details_sent") {
           await sendReply(from,
-            `Job #${shortRef} has already been assigned to ${techName}. No further action needed.`,
+            `Details have already been shared for job #${shortRef}. No further action needed.`,
             channel);
           return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
         }
 
-        // Paid (fee received), not yet assigned → assignment flow (irreversible: require CONFIRM).
-        if (feePaid && status !== "in_progress" && status !== "accepted" && !job.assigned_technician_id) {
+        // Paid (fee received), details not yet shared → assignment flow.
+        // Driven by payment + assignment_status, NOT by job.status, so the
+        // status field cannot block this branch.
+        if (feePaid && assignmentStatus !== "details_sent") {
           if (yesRefConfirmMatch) {
             // Execute the assignment.
             await runShareContactsForJobId(String(job.id));
             return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
           }
           // Otherwise show confirmation prompt.
-          // Pull accepted quote & technician for preview.
           const { data: acceptedQuote } = await supabase
             .from("quotes")
             .select("technician_id")
@@ -1711,6 +1704,14 @@ Deno.serve(async (req) => {
             `🔧 Technician: ${techLine}\n` +
             `👤 Customer: ${job.customer_name ?? "—"}\n\n` +
             `Reply YES #${shortRef} CONFIRM to proceed.`,
+            channel);
+          return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+        }
+
+        // Not paid yet, but tech already assigned (e.g. accepted) → block.
+        if (!feePaid && (status === "accepted" || status === "in_progress")) {
+          await sendReply(from,
+            `Payment has not been received yet for job #${shortRef}.`,
             channel);
           return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
         }
