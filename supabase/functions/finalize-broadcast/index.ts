@@ -262,6 +262,8 @@ Deno.serve(async (req) => {
         lines.push("");
       }
       if (lines[lines.length - 1] === "") lines.pop();
+      lines.push("");
+      lines.push(...buildActionSection(jobRef, uniqueQuotes, techsById));
     }
     const body = lines.join("\n");
 
