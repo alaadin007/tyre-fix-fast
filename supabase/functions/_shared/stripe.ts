@@ -32,6 +32,7 @@ export function createStripeClient(env: StripeEnv): Stripe {
       // Our connector gateway must receive only Lovable-API-Key + X-Connection-Api-Key,
       // otherwise it rejects the request with "Multiple auth schemes provided".
       headers.delete("authorization");
+      headers.delete("Authorization");
       headers.set("X-Connection-Api-Key", connectionApiKey);
       headers.set("Lovable-API-Key", lovableApiKey);
       return fetch(gatewayUrl, {
