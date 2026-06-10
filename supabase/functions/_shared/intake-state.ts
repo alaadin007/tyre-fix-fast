@@ -613,7 +613,6 @@ function welcomeMessage(
     "⚙️ Affected tyre(s)?",
     "Front-left / front-right / rear-left / rear-right / both front / both rear / all four",
     "⚠️ Nature of issue: puncture / flat / blowout / low pressure / not sure",
-    "📏 Tyre size — found on the tyre sidewall, e.g. 205/55 R16",
     "📸 At least 2 clear photos of the affected tyre(s) — JPEG/PNG only (no PDFs, videos, or documents)",
     "",
   ];
