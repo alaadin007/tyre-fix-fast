@@ -91,6 +91,7 @@ export async function classifyAdminMessage(
     return null;
   }
   const model = opts?.model ?? "google/gemini-3-flash-preview";
+  const systemPrompt = await loadAdminSystemPrompt();
 
   try {
     const ctrl = new AbortController();
