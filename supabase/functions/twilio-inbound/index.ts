@@ -2647,39 +2647,6 @@ Deno.serve(async (req) => {
       // disabled. Admins receive a single consolidated summary of every quote
       // for this job from finalize-broadcast once the 1.5-minute window ends.
 
-      // ───────────────────────────────────────────────────────────────
-      // Ask admins for approval BEFORE sending the quote to the customer.
-      // The actual customer-send happens when an admin replies "YES" (with
-      // or without the job ref) — see the admin handler's
-      // await_send_quote_confirm branch.
-      // ───────────────────────────────────────────────────────────────
-      try {
-        const { data: masterSetting } = await supabase
-          .from("app_settings")
-          .select("value")
-          .eq("key", "master_numbers")
-          .maybeSingle();
-        const masterNumbers: string[] = ((masterSetting?.value as any)?.numbers ?? []).filter(Boolean);
-        if (masterNumbers.length > 0) {
-          const nowIso = new Date().toISOString();
-          await supabase.from("admin_states").upsert(
-            masterNumbers.map((p) => ({
-              phone: normPhone(p),
-              step: "await_send_quote_confirm",
-              job_id: alloc.job_id,
-              updated_at: nowIso,
-            })),
-          );
-        }
-
-        // Do NOT send the per-quote "Do you want to send this quote?" prompt
-        // here. The consolidated finalize-broadcast summary (sent after the
-        // 1.5-minute window) instructs admins to reply YES #ref to forward
-        // any specific quote to the customer.
-      } catch (e) {
-        console.error("queue admin send-quote approval failed", e);
-      }
-
       // Intentionally NO early-finalize here. The consolidated summary is
       // sent only after the full 1.5-minute quote window closes, so admins
       // always receive every quote that came in during the window in a
