@@ -1256,11 +1256,15 @@ Deno.serve(async (req) => {
       const yesOnly = /^\s*(y|yes|ok|okay|sure|confirm|yep|yeah)\s*[.!]?\s*$/i.test(trimmed);
       // "yes <ref>" / "yes #<ref>" / "<ref> yes" combined in one message →
       // treat as a list request (share technicians, then ask broadcast confirm).
-      const yesPlusRefMatch = trimmed.match(
+      // "YES #<REF> CONFIRM" — final confirmation for irreversible actions (assignment).
+      const yesRefConfirmMatch = trimmed.match(
+        /^\s*(?:y|yes|ok|okay|sure|yep|yeah)[\s,:.!#-]+([0-9a-f]{6,8})[\s,:.!#-]+confirm\s*[*.!]?\s*$/i,
+      );
+      const yesPlusRefMatch = !yesRefConfirmMatch && (trimmed.match(
         /^\s*(?:y|yes|ok|okay|sure|confirm|yep|yeah)[\s,:.!#-]+([0-9a-f]{6,8})\s*[*.!]?\s*$/i,
       ) ?? trimmed.match(
         /^\s*#?\s*([0-9a-f]{6,8})[\s,:.!-]+(?:y|yes|ok|okay|sure|confirm|yep|yeah)\s*$/i,
-      );
+      ));
 
       const { data: adminStateRow } = await supabase
         .from("admin_states")
@@ -1592,6 +1596,132 @@ Deno.serve(async (req) => {
         await sendReply(from,
           "Please provide the job reference number (with or without #).", channel);
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+      }
+
+      // ============================================================
+      // YES + JOBREF — status-based router (single source of truth).
+      // The job's current status determines which action YES confirms.
+      // This prevents ambiguity when multiple actions are pending across
+      // different jobs at the same time.
+      // ============================================================
+      const yesRefForRouter =
+        (yesRefConfirmMatch ? yesRefConfirmMatch[1] : null) ??
+        (yesPlusRefMatch ? yesPlusRefMatch[1] : null);
+
+      if (yesRefForRouter) {
+        const ref = yesRefForRouter.toLowerCase();
+        const shortRef = ref.toUpperCase();
+        const jobMatches = await findJobByRef(ref);
+        if (jobMatches.length === 0) {
+          await sendReply(from,
+            `I could not find a job with reference #${shortRef}. Please check the reference number and try again.`,
+            channel);
+          return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+        }
+        if (jobMatches.length > 1) {
+          await sendReply(from,
+            `Multiple jobs match #${shortRef} — please send the full 6-character reference.`, channel);
+          return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+        }
+
+        // Re-fetch the full job row (findJobByRef returns a trimmed projection).
+        const { data: fullJob } = await supabase
+          .from("jobs")
+          .select("id,status,assigned_technician_id,platform_fee_status,customer_name")
+          .eq("id", jobMatches[0].id)
+          .maybeSingle();
+        const job: any = fullJob ?? jobMatches[0];
+        const status = String(job.status ?? "").toLowerCase();
+        const feePaid = String(job.platform_fee_status ?? "").toLowerCase() === "paid";
+
+        // Terminal states
+        if (status === "completed" || status === "closed") {
+          await sendReply(from,
+            `Job #${shortRef} is already completed. No action taken.`, channel);
+          return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+        }
+        if (status === "cancelled") {
+          await sendReply(from,
+            `Job #${shortRef} is already cancelled. No action taken.`, channel);
+          return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+        }
+
+        // Already assigned / in progress
+        if (status === "accepted" || status === "in_progress") {
+          let techName = "the assigned technician";
+          if (job.assigned_technician_id) {
+            const { data: t } = await supabase
+              .from("technicians")
+              .select("name,tech_code")
+              .eq("id", job.assigned_technician_id)
+              .maybeSingle();
+            if (t?.name) techName = t.name;
+          }
+          await sendReply(from,
+            `Job #${shortRef} has already been assigned to ${techName}. No further action needed.`,
+            channel);
+          return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+        }
+
+        // Paid (fee received), not yet assigned → assignment flow (irreversible: require CONFIRM).
+        if (feePaid && status !== "in_progress" && status !== "accepted" && !job.assigned_technician_id) {
+          if (yesRefConfirmMatch) {
+            // Execute the assignment.
+            await runShareContactsForJobId(String(job.id));
+            return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+          }
+          // Otherwise show confirmation prompt.
+          // Pull accepted quote & technician for preview.
+          const { data: acceptedQuote } = await supabase
+            .from("quotes")
+            .select("technician_id")
+            .eq("job_id", job.id)
+            .eq("status", "accepted")
+            .maybeSingle();
+          const techId = job.assigned_technician_id ?? acceptedQuote?.technician_id ?? null;
+          let techLine = "—";
+          if (techId) {
+            const { data: t } = await supabase
+              .from("technicians")
+              .select("name,tech_code")
+              .eq("id", techId)
+              .maybeSingle();
+            if (t) techLine = `${t.name}${t.tech_code ? ` (${t.tech_code})` : ""}`;
+          }
+          await sendReply(from,
+            `Payment confirmed for job #${shortRef} — ${job.customer_name ?? "customer"}.\n\n` +
+            `Shall I send technician and customer details to both parties now?\n\n` +
+            `🔧 Technician: ${techLine}\n` +
+            `👤 Customer: ${job.customer_name ?? "—"}\n\n` +
+            `Reply YES #${shortRef} CONFIRM to proceed.`,
+            channel);
+          return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+        }
+
+        // Quote already sent to customer → waiting on payment.
+        if (status === "sent" || status === "awaiting_payment") {
+          await sendReply(from,
+            `Quote has already been sent to the customer for job #${shortRef}. Waiting for payment.`,
+            channel);
+          return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+        }
+
+        // Quotes received but not yet forwarded → forward to customer.
+        if (status === "quoted") {
+          await runSendQuoteForJobId(String(job.id));
+          return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+        }
+
+        // Currently broadcasting → already out, waiting on quotes.
+        if (status === "broadcasting") {
+          await sendReply(from,
+            `Job #${shortRef} has already been broadcasted. Waiting for technician quotes.`,
+            channel);
+          return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+        }
+
+        // Fall through (intake_pending / intake_complete / awaiting_approval / pending /
+        // unknown statuses) → use the existing list/broadcast confirmation flow.
       }
 
       const refFromMsg =
