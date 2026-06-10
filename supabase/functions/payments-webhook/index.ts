@@ -78,12 +78,15 @@ async function handleCheckoutCompleted(session: any) {
     return;
   }
 
-  const isFullPayment = kind === "job_full_payment";
+  // NOTE: Do NOT move status to "in_progress"/"accepted" here. Status only
+  // advances after contact details are actually exchanged with both parties
+  // (see shareContactsForJobId). assignment_status tracks the handoff state.
   await supabase.from("jobs").update({
     platform_fee_status: "paid",
     platform_fee_paid_at: new Date().toISOString(),
     stripe_payment_intent_id: session.payment_intent ?? null,
-    status: isFullPayment ? "in_progress" : "confirmed",
+    status: "paid",
+    assignment_status: "pending",
   }).eq("id", jobId);
 
 
