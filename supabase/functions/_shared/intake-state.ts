@@ -619,7 +619,11 @@ function welcomeMessage(
   if (known.name || known.reg) {
     lines.push("_We've prefilled the details we already have on file — let us know if anything has changed._", "");
   }
-  lines.push("Once you've shared everything above, we'll show you a summary to confirm before submitting.");
+  lines.push(
+    "_💡 Tip: you can send all your details in a single line separated by commas — e.g._",
+    "_\"James Smith, YC67 PGX, front-right, puncture\"_",
+    "_Then share your live pin location and tyre photos separately._",
+  );
   return lines.join("\n");
 }
 
