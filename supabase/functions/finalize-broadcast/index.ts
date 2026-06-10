@@ -46,32 +46,43 @@ function buildActionSection(jobRef: string, quotes: any[], techsById: Map<string
   const techMeta = quotes.map((q) => {
     const tech = q.technician_id ? techsById.get(q.technician_id) : null;
     return {
-      code: tech?.tech_code ?? "TECH",
+      code: tech?.tech_code ?? "TECH-0001",
       fullName: tech?.name ?? "Technician",
       shortName: firstName(tech?.name),
     };
   });
-  const first = techMeta[0] ?? null;
+  const first = techMeta[0] ?? { code: "TECH-0001", fullName: "Technician", shortName: "Hassan" };
   const second = techMeta[1] ?? null;
+  const multiple = techMeta.length > 1;
 
-  return [
-    "What would you like to do next?",
-    "",
-    "SEND QUOTES TO CUSTOMER:",
-    `• \"send all quotes for #${jobRef} to customer\"`,
-    `• \"send ${first?.shortName ?? "technician"} quote for #${jobRef} to customer\"`,
-    `• \"send ${first?.code ?? "TECH-0001"}${second ? ` and ${second.code}` : ""} quote${second ? "s" : ""} to customer\"`,
-    "",
-    "UPDATE A PRICE FIRST:",
-    `• \"update ${first?.shortName ?? "technician"} price for #${jobRef} to £55\"`,
-    second
-      ? `• \"update ${first?.code} to £60 and ${second.code} to £48 for #${jobRef}\"`
-      : `• \"update ${first?.code ?? "TECH-0001"} to £60 for #${jobRef}\"`,
-    "",
-    "SEND UPDATED QUOTES AFTER PRICE CHANGE:",
-    `• \"send updated quotes for #${jobRef} to customer\"`,
-    `• \"send updated quote for ${first?.code ?? "TECH-0001"} to customer\"`,
-  ];
+  const lines: string[] = [];
+  lines.push("━━━━━━━━━━━━━━━━━━━━━━");
+  lines.push("What would you like to do next?");
+  lines.push("");
+  lines.push("SEND QUOTE TO CUSTOMER:");
+  lines.push(`- send quote for #${jobRef} to customer`);
+  lines.push(`- send ${first.shortName} quote for #${jobRef} to customer`);
+  lines.push("");
+  lines.push("UPDATE PRICE FIRST:");
+  lines.push(`- update ${first.shortName} price for #${jobRef} to £[amount]`);
+  lines.push(`- update ${first.code} price for #${jobRef} to £[amount]`);
+  lines.push("");
+  lines.push("SEND UPDATED QUOTE AFTER PRICE CHANGE:");
+  lines.push(`- send updated quote for #${jobRef} to customer`);
+
+  if (multiple) {
+    const secondShort = second?.shortName ?? "Omar";
+    lines.push("");
+    lines.push("SEND SELECTED QUOTES ONLY:");
+    lines.push(`- send ${first.shortName} and ${secondShort} quotes for #${jobRef} to customer`);
+    lines.push(`- send ${first.code} quote for #${jobRef} to customer`);
+    lines.push("");
+    lines.push("SEND ALL QUOTES:");
+    lines.push(`- send all quotes for #${jobRef} to customer`);
+  }
+
+  lines.push("━━━━━━━━━━━━━━━━━━━━━━");
+  return lines;
 }
 
 Deno.serve(async (req) => {
