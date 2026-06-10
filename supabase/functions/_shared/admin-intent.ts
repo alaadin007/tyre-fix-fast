@@ -28,7 +28,7 @@ export interface AdminClassification {
   confidence: "high" | "low";
 }
 
-const SYSTEM_PROMPT = `You classify WhatsApp/SMS messages sent by an ADMIN of a UK roadside tyre service to their dispatch bot. The admin manages tyre-repair jobs and technicians. They may write in English, Urdu (script), or Roman Urdu (Urdu in Latin letters, e.g. "job cancel kar do").
+export const DEFAULT_ADMIN_SYSTEM_PROMPT = `You classify WhatsApp/SMS messages sent by an ADMIN of a UK roadside tyre service to their dispatch bot. The admin manages tyre-repair jobs and technicians. They may write in English, Urdu (script), or Roman Urdu (Urdu in Latin letters, e.g. "job cancel kar do").
 
 Job references are 6-8 hexadecimal characters (0-9, a-f) and may be written as "9593CB", "#9593CB", "job 9593CB", "ref 9593CB", "reference 9593CB", "Reference Number 9593CB".
 
@@ -50,6 +50,37 @@ Confidence "high" only if you are sure. Otherwise "low".
 
 Return ONLY a JSON object with these exact keys: intent, job_reference (lowercase hex or null), technician_identifier (string or null — preserve original spelling, may be a name, "TECH-0001", or "+923..."), language, confidence. No prose.`;
 
+export const ADMIN_INTENT_PROMPT_KEY = "admin_intent_system_prompt";
+
+// 60s in-memory cache so we don't hit the DB on every inbound message.
+let cachedPrompt: { value: string; expiresAt: number } | null = null;
+
+async function loadAdminSystemPrompt(): Promise<string> {
+  const now = Date.now();
+  if (cachedPrompt && cachedPrompt.expiresAt > now) return cachedPrompt.value;
+
+  const url = Deno.env.get("SUPABASE_URL");
+  const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  let value = DEFAULT_ADMIN_SYSTEM_PROMPT;
+  if (url && key) {
+    try {
+      const r = await fetch(
+        `${url}/rest/v1/app_settings?key=eq.${ADMIN_INTENT_PROMPT_KEY}&select=value`,
+        { headers: { apikey: key, Authorization: `Bearer ${key}` } },
+      );
+      if (r.ok) {
+        const rows = await r.json();
+        const stored = rows?.[0]?.value?.prompt;
+        if (typeof stored === "string" && stored.trim().length > 50) value = stored;
+      }
+    } catch (e) {
+      console.warn("loadAdminSystemPrompt failed, using default", e);
+    }
+  }
+  cachedPrompt = { value, expiresAt: now + 60_000 };
+  return value;
+}
+
 export async function classifyAdminMessage(
   body: string,
   opts?: { lovableApiKey?: string; model?: string },
@@ -60,6 +91,7 @@ export async function classifyAdminMessage(
     return null;
   }
   const model = opts?.model ?? "google/gemini-3-flash-preview";
+  const systemPrompt = await loadAdminSystemPrompt();
 
   try {
     const ctrl = new AbortController();
@@ -75,7 +107,7 @@ export async function classifyAdminMessage(
       body: JSON.stringify({
         model,
         messages: [
-          { role: "system", content: SYSTEM_PROMPT },
+          { role: "system", content: systemPrompt },
           { role: "user", content: body },
         ],
         response_format: { type: "json_object" },

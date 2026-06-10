@@ -25,6 +25,7 @@ import PaymentsPage from "./pages/admin/PaymentsPage.tsx";
 import TechniciansPage from "./pages/admin/TechniciansPage.tsx";
 import ActivityPage from "./pages/admin/ActivityPage.tsx";
 import AISettingsPage from "./pages/admin/AISettingsPage.tsx";
+import AdminAIInstructionsPage from "./pages/admin/AdminAIInstructionsPage.tsx";
 import CommandCenter from "./pages/admin/CommandCenter.tsx";
 import ReportsPage from "./pages/admin/ReportsPage.tsx";
 import SettingsPage from "./pages/admin/SettingsPage.tsx";
@@ -51,6 +52,7 @@ const App = () => (
           <Route path="technicians" element={<TechniciansPage />} />
           <Route path="activity" element={<ActivityPage />} />
           <Route path="ai-settings" element={<AISettingsPage />} />
+          <Route path="admin-ai-instructions" element={<AdminAIInstructionsPage />} />
           <Route path="command" element={<CommandCenter />} />
           <Route path="reports" element={<ReportsPage />} />
           <Route path="settings" element={<SettingsPage />} />

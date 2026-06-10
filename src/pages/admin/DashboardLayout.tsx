@@ -11,6 +11,7 @@ import {
   Radio,
   LogOut,
   Sparkles,
+  Bot,
   BarChart3,
   Settings,
 } from "lucide-react";
@@ -40,7 +41,8 @@ const items = [
   { title: "Technicians", url: "/admin/dashboard/technicians", icon: Users },
   { title: "Activity", url: "/admin/dashboard/activity", icon: Activity },
   { title: "Reports", url: "/admin/dashboard/reports", icon: BarChart3 },
-  { title: "AI Instructions", url: "/admin/dashboard/ai-settings", icon: Sparkles },
+  { title: "AI Instructions (Customer)", url: "/admin/dashboard/ai-settings", icon: Sparkles },
+  { title: "AI Instructions (Admin)", url: "/admin/dashboard/admin-ai-instructions", icon: Bot },
   { title: "Settings", url: "/admin/dashboard/settings", icon: Settings },
 ];
 
