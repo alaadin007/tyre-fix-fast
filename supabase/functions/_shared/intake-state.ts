@@ -613,7 +613,6 @@ function welcomeMessage(
     "⚙️ Affected tyre(s)?",
     "Front-left / front-right / rear-left / rear-right / both front / both rear / all four",
     "⚠️ Nature of issue: puncture / flat / blowout / low pressure / not sure",
-    "📏 Tyre size — found on the tyre sidewall, e.g. 205/55 R16",
     "📸 At least 2 clear photos of the affected tyre(s) — JPEG/PNG only (no PDFs, videos, or documents)",
     "",
   ];
@@ -637,12 +636,11 @@ function summaryMessage(job: any): string {
     `✅ Vehicle reg: ${job.vehicle_reg}`,
     `✅ Affected tyre(s): ${wheels}`,
     `✅ Nature of issue: ${job.issue_type || "noted"}`,
-    `✅ Tyre size: ${job.tyre_size}`,
     `✅ Tyre photo(s): ${photos} received`,
     "",
     "You are submitting the following information. If anything needs to be changed, please let us know (e.g. \"change reg to GB1122\"). Otherwise, please type *DONE* and we can proceed.",
     "",
-    `Progress: ${greenBar} *100%* (7/7) ✅`,
+    `Progress: ${greenBar} *100%* (6/6) ✅`,
   ].join("\n");
 }
 
@@ -663,14 +661,14 @@ function evaluateJob(job: any, conversation: any | null): Missing {
     reg: !job?.vehicle_reg,
     wheels: !(Array.isArray(job?.affected_wheels) && job.affected_wheels.length > 0),
     issue: !hasIncidentContext(job?.issue_description ?? "") && (!job?.issue_type || job?.issue_type === "unknown"),
-    tyreSize: !job?.tyre_size,
+    tyreSize: false,
     photos: !((job?.photo_urls ?? []).length >= 2),
   };
 }
 
 function isComplete(missing: Missing): boolean {
   return !missing.name && !missing.pin && !missing.reg && !missing.wheels
-      && !missing.issue && !missing.tyreSize && !missing.photos;
+      && !missing.issue && !missing.photos;
 }
 
 function progressBar(received: number, total: number): string {
@@ -691,7 +689,6 @@ function checklistMessage(job: any, missing: Missing, opts: { header?: string; f
     [!missing.reg,      "Vehicle reg",       !missing.reg ? job.vehicle_reg : "_missing_"],
     [!missing.wheels,   "Affected tyre(s)",  !missing.wheels ? wheels : "_missing — e.g. front-left / all four_"],
     [!missing.issue,    "Nature of issue",   !missing.issue ? (job.issue_type || "noted") : "_missing — e.g. puncture / flat / blowout_"],
-    [!missing.tyreSize, "Tyre size",         !missing.tyreSize ? job.tyre_size : "_missing — e.g. 205/55 R16_"],
     [!missing.photos,   "Tyre photo(s)",     !missing.photos ? `${photoCount} received` : `_${photoCount > 0 ? `${photoCount} received — need at least 2 valid tyre photos (JPEG/PNG)` : "missing — send at least 2 clear tyre photos (JPEG/PNG)"}_`],
   ];
   const received = items.filter(([ok]) => ok).length;
@@ -700,7 +697,7 @@ function checklistMessage(job: any, missing: Missing, opts: { header?: string; f
   const footer = opts.footer
     ?? (received === total
         ? "All set ✅ — please type *DONE* to submit your job."
-        : "Please send the missing item(s) above. You can write naturally — e.g. \"reg is GB1122\" or \"tyre size 205/55 R16\".");
+        : "Please send the missing item(s) above. You can write naturally — e.g. \"reg is GB1122\" or \"front-left puncture\".");
   const lines = [
     header,
     "",
