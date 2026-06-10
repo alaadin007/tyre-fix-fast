@@ -133,12 +133,29 @@ export async function classifyAdminMessage(
       parsed = JSON.parse(m[0]);
     }
 
-    const intent = String(parsed.intent ?? "UNKNOWN").toUpperCase() as AdminIntent;
+    let intent = String(parsed.intent ?? "UNKNOWN").toUpperCase() as AdminIntent;
+    // Alias map — accept new intent names from custom admin system prompts
+    // and route them to the existing handlers in twilio-inbound.
+    const aliasMap: Record<string, AdminIntent> = {
+      "FORWARD_QUOTE_ONE": "FORWARD_QUOTE",
+      "FORWARD_QUOTE_MULTIPLE": "FORWARD_QUOTE",
+      "FORWARD_QUOTE_UPDATED": "FORWARD_QUOTE",
+      "SEND_QUOTE": "FORWARD_QUOTE",
+      "SEND_QUOTES": "FORWARD_QUOTE",
+      "SEND_UPDATED_QUOTES": "FORWARD_QUOTE",
+      "UPDATE_TECHNICIAN_PRICE": "FORWARD_QUOTE",
+      "UPDATE_PRICE": "FORWARD_QUOTE",
+      "BROADCAST_MULTIPLE_SPECIFIC": "BROADCAST_ONE",
+    };
+    if (aliasMap[intent as string]) intent = aliasMap[intent as string];
     const validIntents: AdminIntent[] = [
       "SHOW_TECHNICIAN_LIST", "BROADCAST_ALL", "BROADCAST_ONE", "FORWARD_QUOTE",
       "ASSIGN", "STATUS", "LIST_ACTIVE", "CANCEL", "CONFIRM_CANCEL", "UNKNOWN",
     ];
-    if (!validIntents.includes(intent)) return null;
+    if (!validIntents.includes(intent)) {
+      console.warn("admin-intent: unknown intent from LLM, falling back to UNKNOWN", intent);
+      intent = "UNKNOWN";
+    }
 
     const ref = parsed.job_reference;
     const refClean = typeof ref === "string" && /^[0-9a-f]{6,8}$/i.test(ref.trim())
