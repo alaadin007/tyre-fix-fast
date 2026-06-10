@@ -1066,9 +1066,15 @@ export async function processCustomerIntake(
     if (ts) updates.tyre_size = ts;
   }
 
-  // Photos
+  // Photos — dedupe against existing URLs so retried webhooks can't
+  // double-count the same image toward the "2 photos" requirement.
   if (mediaUrls.length > 0) {
-    updates.photo_urls = [...(job.photo_urls ?? []), ...mediaUrls].slice(0, 4);
+    const existing: string[] = job.photo_urls ?? [];
+    const merged = [...existing];
+    for (const u of mediaUrls) {
+      if (!merged.includes(u)) merged.push(u);
+    }
+    updates.photo_urls = merged.slice(0, 4);
   }
 
   // ─── AI classifier: fill gaps the regex missed ───
