@@ -3189,6 +3189,30 @@ Deno.serve(async (req) => {
     }
 
 
+    // 3d. Guard: if the customer already has a very recent active job (intake
+    //     just completed, broadcasting, quoting, awaiting payment, in-progress,
+    //     etc.), do NOT auto-start a brand-new intake on a stray follow-up
+    //     message. Acknowledge the existing job and require an explicit
+    //     "NEW JOB" reply to start another one. Mid-intake conversations are
+    //     unaffected (they hit the midIntake branch above).
+    if (
+      !midIntake &&
+      recentJob &&
+      ACTIVE_JOB_STATUSES.has(String(recentJob.status))
+    ) {
+      const recentAgeMs = Date.now() - new Date(recentJob.created_at).getTime();
+      if (recentAgeMs < 2 * 60 * 60_000) {
+        const ref = jobRefOf(recentJob);
+        const statusTxt = String(recentJob.status).replace(/_/g, " ");
+        const reply =
+          `Thanks! We've already got your job *#${ref}* (${statusTxt}) on file ` +
+          `and our team is working on it — we'll be in touch shortly with a price and ETA.\n\n` +
+          `If this is a *different* tyre problem, reply *NEW JOB* to start a new booking.`;
+        await sendReply(from, reply, channel);
+        return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+      }
+    }
+
     // 4. Otherwise → route through the customer intake state machine.
     //    This is the single source of truth for the 6-step information gathering.
     //    It handles brand-new customers, returning customers (with memory pre-fill),
