@@ -1585,7 +1585,8 @@ Deno.serve(async (req) => {
       const targetsOneTech = /\bto\s+(?:tech[-_ ]?\d+|\+?\d[\d\s-]{5,}|[A-Za-z][A-Za-z .'-]{1,40})\s*(?:only)?\s*[.!]?\s*$/i.test(trimmed);
       // Require an explicit broadcast verb here — plain "yes <ref>" is handled
       // above as a list request, not an immediate broadcast.
-      const looksLikeBroadcast = refInMsg && broadcastVerbRegex.test(trimmed) && !targetsOneTech;
+      const wantsListNotBroadcast = /\b(list of (?:available |nearby |matching )?(?:tech|technician)|available (?:tech|technician)|technician list|tech list|show (?:me )?(?:the )?(?:available |nearby |matching )?(?:tech|technician)|who(?:'?s| is) available)/i.test(trimmed);
+      const looksLikeBroadcast = refInMsg && broadcastVerbRegex.test(trimmed) && !targetsOneTech && !wantsListNotBroadcast;
 
       if (looksLikeBroadcast) {
         const ref = refInMsg[1].toLowerCase();
