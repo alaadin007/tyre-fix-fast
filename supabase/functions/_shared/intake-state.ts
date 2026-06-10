@@ -636,12 +636,11 @@ function summaryMessage(job: any): string {
     `✅ Vehicle reg: ${job.vehicle_reg}`,
     `✅ Affected tyre(s): ${wheels}`,
     `✅ Nature of issue: ${job.issue_type || "noted"}`,
-    `✅ Tyre size: ${job.tyre_size}`,
     `✅ Tyre photo(s): ${photos} received`,
     "",
     "You are submitting the following information. If anything needs to be changed, please let us know (e.g. \"change reg to GB1122\"). Otherwise, please type *DONE* and we can proceed.",
     "",
-    `Progress: ${greenBar} *100%* (7/7) ✅`,
+    `Progress: ${greenBar} *100%* (6/6) ✅`,
   ].join("\n");
 }
 
