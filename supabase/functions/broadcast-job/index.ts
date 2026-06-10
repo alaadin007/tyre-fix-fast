@@ -264,6 +264,24 @@ Deno.serve(async (req) => {
       await supabase.from("job_allocations").insert(allocations);
     }
 
+    // A re-broadcast starts a brand-new quote round for this job.
+    // Reset the prior summary marker so finalize-broadcast can send again,
+    // and archive any still-live quotes from earlier rounds so they do not
+    // get mixed into the new summary.
+    await supabase
+      .from("jobs")
+      .update({
+        quote_summary_sent_at: null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", job_id);
+
+    await supabase
+      .from("quotes")
+      .update({ status: "lost" })
+      .eq("job_id", job_id)
+      .in("status", ["collecting", "pending"]);
+
     // Schedule a single consolidated quote summary 1.5 minutes after broadcast.
     // EdgeRuntime.waitUntil keeps the function alive past the HTTP response.
     if (sent > 0) {
@@ -316,7 +334,6 @@ Deno.serve(async (req) => {
     await supabase.from("jobs").update({
       status: "broadcasting",
       broadcast_count: sent,
-      updated_at: new Date().toISOString(),
     }).eq("id", job_id);
 
     await supabase.from("ops_alerts").insert({
