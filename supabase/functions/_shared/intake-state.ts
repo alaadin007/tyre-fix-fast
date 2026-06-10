@@ -1198,7 +1198,18 @@ export async function processCustomerIntake(
   // ─── Non-DONE message: send an updated progress checklist every time. ───
   const missing = evaluateJob(job, conversation);
   if (isComplete(missing)) {
-    // Everything is in — show a confirmation summary before they type DONE.
+    // Everything is in — auto-complete the intake and send confirmation.
+    if (conversation.step !== "complete") {
+      await supabase.from("jobs").update({ status: "intake_complete" }).eq("id", job.id);
+      await supabase.from("conversations").update({ step: "complete" }).eq("id", conversation.id);
+      await bumpCustomer(supabase, from, job);
+      return {
+        reply: `${summaryMessage(job)}\n\n${completionMessage(job)}`,
+        job,
+        conversation: { ...conversation, step: "complete" },
+        justCompleted: true,
+      };
+    }
     return {
       reply: summaryMessage(job),
       job,
