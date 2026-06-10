@@ -1378,6 +1378,76 @@ Deno.serve(async (req) => {
         await runSendQuoteForJobId(String(matches[0].id));
       };
 
+      // Helper: update the technician's quoted price for a job (before sending).
+      const resolveTechnician = async (identifier: string) => {
+        const idTrim = identifier.trim();
+        const isPhone = /^\+?\d{6,}$/.test(idTrim.replace(/\s+/g, ""));
+        const isCode = /^tech-?\d+$/i.test(idTrim.replace(/\s+/g, ""));
+        if (isPhone) {
+          const norm = idTrim.startsWith("+") ? idTrim : `+${idTrim.replace(/\D/g, "")}`;
+          const { data } = await supabase.from("technicians")
+            .select("id, name, phone, tech_code")
+            .eq("phone", norm).eq("approval_status", "approved").eq("active", true);
+          return data ?? [];
+        }
+        if (isCode) {
+          const code = idTrim.toUpperCase().replace(/^TECH/, "TECH-").replace("TECH--", "TECH-");
+          const { data } = await supabase.from("technicians")
+            .select("id, name, phone, tech_code")
+            .ilike("tech_code", code).eq("approval_status", "approved").eq("active", true);
+          return data ?? [];
+        }
+        const { data } = await supabase.from("technicians")
+          .select("id, name, phone, tech_code")
+          .ilike("name", `%${idTrim}%`).eq("approval_status", "approved").eq("active", true);
+        return data ?? [];
+      };
+
+      const runUpdateTechnicianPrice = async (ref: string, identifier: string, newPrice: number) => {
+        const matches = await findJobByRef(ref);
+        if (matches.length === 0) {
+          await sendReply(from, `No job found for ref #${ref.toUpperCase()}. Price not updated.`, channel);
+          return;
+        }
+        if (matches.length > 1) {
+          await sendReply(from, `Multiple jobs match #${ref.toUpperCase()} — please send the full 6-character ref.`, channel);
+          return;
+        }
+        const job: any = matches[0];
+        const shortRef = String(job.id).slice(0, 6).toUpperCase();
+        const candidates = await resolveTechnician(identifier);
+        if (candidates.length === 0) {
+          await sendReply(from, `No approved technician found matching "${identifier}".`, channel);
+          return;
+        }
+        if (candidates.length > 1) {
+          const lines = candidates.slice(0, 5).map((t: any) =>
+            `— ${t.tech_code ?? "TECH-????"} ${t.name}`).join("\n");
+          await sendReply(from,
+            `Multiple technicians match "${identifier}":\n${lines}\n\nPlease retry with the TECH-ID.`, channel);
+          return;
+        }
+        const tech = candidates[0];
+        const { data: quoteRow } = await supabase.from("quotes")
+          .select("id, price_gbp")
+          .eq("job_id", job.id)
+          .eq("technician_id", tech.id)
+          .order("created_at", { ascending: false })
+          .limit(1).maybeSingle();
+        if (!quoteRow) {
+          await sendReply(from,
+            `No quote from ${tech.tech_code ?? tech.name} found on job #${shortRef}. Price not updated.`, channel);
+          return;
+        }
+        const oldPrice = quoteRow.price_gbp;
+        await supabase.from("quotes").update({ price_gbp: newPrice }).eq("id", quoteRow.id);
+        await clearAdminState();
+        await sendReply(from,
+          `✅ Price updated — Job #${shortRef}\n👷 ${tech.tech_code ?? "TECH-????"} · ${tech.name}\n💷 £${oldPrice ?? "—"} → £${newPrice}\n\nReply "send updated quote for ${tech.tech_code ?? tech.name} to customer" to forward it.`,
+          channel,
+        );
+      };
+
       // Helper: share customer ↔ technician contact details after admin approval.
       const runShareContactsForJobId = async (jobIdFull: string) => {
         const shortRef = String(jobIdFull).slice(0, 6).toUpperCase();
