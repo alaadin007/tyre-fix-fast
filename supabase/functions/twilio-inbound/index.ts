@@ -1383,15 +1383,22 @@ Deno.serve(async (req) => {
         const res = await sendQuoteToCustomer(supabase, jobIdFull);
         await clearAdminState();
         if (res.ok) {
-          await sendReply(from,
-            `✅ Quote for job #${shortRef} sent to the customer (${res.customerPhone}).`,
-            channel);
+          if (res.paymentLinkMissing) {
+            await sendReply(from,
+              `⚠️ Quote sent to customer for job #${shortRef} but payment link could not be generated. Please generate and send the payment link manually.${res.stripeError ? `\n\nStripe error: ${res.stripeError}` : ""}`,
+              channel);
+          } else {
+            await sendReply(from,
+              `✅ Quote for job #${shortRef} sent to the customer (${res.customerPhone}).`,
+              channel);
+          }
         } else {
           await sendReply(from,
             `⚠️ Could not send quote for job #${shortRef}: ${res.error ?? "unknown error"}.`,
             channel);
         }
       };
+
       const runSendQuoteForRef = async (ref: string) => {
         const matches = await findJobByRef(ref);
         if (matches.length === 0) {
