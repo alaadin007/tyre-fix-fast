@@ -1525,8 +1525,22 @@ Deno.serve(async (req) => {
         const res = await shareContactsForJobId(supabase, jobIdFull);
         await clearAdminState();
         if (res.ok) {
+          const { data: j } = await supabase
+            .from("jobs")
+            .select("customer_name, assigned_technician_id")
+            .eq("id", jobIdFull)
+            .maybeSingle();
+          let techName = "Technician";
+          if (j?.assigned_technician_id) {
+            const { data: t } = await supabase
+              .from("technicians").select("name").eq("id", j.assigned_technician_id).maybeSingle();
+            if (t?.name) techName = t.name;
+          }
           await sendReply(from,
-            `✅ Job #${shortRef} — details shared. Customer: ${res.customerPhone}, Technician: ${res.techPhone}.`,
+            `✅ Details shared successfully — Job #${shortRef}\n\n` +
+            `👤 Customer: ${j?.customer_name ?? "—"} — notified ✅\n` +
+            `🔧 Technician: ${techName} — notified ✅\n\n` +
+            `Job status updated to: ASSIGNED`,
             channel);
         } else {
           await sendReply(from,
