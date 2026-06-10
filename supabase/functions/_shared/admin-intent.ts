@@ -223,14 +223,19 @@ export function adminMenuText(lang: AdminLanguage): string {
     ].join("\n");
   }
   return [
-    "Hi! Here's what I can help you with:",
-    "• Technician list   → 'techs for #JOBREF'",
-    "• Broadcast to all  → 'broadcast #JOBREF'",
-    "• Broadcast to one  → '#JOBREF send to [name/ID]'",
-    "• Send quote        → 'send quote #JOBREF to customer'",
-    "• Assign technician → 'assign #JOBREF'",
-    "• Job status        → 'status #JOBREF'",
-    "• All active jobs   → 'show active jobs'",
-    "• Cancel job        → 'cancel #JOBREF'",
+    "Hi! Here is what I can help you with:",
+    "",
+    "— Technician list      → 'techs for #JOBREF'",
+    "— Broadcast to all     → 'broadcast #JOBREF'",
+    "— Broadcast to one     → '#JOBREF send to [name/ID]'",
+    "— Broadcast to select  → '#JOBREF send to [A] and [B]'",
+    "— Send one quote       → 'send [name] quote for #JOBREF to customer'",
+    "— Send all quotes      → 'send all quotes for #JOBREF to customer'",
+    "— Update price         → 'update [name] price for #JOBREF to £[amount]'",
+    "— Send updated quotes  → 'send updated quotes for #JOBREF to customer'",
+    "— Assign technician    → 'assign #JOBREF'",
+    "— Job status           → 'status #JOBREF'",
+    "— All active jobs      → 'show active jobs'",
+    "— Cancel job           → 'cancel #JOBREF'",
   ].join("\n");
 }

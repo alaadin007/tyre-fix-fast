@@ -1378,6 +1378,76 @@ Deno.serve(async (req) => {
         await runSendQuoteForJobId(String(matches[0].id));
       };
 
+      // Helper: update the technician's quoted price for a job (before sending).
+      const resolveTechnician = async (identifier: string) => {
+        const idTrim = identifier.trim();
+        const isPhone = /^\+?\d{6,}$/.test(idTrim.replace(/\s+/g, ""));
+        const isCode = /^tech-?\d+$/i.test(idTrim.replace(/\s+/g, ""));
+        if (isPhone) {
+          const norm = idTrim.startsWith("+") ? idTrim : `+${idTrim.replace(/\D/g, "")}`;
+          const { data } = await supabase.from("technicians")
+            .select("id, name, phone, tech_code")
+            .eq("phone", norm).eq("approval_status", "approved").eq("active", true);
+          return data ?? [];
+        }
+        if (isCode) {
+          const code = idTrim.toUpperCase().replace(/^TECH/, "TECH-").replace("TECH--", "TECH-");
+          const { data } = await supabase.from("technicians")
+            .select("id, name, phone, tech_code")
+            .ilike("tech_code", code).eq("approval_status", "approved").eq("active", true);
+          return data ?? [];
+        }
+        const { data } = await supabase.from("technicians")
+          .select("id, name, phone, tech_code")
+          .ilike("name", `%${idTrim}%`).eq("approval_status", "approved").eq("active", true);
+        return data ?? [];
+      };
+
+      const runUpdateTechnicianPrice = async (ref: string, identifier: string, newPrice: number) => {
+        const matches = await findJobByRef(ref);
+        if (matches.length === 0) {
+          await sendReply(from, `No job found for ref #${ref.toUpperCase()}. Price not updated.`, channel);
+          return;
+        }
+        if (matches.length > 1) {
+          await sendReply(from, `Multiple jobs match #${ref.toUpperCase()} — please send the full 6-character ref.`, channel);
+          return;
+        }
+        const job: any = matches[0];
+        const shortRef = String(job.id).slice(0, 6).toUpperCase();
+        const candidates = await resolveTechnician(identifier);
+        if (candidates.length === 0) {
+          await sendReply(from, `No approved technician found matching "${identifier}".`, channel);
+          return;
+        }
+        if (candidates.length > 1) {
+          const lines = candidates.slice(0, 5).map((t: any) =>
+            `— ${t.tech_code ?? "TECH-????"} ${t.name}`).join("\n");
+          await sendReply(from,
+            `Multiple technicians match "${identifier}":\n${lines}\n\nPlease retry with the TECH-ID.`, channel);
+          return;
+        }
+        const tech = candidates[0];
+        const { data: quoteRow } = await supabase.from("quotes")
+          .select("id, price_gbp")
+          .eq("job_id", job.id)
+          .eq("technician_id", tech.id)
+          .order("created_at", { ascending: false })
+          .limit(1).maybeSingle();
+        if (!quoteRow) {
+          await sendReply(from,
+            `No quote from ${tech.tech_code ?? tech.name} found on job #${shortRef}. Price not updated.`, channel);
+          return;
+        }
+        const oldPrice = quoteRow.price_gbp;
+        await supabase.from("quotes").update({ price_gbp: newPrice }).eq("id", quoteRow.id);
+        await clearAdminState();
+        await sendReply(from,
+          `✅ Price updated — Job #${shortRef}\n👷 ${tech.tech_code ?? "TECH-????"} · ${tech.name}\n💷 £${oldPrice ?? "—"} → £${newPrice}\n\nReply "send updated quote for ${tech.tech_code ?? tech.name} to customer" to forward it.`,
+          channel,
+        );
+      };
+
       // Helper: share customer ↔ technician contact details after admin approval.
       const runShareContactsForJobId = async (jobIdFull: string) => {
         const shortRef = String(jobIdFull).slice(0, 6).toUpperCase();
@@ -1958,6 +2028,21 @@ Deno.serve(async (req) => {
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
       }
 
+      // Pending price-update context: if the admin was previously asked
+      // "Please provide the new price for TECH-XXXX on job #YYYYYY" and now
+      // replies with just a bare price (e.g. "£55", "55", "65.50"), resolve
+      // it against the stored context instead of asking again.
+      if (adminState?.step?.startsWith("await_price_update:") && adminState.job_id) {
+        const bareMatch = trimmed.match(/^\s*(?:£|gbp\s*)?\s*(\d{1,4}(?:\.\d{1,2})?)\s*(?:£|gbp|pounds?)?\s*[.!]?\s*$/i);
+        if (bareMatch) {
+          const newPrice = Number(bareMatch[1]);
+          const techIdent = adminState.step.slice("await_price_update:".length);
+          const refShort = String(adminState.job_id).slice(0, 6);
+          await runUpdateTechnicianPrice(refShort, techIdent, newPrice);
+          return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+        }
+      }
+
       // ---- LLM classifier — the single source of truth for admin NL ----
       // Reads the editable prompt at app_settings.admin_intent_system_prompt.
       const classification = await classifyAdminMessage(trimmed);
@@ -2060,13 +2145,21 @@ Deno.serve(async (req) => {
             await runSendQuoteForRef(ref!);
             return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
           case "UPDATE_TECHNICIAN_PRICE": {
-            // Require an explicit new price value — otherwise prompt for it
-            // rather than silently forwarding the existing quote.
+            // Require an explicit new price value — otherwise store a pending
+            // context so the next bare-price reply resolves automatically.
             const priceMatch = trimmed.match(/(?:£|gbp\s*)?(\d{1,4}(?:\.\d{1,2})?)\b/i);
             const hasPrice = !!priceMatch && /\b(to|=|@|for\s+£?\s*\d)/i.test(trimmed.replace(/#?[0-9a-f]{6,8}/gi, "").replace(/tech-?\d+/gi, ""));
+            const refUp = ref!.toUpperCase();
             if (!hasPrice) {
-              const refUp = ref!.toUpperCase();
               const techLabel = techId ? techId : "the technician";
+              if (techId) {
+                // Resolve job UUID so the bare-price reply has all context.
+                const jobs = await findJobByRef(ref!);
+                const jobId = jobs.length === 1 ? String(jobs[0].id) : null;
+                if (jobId) {
+                  await setAdminState(`await_price_update:${techId}`, jobId);
+                }
+              }
               await sendReply(
                 from,
                 `Please provide the new price for ${techLabel} on job #${refUp}.\nExample: "update ${techId || "TECH-0001"} price for #${refUp} to £55"`,
@@ -2074,7 +2167,11 @@ Deno.serve(async (req) => {
               );
               return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
             }
-            await runSendQuoteForRef(ref!);
+            if (!techId) {
+              await sendReply(from, `Which technician's price should I update on job #${refUp}? Reply with the name or TECH-ID.`, channel);
+              return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+            }
+            await runUpdateTechnicianPrice(ref!, techId, Number(priceMatch![1]));
             return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
           }
           case "ASSIGN":
