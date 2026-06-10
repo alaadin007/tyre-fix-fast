@@ -758,12 +758,12 @@ async function sendQuoteToCustomer(
     const vehicleReg = jobRow.vehicle_reg?.toString().trim() || "Not provided";
 
     let payUrl: string | null = null;
+    let stripeErrorMsg: string | null = null;
     try {
       const { createStripeClient } = await import("../_shared/stripe.ts");
       const stripe = createStripeClient("live");
       const session = await stripe.checkout.sessions.create({
         mode: "payment",
-        ui_mode: "hosted",
         line_items: [{
           price_data: {
             currency: "gbp",
@@ -790,6 +790,12 @@ async function sendQuoteToCustomer(
           description: `Tyre Fly — job ${shortRef} — ${jobRow.postcode ?? ""}`.trim(),
         },
       });
+      console.log("stripe checkout (customer quote) session created", {
+        jobId,
+        sessionId: session?.id,
+        hasUrl: !!session?.url,
+        priceGbp: mergedPrice,
+      });
       if (!session?.url) {
         throw new Error(`Stripe session ${session?.id ?? "?"} returned no checkout url`);
       }
@@ -800,19 +806,18 @@ async function sendQuoteToCustomer(
         stripe_session_id: session.id,
         stripe_checkout_url: session.url,
       }).eq("id", jobId);
-    } catch (e) {
-      console.error("stripe checkout (customer quote) failed", e);
-      return {
-        ok: false,
-        error: `Could not generate the payment link for job #${shortRef}. The quote was not sent to the customer.`,
-      };
-    }
-    if (!payUrl) {
-      console.error("sendQuoteToCustomer: payUrl empty after stripe success", { jobId });
-      return {
-        ok: false,
-        error: `Could not generate the payment link for job #${shortRef}. The quote was not sent to the customer.`,
-      };
+    } catch (e: any) {
+      stripeErrorMsg = String(e?.raw?.message ?? e?.message ?? e);
+      console.error("stripe checkout (customer quote) failed", {
+        jobId,
+        priceGbp: mergedPrice,
+        errorMessage: stripeErrorMsg,
+        errorType: e?.type,
+        errorCode: e?.code,
+        errorRaw: e?.raw,
+        stack: e?.stack,
+      });
+      payUrl = null;
     }
 
     await supabase.from("quotes").update({ status: "accepted" }).eq("id", quoteRow.id);
@@ -826,6 +831,11 @@ async function sendQuoteToCustomer(
       assigned_technician_id: quoteRow.technician_id,
     }).eq("id", jobId);
 
+    const paymentSection = payUrl
+      ? `To proceed with the service, please complete the payment using the secure Stripe link below:\n\n💳 Payment Link: ${payUrl}\n\n` +
+        `Once the payment is confirmed, the technician will proceed with the repair service at your location.\n\n`
+      : `Our team will contact you shortly with a secure payment link to complete the booking.\n\n`;
+
     const customerBody =
       `Job Reference: #${shortRef}\n\n` +
       `Hello${jobRow.customer_name ? ` ${jobRow.customer_name}` : ""},\n\n` +
@@ -834,12 +844,18 @@ async function sendQuoteToCustomer(
       `⚠️ Issue Found: ${issueLine}\n\n` +
       `💰 Repair Cost: £${mergedPrice}${tyreNote}\n\n` +
       `⏱️ Estimated Arrival Time (ETA): ${mergedEta} minutes\n\n` +
-      `To proceed with the service, please complete the payment using the secure Stripe link below:\n\n💳 Payment Link: ${payUrl}\n\n` +
-      `Once the payment is confirmed, the technician will proceed with the repair service at your location.\n\n` +
+      paymentSection +
       `Thank you.\n— Tyre Fly`;
 
     await sendReply(jobRow.customer_phone, customerBody, "whatsapp");
-    return { ok: true, price: Number(mergedPrice), customerPhone: jobRow.customer_phone };
+    return {
+      ok: true,
+      price: Number(mergedPrice),
+      customerPhone: jobRow.customer_phone,
+      paymentLinkMissing: !payUrl,
+      stripeError: stripeErrorMsg ?? undefined,
+    };
+
 
   } catch (e: any) {
     console.error("sendQuoteToCustomer failed", e);
