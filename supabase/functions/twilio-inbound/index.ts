@@ -795,9 +795,10 @@ async function sendQuoteToCustomer(
         sessionId: session?.id,
         hasUrl: !!session?.url,
         priceGbp: mergedPrice,
+        rawSession: JSON.stringify(session)?.slice(0, 2000),
       });
       if (!session?.url) {
-        throw new Error(`Stripe session ${session?.id ?? "?"} returned no checkout url`);
+        throw new Error(`Stripe session ${session?.id ?? "?"} returned no checkout url (raw=${JSON.stringify(session)?.slice(0, 500)})`);
       }
       const { shortenUrl } = await import("../_shared/short-link.ts");
       const shortened = await shortenUrl(session.url, { kind: "job_full_payment", job_id: jobId });
