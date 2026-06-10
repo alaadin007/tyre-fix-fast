@@ -1454,10 +1454,37 @@ Deno.serve(async (req) => {
         const oldPrice = quoteRow.price_gbp;
         await supabase.from("quotes").update({ price_gbp: newPrice }).eq("id", quoteRow.id);
         await clearAdminState();
-        await sendReply(from,
-          `✅ Price updated — Job #${shortRef}\n👷 ${tech.tech_code ?? "TECH-????"} · ${tech.name}\n💷 £${oldPrice ?? "—"} → £${newPrice}\n\nReply "send updated quote for ${tech.tech_code ?? tech.name} to customer" to forward it.`,
-          channel,
-        );
+
+        // Fetch all other quotes on the same job to build the action block.
+        const { data: allQuoteRows } = await supabase.from("quotes")
+          .select("technician_id")
+          .eq("job_id", job.id);
+        const techIds = Array.from(new Set((allQuoteRows ?? []).map((q: any) => q.technician_id).filter(Boolean)));
+        const { data: techRows } = techIds.length
+          ? await supabase.from("technicians").select("id, name, tech_code").in("id", techIds)
+          : { data: [] as any[] };
+        const techCode = tech.tech_code ?? "TECH-????";
+        const techShort = (tech.name ?? "Technician").split(/\s+/)[0];
+        const others = (techRows ?? []).filter((t: any) => t.id !== tech.id);
+        const otherLines = others.length
+          ? others.map((t: any) => `- update ${(t.name ?? "").split(/\s+/)[0] || t.tech_code} price for #${shortRef} to £[amount]`).join("\n")
+          : `- update [name] price for #${shortRef} to £[amount]`;
+
+        const msg =
+          `✅ Price updated — Job #${shortRef}\n` +
+          `🧑‍🔧 ${techCode} · ${tech.name}\n` +
+          `💷 £${oldPrice ?? "—"} → £${newPrice}\n\n` +
+          `━━━━━━━━━━━━━━━━━━━━━━\n` +
+          `What would you like to do next?\n\n` +
+          `SEND UPDATED QUOTE TO CUSTOMER:\n` +
+          `- send updated quote for #${shortRef} to customer\n` +
+          `- send updated ${techShort} quote for #${shortRef} to customer\n\n` +
+          `UPDATE ANOTHER TECHNICIAN PRICE:\n` +
+          `${otherLines}\n\n` +
+          `SEND ALL QUOTES TO CUSTOMER:\n` +
+          `- send all quotes for #${shortRef} to customer\n` +
+          `━━━━━━━━━━━━━━━━━━━━━━`;
+        await sendReply(from, msg, channel);
       };
 
       // Helper: share customer ↔ technician contact details after admin approval.
