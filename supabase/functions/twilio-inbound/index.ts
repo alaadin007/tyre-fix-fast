@@ -762,6 +762,7 @@ async function sendQuoteToCustomer(
       const stripe = createStripeClient("live");
       const session = await stripe.checkout.sessions.create({
         mode: "payment",
+        ui_mode: "hosted",
         line_items: [{
           price_data: {
             currency: "gbp",
@@ -788,14 +789,25 @@ async function sendQuoteToCustomer(
           description: `Tyre Fly — job ${shortRef} — ${jobRow.postcode ?? ""}`.trim(),
         },
       });
+      if (!session?.url) {
+        throw new Error(`Stripe session ${session?.id ?? "?"} returned no checkout url`);
+      }
       const { shortenUrl } = await import("../_shared/short-link.ts");
-      payUrl = await shortenUrl(session.url!, { kind: "job_full_payment", job_id: jobId });
+      const shortened = await shortenUrl(session.url, { kind: "job_full_payment", job_id: jobId });
+      payUrl = shortened || session.url;
       await supabase.from("jobs").update({
         stripe_session_id: session.id,
         stripe_checkout_url: session.url,
       }).eq("id", jobId);
     } catch (e) {
       console.error("stripe checkout (customer quote) failed", e);
+      return {
+        ok: false,
+        error: `Could not generate the payment link for job #${shortRef}. The quote was not sent to the customer.`,
+      };
+    }
+    if (!payUrl) {
+      console.error("sendQuoteToCustomer: payUrl empty after stripe success", { jobId });
       return {
         ok: false,
         error: `Could not generate the payment link for job #${shortRef}. The quote was not sent to the customer.`,
