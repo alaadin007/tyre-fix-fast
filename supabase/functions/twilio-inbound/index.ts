@@ -2038,13 +2038,17 @@ Deno.serve(async (req) => {
             await runBroadcastForRef(ref!);
             return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
           case "BROADCAST_ONE":
+          case "BROADCAST_MULTIPLE_SPECIFIC":
             if (!techId) {
               await sendReply(from, `Which technician should receive job #${ref!.toUpperCase()}? Reply with their name, TECH-ID, or phone.`, channel);
             } else {
               await runBroadcastToOne(ref!, techId);
             }
             return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
-          case "FORWARD_QUOTE":
+          case "FORWARD_QUOTE_ONE":
+          case "FORWARD_QUOTE_MULTIPLE":
+          case "FORWARD_QUOTE_UPDATED":
+          case "UPDATE_TECHNICIAN_PRICE":
             await runSendQuoteForRef(ref!);
             return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
           case "ASSIGN":
