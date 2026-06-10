@@ -11,6 +11,7 @@ import {
   Radio,
   LogOut,
   Sparkles,
+  Bot,
   BarChart3,
   Settings,
 } from "lucide-react";
