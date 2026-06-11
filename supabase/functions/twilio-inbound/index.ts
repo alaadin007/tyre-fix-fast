@@ -2928,7 +2928,8 @@ Deno.serve(async (req) => {
             // so their digits cannot be misread as the price.
             const scrubbed = trimmed
               .replace(/#\s*[0-9a-f]{6,8}\b/gi, " ")
-              .replace(/\btech[-\s]?\d+\b/gi, " ");
+              .replace(/\bt(?:ech)?[-\s]?\d{1,6}\b/gi, " ");
+
             // Prefer £-prefixed amount, then "to <amount>", then "<amount> gbp/pounds".
             let priceStr: string | null = null;
             const mPound = scrubbed.match(/£\s*(\d{1,5}(?:\.\d{1,2})?)/i);
