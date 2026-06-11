@@ -2538,14 +2538,15 @@ Deno.serve(async (req) => {
                   await sendReply(from, `Job #${shortRef} (${job.postcode}) — no approved technicians found nearby.`, channel);
                 } else {
                   const lines = scored.slice(0, 10).map(({ t, miles }: any, idx: number) => {
-                    const dist = miles != null ? `${miles.toFixed(1)} mi away` : "distance unknown";
+                    const dist = miles != null ? `${miles.toFixed(1)} mi` : "Unknown";
                     const code = t.tech_code ?? "TECH-????";
-                    return `${idx + 1}. 🔧 ${code} · ${t.name}\n   📞 ${t.phone} · ${dist}`;
-                  }).join("\n");
-                  const more = scored.length > 10 ? `\n…and ${scored.length - 10} more` : "";
+                    return `${idx + 1}. ${code} · ${t.name}\n   Phone: ${t.phone}\n   Distance: ${dist}`;
+                  }).join("\n\n");
+                  const more = scored.length > 10 ? `\n\n…and ${scored.length - 10} more` : "";
+                  const divider = "─────────────────────────────";
                   await setAdminState("await_broadcast_confirm", job.id);
                   await sendReply(from,
-                    `📋 Job #${shortRef} — Available Technicians (${job.postcode ?? "—"})\n\n${lines}${more}\n\nTotal: ${scored.length} technician(s) available in this area.\n\nTo broadcast to all, reply: "broadcast #${shortRef}"\nTo send to one only, reply: "#${shortRef} send to <name or TECH-ID>"`,
+                    `Job #${shortRef} — Available Technicians (${job.postcode ?? "—"})\n${divider}\n${lines}${more}\n${divider}\nTotal: ${scored.length} technician(s) available\n\nTo broadcast to all: "broadcast #${shortRef}"\nTo send to one only: "#${shortRef} send to [name or TECH-ID]"`,
                     channel,
                   );
                 }
