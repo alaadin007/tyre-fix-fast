@@ -2011,7 +2011,7 @@ Deno.serve(async (req) => {
         const divider = "──────────────────────";
         await setAdminState("await_broadcast_confirm", job.id);
         await sendReply(from,
-          `Job #${shortRef} — Available Technicians (${job.postcode ?? "—"})\n\n${divider}\n\n${lines}${more}\n\n${divider}\n\nTotal: ${scored.length} technician(s) available\n\nBroadcast all:\nbroadcast #${shortRef}\n\nSend to one:\n#${shortRef} send to Hassan\n#${shortRef} send to TECH-0001\n\nSend to few:\n#${shortRef} send to Hassan and Pashma\n#${shortRef} send to TECH-0001 and TECH-0003`,
+          `Job #${shortRef} — Available Technicians (${job.postcode ?? "—"})\n\n${divider}\n\n${lines}${more}\n\n${divider}\n\nTotal: ${scored.length} technician(s) available\n\nBroadcast all:\nbroadcast #${shortRef}\n\nSend to one:\n#${shortRef} send to Hassan\n#${shortRef} send to TECH-0001\n\nSend to few:\n#${shortRef} send to Hassan, Pashma\n#${shortRef} send to TECH-0001, TECH-0003\n#${shortRef} send to TECH-0001, Hassan`,
           channel,
         );
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
@@ -2564,7 +2564,7 @@ Deno.serve(async (req) => {
                   const divider = "──────────────────────";
                   await setAdminState("await_broadcast_confirm", job.id);
                   await sendReply(from,
-                    `Job #${shortRef} — Available Technicians (${job.postcode ?? "—"})\n\n${divider}\n\n${lines}${more}\n\n${divider}\n\nTotal: ${scored.length} technician(s) available\n\nBroadcast all:\nbroadcast #${shortRef}\n\nSend to one:\n#${shortRef} send to Hassan\n#${shortRef} send to TECH-0001\n\nSend to few:\n#${shortRef} send to Hassan and Pashma\n#${shortRef} send to TECH-0001 and TECH-0003`,
+                    `Job #${shortRef} — Available Technicians (${job.postcode ?? "—"})\n\n${divider}\n\n${lines}${more}\n\n${divider}\n\nTotal: ${scored.length} technician(s) available\n\nBroadcast all:\nbroadcast #${shortRef}\n\nSend to one:\n#${shortRef} send to Hassan\n#${shortRef} send to TECH-0001\n\nSend to few:\n#${shortRef} send to Hassan, Pashma\n#${shortRef} send to TECH-0001, TECH-0003\n#${shortRef} send to TECH-0001, Hassan`,
                     channel,
                   );
                 }
