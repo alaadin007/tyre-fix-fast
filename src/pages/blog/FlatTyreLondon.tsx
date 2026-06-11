@@ -1,19 +1,78 @@
 import { Link } from "react-router-dom";
 import { Seo } from "@/components/Seo";
+import heroImg from "@/assets/blog/flat-tyre-london-hero.jpg";
+import fitterImg from "@/assets/blog/flat-tyre-london-fitter.jpg";
 
 export default function FlatTyreLondon() {
-  const jsonLd = {
+  const url = "https://tyrefly.com/blog/flat-tyre-london";
+  const imageUrl = `https://tyrefly.com${heroImg}`;
+  const datePublished = "2026-06-11";
+
+  const articleLd = {
     "@context": "https://schema.org",
     "@type": "BlogPosting",
-    headline:
-      "Flat Tyre in London: Causes, Emergency Steps & Mobile Fitter Guide (2026)",
+    headline: "Flat Tyre in London: Causes, Emergency Steps & Mobile Fitter Guide (2026)",
     description:
       "Complete London guide to flat tyres — causes, what to do in the first 60 seconds, legal duties, and how to get a mobile tyre fitter to you fast.",
-    datePublished: "2026-06-11",
-    dateModified: "2026-06-11",
-    author: { "@type": "Organization", name: "Tyrefly" },
-    publisher: { "@type": "Organization", name: "Tyrefly" },
-    mainEntityOfPage: "https://tyrefly.com/blog/flat-tyre-london",
+    image: [imageUrl],
+    datePublished,
+    dateModified: datePublished,
+    author: { "@type": "Organization", name: "Tyrefly", url: "https://tyrefly.com" },
+    publisher: {
+      "@type": "Organization",
+      name: "Tyrefly",
+      logo: { "@type": "ImageObject", url: "https://tyrefly.com/og.jpg" },
+    },
+    mainEntityOfPage: { "@type": "WebPage", "@id": url },
+  };
+
+  const breadcrumbLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: "https://tyrefly.com/" },
+      { "@type": "ListItem", position: 2, name: "Blog", item: "https://tyrefly.com/blog" },
+      { "@type": "ListItem", position: 3, name: "Flat Tyre London", item: url },
+    ],
+  };
+
+  const faqLd = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: [
+      {
+        "@type": "Question",
+        name: "What should I do immediately after getting a flat tyre in London?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "Don't brake hard. Ease off the accelerator, grip the wheel firmly, indicate and aim for a safe spot (hard shoulder, layby, petrol station or side street). Put hazards on, get everyone out behind a barrier, and call a mobile tyre fitter or recovery.",
+        },
+      },
+      {
+        "@type": "Question",
+        name: "How much does a mobile tyre fitter cost in London?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "Puncture repairs run £35–£55. Replacement tyres fitted at the roadside in London typically cost £85–£130 for budget tyres, £150–£240 for premium brands and £220–£420 for performance or SUV sizes. Out-of-hours work adds £20–£40.",
+        },
+      },
+      {
+        "@type": "Question",
+        name: "Can I keep driving on a flat tyre?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "Only if it's a genuine run-flat tyre (marked RFT, ROF, EMT, ZP or SSR), and only up to 50 miles at 50 mph. Standard tyres driven flat for more than 100–200 metres are destroyed and may damage the alloy and suspension.",
+        },
+      },
+      {
+        "@type": "Question",
+        name: "Is a flat tyre an MOT failure?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "Yes if tread depth drops below 1.6 mm across the central three-quarters of the tread, or if there are visible cuts, bulges or exposed cord. Each illegal tyre carries a £2,500 fine and 3 penalty points.",
+        },
+      },
+    ],
   };
 
   return (
@@ -22,11 +81,12 @@ export default function FlatTyreLondon() {
         title="Flat Tyre London: Causes & Emergency Steps (2026 Guide)"
         description="What to do if you get a flat tyre in London — causes, first 60 seconds, legal duties, mobile fitter costs and how to avoid roadside scams."
         canonical="/blog/flat-tyre-london"
-        jsonLd={jsonLd}
+        ogImage={imageUrl}
+        jsonLd={[articleLd, breadcrumbLd, faqLd]}
       />
 
       <article className="max-w-3xl mx-auto px-6 py-16">
-        <nav className="text-sm text-muted-foreground mb-8">
+        <nav aria-label="Breadcrumb" className="text-sm text-muted-foreground mb-8">
           <Link to="/" className="hover:text-foreground">Home</Link>
           <span className="mx-2">/</span>
           <Link to="/blog" className="hover:text-foreground">Blog</Link>
@@ -40,12 +100,26 @@ export default function FlatTyreLondon() {
         <h1 className="text-4xl md:text-5xl font-semibold tracking-tight mb-6">
           Flat Tyre in London: Causes, Emergency Steps & Mobile Fitter Guide
         </h1>
-        <p className="text-lg text-muted-foreground mb-10">
+        <p className="text-lg text-muted-foreground mb-8">
           You're on the A406 in the rain, the steering pulls, and a flapping noise starts under the
           wheel arch. Welcome to the most common roadside problem in the capital. This guide walks
           you through exactly what to do — from the first 60 seconds to getting a mobile fitter on
           the way — written by a team that does this every night across all 33 London boroughs.
         </p>
+
+        <figure className="mb-10 -mx-6 md:mx-0">
+          <img
+            src={heroImg}
+            alt="Flat car tyre on a wet London street at night with a red double-decker bus passing in the background"
+            width={1600}
+            height={896}
+            className="w-full h-auto md:rounded-2xl"
+            fetchPriority="high"
+          />
+          <figcaption className="text-xs text-muted-foreground mt-2 px-6 md:px-0">
+            Most London flats happen on wet nights — visibility drops and potholes fill with water.
+          </figcaption>
+        </figure>
 
         <div className="prose prose-neutral dark:prose-invert max-w-none space-y-6 leading-relaxed">
           <h2 className="text-2xl font-semibold mt-12">Why London is brutal on tyres</h2>
