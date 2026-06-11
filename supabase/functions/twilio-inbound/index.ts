@@ -731,6 +731,20 @@ function jobRefOf(j: any): string {
   return j?.id ? `#${String(j.id).slice(0, 6).toUpperCase()}` : "";
 }
 
+function normalizeJobReference(raw: string | null | undefined): string | null {
+  const cleaned = String(raw ?? "").trim().replace(/^#/, "").toUpperCase();
+  const match = cleaned.match(/^([0-9A-F]{6})[0-9A-F]{0,2}$/);
+  return match ? match[1] : null;
+}
+
+function jobRefUuidBounds(shortRef: string): { lower: string; upper: string } {
+  const ref = shortRef.toLowerCase();
+  return {
+    lower: `${ref}00-0000-0000-0000-000000000000`,
+    upper: `${ref}ff-ffff-ffff-ffff-ffffffffffff`,
+  };
+}
+
 const ACTIVE_JOB_STATUSES = new Set([
   "intake_pending", "intake_complete", "broadcasting", "awaiting_approval",
   "pending", "awaiting_payment", "assigned", "en_route", "on_site", "in_progress",
@@ -1235,36 +1249,39 @@ Deno.serve(async (req) => {
     {
       const doneMatch = body.trim().match(/^\s*done\s+#?([0-9a-f]{6,12})\s*$/i);
       if (doneMatch) {
-        const ref = doneMatch[1].toLowerCase();
+          const ref = normalizeJobReference(doneMatch[1]);
         const { data: tech } = await supabase
           .from("technicians")
           .select("id, name, phone, approval_status")
           .eq("phone", from)
           .maybeSingle();
         if (tech && tech.approval_status === "approved") {
+            const bounds = ref ? jobRefUuidBounds(ref) : null;
           const { data: jobMatches } = await supabase
             .from("jobs")
             .select("id, status, customer_phone, customer_name, assigned_technician_id, created_at")
+              .gte("id", bounds?.lower ?? "00000000-0000-0000-0000-000000000000")
+              .lte("id", bounds?.upper ?? "ffffffff-ffff-ffff-ffff-ffffffffffff")
             .order("created_at", { ascending: false })
-            .limit(500);
-          const jm = (jobMatches ?? []).filter((j: any) =>
-            String(j.id).toLowerCase().startsWith(ref)
-          );
+              .limit(5);
+           const jm = (jobMatches ?? []).filter((j: any) =>
+             ref && String(j.id).slice(0, 6).toUpperCase() === ref
+           );
           if (jm.length === 0) {
-            await sendReply(from, `No job found for ref "${ref.toUpperCase()}". Please double-check the reference.`, channel);
+             await sendReply(from, `No job found for ref "${ref ?? doneMatch[1].toUpperCase()}". Please double-check the reference.`, channel);
             return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
           }
           if (jm.length > 1) {
-            await sendReply(from, `Multiple jobs match "${ref.toUpperCase()}" — please use the full reference shown in your job message.`, channel);
+             await sendReply(from, `Multiple jobs match "${ref}" — please use the full 6-character reference shown in your job message.`, channel);
             return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
           }
           const job: any = jm[0];
           if (job.assigned_technician_id && job.assigned_technician_id !== tech.id) {
-            await sendReply(from, `Job ${ref.toUpperCase()} isn't assigned to you. Please contact admin if this is wrong.`, channel);
+             await sendReply(from, `Job ${ref} isn't assigned to you. Please contact admin if this is wrong.`, channel);
             return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
           }
           if (job.status === "completed" || job.status === "closed" || job.status === "closed_pending_review") {
-            await sendReply(from, `Job ${ref.toUpperCase()} is already closed ✅`, channel);
+             await sendReply(from, `Job ${ref} is already closed ✅`, channel);
             return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
           }
           await supabase
@@ -1274,18 +1291,18 @@ Deno.serve(async (req) => {
           await supabase.from("ops_alerts").insert({
             level: "info",
             title: "Job completed by technician",
-            body: `${tech.name} marked job ${ref.toUpperCase()} as done.`,
+             body: `${tech.name} marked job ${ref} as done.`,
             job_id: job.id,
           });
           await sendReply(
             from,
-            `✅ Job ${ref.toUpperCase()} closed. Thanks ${tech.name}! 👏`,
+             `✅ Job ${ref} closed. Thanks ${tech.name}! 👏`,
             channel,
           );
           if (job.customer_phone) {
             await sendReply(
               job.customer_phone,
-              `✅ Your tyre service is complete — Job #${ref.toUpperCase()}.\n\nThanks for choosing Tyre Fly! 🛞`,
+               `✅ Your tyre service is complete — Job #${ref}.\n\nThanks for choosing Tyre Fly! 🛞`,
               "whatsapp",
             );
           }
@@ -1433,12 +1450,18 @@ Deno.serve(async (req) => {
         });
       };
       const findJobByRef = async (ref: string) => {
+        const shortRef = normalizeJobReference(ref);
+        if (!shortRef) return [];
+        const bounds = jobRefUuidBounds(shortRef);
         const { data: jobMatches } = await supabase
           .from("jobs")
           .select("id,customer_name,vehicle_reg,postcode,lat,lng,issue_type,status,created_at")
-          .order("created_at", { ascending: false }).limit(500);
+          .gte("id", bounds.lower)
+          .lte("id", bounds.upper)
+          .order("created_at", { ascending: false })
+          .limit(5);
         return (jobMatches ?? []).filter((j: any) =>
-          String(j.id).toLowerCase().startsWith(ref.toLowerCase()));
+          String(j.id).slice(0, 6).toUpperCase() === shortRef);
       };
       const clearAdminState = () =>
         supabase.from("admin_states").delete().eq("phone", fromN);
@@ -2496,7 +2519,6 @@ Deno.serve(async (req) => {
 
       // ---- Shared helpers ----
       const refRegexBoundary = /\b([0-9a-f]{6,8})\b/i;
-      const ACTIVE_STATUSES = ["new", "intake_complete", "matching", "broadcasting", "quoting", "quoted", "fee_pending", "confirmed"];
       const formatRelative = (iso: string) => {
         const d = Date.now() - new Date(iso).getTime();
         const mins = Math.round(d / 60000);
@@ -2509,22 +2531,27 @@ Deno.serve(async (req) => {
       const statusBadge = (s: string) => {
         const map: Record<string, string> = {
           new: "🔴 NEW", intake_complete: "🔴 NEW",
+          awaiting_approval: "🟡 AWAITING APPROVAL",
+          pending: "🟠 PENDING REVIEW",
           matching: "🟡 MATCHING", broadcasting: "🟡 BROADCASTED", quoting: "🟡 QUOTING",
           quoted: "🟠 QUOTED",
-          fee_pending: "🟣 AWAITING PAYMENT",
-          confirmed: "🟢 ASSIGNED", in_progress: "🟢 IN PROGRESS",
+          fee_pending: "🟣 AWAITING PAYMENT", awaiting_payment: "🟣 AWAITING PAYMENT",
+          confirmed: "🟢 ASSIGNED", assigned: "🟢 ASSIGNED", en_route: "🟢 EN ROUTE",
+          on_site: "🟢 ON SITE", in_progress: "🟢 IN PROGRESS",
           completed: "✅ COMPLETED", cancelled: "⚫ CANCELLED",
         };
         return map[s] ?? s.toUpperCase();
       };
-      const lookupJobByRef = async (ref: string) => {
+      const listActiveJobs = async (limit = 50) => {
         const { data } = await supabase
           .from("jobs")
-          .select("*")
+          .select("id, customer_name, postcode, issue_type, status, created_at")
+          .or("status.is.null,status.not.in.(completed,cancelled,closed)")
           .order("created_at", { ascending: false })
-          .limit(500);
-        return (data ?? []).filter((j: any) => String(j.id).toLowerCase().startsWith(ref.toLowerCase()));
+          .limit(limit);
+        return data ?? [];
       };
+      const lookupJobByRef = findJobByRef;
 
       // ---- Intent 6 — JOB_STATUS_CHECK ----
       const runStatusForRef = async (ref: string) => {
@@ -2579,12 +2606,7 @@ Deno.serve(async (req) => {
 
       // ---- Intent 7 — LIST_ALL_ACTIVE_JOBS ----
       const runListActiveJobs = async () => {
-        const { data: jobs } = await supabase
-          .from("jobs")
-          .select("id, customer_name, postcode, status, created_at")
-          .in("status", ACTIVE_STATUSES)
-          .order("created_at", { ascending: false })
-          .limit(50);
+        const jobs = await listActiveJobs(50);
         if (!jobs || jobs.length === 0) {
           await sendReply(from, "📋 No active jobs right now.", channel);
           return;
@@ -2594,13 +2616,13 @@ Deno.serve(async (req) => {
           const key = statusBadge(j.status ?? "new");
           (groups[key] ||= []).push(j);
         }
-        const order = ["🔴 NEW", "🟡 MATCHING", "🟡 BROADCASTED", "🟡 QUOTING", "🟠 QUOTED", "🟣 AWAITING PAYMENT", "🟢 ASSIGNED"];
+        const order = ["🔴 NEW", "🟡 AWAITING APPROVAL", "🟠 PENDING REVIEW", "🟡 MATCHING", "🟡 BROADCASTED", "🟡 QUOTING", "🟠 QUOTED", "🟣 AWAITING PAYMENT", "🟢 ASSIGNED", "🟢 EN ROUTE", "🟢 ON SITE", "🟢 IN PROGRESS"];
         const sections: string[] = [];
         for (const k of [...order, ...Object.keys(groups).filter((g) => !order.includes(g))]) {
           const arr = groups[k];
           if (!arr || !arr.length) continue;
           const lines = arr.slice(0, 10).map((j: any) =>
-            `   • #${String(j.id).slice(0, 6).toUpperCase()} · ${j.postcode ?? "—"} · ${j.customer_name ?? "—"} · ${formatRelative(j.created_at)}`
+            `   • #${String(j.id).slice(0, 6).toUpperCase()} · ${j.postcode ?? "—"} · ${j.customer_name ?? "—"} · ${j.issue_type ?? "—"} · ${formatRelative(j.created_at)}`
           ).join("\n");
           sections.push(`${k} (${arr.length})\n${lines}`);
         }
@@ -2839,13 +2861,7 @@ Deno.serve(async (req) => {
             );
             return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
           }
-          const { data: openJobs } = await supabase
-            .from("jobs")
-            .select("id, status, postcode, customer_name, created_at")
-            .in("status", ACTIVE_STATUSES)
-            .order("created_at", { ascending: false })
-            .limit(10);
-          const list = openJobs ?? [];
+          const list = await listActiveJobs(10);
           if (list.length === 0) {
             await sendReply(from, `There are no active jobs right now.`, channel);
             return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
