@@ -31,6 +31,8 @@ import CommandCenter from "./pages/admin/CommandCenter.tsx";
 import ReportsPage from "./pages/admin/ReportsPage.tsx";
 import SettingsPage from "./pages/admin/SettingsPage.tsx";
 import Dash2 from "./pages/Dash2.tsx";
+import Blog from "./pages/Blog.tsx";
+import FlatTyreLondon from "./pages/blog/FlatTyreLondon.tsx";
 
 const queryClient = new QueryClient();
 
@@ -69,6 +71,8 @@ const App = () => (
         <Route path="/console" element={<Console />} />
         <Route path="/p/:code" element={<ShortLinkRedirect />} />
         <Route path="/dash2" element={<Dash2 />} />
+        <Route path="/blog" element={<Blog />} />
+        <Route path="/blog/flat-tyre-london" element={<FlatTyreLondon />} />
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
         <Route path="*" element={<NotFound />} />
       </Routes>
