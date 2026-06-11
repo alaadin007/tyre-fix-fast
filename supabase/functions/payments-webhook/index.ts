@@ -171,7 +171,7 @@ async function handleCheckoutCompleted(session: any) {
     `🔧 Technician: ${techName}${techPhone !== "—" ? ` (${techPhone})` : ""}`,
     ``,
     `Ready to connect both parties.`,
-    `Reply YES #${ref} to preview assignment.`,
+    `Reply YES #${ref} to send details to both parties now.`,
   ].join("\n");
 
   for (const to of masterNumbers) {
