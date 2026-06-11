@@ -77,16 +77,16 @@ function buildActionSection(jobRef: string, quotes: any[], techsById: Map<string
   lines.push("3️⃣ *Send updated quote after price change*");
   lines.push(`✓ send updated quote for #${jobRef} to customer`);
 
-  if (multiple) {
-    const secondShort = second?.shortName ?? "Omar";
-    lines.push("");
-    lines.push("4️⃣ *Send selected quotes only*");
-    lines.push(`✓ send ${first.shortName} and ${secondShort} quotes for #${jobRef} to customer`);
-    lines.push(`✓ send ${first.code} quote for #${jobRef} to customer`);
-    lines.push("");
-    lines.push("5️⃣ *Send all quotes*");
-    lines.push(`✓ send all quotes for #${jobRef} to customer`);
-  }
+  const secondShort = second?.shortName ?? "Bilal";
+  const secondCode = second?.code ?? "TECH-0004";
+  lines.push("");
+  lines.push("4️⃣ *Send selected quotes only*");
+  lines.push(`✓ send ${first.shortName} and ${secondShort} quotes for #${jobRef} to customer`);
+  lines.push(`✓ send ${first.code} quote for #${jobRef} to customer`);
+  lines.push("");
+  lines.push("5️⃣ *Send all quotes*");
+  lines.push(`✓ send all quotes for #${jobRef} to customer`);
+
 
   return lines;
 }
