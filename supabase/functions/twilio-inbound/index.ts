@@ -1779,7 +1779,7 @@ Deno.serve(async (req) => {
             await sendReply(from, `Multiple technicians match "${identifier}":\n${lines}\n\nPlease retry with the TECH-ID.`, channel);
             return;
           }
-          await runSendQuoteForJobId(jobIdFull, { technicianId: techs[0].id });
+          await runSendQuoteForJobId(jobIdFull, { technicianId: techs[0].id, force });
           return;
         }
 
