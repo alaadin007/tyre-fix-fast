@@ -1749,7 +1749,12 @@ Deno.serve(async (req) => {
       // If admin named a technician, send that tech's quote. Otherwise pick
       // the quote with the latest price_updated_at. If multiple updates
       // happened within 5 minutes of each other, ask admin to pick.
-      const runSendUpdatedQuoteForRef = async (ref: string, identifier?: string | null) => {
+      const runSendUpdatedQuoteForRef = async (
+        ref: string,
+        identifier?: string | null,
+        runOpts?: { force?: boolean },
+      ) => {
+        const force = !!runOpts?.force;
         const matches = await findJobByRef(ref);
         if (matches.length === 0) {
           await sendReply(from, `No job found for ref #${ref.toUpperCase()}. Quote not sent.`, channel);
