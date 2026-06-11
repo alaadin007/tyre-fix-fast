@@ -185,6 +185,7 @@ export type Database = {
           customer_email: string | null
           customer_name: string
           customer_phone: string
+          customer_quote_sent_at: string | null
           damage_confidence: string | null
           damage_summary: string | null
           damage_type: string | null
@@ -227,6 +228,7 @@ export type Database = {
           customer_email?: string | null
           customer_name: string
           customer_phone: string
+          customer_quote_sent_at?: string | null
           damage_confidence?: string | null
           damage_summary?: string | null
           damage_type?: string | null
@@ -269,6 +271,7 @@ export type Database = {
           customer_email?: string | null
           customer_name?: string
           customer_phone?: string
+          customer_quote_sent_at?: string | null
           damage_confidence?: string | null
           damage_summary?: string | null
           damage_type?: string | null

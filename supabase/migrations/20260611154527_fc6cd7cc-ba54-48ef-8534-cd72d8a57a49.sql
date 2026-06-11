@@ -1,0 +1,1 @@
+ALTER TABLE public.jobs ADD COLUMN IF NOT EXISTS customer_quote_sent_at TIMESTAMPTZ;
