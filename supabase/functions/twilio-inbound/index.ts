@@ -2283,6 +2283,33 @@ Deno.serve(async (req) => {
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
       }
 
+      // Pending-context carry-forward: a bare job ref (#E2C9FE) sent right
+      // after the bot asked "please include the job reference" must complete
+      // the ORIGINAL intent (broadcast to TECH-0001, send quote to X, update
+      // price for Y) instead of being treated as a fresh list/broadcast-all.
+      if (refOnlyMatch && adminState?.step) {
+        const step = adminState.step;
+        const bareRef = refOnlyMatch[1];
+        if (step.startsWith("await_ref_for_broadcast_to:")) {
+          const ident = step.slice("await_ref_for_broadcast_to:".length);
+          await clearAdminState();
+          await runBroadcastToOne(bareRef, ident);
+          return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+        }
+        if (step.startsWith("await_ref_for_send_quote_to:")) {
+          const ident = step.slice("await_ref_for_send_quote_to:".length);
+          await clearAdminState();
+          await runSendQuoteForRef(bareRef, ident);
+          return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+        }
+        if (step.startsWith("await_ref_for_send_updated_quote_to:")) {
+          const ident = step.slice("await_ref_for_send_updated_quote_to:".length);
+          await clearAdminState();
+          await runSendUpdatedQuoteForRef(bareRef, ident);
+          return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+        }
+      }
+
       const refFromMsg =
         (yesPlusRefMatch ? yesPlusRefMatch[1] : null) ??
         (refOnlyMatch ? refOnlyMatch[1] : null);
@@ -2851,8 +2878,31 @@ Deno.serve(async (req) => {
         const needsRef = ["SHOW_TECHNICIAN_LIST", "BROADCAST_ALL", "BROADCAST_ONE", "BROADCAST_MULTIPLE_SPECIFIC", "FORWARD_QUOTE_ONE", "FORWARD_QUOTE_MULTIPLE", "FORWARD_QUOTE_UPDATED", "UPDATE_TECHNICIAN_PRICE", "ASSIGN", "STATUS", "CANCEL", "CONFIRM_CANCEL"].includes(classification.intent);
         const isBroadcastIntent = ["BROADCAST_ALL", "BROADCAST_ONE", "BROADCAST_MULTIPLE_SPECIFIC"].includes(classification.intent);
         if (needsRef && !ref) {
-          // For broadcast commands without a job reference, always ask for the
-          // reference directly instead of guessing from active jobs.
+          // Pending-context carry-forward: if we already have a technician
+          // identifier (or a price for UPDATE_TECHNICIAN_PRICE), stash it so
+          // the admin's next message (a bare job ref like #E2C9FE) completes
+          // the original intent instead of being reclassified from scratch.
+          if (isBroadcastIntent && techId) {
+            await setAdminState(`await_ref_for_broadcast_to:${techId}`, null);
+            await sendReply(
+              from,
+              `Please include the job reference number for this broadcast to ${techId}. Example:\n\n#E2C9FE\n\nOr if you are unsure of the reference:\n"show active jobs"`,
+              channel,
+            );
+            return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+          }
+          if (["FORWARD_QUOTE_ONE", "FORWARD_QUOTE_MULTIPLE", "FORWARD_QUOTE_UPDATED"].includes(classification.intent) && techId) {
+            const stepName = classification.intent === "FORWARD_QUOTE_UPDATED"
+              ? `await_ref_for_send_updated_quote_to:${techId}`
+              : `await_ref_for_send_quote_to:${techId}`;
+            await setAdminState(stepName, null);
+            await sendReply(
+              from,
+              `Please include the job reference number to send the quote for ${techId}. Example:\n\n#E2C9FE\n\nOr if you are unsure of the reference:\n"show active jobs"`,
+              channel,
+            );
+            return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+          }
           if (isBroadcastIntent) {
             await sendReply(
               from,
