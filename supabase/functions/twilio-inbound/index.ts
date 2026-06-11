@@ -2244,6 +2244,13 @@ Deno.serve(async (req) => {
         // unknown statuses) → use the existing list/broadcast confirmation flow.
       }
 
+      // RESEND #REF — admin override to bypass the 5-minute duplicate-send guard.
+      const resendMatch = trimmed.match(/^\s*resend\s+#?([0-9a-f]{6})\s*$/i);
+      if (resendMatch) {
+        await runSendQuoteForRef(resendMatch[1], null, { force: true });
+        return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+      }
+
       const refFromMsg =
         (yesPlusRefMatch ? yesPlusRefMatch[1] : null) ??
         (refOnlyMatch ? refOnlyMatch[1] : null);
