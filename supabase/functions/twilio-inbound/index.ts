@@ -800,7 +800,7 @@ async function answerCustomerJobQuestion(openJobs: any[], question: string): Pro
 async function sendQuoteToCustomer(
   supabase: any,
   jobId: string,
-  opts?: { quoteId?: string; technicianId?: string },
+  opts?: { quoteId?: string; technicianId?: string; multiPending?: boolean },
 ): Promise<{ ok: boolean; error?: string; price?: number; customerPhone?: string; paymentLinkMissing?: boolean; stripeError?: string }> {
 
   try {
