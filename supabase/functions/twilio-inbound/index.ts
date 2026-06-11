@@ -2005,7 +2005,7 @@ Deno.serve(async (req) => {
         const lines = scored.slice(0, 10).map(({ t, miles }: any, idx: number) => {
           const dist = miles != null ? `${miles.toFixed(1)} mi` : "Unknown";
           const code = t.tech_code ?? "TECH-????";
-          return `${idx + 1}. ${code} · ${t.name}\n\n   Phone: ${t.phone}\n\n   Distance: ${dist}`;
+          return `${idx + 1}. ${code} · ${t.name}\n   Phone: ${t.phone}\n   Distance: ${dist}`;
         }).join("\n\n");
         const more = scored.length > 10 ? `\n\n…and ${scored.length - 10} more` : "";
         const divider = "──────────────────────";
@@ -2540,7 +2540,7 @@ Deno.serve(async (req) => {
                   const lines = scored.slice(0, 10).map(({ t, miles }: any, idx: number) => {
                     const dist = miles != null ? `${miles.toFixed(1)} mi` : "Unknown";
                     const code = t.tech_code ?? "TECH-????";
-                    return `${idx + 1}. ${code} · ${t.name}\n\n   Phone: ${t.phone}\n\n   Distance: ${dist}`;
+                    return `${idx + 1}. ${code} · ${t.name}\n   Phone: ${t.phone}\n   Distance: ${dist}`;
                   }).join("\n\n");
                   const more = scored.length > 10 ? `\n\n…and ${scored.length - 10} more` : "";
                   const divider = "──────────────────────";
