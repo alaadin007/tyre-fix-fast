@@ -1826,7 +1826,7 @@ Deno.serve(async (req) => {
           return;
         }
 
-        await runSendQuoteForJobId(jobIdFull, { quoteId: latest.id });
+        await runSendQuoteForJobId(jobIdFull, { quoteId: latest.id, force });
       };
 
 
