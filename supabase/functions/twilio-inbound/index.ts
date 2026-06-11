@@ -1794,7 +1794,7 @@ Deno.serve(async (req) => {
         const list = updatedQuotes ?? [];
         if (list.length === 0) {
           // Fall back to default behaviour (latest pending/accepted quote)
-          await runSendQuoteForJobId(jobIdFull);
+          await runSendQuoteForJobId(jobIdFull, { force });
           return;
         }
 
