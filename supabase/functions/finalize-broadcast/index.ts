@@ -56,51 +56,38 @@ function buildActionSection(jobRef: string, quotes: any[], techsById: Map<string
   const multiple = techMeta.length > 1;
 
   const lines: string[] = [];
-  lines.push("━━━━━━━━━━━━━━━━━━━━━━");
   lines.push("What would you like to do next?");
   lines.push("");
 
-  const pushSection = (heading: string, bullets: string[]) => {
-    lines.push(heading);
-    bullets.forEach((b, i) => {
-      if (i > 0) lines.push("");
-      lines.push(b);
-    });
-    lines.push("");
-  };
+  lines.push("1️⃣ *Send quote to customer*");
+  lines.push(`✓ send quote for #${jobRef} to customer`);
+  lines.push(`✓ send ${first.shortName} quote for #${jobRef} to customer`);
+  lines.push("");
 
-  pushSection("SEND QUOTE TO CUSTOMER:", [
-    `· send quote for #${jobRef} to customer`,
-    `· send ${first.shortName} quote for #${jobRef} to customer`,
-  ]);
-
-  const updateBullets = [
-    `· By name:    update ${first.shortName} price for #${jobRef} to £45`,
-    `· By tech ID: update ${first.code} price for #${jobRef} to £45`,
-  ];
+  lines.push("2️⃣ *Update price first*");
+  lines.push(`✓ By name:\n   update ${first.shortName} price for #${jobRef} to £45`);
+  lines.push(`✓ By tech ID:\n   update ${first.code} price for #${jobRef} to £45`);
   if (multiple && second) {
-    updateBullets.push(
-      `· Multiple:   update ${first.shortName} to £45 and ${second.shortName} to £30 for #${jobRef}\n              update ${first.code} to £45 and ${second.code} to £30 for #${jobRef}`,
+    lines.push(
+      `✓ Multiple:\n   update ${first.shortName} to £45 and ${second.shortName} to £30 for #${jobRef}\n   update ${first.code} to £45 and ${second.code} to £30 for #${jobRef}`,
     );
   }
-  pushSection("UPDATE PRICE FIRST:", updateBullets);
+  lines.push("");
 
-  pushSection("SEND UPDATED QUOTE AFTER PRICE CHANGE:", [
-    `· send updated quote for #${jobRef} to customer`,
-  ]);
+  lines.push("3️⃣ *Send updated quote after price change*");
+  lines.push(`✓ send updated quote for #${jobRef} to customer`);
 
   if (multiple) {
     const secondShort = second?.shortName ?? "Omar";
-    pushSection("SEND SELECTED QUOTES ONLY:", [
-      `· send ${first.shortName} and ${secondShort} quotes for #${jobRef} to customer`,
-      `· send ${first.code} quote for #${jobRef} to customer`,
-    ]);
-    pushSection("SEND ALL QUOTES:", [
-      `· send all quotes for #${jobRef} to customer`,
-    ]);
+    lines.push("");
+    lines.push("4️⃣ *Send selected quotes only*");
+    lines.push(`✓ send ${first.shortName} and ${secondShort} quotes for #${jobRef} to customer`);
+    lines.push(`✓ send ${first.code} quote for #${jobRef} to customer`);
+    lines.push("");
+    lines.push("5️⃣ *Send all quotes*");
+    lines.push(`✓ send all quotes for #${jobRef} to customer`);
   }
 
-  lines.push("━━━━━━━━━━━━━━━━━━━━━━");
   return lines;
 }
 
