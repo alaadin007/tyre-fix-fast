@@ -33,6 +33,8 @@ import SettingsPage from "./pages/admin/SettingsPage.tsx";
 import Dash2 from "./pages/Dash2.tsx";
 import Blog from "./pages/Blog.tsx";
 import FlatTyreLondon from "./pages/blog/FlatTyreLondon.tsx";
+import RunFlatTyresUk from "./pages/blog/RunFlatTyresUk.tsx";
+import TpmsWarningLight from "./pages/blog/TpmsWarningLight.tsx";
 
 const queryClient = new QueryClient();
 
@@ -73,6 +75,8 @@ const App = () => (
         <Route path="/dash2" element={<Dash2 />} />
         <Route path="/blog" element={<Blog />} />
         <Route path="/blog/flat-tyre-london" element={<FlatTyreLondon />} />
+        <Route path="/blog/run-flat-tyres-uk-guide" element={<RunFlatTyresUk />} />
+        <Route path="/blog/tpms-warning-light" element={<TpmsWarningLight />} />
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
         <Route path="*" element={<NotFound />} />
       </Routes>
