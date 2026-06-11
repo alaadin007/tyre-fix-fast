@@ -288,18 +288,21 @@ Deno.serve(async (req) => {
       // Reliable fallback: enqueue a scheduled task so the runner (pg_cron,
       // every minute) will invoke finalize-broadcast even if the in-process
       // timer below gets dropped after the HTTP response.
+      // Add a 5s buffer beyond the 90s window so any in-flight quote saves
+      // have time to commit before the summary query runs.
+      const FINALIZE_BUFFER_MS = 5_000;
       await supabase.from("scheduled_tasks").insert({
         kind: "finalize_broadcast",
         payload: { job_id },
-        run_at: new Date(Date.now() + QUOTE_WINDOW_MS).toISOString(),
+        run_at: new Date(Date.now() + QUOTE_WINDOW_MS + FINALIZE_BUFFER_MS).toISOString(),
       });
 
-      // Primary path: fire finalize-broadcast ~92s after broadcast.
+      // Primary path: fire finalize-broadcast ~95s after broadcast.
       // finalize-broadcast is idempotent (quote_summary_sent_at marker), so
       // whichever runs first wins.
       const finalize = (async () => {
         try {
-          await new Promise((r) => setTimeout(r, QUOTE_WINDOW_MS + 2_000));
+          await new Promise((r) => setTimeout(r, QUOTE_WINDOW_MS + FINALIZE_BUFFER_MS));
           await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/finalize-broadcast`, {
             method: "POST",
             headers: {
