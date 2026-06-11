@@ -2818,7 +2818,18 @@ Deno.serve(async (req) => {
 
         // Rule 1 & 2: if ref missing for a per-job intent, count active jobs.
         const needsRef = ["SHOW_TECHNICIAN_LIST", "BROADCAST_ALL", "BROADCAST_ONE", "BROADCAST_MULTIPLE_SPECIFIC", "FORWARD_QUOTE_ONE", "FORWARD_QUOTE_MULTIPLE", "FORWARD_QUOTE_UPDATED", "UPDATE_TECHNICIAN_PRICE", "ASSIGN", "STATUS", "CANCEL", "CONFIRM_CANCEL"].includes(classification.intent);
+        const isBroadcastIntent = ["BROADCAST_ALL", "BROADCAST_ONE", "BROADCAST_MULTIPLE_SPECIFIC"].includes(classification.intent);
         if (needsRef && !ref) {
+          // For broadcast commands without a job reference, always ask for the
+          // reference directly instead of guessing from active jobs.
+          if (isBroadcastIntent) {
+            await sendReply(
+              from,
+              `Please include the job reference number for this broadcast. Example:\n\n#E2C9FE send to TECH-0001, TECH-0002\n\nOr if you are unsure of the reference:\n"show active jobs"`,
+              channel,
+            );
+            return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+          }
           const { data: openJobs } = await supabase
             .from("jobs")
             .select("id, status, postcode, customer_name, created_at")
@@ -2847,6 +2858,7 @@ Deno.serve(async (req) => {
           );
           return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
         }
+
 
         switch (classification.intent) {
           case "SHOW_TECHNICIAN_LIST":
