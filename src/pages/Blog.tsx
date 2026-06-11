@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { Seo } from "@/components/Seo";
+import flatTyreHero from "@/assets/blog/flat-tyre-london-hero.jpg";
 
 const posts = [
   {
@@ -9,6 +10,7 @@ const posts = [
       "A complete London driver's guide to flat tyres — why they happen, what to do in the first 60 seconds, when to call a mobile fitter, and how to avoid getting stranded on the North Circular at 2am.",
     date: "2026-06-11",
     readMinutes: 12,
+    image: flatTyreHero,
   },
 ];
 
@@ -33,6 +35,14 @@ export default function Blog() {
           {posts.map((p) => (
             <li key={p.slug} className="border-b border-border pb-8">
               <Link to={`/blog/${p.slug}`} className="group block">
+                <img
+                  src={p.image}
+                  alt={p.title}
+                  width={1600}
+                  height={896}
+                  loading="lazy"
+                  className="w-full h-auto rounded-2xl mb-5"
+                />
                 <time className="text-xs text-muted-foreground">
                   {new Date(p.date).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })} · {p.readMinutes} min read
                 </time>
