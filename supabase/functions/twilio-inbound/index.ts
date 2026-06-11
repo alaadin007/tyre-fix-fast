@@ -3041,14 +3041,31 @@ Deno.serve(async (req) => {
       let draft: any = existingDrafts?.[0] ?? null;
 
       if (!draft) {
-        const { data: inserted } = await supabase.from("quotes").insert({
+        const { data: inserted, error: insertErr } = await supabase.from("quotes").insert({
           job_id: alloc.job_id,
           technician_id: tech.id,
           status: "collecting",
           raw_message: body,
           confidence: parsed.confidence,
         }).select("*").single();
+        if (insertErr) {
+          console.error("quote draft insert FAILED", {
+            job_id: alloc.job_id,
+            technician_id: tech.id,
+            error: insertErr,
+          });
+        }
         draft = inserted;
+      }
+
+      if (!draft) {
+        console.error("quote draft missing after insert attempt — aborting", {
+          job_id: alloc.job_id,
+          technician_id: tech.id,
+          raw_body: body,
+        });
+        await sendReply(from, "Sorry — we hit a snag saving your quote. Please resend price, ETA and your live location.", channel);
+        return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
       }
 
       // Merge new fields into the draft (don't overwrite previously-collected values with null).
@@ -3092,8 +3109,9 @@ Deno.serve(async (req) => {
       const pinLat = quoteLocation.lat;
       const pinLng = quoteLocation.lng;
 
-      // Persist whatever we've collected so far.
-      await supabase.from("quotes").update({
+      // Persist whatever we've collected so far. Log any failure loudly so it
+      // can't silently leave price_gbp / eta_minutes NULL on a "completed" quote.
+      const { error: persistErr } = await supabase.from("quotes").update({
         price_gbp: mergedPrice,
         callout_fee_gbp: mergedCallout,
         eta_minutes: mergedEta,
@@ -3102,6 +3120,27 @@ Deno.serve(async (req) => {
         raw_message: ((draft.raw_message ? draft.raw_message + " | " : "") + body).slice(0, 2000),
         confidence: parsed.confidence,
       }).eq("id", draft.id);
+      if (persistErr) {
+        console.error("quote draft update FAILED", {
+          quote_id: draft.id,
+          job_id: alloc.job_id,
+          technician_id: tech.id,
+          mergedPrice,
+          mergedEta,
+          error: persistErr,
+        });
+      } else {
+        console.log("quote draft updated", {
+          quote_id: draft.id,
+          job_id: alloc.job_id,
+          technician_id: tech.id,
+          price_gbp: mergedPrice,
+          eta_minutes: mergedEta,
+          hasPin,
+          ai_confidence: parsed.confidence,
+          raw_body: body,
+        });
+      }
 
       if (!(hasPrice && hasEta && hasPin)) {
         const missing: string[] = [];
