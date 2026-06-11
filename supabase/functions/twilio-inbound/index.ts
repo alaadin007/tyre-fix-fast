@@ -1511,14 +1511,48 @@ Deno.serve(async (req) => {
       };
 
       // Helper: actually push the technician's quote to the customer.
+      // Returns true if a recent customer quote send should BLOCK this attempt.
+      // Replies to the admin with a "already sent" message + RESEND hint.
+      const customerQuoteRecentlyBlocked = async (
+        jobIdFull: string,
+        shortRef: string,
+        force: boolean,
+      ): Promise<boolean> => {
+        if (force) return false;
+        const { data: jobRow } = await supabase
+          .from("jobs")
+          .select("customer_quote_sent_at")
+          .eq("id", jobIdFull)
+          .maybeSingle();
+        const ts = jobRow?.customer_quote_sent_at;
+        if (!ts) return false;
+        const ageMs = Date.now() - new Date(ts).getTime();
+        if (ageMs >= 5 * 60 * 1000) return false;
+        const sentTime = new Date(ts).toLocaleTimeString("en-GB", {
+          hour: "2-digit", minute: "2-digit", timeZone: "Europe/London",
+        });
+        await sendReply(from,
+          `⚠️ Quote was already sent to this customer for job #${shortRef} at ${sentTime}.\n\nReply *RESEND #${shortRef}* to send again.`,
+          channel);
+        return true;
+      };
+
+      const markCustomerQuoteSent = async (jobIdFull: string) => {
+        await supabase.from("jobs")
+          .update({ customer_quote_sent_at: new Date().toISOString() })
+          .eq("id", jobIdFull);
+      };
+
       const runSendQuoteForJobId = async (
         jobIdFull: string,
-        opts?: { quoteId?: string; technicianId?: string },
+        opts?: { quoteId?: string; technicianId?: string; force?: boolean },
       ) => {
         const shortRef = String(jobIdFull).slice(0, 6).toUpperCase();
+        if (await customerQuoteRecentlyBlocked(jobIdFull, shortRef, !!opts?.force)) return;
         const res = await sendQuoteToCustomer(supabase, jobIdFull, opts);
         await clearAdminState();
         if (res.ok) {
+          await markCustomerQuoteSent(jobIdFull);
           if (res.paymentLinkMissing) {
             await sendReply(from,
               `⚠️ Quote sent to customer for job #${shortRef} but payment link could not be generated. Please generate and send the payment link manually.${res.stripeError ? `\n\nStripe error: ${res.stripeError}` : ""}`,
@@ -1535,7 +1569,121 @@ Deno.serve(async (req) => {
         }
       };
 
-      const runSendQuoteForRef = async (ref: string, identifier?: string | null) => {
+      // Build & send a single consolidated quote message containing every
+      // pending/accepted quote for a job, each with its own Stripe payment link.
+      const sendConsolidatedQuotesForJob = async (jobIdFull: string, shortRef: string) => {
+        const { data: jobRow } = await supabase
+          .from("jobs")
+          .select("id, vehicle_reg, customer_name, customer_phone, customer_email, postcode, issue_type, issue_description, damage_summary, damage_type")
+          .eq("id", jobIdFull)
+          .maybeSingle();
+        if (!jobRow) return { ok: false, error: "Job not found" };
+        if (!jobRow.customer_phone) return { ok: false, error: "Customer has no phone on file" };
+
+        const { data: quoteRows } = await supabase
+          .from("quotes")
+          .select("id, technician_id, price_gbp, eta_minutes, raw_message, created_at")
+          .eq("job_id", jobIdFull)
+          .in("status", ["pending", "accepted"])
+          .order("price_gbp", { ascending: true, nullsFirst: false });
+        const quotes = quoteRows ?? [];
+        if (quotes.length === 0) return { ok: false, error: "No quotes available" };
+
+        const techIds = Array.from(new Set(quotes.map((q: any) => q.technician_id).filter(Boolean))) as string[];
+        const { data: techRows } = techIds.length
+          ? await supabase.from("technicians").select("id, name, tech_code").in("id", techIds)
+          : { data: [] as any[] };
+        const techById = new Map((techRows ?? []).map((t: any) => [t.id, t]));
+
+        const issueLine =
+          jobRow.damage_summary?.trim() ||
+          jobRow.issue_description?.trim() ||
+          jobRow.damage_type?.trim() ||
+          jobRow.issue_type?.trim() ||
+          "Tyre service required";
+        const vehicleReg = jobRow.vehicle_reg?.toString().trim() || "Not provided";
+
+        const { createStripeClient } = await import("../_shared/stripe.ts");
+        const { shortenUrl } = await import("../_shared/short-link.ts");
+        const stripe = createStripeClient("live");
+
+        const options: { name: string; price: number; eta: any; link: string | null }[] = [];
+        for (const q of quotes) {
+          const mergedPrice = normalizeSuspiciousQuotePrice(q.price_gbp, q.raw_message ?? "");
+          if (!isCustomerQuoteAmountValid(mergedPrice)) continue;
+          if (Number(q.price_gbp) !== Number(mergedPrice)) {
+            await supabase.from("quotes").update({ price_gbp: mergedPrice }).eq("id", q.id);
+          }
+          const tech: any = techById.get(q.technician_id) ?? {};
+          let payUrl: string | null = null;
+          try {
+            const session = await stripe.checkout.sessions.create({
+              mode: "payment",
+              line_items: [{
+                price_data: {
+                  currency: "gbp",
+                  product_data: {
+                    name: `Mobile tyre service — ${jobRow.postcode ?? ""}`.trim(),
+                    description: `${issueLine} · ETA ${q.eta_minutes} min`,
+                  },
+                  unit_amount: Math.round(Number(mergedPrice) * 100),
+                },
+                quantity: 1,
+              }],
+              success_url: `https://tyrefly.com/confirmed?job=${jobIdFull}`,
+              cancel_url: `https://tyrefly.com/job/${jobIdFull}?canceled=1`,
+              customer_email: jobRow.customer_email ?? undefined,
+              metadata: {
+                job_id: jobIdFull, technician_id: q.technician_id, kind: "job_full_payment",
+                price_gbp: String(mergedPrice), eta_minutes: String(q.eta_minutes),
+              },
+              payment_intent_data: {
+                metadata: { job_id: jobIdFull, technician_id: q.technician_id, kind: "job_full_payment" },
+                description: `Tyre Fly — job ${shortRef} — ${jobRow.postcode ?? ""}`.trim(),
+              },
+            });
+            if (session?.url) {
+              const shortened = await shortenUrl(session.url, { kind: "job_full_payment", job_id: jobIdFull });
+              payUrl = shortened || session.url;
+            }
+          } catch (e) {
+            console.error("consolidated stripe checkout failed", e);
+          }
+          options.push({
+            name: tech.name ?? "Technician",
+            price: Number(mergedPrice),
+            eta: q.eta_minutes,
+            link: payUrl,
+          });
+        }
+
+        if (options.length === 0) return { ok: false, error: "Could not prepare any quote options" };
+
+        const optionLines = options.map((o, i) =>
+          `Option ${i + 1} — ${o.name}\n` +
+          `💷 Repair Cost: £${o.price}\n` +
+          `⏱ Estimated Arrival: ${o.eta} minutes\n` +
+          `🔗 Payment Link: ${o.link ?? "to be sent shortly"}`
+        ).join("\n\n");
+
+        const body =
+          `Job Reference: #${shortRef}\n\n` +
+          `Hello${jobRow.customer_name ? ` ${jobRow.customer_name}` : ""},\n\n` +
+          `We have received quotes from our technicians for your vehicle ${vehicleReg}. Please review and choose your preferred option:\n\n` +
+          `${optionLines}\n\n` +
+          `Please tap your preferred payment link to confirm your booking. Once payment is confirmed, your technician will proceed to your location.\n\n` +
+          `Thank you.\n— Tyre Fly`;
+
+        await sendReply(jobRow.customer_phone, body, "whatsapp");
+        return { ok: true, count: options.length, customerPhone: jobRow.customer_phone };
+      };
+
+      const runSendQuoteForRef = async (
+        ref: string,
+        identifier?: string | null,
+        runOpts?: { force?: boolean },
+      ) => {
+        const force = !!runOpts?.force;
         const matches = await findJobByRef(ref);
         if (matches.length === 0) {
           await sendReply(from,
@@ -1562,13 +1710,13 @@ Deno.serve(async (req) => {
             await sendReply(from, `Multiple technicians match "${identifier}":\n${lines}\n\nPlease retry with the TECH-ID.`, channel);
             return;
           }
-          await runSendQuoteForJobId(jobIdFull, { technicianId: techs[0].id });
+          await runSendQuoteForJobId(jobIdFull, { technicianId: techs[0].id, force });
           return;
         }
 
         // No technician named → if the job has multiple pending/accepted
-        // quotes, send ALL of them so the customer can choose. If there is
-        // only one quote, fall through to the single-quote behaviour.
+        // quotes, send a single consolidated message containing every option.
+        // Otherwise fall through to the single-quote behaviour.
         const { data: pendingQuotes } = await supabase
           .from("quotes")
           .select("id, technician_id, price_gbp")
@@ -1577,37 +1725,22 @@ Deno.serve(async (req) => {
           .order("created_at", { ascending: true });
         const quotes = pendingQuotes ?? [];
         if (quotes.length <= 1) {
-          await runSendQuoteForJobId(jobIdFull);
+          await runSendQuoteForJobId(jobIdFull, { force });
           return;
         }
 
-        let sent = 0;
-        const failures: string[] = [];
-        let lastCustomerPhone: string | null = null;
-        for (const q of quotes) {
-          const res = await sendQuoteToCustomer(supabase, jobIdFull, {
-            quoteId: q.id,
-            multiPending: true,
-          });
-          if (res.ok) {
-            sent++;
-            if (res.customerPhone) lastCustomerPhone = res.customerPhone;
-          } else {
-            failures.push(res.error ?? "unknown error");
-          }
-        }
+        if (await customerQuoteRecentlyBlocked(jobIdFull, shortRef, force)) return;
+
+        const res = await sendConsolidatedQuotesForJob(jobIdFull, shortRef);
         await clearAdminState();
-        if (sent > 0) {
-          const phoneNote = lastCustomerPhone ? ` (${lastCustomerPhone})` : "";
-          const failNote = failures.length
-            ? `\n⚠️ ${failures.length} quote(s) could not be sent: ${failures.slice(0, 2).join("; ")}`
-            : "";
+        if (res.ok) {
+          await markCustomerQuoteSent(jobIdFull);
           await sendReply(from,
-            `✅ ${sent} quote${sent === 1 ? "" : "s"} for job #${shortRef} sent to the customer${phoneNote}.${failNote}`,
+            `✅ ${res.count} quote${res.count === 1 ? "" : "s"} for job #${shortRef} sent to the customer (${res.customerPhone}).`,
             channel);
         } else {
           await sendReply(from,
-            `⚠️ Could not send quotes for job #${shortRef}: ${failures[0] ?? "unknown error"}.`,
+            `⚠️ Could not send quotes for job #${shortRef}: ${res.error ?? "unknown error"}.`,
             channel);
         }
       };
@@ -1616,7 +1749,12 @@ Deno.serve(async (req) => {
       // If admin named a technician, send that tech's quote. Otherwise pick
       // the quote with the latest price_updated_at. If multiple updates
       // happened within 5 minutes of each other, ask admin to pick.
-      const runSendUpdatedQuoteForRef = async (ref: string, identifier?: string | null) => {
+      const runSendUpdatedQuoteForRef = async (
+        ref: string,
+        identifier?: string | null,
+        runOpts?: { force?: boolean },
+      ) => {
+        const force = !!runOpts?.force;
         const matches = await findJobByRef(ref);
         if (matches.length === 0) {
           await sendReply(from, `No job found for ref #${ref.toUpperCase()}. Quote not sent.`, channel);
@@ -1641,7 +1779,7 @@ Deno.serve(async (req) => {
             await sendReply(from, `Multiple technicians match "${identifier}":\n${lines}\n\nPlease retry with the TECH-ID.`, channel);
             return;
           }
-          await runSendQuoteForJobId(jobIdFull, { technicianId: techs[0].id });
+          await runSendQuoteForJobId(jobIdFull, { technicianId: techs[0].id, force });
           return;
         }
 
@@ -1656,7 +1794,7 @@ Deno.serve(async (req) => {
         const list = updatedQuotes ?? [];
         if (list.length === 0) {
           // Fall back to default behaviour (latest pending/accepted quote)
-          await runSendQuoteForJobId(jobIdFull);
+          await runSendQuoteForJobId(jobIdFull, { force });
           return;
         }
 
@@ -1688,7 +1826,7 @@ Deno.serve(async (req) => {
           return;
         }
 
-        await runSendQuoteForJobId(jobIdFull, { quoteId: latest.id });
+        await runSendQuoteForJobId(jobIdFull, { quoteId: latest.id, force });
       };
 
 
@@ -2104,6 +2242,13 @@ Deno.serve(async (req) => {
 
         // Fall through (intake_pending / intake_complete / awaiting_approval / pending /
         // unknown statuses) → use the existing list/broadcast confirmation flow.
+      }
+
+      // RESEND #REF — admin override to bypass the 5-minute duplicate-send guard.
+      const resendMatch = trimmed.match(/^\s*resend\s+#?([0-9a-f]{6})\s*$/i);
+      if (resendMatch) {
+        await runSendQuoteForRef(resendMatch[1], null, { force: true });
+        return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
       }
 
       const refFromMsg =
