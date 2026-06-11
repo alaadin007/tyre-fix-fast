@@ -2005,13 +2005,13 @@ Deno.serve(async (req) => {
         const lines = scored.slice(0, 10).map(({ t, miles }: any, idx: number) => {
           const dist = miles != null ? `${miles.toFixed(1)} mi` : "Unknown";
           const code = t.tech_code ?? "TECH-????";
-          return `${idx + 1}. ${code} · ${t.name}\n   Phone: ${t.phone}\n   Distance: ${dist}`;
+          return `${idx + 1}. ${code} · ${t.name}\n\n   Phone: ${t.phone}\n\n   Distance: ${dist}`;
         }).join("\n\n");
         const more = scored.length > 10 ? `\n\n…and ${scored.length - 10} more` : "";
-        const divider = "─────────────────────────────";
+        const divider = "──────────────────────";
         await setAdminState("await_broadcast_confirm", job.id);
         await sendReply(from,
-          `Job #${shortRef} — Available Technicians (${job.postcode ?? "—"})\n${divider}\n${lines}${more}\n${divider}\nTotal: ${scored.length} technician(s) available\n\nBroadcast all:\nbroadcast #${shortRef}\n\nSend to one:\n#${shortRef} send to Hassan\n#${shortRef} send to TECH-0001\n\nSend to few:\n#${shortRef} send to Hassan and Pashma\n#${shortRef} send to TECH-0001 and TECH-0003`,
+          `Job #${shortRef} — Available Technicians (${job.postcode ?? "—"})\n\n${divider}\n\n${lines}${more}\n\n${divider}\n\nTotal: ${scored.length} technician(s) available\n\nBroadcast all:\nbroadcast #${shortRef}\n\nSend to one:\n#${shortRef} send to Hassan\n#${shortRef} send to TECH-0001\n\nSend to few:\n#${shortRef} send to Hassan and Pashma\n#${shortRef} send to TECH-0001 and TECH-0003`,
           channel,
         );
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
@@ -2540,13 +2540,13 @@ Deno.serve(async (req) => {
                   const lines = scored.slice(0, 10).map(({ t, miles }: any, idx: number) => {
                     const dist = miles != null ? `${miles.toFixed(1)} mi` : "Unknown";
                     const code = t.tech_code ?? "TECH-????";
-                    return `${idx + 1}. ${code} · ${t.name}\n   Phone: ${t.phone}\n   Distance: ${dist}`;
+                    return `${idx + 1}. ${code} · ${t.name}\n\n   Phone: ${t.phone}\n\n   Distance: ${dist}`;
                   }).join("\n\n");
                   const more = scored.length > 10 ? `\n\n…and ${scored.length - 10} more` : "";
-                  const divider = "─────────────────────────────";
+                  const divider = "──────────────────────";
                   await setAdminState("await_broadcast_confirm", job.id);
                   await sendReply(from,
-                    `Job #${shortRef} — Available Technicians (${job.postcode ?? "—"})\n${divider}\n${lines}${more}\n${divider}\nTotal: ${scored.length} technician(s) available\n\nBroadcast all:\nbroadcast #${shortRef}\n\nSend to one:\n#${shortRef} send to Hassan\n#${shortRef} send to TECH-0001\n\nSend to few:\n#${shortRef} send to Hassan and Pashma\n#${shortRef} send to TECH-0001 and TECH-0003`,
+                    `Job #${shortRef} — Available Technicians (${job.postcode ?? "—"})\n\n${divider}\n\n${lines}${more}\n\n${divider}\n\nTotal: ${scored.length} technician(s) available\n\nBroadcast all:\nbroadcast #${shortRef}\n\nSend to one:\n#${shortRef} send to Hassan\n#${shortRef} send to TECH-0001\n\nSend to few:\n#${shortRef} send to Hassan and Pashma\n#${shortRef} send to TECH-0001 and TECH-0003`,
                     channel,
                   );
                 }
