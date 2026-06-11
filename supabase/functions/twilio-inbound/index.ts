@@ -2283,6 +2283,33 @@ Deno.serve(async (req) => {
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
       }
 
+      // Pending-context carry-forward: a bare job ref (#E2C9FE) sent right
+      // after the bot asked "please include the job reference" must complete
+      // the ORIGINAL intent (broadcast to TECH-0001, send quote to X, update
+      // price for Y) instead of being treated as a fresh list/broadcast-all.
+      if (refOnlyMatch && adminState?.step) {
+        const step = adminState.step;
+        const bareRef = refOnlyMatch[1];
+        if (step.startsWith("await_ref_for_broadcast_to:")) {
+          const ident = step.slice("await_ref_for_broadcast_to:".length);
+          await clearAdminState();
+          await runBroadcastToOne(bareRef, ident);
+          return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+        }
+        if (step.startsWith("await_ref_for_send_quote_to:")) {
+          const ident = step.slice("await_ref_for_send_quote_to:".length);
+          await clearAdminState();
+          await runSendQuoteForRef(bareRef, ident);
+          return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+        }
+        if (step.startsWith("await_ref_for_send_updated_quote_to:")) {
+          const ident = step.slice("await_ref_for_send_updated_quote_to:".length);
+          await clearAdminState();
+          await runSendUpdatedQuoteForRef(bareRef, ident);
+          return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+        }
+      }
+
       const refFromMsg =
         (yesPlusRefMatch ? yesPlusRefMatch[1] : null) ??
         (refOnlyMatch ? refOnlyMatch[1] : null);
