@@ -287,6 +287,20 @@ export default function FlatTyreLondon() {
             knock-on damage of a botched change.
           </p>
 
+          <figure className="my-10 -mx-6 md:mx-0">
+            <img
+              src={fitterImg}
+              alt="Mobile tyre fitter changing a wheel kerbside on a London residential street at dusk"
+              width={1600}
+              height={896}
+              loading="lazy"
+              className="w-full h-auto md:rounded-2xl"
+            />
+            <figcaption className="text-xs text-muted-foreground mt-2 px-6 md:px-0">
+              A mobile fitter swaps a damaged tyre kerbside — typical job time is 25–40 minutes.
+            </figcaption>
+          </figure>
+
           <h2 className="text-2xl font-semibold mt-12">When to call a mobile tyre fitter vs recovery</h2>
           <p>
             Call a <strong>mobile tyre fitter</strong> when:
