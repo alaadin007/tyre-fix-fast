@@ -912,16 +912,22 @@ async function sendQuoteToCustomer(
       payUrl = null;
     }
 
-    await supabase.from("quotes").update({ status: "accepted" }).eq("id", quoteRow.id);
-    await supabase.from("quotes")
-      .update({ status: "lost" })
-      .eq("job_id", jobId)
-      .eq("status", "pending")
-      .neq("id", quoteRow.id);
-    await supabase.from("jobs").update({
-      status: "awaiting_payment",
-      assigned_technician_id: quoteRow.technician_id,
-    }).eq("id", jobId);
+    if (opts?.multiPending) {
+      // Sending multiple quotes for the same job: keep all quotes pending
+      // and do NOT assign a technician or change job status. The chosen
+      // technician will be assigned automatically when the customer pays.
+    } else {
+      await supabase.from("quotes").update({ status: "accepted" }).eq("id", quoteRow.id);
+      await supabase.from("quotes")
+        .update({ status: "lost" })
+        .eq("job_id", jobId)
+        .eq("status", "pending")
+        .neq("id", quoteRow.id);
+      await supabase.from("jobs").update({
+        status: "awaiting_payment",
+        assigned_technician_id: quoteRow.technician_id,
+      }).eq("id", jobId);
+    }
 
     const paymentSection = payUrl
       ? `To proceed with the service, please complete the payment using the secure Stripe link below:\n\n💳 Payment Link: ${payUrl}\n\n` +
