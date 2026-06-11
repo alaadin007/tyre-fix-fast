@@ -340,6 +340,91 @@ export default function FlatTyreLondon() {
             insist on a written or WhatsApp quote with the tyre brand and model named.
           </p>
 
+          <h3 className="text-xl font-semibold mt-8">Average mobile callout price in London</h3>
+          <p>
+            The average <strong>all-in mobile tyre callout in London in 2026 is around £140</strong>
+            {" "}— that's the typical bill for one mid-range replacement tyre fitted at the kerbside
+            during normal hours, including the callout, balancing, valve and disposal of the old
+            tyre. Across the wider M25 the average drops to about £125 because labour competition is
+            higher outside Zone 1–2.
+          </p>
+          <p>By time of day and tyre choice, expect:</p>
+          <ul className="list-disc pl-6 space-y-2">
+            <li><strong>Daytime, budget tyre:</strong> £95–£135 all-in</li>
+            <li><strong>Daytime, mid-range premium:</strong> £140–£200 all-in</li>
+            <li><strong>Daytime, performance / SUV / run-flat:</strong> £220–£420 all-in</li>
+            <li><strong>Night (10pm–6am), any tyre:</strong> add £20–£40</li>
+            <li><strong>Weekend / bank holiday:</strong> add £10–£25</li>
+            <li><strong>Inside Congestion Charge or ULEZ during charging hours:</strong> some operators add £15 (the van pays the charge, you pay it back)</li>
+          </ul>
+          <p>
+            A <strong>repair-only callout</strong> (no new tyre, just plugging a tread puncture)
+            averages <strong>£45 in London</strong>, normally 20–30 minutes on site. If the fitter
+            arrives and finds the damage is in the sidewall or shoulder, the job converts to a
+            replacement and the repair fee is rolled into the new tyre price — you should never pay
+            for both.
+          </p>
+          <p>
+            Anything quoted above £180 for a single standard tyre, or any "diagnostic fee" before
+            the fitter has looked at the wheel, is a red flag. Walk away and call someone else.
+          </p>
+
+          <h2 className="text-2xl font-semibold mt-12">How to read your tyre size (the number every fitter will ask for)</h2>
+          <p>
+            Before you call anyone, find the size printed on the sidewall of the tyre. It looks like
+            a string of letters and numbers, for example:
+          </p>
+          <p className="text-center">
+            <code className="inline-block px-4 py-2 rounded-lg bg-muted text-base font-mono">
+              225 / 45 R 17 91 W
+            </code>
+          </p>
+          <p>Here's what each part means:</p>
+          <ul className="list-disc pl-6 space-y-2">
+            <li><strong>225</strong> — tyre <strong>width</strong> in millimetres (tread to tread).</li>
+            <li><strong>45</strong> — <strong>profile / aspect ratio</strong>. Sidewall height as a percentage of the width. Lower = sportier, harsher ride.</li>
+            <li><strong>R</strong> — <strong>radial construction</strong>. Almost every modern car tyre is radial.</li>
+            <li><strong>17</strong> — <strong>wheel diameter</strong> in inches. Must match your alloy.</li>
+            <li><strong>91</strong> — <strong>load index</strong>. 91 = 615 kg per tyre. Never fit a lower load index than the original.</li>
+            <li><strong>W</strong> — <strong>speed rating</strong>. W = 168 mph. Common ratings: H (130), V (149), W (168), Y (186). Don't drop below the manufacturer's rating — insurance can void.</li>
+          </ul>
+          <p>
+            You may also see extra markings — they matter when ordering a replacement:
+          </p>
+          <ul className="list-disc pl-6 space-y-2">
+            <li><strong>XL</strong> or <strong>Reinforced</strong> — heavier-duty carcass, common on SUVs and EVs.</li>
+            <li><strong>RFT / ROF / EMT / ZP / SSR</strong> — <strong>run-flat</strong>. Replace like-for-like unless your car can run on standard tyres (check the handbook).</li>
+            <li><strong>M+S</strong> or three-peak-mountain snowflake — all-season or winter tyre.</li>
+            <li><strong>★ / MO / N0 / AO / J / *</strong> — OE-approved fitments for BMW, Mercedes, Porsche, Audi, Jaguar etc. On these cars, fitting a non-OE tyre is legal but can affect ride and tyre warranty.</li>
+            <li><strong>DOT XXXXYYWW</strong> — date code. Last four digits = week and year of manufacture (e.g. <em>3823</em> = week 38 of 2023). Don't accept a "new" tyre older than 24 months.</li>
+          </ul>
+
+          <h3 className="text-xl font-semibold mt-8">Where to find the size</h3>
+          <ol className="list-decimal pl-6 space-y-2">
+            <li><strong>Sidewall of the tyre itself</strong> — easiest if the tyre is intact. Use your phone torch.</li>
+            <li><strong>Driver's door jamb sticker</strong> — open the driver's door; a label on the B-pillar lists factory-recommended sizes and pressures.</li>
+            <li><strong>Inside the fuel filler flap</strong> — many European cars print pressures (and sometimes sizes) here.</li>
+            <li><strong>Owner's handbook</strong> — under "wheels and tyres".</li>
+            <li><strong>V5C log book</strong> — does NOT list tyre size; only the vehicle's plated weights.</li>
+          </ol>
+          <p>
+            If the tyre is shredded and unreadable, send your registration plate to the fitter — any
+            reputable mobile operator can look up the OE size from the DVLA in seconds. Send the
+            size of the <em>other</em> three wheels too if they differ (some cars run staggered
+            front/rear setups, common on RWD BMWs and performance cars).
+          </p>
+
+          <h3 className="text-xl font-semibold mt-8">What else to send when you book</h3>
+          <ul className="list-disc pl-6 space-y-2">
+            <li>Full postcode and a what3words or pin drop if you're roadside.</li>
+            <li>Tyre size (e.g. 225/45 R17 91W) — and run-flat marking if applicable.</li>
+            <li>How many tyres need replacing.</li>
+            <li>Photo of the damage (helps the fitter bring the right kit — repair plug vs full replacement).</li>
+            <li>Car make, model and year — confirms wheel locking-nut type.</li>
+            <li>Whether you have the <strong>locking wheel-nut key</strong> in the car. No key = no wheel off. It usually lives in the glovebox, boot floor or with the spare.</li>
+          </ul>
+
+
           <h2 className="text-2xl font-semibold mt-12">Your legal duties as a UK driver</h2>
           <p>
             The law is short and strict. Each tyre must have at least <strong>1.6 mm of tread
