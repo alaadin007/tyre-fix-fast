@@ -2011,7 +2011,7 @@ Deno.serve(async (req) => {
         const divider = "──────────────────────";
         await setAdminState("await_broadcast_confirm", job.id);
         await sendReply(from,
-          `Job #${shortRef} — Available Technicians (${job.postcode ?? "—"})\n\n${divider}\n\n${lines}${more}\n\n${divider}\n\nTotal: ${scored.length} technician(s) available\n\nBroadcast all:\nbroadcast #${shortRef}\n\nSend to one:\n#${shortRef} send to Hassan\n#${shortRef} send to TECH-0001\n\nSend to few:\n#${shortRef} send to Hassan and Pashma\n#${shortRef} send to TECH-0001 and TECH-0003`,
+          `Job #${shortRef} — Available Technicians (${job.postcode ?? "—"})\n\n${divider}\n\n${lines}${more}\n\n${divider}\n\nTotal: ${scored.length} technician(s) available\n\nBroadcast all:\nbroadcast #${shortRef}\n\nSend to one:\n#${shortRef} send to Hassan\n#${shortRef} send to TECH-0001\n\nSend to few:\n#${shortRef} send to Hassan, Pashma\n#${shortRef} send to TECH-0001, TECH-0003\n#${shortRef} send to TECH-0001, Hassan`,
           channel,
         );
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
@@ -2346,7 +2346,21 @@ Deno.serve(async (req) => {
         await sendReply(from, `✅ Job #${shortRef} cancelled. Customer has been notified.`, channel);
       };
 
-      // ---- Intent 3 — BROADCAST_JOB_TO_ONE_TECHNICIAN ----
+      // ---- Intent 3 — BROADCAST_JOB_TO_ONE_OR_MORE_TECHNICIANS ----
+      // Splits identifier on commas / "and" / "&" and resolves each piece
+      // individually (name, TECH-ID, or phone). Broadcasts to all resolved
+      // technicians in a single call; reports any that didn't match.
+      const splitTechnicianIdentifiers = (raw: string): string[] => {
+        const parts: string[] = [];
+        for (const chunk of raw.split(/\s*,\s*/)) {
+          for (const piece of chunk.split(/\s+(?:and|&)\s+/i)) {
+            const t = piece.trim().replace(/^[.;:!]+|[.;:!]+$/g, "");
+            if (t) parts.push(t);
+          }
+        }
+        return parts;
+      };
+
       const runBroadcastToOne = async (ref: string, identifier: string) => {
         const matches = await lookupJobByRef(ref);
         if (matches.length === 0) {
@@ -2360,54 +2374,52 @@ Deno.serve(async (req) => {
         const job: any = matches[0];
         const shortRef = String(job.id).slice(0, 6).toUpperCase();
 
-        // Resolve technician
-        const idTrim = identifier.trim();
-        const isPhone = /^\+?\d{6,}$/.test(idTrim.replace(/\s+/g, ""));
-        const isCode = /^tech-?\d+$/i.test(idTrim.replace(/\s+/g, ""));
-        let candidates: any[] = [];
-        if (isPhone) {
-          const norm = idTrim.startsWith("+") ? idTrim : `+${idTrim.replace(/\D/g, "")}`;
-          const { data } = await supabase
-            .from("technicians")
-            .select("id, name, phone, tech_code")
-            .eq("phone", norm)
-            .eq("approval_status", "approved")
-            .eq("active", true);
-          candidates = data ?? [];
-        } else if (isCode) {
-          const code = idTrim.toUpperCase().replace(/^TECH/, "TECH-").replace("TECH--", "TECH-");
-          const { data } = await supabase
-            .from("technicians")
-            .select("id, name, phone, tech_code")
-            .ilike("tech_code", code)
-            .eq("approval_status", "approved")
-            .eq("active", true);
-          candidates = data ?? [];
-        } else {
-          const { data } = await supabase
-            .from("technicians")
-            .select("id, name, phone, tech_code")
-            .ilike("name", `%${idTrim}%`)
-            .eq("approval_status", "approved")
-            .eq("active", true);
-          candidates = data ?? [];
-        }
-
-        if (candidates.length === 0) {
-          await sendReply(from, `No approved technician found matching "${idTrim}".`, channel);
+        const identifiers = splitTechnicianIdentifiers(identifier);
+        if (identifiers.length === 0) {
+          await sendReply(from, `Please specify at least one technician name, TECH-ID, or phone.`, channel);
           return;
         }
-        if (candidates.length > 1) {
-          const lines = candidates.slice(0, 5).map((t: any) =>
+
+        const resolvedTechs: any[] = [];
+        const seenIds = new Set<string>();
+        const notFound: string[] = [];
+        const ambiguous: { id: string; candidates: any[] }[] = [];
+
+        for (const id of identifiers) {
+          const candidates = await resolveTechnician(id);
+          if (candidates.length === 0) {
+            notFound.push(id);
+          } else if (candidates.length > 1) {
+            ambiguous.push({ id, candidates });
+          } else {
+            const t = candidates[0];
+            if (!seenIds.has(t.id)) {
+              seenIds.add(t.id);
+              resolvedTechs.push(t);
+            }
+          }
+        }
+
+        for (const a of ambiguous) {
+          const lines = a.candidates.slice(0, 5).map((t: any) =>
             `— ${t.tech_code ?? "TECH-????"} ${t.name} (${t.phone})`
           ).join("\n");
           await sendReply(from,
-            `Multiple technicians found matching "${idTrim}":\n${lines}\n\nWhich one should receive job #${shortRef}? Reply with the technician ID, e.g. "#${shortRef} send to ${candidates[0].tech_code ?? "TECH-XXXX"}".`,
+            `Multiple technicians found matching "${a.id}":\n${lines}\n\nWhich one should receive job #${shortRef}? Reply with the technician ID, e.g. "#${shortRef} send to ${a.candidates[0].tech_code ?? "TECH-XXXX"}".`,
             channel,
           );
+        }
+
+        if (resolvedTechs.length === 0) {
+          if (notFound.length > 0 && ambiguous.length === 0) {
+            const label = notFound.length === 1 ? notFound[0] : notFound.join(", ");
+            await sendReply(from,
+              `Could not find a technician matching "${label}".\nPlease check the name or ID and try again.`,
+              channel,
+            );
+          }
           return;
         }
-        const tech = candidates[0];
 
         const bRes = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/broadcast-job`, {
           method: "POST",
@@ -2415,19 +2427,25 @@ Deno.serve(async (req) => {
             "Content-Type": "application/json",
             Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
           },
-          body: JSON.stringify({ job_id: job.id, mode: "specific", technician_ids: [tech.id] }),
+          body: JSON.stringify({ job_id: job.id, mode: "specific", technician_ids: resolvedTechs.map((t) => t.id) }),
         });
         const bJson: any = await bRes.json().catch(() => ({}));
         const sent = bJson?.sent ?? 0;
         if (bRes.ok && sent > 0) {
           await supabase.from("jobs").update({ status: "broadcasting" }).eq("id", job.id);
-          await sendReply(from,
-            `✅ Broadcast sent — Job #${shortRef}\n📍 Service Area: ${job.postcode ?? "—"}\n👷 Technician Notified: 1\n   — ${tech.name}${tech.tech_code ? ` (${tech.tech_code})` : ""}\n\nWaiting for their quote...`,
-            channel,
-          );
+          const techLines = resolvedTechs.map((t) =>
+            `   — ${t.name}${t.tech_code ? ` (${t.tech_code})` : ""}`
+          ).join("\n");
+          let msg = `✅ Broadcast sent — Job #${shortRef}\n📍 Service Area: ${job.postcode ?? "—"}\n👷 Technician(s) Notified: ${resolvedTechs.length}\n${techLines}\n\nWaiting for their quote...`;
+          if (notFound.length > 0) {
+            const label = notFound.length === 1 ? notFound[0] : notFound.join(", ");
+            msg += `\n\n⚠️ Could not find a technician matching "${label}". All other technicians in your command were notified.`;
+          }
+          await sendReply(from, msg, channel);
         } else {
           const err = bJson?.error ? ` (${String(bJson.error).slice(0, 140)})` : "";
-          await sendReply(from, `⚠️ Failed to send job #${shortRef} to ${tech.name}${err}.`, channel);
+          const names = resolvedTechs.map((t) => t.name).join(", ");
+          await sendReply(from, `⚠️ Failed to send job #${shortRef} to ${names}${err}.`, channel);
         }
       };
 
@@ -2546,7 +2564,7 @@ Deno.serve(async (req) => {
                   const divider = "──────────────────────";
                   await setAdminState("await_broadcast_confirm", job.id);
                   await sendReply(from,
-                    `Job #${shortRef} — Available Technicians (${job.postcode ?? "—"})\n\n${divider}\n\n${lines}${more}\n\n${divider}\n\nTotal: ${scored.length} technician(s) available\n\nBroadcast all:\nbroadcast #${shortRef}\n\nSend to one:\n#${shortRef} send to Hassan\n#${shortRef} send to TECH-0001\n\nSend to few:\n#${shortRef} send to Hassan and Pashma\n#${shortRef} send to TECH-0001 and TECH-0003`,
+                    `Job #${shortRef} — Available Technicians (${job.postcode ?? "—"})\n\n${divider}\n\n${lines}${more}\n\n${divider}\n\nTotal: ${scored.length} technician(s) available\n\nBroadcast all:\nbroadcast #${shortRef}\n\nSend to one:\n#${shortRef} send to Hassan\n#${shortRef} send to TECH-0001\n\nSend to few:\n#${shortRef} send to Hassan, Pashma\n#${shortRef} send to TECH-0001, TECH-0003\n#${shortRef} send to TECH-0001, Hassan`,
                     channel,
                   );
                 }
