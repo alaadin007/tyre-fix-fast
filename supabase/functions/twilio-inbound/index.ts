@@ -1831,22 +1831,30 @@ Deno.serve(async (req) => {
 
 
       // Helper: update the technician's quoted price for a job (before sending).
+      // Normalise any technician-ID style input to canonical "TECH-XXXX".
+      // Accepts: TECH-0001, TECH-001, TECH001, Tech001, tech-001, T0001, T001, etc.
+      const normaliseTechCode = (raw: string): string | null => {
+        const compact = raw.trim().replace(/[\s-]+/g, "").toUpperCase();
+        const m = compact.match(/^T(?:ECH)?(\d{1,6})$/);
+        if (!m) return null;
+        return `TECH-${m[1].padStart(4, "0")}`;
+      };
+
       const resolveTechnician = async (identifier: string) => {
         const idTrim = identifier.trim();
         const isPhone = /^\+?\d{6,}$/.test(idTrim.replace(/\s+/g, ""));
-        const isCode = /^tech-?\d+$/i.test(idTrim.replace(/\s+/g, ""));
-        if (isPhone) {
+        const normalisedCode = normaliseTechCode(idTrim);
+        if (isPhone && !normalisedCode) {
           const norm = idTrim.startsWith("+") ? idTrim : `+${idTrim.replace(/\D/g, "")}`;
           const { data } = await supabase.from("technicians")
             .select("id, name, phone, tech_code")
             .eq("phone", norm).eq("approval_status", "approved").eq("active", true);
           return data ?? [];
         }
-        if (isCode) {
-          const code = idTrim.toUpperCase().replace(/^TECH/, "TECH-").replace("TECH--", "TECH-");
+        if (normalisedCode) {
           const { data } = await supabase.from("technicians")
             .select("id, name, phone, tech_code")
-            .ilike("tech_code", code).eq("approval_status", "approved").eq("active", true);
+            .ilike("tech_code", normalisedCode).eq("approval_status", "approved").eq("active", true);
           return data ?? [];
         }
         const { data } = await supabase.from("technicians")
@@ -1854,6 +1862,7 @@ Deno.serve(async (req) => {
           .ilike("name", `%${idTrim}%`).eq("approval_status", "approved").eq("active", true);
         return data ?? [];
       };
+
 
       const runUpdateTechnicianPrice = async (ref: string, identifier: string, newPrice: number) => {
         const matches = await findJobByRef(ref);
