@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { Seo } from "@/components/Seo";
+import flatTyreHero from "@/assets/blog/flat-tyre-london-hero.jpg";
 
 const posts = [
   {
@@ -9,6 +10,7 @@ const posts = [
       "A complete London driver's guide to flat tyres — why they happen, what to do in the first 60 seconds, when to call a mobile fitter, and how to avoid getting stranded on the North Circular at 2am.",
     date: "2026-06-11",
     readMinutes: 12,
+    image: flatTyreHero,
   },
 ];
 
