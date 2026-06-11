@@ -1,6 +1,8 @@
 import { Link } from "react-router-dom";
 import { Seo } from "@/components/Seo";
 import flatTyreHero from "@/assets/blog/flat-tyre-london-hero.jpg";
+import runFlatHero from "@/assets/blog/run-flat-tyres-hero.jpg";
+import tpmsHero from "@/assets/blog/tpms-warning-hero.jpg";
 
 const posts = [
   {
@@ -11,6 +13,24 @@ const posts = [
     date: "2026-06-11",
     readMinutes: 12,
     image: flatTyreHero,
+  },
+  {
+    slug: "run-flat-tyres-uk-guide",
+    title: "Run-Flat Tyres UK: How They Work, Costs & When to Replace (2026)",
+    excerpt:
+      "Markings (RFT, ROF, ZP, SSR, EMT) decoded, how far you can really drive flat, repair rules, UK prices and mobile replacement.",
+    date: "2026-06-11",
+    readMinutes: 9,
+    image: runFlatHero,
+  },
+  {
+    slug: "tpms-warning-light",
+    title: "TPMS Warning Light: What It Means and What to Do (UK Guide 2026)",
+    excerpt:
+      "That amber horseshoe just lit up. Here's what it means, whether it's safe to keep driving, how to reset it, and when to call a fitter.",
+    date: "2026-06-11",
+    readMinutes: 8,
+    image: tpmsHero,
   },
 ];
 
