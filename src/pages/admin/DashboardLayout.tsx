@@ -12,6 +12,7 @@ import {
   LogOut,
   Sparkles,
   Bot,
+  Wrench,
   BarChart3,
   Settings,
 } from "lucide-react";
@@ -43,6 +44,7 @@ const items = [
   { title: "Reports", url: "/admin/dashboard/reports", icon: BarChart3 },
   { title: "AI Instructions (Customer)", url: "/admin/dashboard/ai-settings", icon: Sparkles },
   { title: "AI Instructions (Admin)", url: "/admin/dashboard/admin-ai-instructions", icon: Bot },
+  { title: "AI Instructions (Technician)", url: "/admin/dashboard/technician-ai-instructions", icon: Wrench },
   { title: "Settings", url: "/admin/dashboard/settings", icon: Settings },
 ];
 
