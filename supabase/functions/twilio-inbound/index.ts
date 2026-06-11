@@ -1429,7 +1429,7 @@ Deno.serve(async (req) => {
       const findJobByRef = async (ref: string) => {
         const { data: jobMatches } = await supabase
           .from("jobs")
-          .select("id,customer_name,postcode,lat,lng,issue_type,status,created_at")
+          .select("id,customer_name,vehicle_reg,postcode,lat,lng,issue_type,status,created_at")
           .order("created_at", { ascending: false }).limit(500);
         return (jobMatches ?? []).filter((j: any) =>
           String(j.id).toLowerCase().startsWith(ref.toLowerCase()));
@@ -1478,13 +1478,22 @@ Deno.serve(async (req) => {
         await clearAdminState();
         await supabase.from("jobs").update({ status: "broadcasting" }).eq("id", job.id);
         if (bRes.ok && sent > 0) {
-          const notifiedLines = scored.slice(0, sent).map(({ t }: any) =>
-            `   — ${t.name}${t.tech_code ? ` (${t.tech_code})` : ""}`
+          const notifiedLines = scored.slice(0, sent).map(({ t }: any, i: number) =>
+            `${i + 1}. ${t.tech_code ? `${t.tech_code} · ` : ""}${t.name}`
           ).join("\n");
-          await sendReply(from,
-            `✅ Broadcast sent — Job #${shortRef}\n📍 Service Area: ${job.postcode ?? "—"}\n👷 Technicians Notified: ${sent}\n${notifiedLines}\n\nWaiting for quotes to come in...`,
-            channel,
-          );
+          const msg = [
+            `Broadcast Sent — Job #${shortRef}`,
+            `──────────────────────`,
+            `Customer: ${job.customer_name ?? "—"}`,
+            `Vehicle: ${job.vehicle_reg ?? "—"}`,
+            `Service Area: ${job.postcode ?? "—"}`,
+            `Technicians Notified: ${sent}`,
+            ``,
+            notifiedLines,
+            `──────────────────────`,
+            `Waiting for quotes...`,
+          ].join("\n");
+          await sendReply(from, msg, channel);
         } else {
           const err = bJson?.error ? ` (${String(bJson.error).slice(0, 140)})` : "";
           await sendReply(from,
@@ -2433,13 +2442,24 @@ Deno.serve(async (req) => {
         const sent = bJson?.sent ?? 0;
         if (bRes.ok && sent > 0) {
           await supabase.from("jobs").update({ status: "broadcasting" }).eq("id", job.id);
-          const techLines = resolvedTechs.map((t) =>
-            `   — ${t.name}${t.tech_code ? ` (${t.tech_code})` : ""}`
+          const techLines = resolvedTechs.map((t, i) =>
+            `${i + 1}. ${t.tech_code ? `${t.tech_code} · ` : ""}${t.name}`
           ).join("\n");
-          let msg = `✅ Broadcast sent — Job #${shortRef}\n📍 Service Area: ${job.postcode ?? "—"}\n👷 Technician(s) Notified: ${resolvedTechs.length}\n${techLines}\n\nWaiting for their quote...`;
+          let msg = [
+            `Broadcast Sent — Job #${shortRef}`,
+            `──────────────────────`,
+            `Customer: ${job.customer_name ?? "—"}`,
+            `Vehicle: ${job.vehicle_reg ?? "—"}`,
+            `Service Area: ${job.postcode ?? "—"}`,
+            `Technicians Notified: ${resolvedTechs.length}`,
+            ``,
+            techLines,
+            `──────────────────────`,
+            `Waiting for quotes...`,
+          ].join("\n");
           if (notFound.length > 0) {
             const label = notFound.length === 1 ? notFound[0] : notFound.join(", ");
-            msg += `\n\n⚠️ Could not find a technician matching "${label}". All other technicians in your command were notified.`;
+            msg += `\n\nCould not find a technician matching "${label}". All other technicians in your command were notified.`;
           }
           await sendReply(from, msg, channel);
         } else {
