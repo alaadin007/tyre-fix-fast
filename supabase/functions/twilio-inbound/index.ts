@@ -1831,22 +1831,30 @@ Deno.serve(async (req) => {
 
 
       // Helper: update the technician's quoted price for a job (before sending).
+      // Normalise any technician-ID style input to canonical "TECH-XXXX".
+      // Accepts: TECH-0001, TECH-001, TECH001, Tech001, tech-001, T0001, T001, etc.
+      const normaliseTechCode = (raw: string): string | null => {
+        const compact = raw.trim().replace(/[\s-]+/g, "").toUpperCase();
+        const m = compact.match(/^T(?:ECH)?(\d{1,6})$/);
+        if (!m) return null;
+        return `TECH-${m[1].padStart(4, "0")}`;
+      };
+
       const resolveTechnician = async (identifier: string) => {
         const idTrim = identifier.trim();
         const isPhone = /^\+?\d{6,}$/.test(idTrim.replace(/\s+/g, ""));
-        const isCode = /^tech-?\d+$/i.test(idTrim.replace(/\s+/g, ""));
-        if (isPhone) {
+        const normalisedCode = normaliseTechCode(idTrim);
+        if (isPhone && !normalisedCode) {
           const norm = idTrim.startsWith("+") ? idTrim : `+${idTrim.replace(/\D/g, "")}`;
           const { data } = await supabase.from("technicians")
             .select("id, name, phone, tech_code")
             .eq("phone", norm).eq("approval_status", "approved").eq("active", true);
           return data ?? [];
         }
-        if (isCode) {
-          const code = idTrim.toUpperCase().replace(/^TECH/, "TECH-").replace("TECH--", "TECH-");
+        if (normalisedCode) {
           const { data } = await supabase.from("technicians")
             .select("id, name, phone, tech_code")
-            .ilike("tech_code", code).eq("approval_status", "approved").eq("active", true);
+            .ilike("tech_code", normalisedCode).eq("approval_status", "approved").eq("active", true);
           return data ?? [];
         }
         const { data } = await supabase.from("technicians")
@@ -1854,6 +1862,7 @@ Deno.serve(async (req) => {
           .ilike("name", `%${idTrim}%`).eq("approval_status", "approved").eq("active", true);
         return data ?? [];
       };
+
 
       const runUpdateTechnicianPrice = async (ref: string, identifier: string, newPrice: number) => {
         const matches = await findJobByRef(ref);
@@ -2818,7 +2827,18 @@ Deno.serve(async (req) => {
 
         // Rule 1 & 2: if ref missing for a per-job intent, count active jobs.
         const needsRef = ["SHOW_TECHNICIAN_LIST", "BROADCAST_ALL", "BROADCAST_ONE", "BROADCAST_MULTIPLE_SPECIFIC", "FORWARD_QUOTE_ONE", "FORWARD_QUOTE_MULTIPLE", "FORWARD_QUOTE_UPDATED", "UPDATE_TECHNICIAN_PRICE", "ASSIGN", "STATUS", "CANCEL", "CONFIRM_CANCEL"].includes(classification.intent);
+        const isBroadcastIntent = ["BROADCAST_ALL", "BROADCAST_ONE", "BROADCAST_MULTIPLE_SPECIFIC"].includes(classification.intent);
         if (needsRef && !ref) {
+          // For broadcast commands without a job reference, always ask for the
+          // reference directly instead of guessing from active jobs.
+          if (isBroadcastIntent) {
+            await sendReply(
+              from,
+              `Please include the job reference number for this broadcast. Example:\n\n#E2C9FE send to TECH-0001, TECH-0002\n\nOr if you are unsure of the reference:\n"show active jobs"`,
+              channel,
+            );
+            return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+          }
           const { data: openJobs } = await supabase
             .from("jobs")
             .select("id, status, postcode, customer_name, created_at")
@@ -2847,6 +2867,7 @@ Deno.serve(async (req) => {
           );
           return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
         }
+
 
         switch (classification.intent) {
           case "SHOW_TECHNICIAN_LIST":
@@ -2907,7 +2928,8 @@ Deno.serve(async (req) => {
             // so their digits cannot be misread as the price.
             const scrubbed = trimmed
               .replace(/#\s*[0-9a-f]{6,8}\b/gi, " ")
-              .replace(/\btech[-\s]?\d+\b/gi, " ");
+              .replace(/\bt(?:ech)?[-\s]?\d{1,6}\b/gi, " ");
+
             // Prefer £-prefixed amount, then "to <amount>", then "<amount> gbp/pounds".
             let priceStr: string | null = null;
             const mPound = scrubbed.match(/£\s*(\d{1,5}(?:\.\d{1,2})?)/i);
