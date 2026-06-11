@@ -64,8 +64,12 @@ function buildActionSection(jobRef: string, quotes: any[], techsById: Map<string
   lines.push(`- send ${first.shortName} quote for #${jobRef} to customer`);
   lines.push("");
   lines.push("UPDATE PRICE FIRST:");
-  lines.push(`- update ${first.shortName} price for #${jobRef} to £[amount]`);
-  lines.push(`- update ${first.code} price for #${jobRef} to £[amount]`);
+  lines.push(`· By name:    "update ${first.shortName} price for #${jobRef} to £45"`);
+  lines.push(`· By tech ID: "update ${first.code} price for #${jobRef} to £45"`);
+  if (multiple && second) {
+    lines.push(`· Multiple:   "update ${first.shortName} to £45 and ${second.shortName} to £30 for #${jobRef}"`);
+    lines.push(`              "update ${first.code} to £45 and ${second.code} to £30 for #${jobRef}"`);
+  }
   lines.push("");
   lines.push("SEND UPDATED QUOTE AFTER PRICE CHANGE:");
   lines.push(`- send updated quote for #${jobRef} to customer`);
