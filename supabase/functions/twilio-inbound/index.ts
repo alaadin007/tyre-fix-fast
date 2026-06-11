@@ -1060,9 +1060,7 @@ async function shareContactsForJobId(
     }
 
     // ===== Technician message: customer details =====
-    const paidLine = quotedAmount
-      ? `✅ Payment received: £${quotedAmount} (your quoted amount).`
-      : `✅ Payment received (your quoted amount).`;
+    const paidLine = `✅ Payment received.`;
     const techMsg = [
       `🔔 Job Confirmed — #${ref}`,
       ``,
