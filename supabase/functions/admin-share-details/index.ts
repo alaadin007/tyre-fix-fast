@@ -122,9 +122,7 @@ Deno.serve(async (req) => {
       await sendReply(job.customer_phone, customerMsg, "whatsapp");
     }
 
-    const paidLine = quotedAmount
-      ? `✅ Payment received: £${quotedAmount} (your quoted amount).`
-      : `✅ Payment received (your quoted amount).`;
+    const paidLine = `✅ Payment received.`;
     const techMsg = [
       `🔔 Job Confirmed — #${ref}`,
       ``,
