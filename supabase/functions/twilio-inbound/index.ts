@@ -1548,14 +1548,68 @@ Deno.serve(async (req) => {
           return;
         }
         const jobIdFull = String(matches[0].id);
+        const shortRef = String(jobIdFull).slice(0, 6).toUpperCase();
+
+        // Specific technician named → send only that technician's quote.
         if (identifier && identifier.trim()) {
           const techs = await resolveTechnician(identifier);
-          if (techs.length === 1) {
-            await runSendQuoteForJobId(jobIdFull, { technicianId: techs[0].id });
+          if (techs.length === 0) {
+            await sendReply(from, `No approved technician found matching "${identifier}".`, channel);
             return;
           }
+          if (techs.length > 1) {
+            const lines = techs.slice(0, 5).map((t: any) => `— ${t.tech_code ?? "TECH-????"} ${t.name}`).join("\n");
+            await sendReply(from, `Multiple technicians match "${identifier}":\n${lines}\n\nPlease retry with the TECH-ID.`, channel);
+            return;
+          }
+          await runSendQuoteForJobId(jobIdFull, { technicianId: techs[0].id });
+          return;
         }
-        await runSendQuoteForJobId(jobIdFull);
+
+        // No technician named → if the job has multiple pending/accepted
+        // quotes, send ALL of them so the customer can choose. If there is
+        // only one quote, fall through to the single-quote behaviour.
+        const { data: pendingQuotes } = await supabase
+          .from("quotes")
+          .select("id, technician_id, price_gbp")
+          .eq("job_id", jobIdFull)
+          .in("status", ["pending", "accepted"])
+          .order("created_at", { ascending: true });
+        const quotes = pendingQuotes ?? [];
+        if (quotes.length <= 1) {
+          await runSendQuoteForJobId(jobIdFull);
+          return;
+        }
+
+        let sent = 0;
+        const failures: string[] = [];
+        let lastCustomerPhone: string | null = null;
+        for (const q of quotes) {
+          const res = await sendQuoteToCustomer(supabase, jobIdFull, {
+            quoteId: q.id,
+            multiPending: true,
+          });
+          if (res.ok) {
+            sent++;
+            if (res.customerPhone) lastCustomerPhone = res.customerPhone;
+          } else {
+            failures.push(res.error ?? "unknown error");
+          }
+        }
+        await clearAdminState();
+        if (sent > 0) {
+          const phoneNote = lastCustomerPhone ? ` (${lastCustomerPhone})` : "";
+          const failNote = failures.length
+            ? `\n⚠️ ${failures.length} quote(s) could not be sent: ${failures.slice(0, 2).join("; ")}`
+            : "";
+          await sendReply(from,
+            `✅ ${sent} quote${sent === 1 ? "" : "s"} for job #${shortRef} sent to the customer${phoneNote}.${failNote}`,
+            channel);
+        } else {
+          await sendReply(from,
+            `⚠️ Could not send quotes for job #${shortRef}: ${failures[0] ?? "unknown error"}.`,
+            channel);
+        }
       };
 
       // Helper: send the MOST RECENTLY UPDATED quote (by price_updated_at).
