@@ -1878,12 +1878,9 @@ Deno.serve(async (req) => {
         // Driven by payment + assignment_status, NOT by job.status, so the
         // status field cannot block this branch.
         if (feePaid && assignmentStatus !== "details_sent") {
-          if (yesRefConfirmMatch) {
-            // Execute the assignment.
-            await runShareContactsForJobId(String(job.id));
-            return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
-          }
-          // Otherwise show confirmation prompt.
+          // Single-step: YES #REF immediately executes the assignment.
+          // No preview / CONFIRM step — admin gets a brief prelude, then
+          // both parties are connected, then a Done summary.
           const { data: acceptedQuote } = await supabase
             .from("quotes")
             .select("technician_id")
@@ -1891,22 +1888,36 @@ Deno.serve(async (req) => {
             .eq("status", "accepted")
             .maybeSingle();
           const techId = job.assigned_technician_id ?? acceptedQuote?.technician_id ?? null;
-          let techLine = "—";
+          let techName = "Technician";
           if (techId) {
             const { data: t } = await supabase
-              .from("technicians")
-              .select("name,tech_code")
-              .eq("id", techId)
-              .maybeSingle();
-            if (t) techLine = `${t.name}${t.tech_code ? ` (${t.tech_code})` : ""}`;
+              .from("technicians").select("name").eq("id", techId).maybeSingle();
+            if (t?.name) techName = t.name;
           }
+          const customerName = job.customer_name ?? "Customer";
+
           await sendReply(from,
-            `Payment confirmed for job #${shortRef} — ${job.customer_name ?? "customer"}.\n\n` +
-            `Shall I send technician and customer details to both parties now?\n\n` +
-            `🔧 Technician: ${techLine}\n` +
-            `👤 Customer: ${job.customer_name ?? "—"}\n\n` +
-            `Reply YES #${shortRef} CONFIRM to proceed.`,
+            `✅ Sending details now — Job #${shortRef}\n\n` +
+            `🔧 ${techName} → receiving customer details\n` +
+            `👤 ${customerName} → receiving technician details\n\n` +
+            `Please wait...`,
             channel);
+
+          const res = await shareContactsForJobId(supabase, String(job.id));
+          await clearAdminState();
+          if (res.ok) {
+            await sendReply(from,
+              `✅ Done — Job #${shortRef}\n\n` +
+              `Both parties have been connected:\n` +
+              `👤 ${customerName} — technician details sent ✓\n` +
+              `🔧 ${techName} — customer details sent ✓\n\n` +
+              `Job status: ASSIGNED`,
+              channel);
+          } else {
+            await sendReply(from,
+              `⚠️ Could not share details for job #${shortRef}: ${res.error ?? "unknown error"}.`,
+              channel);
+          }
           return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
         }
 
