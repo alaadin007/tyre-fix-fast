@@ -1699,36 +1699,117 @@ Deno.serve(async (req) => {
           .eq("id", quoteRow.id);
         await clearAdminState();
 
-        // Fetch all other quotes on the same job to build the action block.
-        const { data: allQuoteRows } = await supabase.from("quotes")
-          .select("technician_id")
-          .eq("job_id", job.id);
-        const techIds = Array.from(new Set((allQuoteRows ?? []).map((q: any) => q.technician_id).filter(Boolean)));
-        const { data: techRows } = techIds.length
-          ? await supabase.from("technicians").select("id, name, tech_code").in("id", techIds)
-          : { data: [] as any[] };
-        const techCode = tech.tech_code ?? "TECH-????";
-        const techShort = (tech.name ?? "Technician").split(/\s+/)[0];
-        const others = (techRows ?? []).filter((t: any) => t.id !== tech.id);
-        const otherLines = others.length
-          ? others.map((t: any) => `- update ${(t.name ?? "").split(/\s+/)[0] || t.tech_code} price for #${shortRef} to £[amount]`).join("\n")
-          : `- update [name] price for #${shortRef} to £[amount]`;
+        // Fetch job details (customer + vehicle) and all current quotes for the job.
+        const { data: jobFull } = await supabase
+          .from("jobs")
+          .select("customer_name, vehicle_reg")
+          .eq("id", job.id)
+          .maybeSingle();
 
-        const msg =
-          `✅ Price updated — Job #${shortRef}\n` +
-          `🧑‍🔧 ${techCode} · ${tech.name}\n` +
-          `💷 £${oldPrice ?? "—"} → £${newPrice}\n\n` +
-          `━━━━━━━━━━━━━━━━━━━━━━\n` +
-          `What would you like to do next?\n\n` +
-          `SEND UPDATED QUOTE TO CUSTOMER:\n` +
-          `- send updated quote for #${shortRef} to customer\n` +
-          `- send updated ${techShort} quote for #${shortRef} to customer\n\n` +
-          `UPDATE ANOTHER TECHNICIAN PRICE:\n` +
-          `${otherLines}\n\n` +
-          `SEND ALL QUOTES TO CUSTOMER:\n` +
-          `- send all quotes for #${shortRef} to customer\n` +
-          `━━━━━━━━━━━━━━━━━━━━━━`;
-        await sendReply(from, msg, channel);
+        const { data: allQuoteRows } = await supabase.from("quotes")
+          .select("technician_id, price_gbp, eta_minutes, created_at")
+          .eq("job_id", job.id);
+
+        // Dedupe by technician (latest by created_at).
+        const latestByTech = new Map<string, any>();
+        for (const q of allQuoteRows ?? []) {
+          if (!q.technician_id) continue;
+          const existing = latestByTech.get(q.technician_id);
+          if (!existing || new Date(q.created_at).getTime() >= new Date(existing.created_at).getTime()) {
+            latestByTech.set(q.technician_id, q);
+          }
+        }
+        // Ensure the updated tech reflects the new price.
+        const updatedQuoteRecord = latestByTech.get(tech.id);
+        if (updatedQuoteRecord) updatedQuoteRecord.price_gbp = newPrice;
+
+        const techIds = Array.from(latestByTech.keys());
+        const { data: techRows } = techIds.length
+          ? await supabase.from("technicians").select("id, name, tech_code, last_lat, last_lng").in("id", techIds)
+          : { data: [] as any[] };
+        const techById = new Map<string, any>((techRows ?? []).map((t: any) => [t.id, t]));
+
+        const orderedTechIds = [
+          ...techIds.filter((id) => id !== tech.id),
+        ];
+        // Updated tech first.
+        const finalOrder = [tech.id, ...orderedTechIds.filter((id) => id !== tech.id)];
+
+        const customerName = (jobFull?.customer_name ?? "—").toString().trim() || "—";
+        const vehicleReg = (jobFull?.vehicle_reg ?? "—").toString().trim() || "—";
+
+        const quoteLines: string[] = [];
+        finalOrder.forEach((id, idx) => {
+          const t = techById.get(id);
+          const q = latestByTech.get(id);
+          if (!t || !q) return;
+          const code = t.tech_code ?? "TECH-????";
+          const price = q.price_gbp != null ? `£${q.price_gbp}` : "—";
+          const eta = q.eta_minutes != null ? `${q.eta_minutes} min` : "—";
+          const loc = (t.last_lat != null && t.last_lng != null)
+            ? `https://maps.google.com/?q=${t.last_lat},${t.last_lng}`
+            : "no live pin";
+          const updatedTag = id === tech.id ? " *(updated)*" : "";
+          quoteLines.push(`${idx + 1}. ${code} · ${t.name ?? "Technician"}`);
+          quoteLines.push(`   💷 Price: ${price}${updatedTag}`);
+          quoteLines.push(`   ⏱ ETA: ${eta}`);
+          quoteLines.push(`   📍 Location: ${loc}`);
+          quoteLines.push("");
+        });
+        if (quoteLines[quoteLines.length - 1] === "") quoteLines.pop();
+
+        const techShort = (tech.name ?? "Technician").split(/\s+/)[0];
+        const techCode = tech.tech_code ?? "TECH-????";
+        const others = finalOrder
+          .filter((id) => id !== tech.id)
+          .map((id) => techById.get(id))
+          .filter(Boolean);
+        const multiple = others.length > 0;
+
+        const sections: string[] = [];
+        sections.push(`✅ Price Updated — Job #${shortRef}`);
+        sections.push("──────────────────────");
+        sections.push(`👤 Customer: ${customerName}`);
+        sections.push(`🚗 Vehicle: ${vehicleReg}`);
+        sections.push("──────────────────────");
+        sections.push("");
+        sections.push("Current Quotes:");
+        sections.push("");
+        sections.push(...quoteLines);
+        sections.push("");
+        sections.push("──────────────────────");
+        sections.push("");
+        sections.push("What would you like to do next?");
+        sections.push("");
+
+        sections.push("1️⃣ *Send all quotes to customer*");
+        sections.push(`✓ send all quotes for #${shortRef} to customer`);
+        sections.push("");
+
+        sections.push("2️⃣ *Send updated quote only*");
+        sections.push(`✓ send updated ${techShort} quote for #${shortRef} to customer`);
+        sections.push(`✓ send updated ${techCode} quote for #${shortRef} to customer`);
+
+        if (multiple) {
+          const firstOther = others[0];
+          const otherShort = (firstOther.name ?? "Technician").split(/\s+/)[0];
+          const otherCode = firstOther.tech_code ?? "TECH-????";
+          sections.push("");
+          sections.push("3️⃣ *Send selected quotes*");
+          sections.push(`✓ send ${techShort} and ${otherShort} quotes for #${shortRef} to customer`);
+          sections.push(`✓ send ${techCode} and ${otherCode} quotes for #${shortRef} to customer`);
+          sections.push("");
+          sections.push("4️⃣ *Update another price*");
+          sections.push(`✓ By name:    update ${otherShort} price for #${shortRef} to £45`);
+          sections.push(`✓ By tech ID: update ${otherCode} price for #${shortRef} to £45`);
+        } else {
+          sections.push("");
+          sections.push("3️⃣ *Update another price*");
+          sections.push(`✓ By name:    update [name] price for #${shortRef} to £45`);
+          sections.push(`✓ By tech ID: update TECH-XXXX price for #${shortRef} to £45`);
+        }
+
+        await sendReply(from, sections.join("\n"), channel);
       };
 
       // Helper: share customer ↔ technician contact details after admin approval.
