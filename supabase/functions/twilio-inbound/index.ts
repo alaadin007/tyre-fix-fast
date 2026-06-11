@@ -1484,12 +1484,15 @@ Deno.serve(async (req) => {
           const msg = [
             `Broadcast Sent — Job #${shortRef}`,
             `──────────────────────`,
-            `Customer: ${job.customer_name ?? "—"}`,
-            `Vehicle: ${job.vehicle_reg ?? "—"}`,
-            `Service Area: ${job.postcode ?? "—"}`,
+            `👤 Customer: ${job.customer_name ?? "—"}`,
+            `🚗 Vehicle: ${job.vehicle_reg ?? "—"}`,
+            `📍 Service Area: ${job.postcode ?? "—"}`,
+            `──────────────────────`,
+            ``,
             `Technicians Notified: ${sent}`,
             ``,
             notifiedLines,
+            ``,
             `──────────────────────`,
             `Waiting for quotes...`,
           ].join("\n");
