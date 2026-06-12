@@ -2340,7 +2340,9 @@ Deno.serve(async (req) => {
 
         // Quotes received but not yet forwarded → forward to customer.
         if (status === "quoted") {
-          await runSendQuoteForJobId(String(job.id));
+          await runSendQuoteForJobId(String(job.id), {
+            resendInfo: { stepSuffix: `all:`, label: `the quote for #${shortRef}` },
+          });
           return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
         }
 
