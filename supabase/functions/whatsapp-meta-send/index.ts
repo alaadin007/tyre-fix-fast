@@ -45,13 +45,27 @@ Deno.serve(async (req) => {
     const toNum = toClean.replace(/^\+/, "");
 
     const sendOne = async (payload: any) => {
-      const r = await fetch(`https://graph.facebook.com/v22.0/${PHONE_NUMBER_ID}/messages`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${TOKEN}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ messaging_product: "whatsapp", to: toNum, ...payload }),
-      });
-      const data = await r.json();
-      return { ok: r.ok, status: r.status, data };
+      // Retry transient Meta errors (code 2, is_transient=true, 5xx) up to 3 times
+      // with exponential backoff. Meta's "An unexpected error has occurred" is
+      // surfaced as code 2 / is_transient=true and almost always succeeds on retry.
+      const maxAttempts = 3;
+      let lastResult: { ok: boolean; status: number; data: any } | null = null;
+      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        const r = await fetch(`https://graph.facebook.com/v22.0/${PHONE_NUMBER_ID}/messages`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${TOKEN}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ messaging_product: "whatsapp", to: toNum, ...payload }),
+        });
+        const data = await r.json().catch(() => ({}));
+        lastResult = { ok: r.ok, status: r.status, data };
+        if (r.ok) return lastResult;
+        const err = data?.error ?? {};
+        const transient = err?.is_transient === true || err?.code === 2 || r.status >= 500;
+        console.error(`meta send attempt ${attempt}/${maxAttempts} failed`, r.status, JSON.stringify(err));
+        if (!transient || attempt === maxAttempts) break;
+        await new Promise((res) => setTimeout(res, 400 * attempt));
+      }
+      return lastResult!;
     };
 
     const results: any[] = [];
