@@ -4047,6 +4047,54 @@ Deno.serve(async (req) => {
       });
     }
 
+    // ─── Photo batching ───
+    // WhatsApp delivers each image as a separate webhook event milliseconds
+    // apart. Without batching we'd reply with N confirmations. When a media-
+    // only message arrives, hold the reply for ~3.5s; if another photo arrives
+    // for the same conversation in that window it stamps a newer token, so the
+    // earlier request returns silently. The last writer wins and sends a single
+    // consolidated confirmation reflecting the total photo count on the job.
+    const isPhotoOnlyMsg = mediaUrls.length > 0 && !(body || "").trim();
+    if (isPhotoOnlyMsg && outcome.conversation?.id && outcome.job?.id) {
+      const myToken = `${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
+      const baseCtx = (outcome.conversation.context ?? {}) as Record<string, any>;
+      await supabase.from("conversations")
+        .update({ context: { ...baseCtx, photo_batch_token: myToken } })
+        .eq("id", outcome.conversation.id);
+      await new Promise((r) => setTimeout(r, 3500));
+      const { data: convNow } = await supabase
+        .from("conversations")
+        .select("context")
+        .eq("id", outcome.conversation.id)
+        .maybeSingle();
+      const latestToken = (convNow?.context as any)?.photo_batch_token;
+      if (latestToken && latestToken !== myToken) {
+        // A newer photo from the same batch will send the consolidated reply.
+        console.log("photo batch: superseded, suppressing reply", { myToken, latestToken });
+        return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+      }
+      // Winner — build a fast, hardcoded confirmation based on total photos.
+      const { data: jobNow } = await supabase
+        .from("jobs")
+        .select("photo_urls, postcode, lat")
+        .eq("id", outcome.job.id)
+        .maybeSingle();
+      const photoCount = Array.isArray(jobNow?.photo_urls) ? jobNow!.photo_urls.length : 0;
+      const hasPin = jobNow?.lat != null;
+      let photoReply: string;
+      if (photoCount <= 0) {
+        photoReply = outcome.reply;
+      } else if (photoCount === 1) {
+        photoReply = "Got it — 1 photo received 📸 Please send one more clear photo of the tyre.";
+      } else {
+        photoReply = hasPin
+          ? `Perfect — ${photoCount} photos received ✅\n\n${outcome.reply}`
+          : `Perfect — ${photoCount} photos received ✅ Just need your live location 📍 pin to complete your booking.`;
+      }
+      await sendReply(from, photoReply, channel);
+      return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+    }
+
     await sendReply(from, outcome.reply, channel);
     return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
   } catch (e) {
