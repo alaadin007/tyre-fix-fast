@@ -1560,6 +1560,7 @@ Deno.serve(async (req) => {
         jobIdFull: string,
         shortRef: string,
         force: boolean,
+        resendInfo?: { stepSuffix: string; label: string } | null,
       ): Promise<boolean> => {
         if (force) return false;
         const { data: jobRow } = await supabase
@@ -1574,10 +1575,25 @@ Deno.serve(async (req) => {
         const sentTime = new Date(ts).toLocaleTimeString("en-GB", {
           hour: "2-digit", minute: "2-digit", timeZone: "Europe/London",
         });
+        // Persist the ORIGINAL intent so RESEND #REF replays the correct scope
+        // (single tech, updated-only, or all) instead of defaulting to all.
+        if (resendInfo?.stepSuffix) {
+          await setAdminState(`pending_resend:${resendInfo.stepSuffix}`, jobIdFull);
+        }
+        const scopeLine = resendInfo?.label
+          ? `\n\nThis will resend: ${resendInfo.label}.`
+          : "";
         await sendReply(from,
-          `⚠️ Quote was already sent to this customer for job #${shortRef} at ${sentTime}.\n\nReply *RESEND #${shortRef}* to send again.`,
+          `⚠️ Quote was already sent to this customer for job #${shortRef} at ${sentTime}.${scopeLine}\n\nReply *RESEND #${shortRef}* to send again.`,
           channel);
         return true;
+      };
+
+      // Build a human-readable display "TECH-XXXX · Name" for the resend label.
+      const buildTechDisplay = async (technicianId: string): Promise<string> => {
+        const { data: t } = await supabase
+          .from("technicians").select("name, tech_code").eq("id", technicianId).maybeSingle();
+        return `${t?.tech_code ?? "TECH-????"} · ${t?.name ?? "Technician"}`;
       };
 
       const markCustomerQuoteSent = async (jobIdFull: string) => {
@@ -1588,10 +1604,10 @@ Deno.serve(async (req) => {
 
       const runSendQuoteForJobId = async (
         jobIdFull: string,
-        opts?: { quoteId?: string; technicianId?: string; force?: boolean },
+        opts?: { quoteId?: string; technicianId?: string; force?: boolean; resendInfo?: { stepSuffix: string; label: string } | null },
       ) => {
         const shortRef = String(jobIdFull).slice(0, 6).toUpperCase();
-        if (await customerQuoteRecentlyBlocked(jobIdFull, shortRef, !!opts?.force)) return;
+        if (await customerQuoteRecentlyBlocked(jobIdFull, shortRef, !!opts?.force, opts?.resendInfo ?? null)) return;
         const res = await sendQuoteToCustomer(supabase, jobIdFull, opts);
         await clearAdminState();
         if (res.ok) {
@@ -1753,7 +1769,21 @@ Deno.serve(async (req) => {
             await sendReply(from, `Multiple technicians match "${identifier}":\n${lines}\n\nPlease retry with the TECH-ID.`, channel);
             return;
           }
-          await runSendQuoteForJobId(jobIdFull, { technicianId: techs[0].id, force });
+          const techDisplay = await buildTechDisplay(techs[0].id);
+          const { data: tq } = await supabase
+            .from("quotes")
+            .select("price_gbp")
+            .eq("job_id", jobIdFull)
+            .eq("technician_id", techs[0].id)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          const priceTag = tq?.price_gbp != null ? ` (£${tq.price_gbp})` : "";
+          await runSendQuoteForJobId(jobIdFull, {
+            technicianId: techs[0].id,
+            force,
+            resendInfo: { stepSuffix: `single:${identifier}`, label: `${techDisplay} quote only${priceTag}` },
+          });
           return;
         }
 
@@ -1768,11 +1798,17 @@ Deno.serve(async (req) => {
           .order("created_at", { ascending: true });
         const quotes = pendingQuotes ?? [];
         if (quotes.length <= 1) {
-          await runSendQuoteForJobId(jobIdFull, { force });
+          await runSendQuoteForJobId(jobIdFull, {
+            force,
+            resendInfo: { stepSuffix: `all:`, label: `the quote for #${shortRef}` },
+          });
           return;
         }
 
-        if (await customerQuoteRecentlyBlocked(jobIdFull, shortRef, force)) return;
+        if (await customerQuoteRecentlyBlocked(jobIdFull, shortRef, force, {
+          stepSuffix: `all:`,
+          label: `all ${quotes.length} quotes for #${shortRef}`,
+        })) return;
 
         const res = await sendConsolidatedQuotesForJob(jobIdFull, shortRef);
         await clearAdminState();
@@ -1822,7 +1858,21 @@ Deno.serve(async (req) => {
             await sendReply(from, `Multiple technicians match "${identifier}":\n${lines}\n\nPlease retry with the TECH-ID.`, channel);
             return;
           }
-          await runSendQuoteForJobId(jobIdFull, { technicianId: techs[0].id, force });
+          const techDisplay = await buildTechDisplay(techs[0].id);
+          const { data: tq } = await supabase
+            .from("quotes")
+            .select("price_gbp")
+            .eq("job_id", jobIdFull)
+            .eq("technician_id", techs[0].id)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          const priceTag = tq?.price_gbp != null ? ` (£${tq.price_gbp})` : "";
+          await runSendQuoteForJobId(jobIdFull, {
+            technicianId: techs[0].id,
+            force,
+            resendInfo: { stepSuffix: `updated:${identifier}`, label: `${techDisplay} updated quote only${priceTag}` },
+          });
           return;
         }
 
@@ -1837,7 +1887,10 @@ Deno.serve(async (req) => {
         const list = updatedQuotes ?? [];
         if (list.length === 0) {
           // Fall back to default behaviour (latest pending/accepted quote)
-          await runSendQuoteForJobId(jobIdFull, { force });
+          await runSendQuoteForJobId(jobIdFull, {
+            force,
+            resendInfo: { stepSuffix: `updated:`, label: `the latest updated quote for #${shortRef}` },
+          });
           return;
         }
 
@@ -1869,7 +1922,14 @@ Deno.serve(async (req) => {
           return;
         }
 
-        await runSendQuoteForJobId(jobIdFull, { quoteId: latest.id, force });
+        const latestTechDisplay = latest.technician_id ? await buildTechDisplay(latest.technician_id) : "the latest updated quote";
+        const latestIdent = latest.technician_id ? latestTechDisplay.split(" · ")[0] : "";
+        const latestPriceTag = latest.price_gbp != null ? ` (£${latest.price_gbp})` : "";
+        await runSendQuoteForJobId(jobIdFull, {
+          quoteId: latest.id,
+          force,
+          resendInfo: { stepSuffix: `updated:${latestIdent}`, label: `${latestTechDisplay} updated quote only${latestPriceTag}` },
+        });
       };
 
 
@@ -2280,7 +2340,9 @@ Deno.serve(async (req) => {
 
         // Quotes received but not yet forwarded → forward to customer.
         if (status === "quoted") {
-          await runSendQuoteForJobId(String(job.id));
+          await runSendQuoteForJobId(String(job.id), {
+            resendInfo: { stepSuffix: `all:`, label: `the quote for #${shortRef}` },
+          });
           return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
         }
 
@@ -2296,10 +2358,46 @@ Deno.serve(async (req) => {
         // unknown statuses) → use the existing list/broadcast confirmation flow.
       }
 
-      // RESEND #REF — admin override to bypass the 5-minute duplicate-send guard.
+      // RESEND #REF — admin override that REPLAYS the original scoped intent
+      // (single tech / updated-only / all). Falls back to a clarifying prompt
+      // if no pending resend context exists for this admin+job.
       const resendMatch = trimmed.match(/^\s*resend\s+#?([0-9a-f]{6})\s*$/i);
       if (resendMatch) {
-        await runSendQuoteForRef(resendMatch[1], null, { force: true });
+        const ref = resendMatch[1];
+        const matches = await findJobByRef(ref);
+        if (matches.length !== 1) {
+          await sendReply(from,
+            matches.length === 0
+              ? `No job found for ref #${ref.toUpperCase()}. Nothing resent.`
+              : `Multiple jobs match #${ref.toUpperCase()} — please send the full 6-character ref.`,
+            channel);
+          return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+        }
+        const jobIdFull = String(matches[0].id);
+        const shortRef = jobIdFull.slice(0, 6).toUpperCase();
+        const pendingStep =
+          adminState?.step?.startsWith("pending_resend:") && String(adminState.job_id) === jobIdFull
+            ? adminState.step.slice("pending_resend:".length)
+            : null;
+
+        if (!pendingStep) {
+          await sendReply(from,
+            `What would you like to resend for job #${shortRef}?\n\n· All quotes — reply: *send all quotes for #${shortRef} to customer*\n· Specific technician quote — reply: *send <tech name> quote for #${shortRef} to customer*\n· Updated quote only — reply: *send updated quote for #${shortRef} to customer*\n\nPlease specify so I send the correct one.`,
+            channel);
+          return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+        }
+
+        const colonIdx = pendingStep.indexOf(":");
+        const mode = colonIdx >= 0 ? pendingStep.slice(0, colonIdx) : pendingStep;
+        const identifier = colonIdx >= 0 ? pendingStep.slice(colonIdx + 1) : "";
+        await clearAdminState();
+        if (mode === "single") {
+          await runSendQuoteForRef(ref, identifier || null, { force: true });
+        } else if (mode === "updated") {
+          await runSendUpdatedQuoteForRef(ref, identifier || null, { force: true });
+        } else {
+          await runSendQuoteForRef(ref, null, { force: true });
+        }
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
       }
 
