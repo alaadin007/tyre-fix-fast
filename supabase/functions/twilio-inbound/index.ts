@@ -1560,6 +1560,7 @@ Deno.serve(async (req) => {
         jobIdFull: string,
         shortRef: string,
         force: boolean,
+        resendInfo?: { stepSuffix: string; label: string } | null,
       ): Promise<boolean> => {
         if (force) return false;
         const { data: jobRow } = await supabase
@@ -1574,10 +1575,25 @@ Deno.serve(async (req) => {
         const sentTime = new Date(ts).toLocaleTimeString("en-GB", {
           hour: "2-digit", minute: "2-digit", timeZone: "Europe/London",
         });
+        // Persist the ORIGINAL intent so RESEND #REF replays the correct scope
+        // (single tech, updated-only, or all) instead of defaulting to all.
+        if (resendInfo?.stepSuffix) {
+          await setAdminState(`pending_resend:${resendInfo.stepSuffix}`, jobIdFull);
+        }
+        const scopeLine = resendInfo?.label
+          ? `\n\nThis will resend: ${resendInfo.label}.`
+          : "";
         await sendReply(from,
-          `⚠️ Quote was already sent to this customer for job #${shortRef} at ${sentTime}.\n\nReply *RESEND #${shortRef}* to send again.`,
+          `⚠️ Quote was already sent to this customer for job #${shortRef} at ${sentTime}.${scopeLine}\n\nReply *RESEND #${shortRef}* to send again.`,
           channel);
         return true;
+      };
+
+      // Build a human-readable display "TECH-XXXX · Name" for the resend label.
+      const buildTechDisplay = async (technicianId: string): Promise<string> => {
+        const { data: t } = await supabase
+          .from("technicians").select("name, tech_code").eq("id", technicianId).maybeSingle();
+        return `${t?.tech_code ?? "TECH-????"} · ${t?.name ?? "Technician"}`;
       };
 
       const markCustomerQuoteSent = async (jobIdFull: string) => {
