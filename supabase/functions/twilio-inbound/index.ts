@@ -1604,10 +1604,10 @@ Deno.serve(async (req) => {
 
       const runSendQuoteForJobId = async (
         jobIdFull: string,
-        opts?: { quoteId?: string; technicianId?: string; force?: boolean },
+        opts?: { quoteId?: string; technicianId?: string; force?: boolean; resendInfo?: { stepSuffix: string; label: string } | null },
       ) => {
         const shortRef = String(jobIdFull).slice(0, 6).toUpperCase();
-        if (await customerQuoteRecentlyBlocked(jobIdFull, shortRef, !!opts?.force)) return;
+        if (await customerQuoteRecentlyBlocked(jobIdFull, shortRef, !!opts?.force, opts?.resendInfo ?? null)) return;
         const res = await sendQuoteToCustomer(supabase, jobIdFull, opts);
         await clearAdminState();
         if (res.ok) {
