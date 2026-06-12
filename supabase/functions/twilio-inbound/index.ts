@@ -3831,7 +3831,17 @@ Deno.serve(async (req) => {
         .limit(1)
         .maybeSingle();
       midIntake = !!conv;
+      // Belt-and-braces: also treat as mid-intake if the customer has any
+      // recent job still in intake_pending state. This guarantees that short
+      // follow-ups like "ok" / "thanks" / "status?" — which would otherwise
+      // hit the intent gate — route through the intake parser first until
+      // the intake form is fully complete.
+      if (!midIntake && recentJob && String(recentJob.status) === "intake_pending") {
+        const ageMs = Date.now() - new Date(recentJob.created_at).getTime();
+        if (ageMs < 30 * 60_000) midIntake = true;
+      }
     } catch (_) { /* best-effort */ }
+
 
     if (!midIntake && mediaUrls.length === 0 && body) {
       // FAQ matcher runs BEFORE intent detection. If the message is a
