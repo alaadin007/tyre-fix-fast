@@ -499,14 +499,34 @@ async function aiExtractTechProfile(args: {
 
 async function sendReply(to: string, body: string, channel: "sms" | "whatsapp") {
   const url = `${Deno.env.get("SUPABASE_URL")}/functions/v1/twilio-send`;
-  await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
-    },
-    body: JSON.stringify({ to, body, channel }),
-  });
+  try {
+    const r = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+      },
+      body: JSON.stringify({ to, body, channel }),
+    });
+    if (!r.ok) {
+      const text = await r.text().catch(() => "");
+      console.error("sendReply: delivery failed", {
+        to,
+        channel,
+        status: r.status,
+        bodyPreview: body.slice(0, 120),
+        responsePreview: text.slice(0, 400),
+      });
+    } else {
+      console.log("sendReply: delivered", { to, channel, len: body.length });
+    }
+  } catch (e) {
+    console.error("sendReply: network error", {
+      to,
+      channel,
+      error: e instanceof Error ? e.message : String(e),
+    });
+  }
 }
 
 // ───────────── Intent classifier (pre-intake gate) ─────────────
