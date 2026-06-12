@@ -2358,10 +2358,46 @@ Deno.serve(async (req) => {
         // unknown statuses) → use the existing list/broadcast confirmation flow.
       }
 
-      // RESEND #REF — admin override to bypass the 5-minute duplicate-send guard.
+      // RESEND #REF — admin override that REPLAYS the original scoped intent
+      // (single tech / updated-only / all). Falls back to a clarifying prompt
+      // if no pending resend context exists for this admin+job.
       const resendMatch = trimmed.match(/^\s*resend\s+#?([0-9a-f]{6})\s*$/i);
       if (resendMatch) {
-        await runSendQuoteForRef(resendMatch[1], null, { force: true });
+        const ref = resendMatch[1];
+        const matches = await findJobByRef(ref);
+        if (matches.length !== 1) {
+          await sendReply(from,
+            matches.length === 0
+              ? `No job found for ref #${ref.toUpperCase()}. Nothing resent.`
+              : `Multiple jobs match #${ref.toUpperCase()} — please send the full 6-character ref.`,
+            channel);
+          return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+        }
+        const jobIdFull = String(matches[0].id);
+        const shortRef = jobIdFull.slice(0, 6).toUpperCase();
+        const pendingStep =
+          adminState?.step?.startsWith("pending_resend:") && String(adminState.job_id) === jobIdFull
+            ? adminState.step.slice("pending_resend:".length)
+            : null;
+
+        if (!pendingStep) {
+          await sendReply(from,
+            `What would you like to resend for job #${shortRef}?\n\n· All quotes — reply: *send all quotes for #${shortRef} to customer*\n· Specific technician quote — reply: *send <tech name> quote for #${shortRef} to customer*\n· Updated quote only — reply: *send updated quote for #${shortRef} to customer*\n\nPlease specify so I send the correct one.`,
+            channel);
+          return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+        }
+
+        const colonIdx = pendingStep.indexOf(":");
+        const mode = colonIdx >= 0 ? pendingStep.slice(0, colonIdx) : pendingStep;
+        const identifier = colonIdx >= 0 ? pendingStep.slice(colonIdx + 1) : "";
+        await clearAdminState();
+        if (mode === "single") {
+          await runSendQuoteForRef(ref, identifier || null, { force: true });
+        } else if (mode === "updated") {
+          await runSendUpdatedQuoteForRef(ref, identifier || null, { force: true });
+        } else {
+          await runSendQuoteForRef(ref, null, { force: true });
+        }
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
       }
 
