@@ -138,24 +138,25 @@ async function handleCheckoutCompleted(session: any) {
   // ===== Fetch assigned technician + accepted quote for admin notification =====
   let techName = "—";
   let techPhone = "—";
+  let techCode = "";
   let quotedAmount: string = amount;
   try {
-    if (job.assigned_technician_id) {
+    if (selectedTechId) {
       const { data: tech } = await supabase
         .from("technicians")
-        .select("name, phone")
-        .eq("id", job.assigned_technician_id)
+        .select("name, phone, tech_code")
+        .eq("id", selectedTechId)
         .maybeSingle();
       if (tech) {
         techName = (tech as any).name ?? "—";
         techPhone = (tech as any).phone ?? "—";
+        techCode = (tech as any).tech_code ?? "";
       }
       const { data: quote } = await supabase
         .from("quotes")
         .select("price_gbp")
         .eq("job_id", jobId)
-        .eq("technician_id", job.assigned_technician_id)
-        .eq("status", "accepted")
+        .eq("technician_id", selectedTechId)
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
