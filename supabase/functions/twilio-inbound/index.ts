@@ -4056,23 +4056,50 @@ Deno.serve(async (req) => {
     // consolidated confirmation reflecting the total photo count on the job.
     const isPhotoOnlyMsg = mediaUrls.length > 0 && !(body || "").trim();
     if (isPhotoOnlyMsg && outcome.conversation?.id && outcome.job?.id) {
+      // Sliding-window debounce per conversation. Each photo writes its own
+      // token; whoever owns the latest token after a quiet 5s window fires the
+      // single consolidated reply. Superseded photos exit immediately on the
+      // next poll instead of waiting the full window.
       const myToken = `${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
       const baseCtx = (outcome.conversation.context ?? {}) as Record<string, any>;
       await supabase.from("conversations")
         .update({ context: { ...baseCtx, photo_batch_token: myToken } })
         .eq("id", outcome.conversation.id);
-      await new Promise((r) => setTimeout(r, 3500));
-      const { data: convNow } = await supabase
-        .from("conversations")
-        .select("context")
-        .eq("id", outcome.conversation.id)
-        .maybeSingle();
-      const latestToken = (convNow?.context as any)?.photo_batch_token;
-      if (latestToken && latestToken !== myToken) {
-        // A newer photo from the same batch will send the consolidated reply.
-        console.log("photo batch: superseded, suppressing reply", { myToken, latestToken });
+
+      const DEBOUNCE_MS = 5000;
+      const POLL_MS = 500;
+      const MAX_WAIT_MS = 15000;
+      let waited = 0;
+      let stableSince = Date.now();
+      let lastSeenToken = myToken;
+      let superseded = false;
+
+      while (waited < MAX_WAIT_MS) {
+        await new Promise((r) => setTimeout(r, POLL_MS));
+        waited += POLL_MS;
+        const { data: convNow } = await supabase
+          .from("conversations")
+          .select("context")
+          .eq("id", outcome.conversation.id)
+          .maybeSingle();
+        const latestToken = (convNow?.context as any)?.photo_batch_token;
+        if (latestToken && latestToken !== lastSeenToken) {
+          // A newer photo arrived — reset the quiet window.
+          lastSeenToken = latestToken;
+          stableSince = Date.now();
+          if (latestToken !== myToken) {
+            superseded = true;
+            break;
+          }
+        }
+        if (Date.now() - stableSince >= DEBOUNCE_MS) break;
+      }
+
+      if (superseded) {
+        console.log("photo batch: superseded, suppressing reply", { myToken, lastSeenToken });
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
       }
+
       // Winner — build a fast, hardcoded confirmation based on total photos.
       const { data: jobNow } = await supabase
         .from("jobs")
