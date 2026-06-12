@@ -185,12 +185,18 @@ async function handleCheckoutCompleted(session: any) {
     .maybeSingle();
   const masterNumbers: string[] = (((masterSetting as any)?.value?.numbers) ?? []).filter(Boolean);
 
+  const techLine = techCode
+    ? `🔧 Technician: ${techName} (${techCode})`
+    : `🔧 Technician: ${techName}`;
+  const phoneLine = techPhone !== "—" ? `   Phone: ${techPhone}` : "";
+
   const compactMsg = [
     `💳 Payment Confirmed — Job #${ref}`,
     ``,
     `👤 Customer: ${job.customer_name ?? "—"}`,
     `💷 Amount Paid: £${amount}`,
-    `🔧 Technician: ${techName}${techPhone !== "—" ? ` (${techPhone})` : ""}`,
+    techLine,
+    ...(phoneLine ? [phoneLine] : []),
     ``,
     `Ready to connect both parties.`,
     `Reply YES #${ref} to send details to both parties now.`,
@@ -210,11 +216,11 @@ async function handleCheckoutCompleted(session: any) {
     }
   }
 
-
+  const isFullPayment = kind === "job_full_payment";
   await supabase.from("ops_alerts").insert({
     level: "info",
     title: isFullPayment ? "Customer paid in full" : "Platform fee paid",
-    body: `Job ${ref} — £${amount} received. Awaiting admin approval to share contact details.`,
+    body: `Job ${ref} — £${amount} received${techName !== "—" ? ` (${techName})` : ""}. Awaiting admin approval to share contact details.`,
     job_id: jobId,
   });
 }
