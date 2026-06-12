@@ -1080,7 +1080,20 @@ export async function processCustomerIntake(
   // ─── AI classifier: fill gaps the regex missed ───
   // Only run when there's textual content to interpret.
   const trimmed = (body || "").trim();
-  const shouldAskAI = trimmed.length >= 2 && !DONE_RE.test(trimmed) && !extractCoords(trimmed);
+  // Performance: skip AI when the body is a short, structured intake answer
+  // (postcode, reg, wheels, tyre size, name, location) that the regex already
+  // captured. Only invoke AI for ambiguous / free-text / questions.
+  const extractedAny = !!(
+    updates.postcode || updates.lat != null || updates.vehicle_reg ||
+    updates.customer_name || updates.affected_wheels || updates.tyre_size ||
+    (updates.issue_type && updates.issue_type !== "unknown")
+  );
+  const looksStructuredShort = trimmed.length > 0 && trimmed.length <= 80 && !/[?]/.test(trimmed);
+  const shouldAskAI =
+    trimmed.length >= 2 &&
+    !DONE_RE.test(trimmed) &&
+    !extractCoords(trimmed) &&
+    !(extractedAny && looksStructuredShort);
   if (shouldAskAI) {
     const ai = await classifyWithAI(supabase, trimmed, { job, customer, phone: from });
     if (ai.customer_name && updates.customer_name == null) {
