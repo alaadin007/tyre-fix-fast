@@ -1769,7 +1769,21 @@ Deno.serve(async (req) => {
             await sendReply(from, `Multiple technicians match "${identifier}":\n${lines}\n\nPlease retry with the TECH-ID.`, channel);
             return;
           }
-          await runSendQuoteForJobId(jobIdFull, { technicianId: techs[0].id, force });
+          const techDisplay = await buildTechDisplay(techs[0].id);
+          const { data: tq } = await supabase
+            .from("quotes")
+            .select("price_gbp")
+            .eq("job_id", jobIdFull)
+            .eq("technician_id", techs[0].id)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          const priceTag = tq?.price_gbp != null ? ` (£${tq.price_gbp})` : "";
+          await runSendQuoteForJobId(jobIdFull, {
+            technicianId: techs[0].id,
+            force,
+            resendInfo: { stepSuffix: `single:${identifier}`, label: `${techDisplay} quote only${priceTag}` },
+          });
           return;
         }
 
@@ -1784,11 +1798,17 @@ Deno.serve(async (req) => {
           .order("created_at", { ascending: true });
         const quotes = pendingQuotes ?? [];
         if (quotes.length <= 1) {
-          await runSendQuoteForJobId(jobIdFull, { force });
+          await runSendQuoteForJobId(jobIdFull, {
+            force,
+            resendInfo: { stepSuffix: `all:`, label: `the quote for #${shortRef}` },
+          });
           return;
         }
 
-        if (await customerQuoteRecentlyBlocked(jobIdFull, shortRef, force)) return;
+        if (await customerQuoteRecentlyBlocked(jobIdFull, shortRef, force, {
+          stepSuffix: `all:`,
+          label: `all ${quotes.length} quotes for #${shortRef}`,
+        })) return;
 
         const res = await sendConsolidatedQuotesForJob(jobIdFull, shortRef);
         await clearAdminState();
