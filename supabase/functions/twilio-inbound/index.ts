@@ -1919,7 +1919,14 @@ Deno.serve(async (req) => {
           return;
         }
 
-        await runSendQuoteForJobId(jobIdFull, { quoteId: latest.id, force });
+        const latestTechDisplay = latest.technician_id ? await buildTechDisplay(latest.technician_id) : "the latest updated quote";
+        const latestIdent = latest.technician_id ? latestTechDisplay.split(" · ")[0] : "";
+        const latestPriceTag = latest.price_gbp != null ? ` (£${latest.price_gbp})` : "";
+        await runSendQuoteForJobId(jobIdFull, {
+          quoteId: latest.id,
+          force,
+          resendInfo: { stepSuffix: `updated:${latestIdent}`, label: `${latestTechDisplay} updated quote only${latestPriceTag}` },
+        });
       };
 
 
