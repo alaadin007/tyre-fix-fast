@@ -2869,6 +2869,18 @@ Deno.serve(async (req) => {
         classification.intent = "UPDATE_TECHNICIAN_PRICE";
       }
 
+      // Safety override (HIGHEST PRIORITY): "connect both / share details /
+      // send contacts / link both / send details to both" + a job ref always
+      // means ASSIGN (share contact details after payment), never FORWARD_QUOTE.
+      // The classifier sometimes confuses these because both involve "sending"
+      // something to the customer. ASSIGN happens AFTER payment, FORWARD_QUOTE
+      // happens BEFORE payment — they must never be conflated.
+      const ASSIGN_KEYWORDS_RE = /\b(connect(?:\s+(?:both|them|customer|parties|for))?|share\s+(?:both\s+)?(?:details|contacts)|send\s+(?:details|contacts)\s+to\s+both|send\s+contacts|link\s+both)\b/i;
+      const HAS_JOB_REF_RE = /#?\s*\b[0-9a-f]{6,8}\b/i;
+      if (classification && ASSIGN_KEYWORDS_RE.test(trimmed) && HAS_JOB_REF_RE.test(trimmed)) {
+        classification.intent = "ASSIGN";
+      }
+
       if (classification && classification.intent !== "UNKNOWN") {
 
         const ref = classification.job_reference;
