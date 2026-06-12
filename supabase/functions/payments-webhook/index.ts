@@ -45,6 +45,7 @@ function jobRef(jobId: string): string {
 async function handleCheckoutCompleted(session: any) {
   const jobId = session?.metadata?.job_id;
   const kind = session?.metadata?.kind ?? "platform_connection_fee";
+  const sessionTechnicianId: string | null = session?.metadata?.technician_id ?? null;
   if (!jobId) {
     console.warn("checkout.session.completed without job_id metadata");
     return;
@@ -78,16 +79,36 @@ async function handleCheckoutCompleted(session: any) {
     return;
   }
 
-  // NOTE: Do NOT move status to "in_progress"/"accepted" here. Status only
-  // advances after contact details are actually exchanged with both parties
-  // (see shareContactsForJobId). assignment_status tracks the handoff state.
-  await supabase.from("jobs").update({
+  // Resolve which technician the customer actually selected.
+  // CRITICAL: when multiple quotes are sent (one Stripe link per tech),
+  // session.metadata.technician_id is the only reliable source of truth —
+  // job.assigned_technician_id may be unset or point at a different tech.
+  const selectedTechId: string | null = sessionTechnicianId || (job as any).assigned_technician_id || null;
+  console.log("payment confirmed", { jobId, sessionTechnicianId, jobAssigned: (job as any).assigned_technician_id, selectedTechId });
+
+  const jobUpdate: Record<string, any> = {
     platform_fee_status: "paid",
     platform_fee_paid_at: new Date().toISOString(),
     stripe_payment_intent_id: session.payment_intent ?? null,
     status: "paid",
     assignment_status: "pending",
-  }).eq("id", jobId);
+  };
+  if (selectedTechId) jobUpdate.assigned_technician_id = selectedTechId;
+  await supabase.from("jobs").update(jobUpdate).eq("id", jobId);
+
+  // Mark the winning quote accepted; sibling quotes -> lost so dashboard
+  // + downstream handoff know which tech the customer chose.
+  if (selectedTechId) {
+    await supabase.from("quotes")
+      .update({ status: "accepted" })
+      .eq("job_id", jobId)
+      .eq("technician_id", selectedTechId);
+    await supabase.from("quotes")
+      .update({ status: "lost" })
+      .eq("job_id", jobId)
+      .neq("technician_id", selectedTechId)
+      .in("status", ["pending", "accepted"]);
+  }
 
 
   const amount = formatGbp(session?.amount_total);
