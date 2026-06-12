@@ -1887,7 +1887,10 @@ Deno.serve(async (req) => {
         const list = updatedQuotes ?? [];
         if (list.length === 0) {
           // Fall back to default behaviour (latest pending/accepted quote)
-          await runSendQuoteForJobId(jobIdFull, { force });
+          await runSendQuoteForJobId(jobIdFull, {
+            force,
+            resendInfo: { stepSuffix: `updated:`, label: `the latest updated quote for #${shortRef}` },
+          });
           return;
         }
 
