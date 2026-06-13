@@ -28,6 +28,8 @@ Possible intents:
 - CONFIRM_CANCEL: explicit cancel confirmation phrase. e.g. "CONFIRM CANCEL #X", "haan cancel kar do X".
 - UNKNOWN: greeting, small talk, or anything that doesn't match.
 
+A message that is ONLY a bare job reference such as "#9593CB" or "9593CB" is ambiguous without prior conversation context. Unless the message explicitly includes status words, do NOT assume STATUS from a bare reference alone; prefer UNKNOWN with low confidence.
+
 Language values: "en" English, "ur" Urdu in Arabic script, "roman_ur" Urdu written with Latin letters.
 
 Confidence "high" only if you are sure. Otherwise "low".
