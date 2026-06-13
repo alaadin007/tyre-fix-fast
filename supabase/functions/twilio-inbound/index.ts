@@ -2941,6 +2941,80 @@ Deno.serve(async (req) => {
         );
       };
 
+      const runPendingAdminIntent = async (
+        intent: string,
+        ref: string,
+        opts?: { technicianId?: string | null },
+      ) => {
+        const techId = opts?.technicianId ?? null;
+        switch (intent) {
+          case "SHOW_TECHNICIAN_LIST":
+            await runShowTechniciansForRef(ref);
+            return;
+          case "BROADCAST_ALL":
+            await runBroadcastForRef(ref);
+            return;
+          case "BROADCAST_ONE":
+          case "BROADCAST_MULTIPLE_SPECIFIC":
+            if (techId) {
+              await runBroadcastToOne(ref, techId);
+            } else {
+              await sendReply(from, `Which technician should receive job #${ref.toUpperCase()}? Reply with their name, TECH-ID, or phone.`, channel);
+            }
+            return;
+          case "FORWARD_QUOTE_ONE":
+          case "FORWARD_QUOTE_MULTIPLE":
+            await runSendQuoteForRef(ref, techId);
+            return;
+          case "FORWARD_QUOTE_UPDATED":
+            await runSendUpdatedQuoteForRef(ref, techId);
+            return;
+          case "UPDATE_TECHNICIAN_PRICE":
+            if (techId) {
+              await runUpdatePricePromptForRef(ref, techId);
+            } else {
+              await sendReply(from, `Which technician's price should I update on job #${ref.toUpperCase()}? Reply with the name or TECH-ID.`, channel);
+            }
+            return;
+          case "ASSIGN":
+            await runShareContactsForRef(ref);
+            return;
+          case "CANCEL":
+            await runCancelPrompt(ref);
+            return;
+          case "CONFIRM_CANCEL":
+            await runCancelConfirm(ref);
+            return;
+          case "STATUS":
+          default:
+            await runStatusForRef(ref);
+            return;
+        }
+      };
+
+      const { data: pendingAdminActionRow } = await supabase
+        .from("pending_admin_actions")
+        .select("intent, awaiting, job_reference, technician_id, extra_data, expires_at")
+        .eq("admin_phone", fromN)
+        .maybeSingle();
+      const pendingAdminAction = pendingAdminActionRow?.expires_at &&
+        new Date(pendingAdminActionRow.expires_at).getTime() > Date.now()
+        ? pendingAdminActionRow
+        : null;
+      if (pendingAdminActionRow && !pendingAdminAction) {
+        await clearPendingAdminAction();
+      }
+
+      if (refOnlyMatch && pendingAdminAction?.awaiting === "job_reference") {
+        const bareRef = refOnlyMatch[1];
+        await clearPendingAdminAction();
+        await clearAdminState();
+        await runPendingAdminIntent(pendingAdminAction.intent, bareRef, {
+          technicianId: pendingAdminAction.technician_id ?? null,
+        });
+        return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+      }
+
 
 
       // ---- Intent 3 — BROADCAST_JOB_TO_ONE_OR_MORE_TECHNICIANS ----
