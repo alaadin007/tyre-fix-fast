@@ -2426,7 +2426,62 @@ Deno.serve(async (req) => {
           await runSendUpdatedQuoteForRef(bareRef, ident);
           return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
         }
+        // Generic pending-intent carry-forward (set when we asked the admin
+        // "There are currently N active jobs. Please include the job reference…").
+        // A bare ref reply MUST complete that original intent, never default
+        // to STATUS.
+        if (step.startsWith("await_ref_for_intent:")) {
+          const payload = step.slice("await_ref_for_intent:".length);
+          const [intent, techIdRaw] = payload.split("|");
+          const techId = techIdRaw || null;
+          await clearAdminState();
+          switch (intent) {
+            case "SHOW_TECHNICIAN_LIST":
+              await runShowTechniciansForRef(bareRef);
+              break;
+            case "BROADCAST_ALL":
+              await runBroadcastForRef(bareRef);
+              break;
+            case "BROADCAST_ONE":
+            case "BROADCAST_MULTIPLE_SPECIFIC":
+              if (techId) {
+                await runBroadcastToOne(bareRef, techId);
+              } else {
+                await sendReply(from, `Which technician should receive job #${bareRef.toUpperCase()}? Reply with their name, TECH-ID, or phone.`, channel);
+              }
+              break;
+            case "FORWARD_QUOTE_ONE":
+            case "FORWARD_QUOTE_MULTIPLE":
+              await runSendQuoteForRef(bareRef, techId);
+              break;
+            case "FORWARD_QUOTE_UPDATED":
+              await runSendUpdatedQuoteForRef(bareRef, techId);
+              break;
+            case "UPDATE_TECHNICIAN_PRICE":
+              if (techId) {
+                await runUpdatePricePromptForRef(bareRef, techId);
+              } else {
+                await sendReply(from, `Which technician's price should I update on job #${bareRef.toUpperCase()}? Reply with the name or TECH-ID.`, channel);
+              }
+              break;
+            case "ASSIGN":
+              await runShareContactsForRef(bareRef);
+              break;
+            case "CANCEL":
+              await runCancelPrompt(bareRef);
+              break;
+            case "CONFIRM_CANCEL":
+              await runCancelConfirm(bareRef);
+              break;
+            case "STATUS":
+            default:
+              await runStatusForRef(bareRef);
+              break;
+          }
+          return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+        }
       }
+
 
       const refFromMsg =
         (yesPlusRefMatch ? yesPlusRefMatch[1] : null) ??
