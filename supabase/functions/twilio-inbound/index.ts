@@ -2454,49 +2454,8 @@ Deno.serve(async (req) => {
           const [intent, techIdRaw] = payload.split("|");
           const techId = techIdRaw || null;
           await clearAdminState();
-          switch (intent) {
-            case "SHOW_TECHNICIAN_LIST":
-              await runShowTechniciansForRef(bareRef);
-              break;
-            case "BROADCAST_ALL":
-              await runBroadcastForRef(bareRef);
-              break;
-            case "BROADCAST_ONE":
-            case "BROADCAST_MULTIPLE_SPECIFIC":
-              if (techId) {
-                await runBroadcastToOne(bareRef, techId);
-              } else {
-                await sendReply(from, `Which technician should receive job #${bareRef.toUpperCase()}? Reply with their name, TECH-ID, or phone.`, channel);
-              }
-              break;
-            case "FORWARD_QUOTE_ONE":
-            case "FORWARD_QUOTE_MULTIPLE":
-              await runSendQuoteForRef(bareRef, techId);
-              break;
-            case "FORWARD_QUOTE_UPDATED":
-              await runSendUpdatedQuoteForRef(bareRef, techId);
-              break;
-            case "UPDATE_TECHNICIAN_PRICE":
-              if (techId) {
-                await runUpdatePricePromptForRef(bareRef, techId);
-              } else {
-                await sendReply(from, `Which technician's price should I update on job #${bareRef.toUpperCase()}? Reply with the name or TECH-ID.`, channel);
-              }
-              break;
-            case "ASSIGN":
-              await runShareContactsForRef(bareRef);
-              break;
-            case "CANCEL":
-              await runCancelPrompt(bareRef);
-              break;
-            case "CONFIRM_CANCEL":
-              await runCancelConfirm(bareRef);
-              break;
-            case "STATUS":
-            default:
-              await runStatusForRef(bareRef);
-              break;
-          }
+          await clearPendingAdminAction();
+          await runPendingAdminIntent(intent, bareRef, { technicianId: techId });
           return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
         }
       }
