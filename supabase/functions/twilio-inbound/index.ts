@@ -2426,7 +2426,62 @@ Deno.serve(async (req) => {
           await runSendUpdatedQuoteForRef(bareRef, ident);
           return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
         }
+        // Generic pending-intent carry-forward (set when we asked the admin
+        // "There are currently N active jobs. Please include the job reference…").
+        // A bare ref reply MUST complete that original intent, never default
+        // to STATUS.
+        if (step.startsWith("await_ref_for_intent:")) {
+          const payload = step.slice("await_ref_for_intent:".length);
+          const [intent, techIdRaw] = payload.split("|");
+          const techId = techIdRaw || null;
+          await clearAdminState();
+          switch (intent) {
+            case "SHOW_TECHNICIAN_LIST":
+              await runShowTechniciansForRef(bareRef);
+              break;
+            case "BROADCAST_ALL":
+              await runBroadcastForRef(bareRef);
+              break;
+            case "BROADCAST_ONE":
+            case "BROADCAST_MULTIPLE_SPECIFIC":
+              if (techId) {
+                await runBroadcastToOne(bareRef, techId);
+              } else {
+                await sendReply(from, `Which technician should receive job #${bareRef.toUpperCase()}? Reply with their name, TECH-ID, or phone.`, channel);
+              }
+              break;
+            case "FORWARD_QUOTE_ONE":
+            case "FORWARD_QUOTE_MULTIPLE":
+              await runSendQuoteForRef(bareRef, techId);
+              break;
+            case "FORWARD_QUOTE_UPDATED":
+              await runSendUpdatedQuoteForRef(bareRef, techId);
+              break;
+            case "UPDATE_TECHNICIAN_PRICE":
+              if (techId) {
+                await runUpdatePricePromptForRef(bareRef, techId);
+              } else {
+                await sendReply(from, `Which technician's price should I update on job #${bareRef.toUpperCase()}? Reply with the name or TECH-ID.`, channel);
+              }
+              break;
+            case "ASSIGN":
+              await runShareContactsForRef(bareRef);
+              break;
+            case "CANCEL":
+              await runCancelPrompt(bareRef);
+              break;
+            case "CONFIRM_CANCEL":
+              await runCancelConfirm(bareRef);
+              break;
+            case "STATUS":
+            default:
+              await runStatusForRef(bareRef);
+              break;
+          }
+          return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+        }
       }
+
 
       const refFromMsg =
         (yesPlusRefMatch ? yesPlusRefMatch[1] : null) ??
@@ -2820,6 +2875,55 @@ Deno.serve(async (req) => {
         await sendReply(from, `✅ Job #${shortRef} cancelled. Customer has been notified.`, channel);
       };
 
+      // Pending-context helper: show available technicians for a job ref.
+      // Mirrors the inline SHOW_TECHNICIAN_LIST case so a bare ref reply
+      // (after we asked for the missing reference) completes the original intent.
+      const runShowTechniciansForRef = async (ref: string) => {
+        const matches = await findJobByRef(ref);
+        if (matches.length === 0) {
+          await sendReply(from, `No job found for ref #${ref.toUpperCase()}.`, channel);
+          return;
+        }
+        if (matches.length > 1) {
+          await sendReply(from, `Multiple jobs match #${ref.toUpperCase()} — please send the full 6-character ref.`, channel);
+          return;
+        }
+        const job: any = matches[0];
+        const shortRef = String(job.id).slice(0, 6).toUpperCase();
+        const scored = await scoreNearbyTechs(job);
+        if (scored.length === 0) {
+          await sendReply(from, `Job #${shortRef} (${job.postcode}) — no approved technicians found nearby.`, channel);
+          return;
+        }
+        const lines = scored.slice(0, 10).map(({ t, miles }: any, idx: number) => {
+          const dist = miles != null ? `${miles.toFixed(1)} mi` : "Unknown";
+          const code = t.tech_code ?? "TECH-????";
+          return `${idx + 1}. 👤 ${code} · ${t.name}\n   Phone: ${t.phone}\n   Distance: ${dist}`;
+        }).join("\n\n");
+        const more = scored.length > 10 ? `\n\n…and ${scored.length - 10} more` : "";
+        const divider = "──────────────────────";
+        await setAdminState("await_broadcast_confirm", job.id);
+        await sendReply(from,
+          `Job #${shortRef} — Available Technicians (${job.postcode ?? "—"})\n\n${divider}\n\n${lines}${more}\n\n${divider}\n\nTotal: ${scored.length} technician(s) available\n\nBroadcast all:\nbroadcast #${shortRef}\n\nSend to one:\n#${shortRef} send to Hassan\n#${shortRef} send to TECH-0001\n\nSend to few:\n#${shortRef} send to Hassan, Pashma\n#${shortRef} send to TECH-0001, TECH-0003\n#${shortRef} send to TECH-0001, Hassan`,
+          channel,
+        );
+      };
+
+      const runUpdatePricePromptForRef = async (ref: string, techId: string) => {
+        const refUp = ref.toUpperCase();
+        const jobs = await findJobByRef(ref);
+        if (jobs.length === 1) {
+          await setAdminState(`await_price_update:${techId}`, String(jobs[0].id));
+        }
+        await sendReply(
+          from,
+          `Please provide the new price for ${techId} on job #${refUp}.\nExample: "update ${techId} price for #${refUp} to £55"`,
+          channel,
+        );
+      };
+
+
+
       // ---- Intent 3 — BROADCAST_JOB_TO_ONE_OR_MORE_TECHNICIANS ----
       // Splits identifier on commas / "and" / "&" and resolves each piece
       // individually (name, TECH-ID, or phone). Broadcasts to all resolved
@@ -3064,11 +3168,18 @@ Deno.serve(async (req) => {
               CONFIRM_CANCEL: `CONFIRM CANCEL ${sampleRef}`,
             };
             const example = exampleByIntent[classification.intent] ?? `status ${sampleRef}`;
+            // Persist the original intent so a bare ref reply (e.g. "#C977B3")
+            // completes that intent instead of falling back to STATUS.
+            const intentPayload = techId
+              ? `${classification.intent}|${techId}`
+              : classification.intent;
+            await setAdminState(`await_ref_for_intent:${intentPayload}`, null);
             await sendReply(from,
               `There are currently ${list.length} active jobs. Please include the job reference number so I know which one to action.\n\nExample: "${example}"\n\nOr type "show active jobs" to see all open jobs.`,
               channel,
             );
             return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+
           }
           // Single active job — confirm with admin first.
           const onlyJob = list[0];
