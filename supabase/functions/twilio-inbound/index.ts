@@ -2820,6 +2820,55 @@ Deno.serve(async (req) => {
         await sendReply(from, `✅ Job #${shortRef} cancelled. Customer has been notified.`, channel);
       };
 
+      // Pending-context helper: show available technicians for a job ref.
+      // Mirrors the inline SHOW_TECHNICIAN_LIST case so a bare ref reply
+      // (after we asked for the missing reference) completes the original intent.
+      const runShowTechniciansForRef = async (ref: string) => {
+        const matches = await findJobByRef(ref);
+        if (matches.length === 0) {
+          await sendReply(from, `No job found for ref #${ref.toUpperCase()}.`, channel);
+          return;
+        }
+        if (matches.length > 1) {
+          await sendReply(from, `Multiple jobs match #${ref.toUpperCase()} — please send the full 6-character ref.`, channel);
+          return;
+        }
+        const job: any = matches[0];
+        const shortRef = String(job.id).slice(0, 6).toUpperCase();
+        const scored = await scoreNearbyTechs(job);
+        if (scored.length === 0) {
+          await sendReply(from, `Job #${shortRef} (${job.postcode}) — no approved technicians found nearby.`, channel);
+          return;
+        }
+        const lines = scored.slice(0, 10).map(({ t, miles }: any, idx: number) => {
+          const dist = miles != null ? `${miles.toFixed(1)} mi` : "Unknown";
+          const code = t.tech_code ?? "TECH-????";
+          return `${idx + 1}. 👤 ${code} · ${t.name}\n   Phone: ${t.phone}\n   Distance: ${dist}`;
+        }).join("\n\n");
+        const more = scored.length > 10 ? `\n\n…and ${scored.length - 10} more` : "";
+        const divider = "──────────────────────";
+        await setAdminState("await_broadcast_confirm", job.id);
+        await sendReply(from,
+          `Job #${shortRef} — Available Technicians (${job.postcode ?? "—"})\n\n${divider}\n\n${lines}${more}\n\n${divider}\n\nTotal: ${scored.length} technician(s) available\n\nBroadcast all:\nbroadcast #${shortRef}\n\nSend to one:\n#${shortRef} send to Hassan\n#${shortRef} send to TECH-0001\n\nSend to few:\n#${shortRef} send to Hassan, Pashma\n#${shortRef} send to TECH-0001, TECH-0003\n#${shortRef} send to TECH-0001, Hassan`,
+          channel,
+        );
+      };
+
+      const runUpdatePricePromptForRef = async (ref: string, techId: string) => {
+        const refUp = ref.toUpperCase();
+        const jobs = await findJobByRef(ref);
+        if (jobs.length === 1) {
+          await setAdminState(`await_price_update:${techId}`, String(jobs[0].id));
+        }
+        await sendReply(
+          from,
+          `Please provide the new price for ${techId} on job #${refUp}.\nExample: "update ${techId} price for #${refUp} to £55"`,
+          channel,
+        );
+      };
+
+
+
       // ---- Intent 3 — BROADCAST_JOB_TO_ONE_OR_MORE_TECHNICIANS ----
       // Splits identifier on commas / "and" / "&" and resolves each piece
       // individually (name, TECH-ID, or phone). Broadcasts to all resolved
