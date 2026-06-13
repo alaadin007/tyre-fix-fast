@@ -1489,6 +1489,25 @@ Deno.serve(async (req) => {
         supabase.from("admin_states").upsert({
           phone: fromN, step, job_id, updated_at: new Date().toISOString(),
         });
+      const clearPendingAdminAction = () =>
+        supabase.from("pending_admin_actions").delete().eq("admin_phone", fromN);
+      const setPendingAdminAction = (
+        intent: string,
+        awaiting: string,
+        opts?: { jobReference?: string | null; technicianId?: string | null; extraData?: Record<string, unknown> | null; expiresInMinutes?: number },
+      ) => {
+        const expiresInMinutes = opts?.expiresInMinutes ?? 10;
+        return supabase.from("pending_admin_actions").upsert({
+          admin_phone: fromN,
+          intent,
+          awaiting,
+          job_reference: opts?.jobReference ?? null,
+          technician_id: opts?.technicianId ?? null,
+          extra_data: opts?.extraData ?? null,
+          created_at: new Date().toISOString(),
+          expires_at: new Date(Date.now() + expiresInMinutes * 60 * 1000).toISOString(),
+        });
+      };
 
       // Helper: run the actual broadcast for a given job ref.
       const runBroadcastForRef = async (ref: string) => {
@@ -2435,49 +2454,8 @@ Deno.serve(async (req) => {
           const [intent, techIdRaw] = payload.split("|");
           const techId = techIdRaw || null;
           await clearAdminState();
-          switch (intent) {
-            case "SHOW_TECHNICIAN_LIST":
-              await runShowTechniciansForRef(bareRef);
-              break;
-            case "BROADCAST_ALL":
-              await runBroadcastForRef(bareRef);
-              break;
-            case "BROADCAST_ONE":
-            case "BROADCAST_MULTIPLE_SPECIFIC":
-              if (techId) {
-                await runBroadcastToOne(bareRef, techId);
-              } else {
-                await sendReply(from, `Which technician should receive job #${bareRef.toUpperCase()}? Reply with their name, TECH-ID, or phone.`, channel);
-              }
-              break;
-            case "FORWARD_QUOTE_ONE":
-            case "FORWARD_QUOTE_MULTIPLE":
-              await runSendQuoteForRef(bareRef, techId);
-              break;
-            case "FORWARD_QUOTE_UPDATED":
-              await runSendUpdatedQuoteForRef(bareRef, techId);
-              break;
-            case "UPDATE_TECHNICIAN_PRICE":
-              if (techId) {
-                await runUpdatePricePromptForRef(bareRef, techId);
-              } else {
-                await sendReply(from, `Which technician's price should I update on job #${bareRef.toUpperCase()}? Reply with the name or TECH-ID.`, channel);
-              }
-              break;
-            case "ASSIGN":
-              await runShareContactsForRef(bareRef);
-              break;
-            case "CANCEL":
-              await runCancelPrompt(bareRef);
-              break;
-            case "CONFIRM_CANCEL":
-              await runCancelConfirm(bareRef);
-              break;
-            case "STATUS":
-            default:
-              await runStatusForRef(bareRef);
-              break;
-          }
+          await clearPendingAdminAction();
+          await runPendingAdminIntent(intent, bareRef, { technicianId: techId });
           return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
         }
       }
@@ -2922,6 +2900,80 @@ Deno.serve(async (req) => {
         );
       };
 
+      const runPendingAdminIntent = async (
+        intent: string,
+        ref: string,
+        opts?: { technicianId?: string | null },
+      ) => {
+        const techId = opts?.technicianId ?? null;
+        switch (intent) {
+          case "SHOW_TECHNICIAN_LIST":
+            await runShowTechniciansForRef(ref);
+            return;
+          case "BROADCAST_ALL":
+            await runBroadcastForRef(ref);
+            return;
+          case "BROADCAST_ONE":
+          case "BROADCAST_MULTIPLE_SPECIFIC":
+            if (techId) {
+              await runBroadcastToOne(ref, techId);
+            } else {
+              await sendReply(from, `Which technician should receive job #${ref.toUpperCase()}? Reply with their name, TECH-ID, or phone.`, channel);
+            }
+            return;
+          case "FORWARD_QUOTE_ONE":
+          case "FORWARD_QUOTE_MULTIPLE":
+            await runSendQuoteForRef(ref, techId);
+            return;
+          case "FORWARD_QUOTE_UPDATED":
+            await runSendUpdatedQuoteForRef(ref, techId);
+            return;
+          case "UPDATE_TECHNICIAN_PRICE":
+            if (techId) {
+              await runUpdatePricePromptForRef(ref, techId);
+            } else {
+              await sendReply(from, `Which technician's price should I update on job #${ref.toUpperCase()}? Reply with the name or TECH-ID.`, channel);
+            }
+            return;
+          case "ASSIGN":
+            await runShareContactsForRef(ref);
+            return;
+          case "CANCEL":
+            await runCancelPrompt(ref);
+            return;
+          case "CONFIRM_CANCEL":
+            await runCancelConfirm(ref);
+            return;
+          case "STATUS":
+          default:
+            await runStatusForRef(ref);
+            return;
+        }
+      };
+
+      const { data: pendingAdminActionRow } = await supabase
+        .from("pending_admin_actions")
+        .select("intent, awaiting, job_reference, technician_id, extra_data, expires_at")
+        .eq("admin_phone", fromN)
+        .maybeSingle();
+      const pendingAdminAction = pendingAdminActionRow?.expires_at &&
+        new Date(pendingAdminActionRow.expires_at).getTime() > Date.now()
+        ? pendingAdminActionRow
+        : null;
+      if (pendingAdminActionRow && !pendingAdminAction) {
+        await clearPendingAdminAction();
+      }
+
+      if (refOnlyMatch && pendingAdminAction?.awaiting === "job_reference") {
+        const bareRef = refOnlyMatch[1];
+        await clearPendingAdminAction();
+        await clearAdminState();
+        await runPendingAdminIntent(pendingAdminAction.intent, bareRef, {
+          technicianId: pendingAdminAction.technician_id ?? null,
+        });
+        return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+      }
+
 
 
       // ---- Intent 3 — BROADCAST_JOB_TO_ONE_OR_MORE_TECHNICIANS ----
@@ -3174,6 +3226,10 @@ Deno.serve(async (req) => {
               ? `${classification.intent}|${techId}`
               : classification.intent;
             await setAdminState(`await_ref_for_intent:${intentPayload}`, null);
+            await setPendingAdminAction(classification.intent, "job_reference", {
+              technicianId: techId,
+              extraData: { source: "missing_job_reference" },
+            });
             await sendReply(from,
               `There are currently ${list.length} active jobs. Please include the job reference number so I know which one to action.\n\nExample: "${example}"\n\nOr type "show active jobs" to see all open jobs.`,
               channel,

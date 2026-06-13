@@ -37,6 +37,18 @@ Deno.test("bare ref while waiting for list lookup keeps technician preview flow"
   );
 });
 
+Deno.test("bare ref with persisted pending-intent step keeps original show-technician context", () => {
+  assertEquals(
+    resolveAdminJobRefAction({
+      step: "await_ref_for_intent:SHOW_TECHNICIAN_LIST",
+      stateJobId: null,
+      yesPlusRef: null,
+      refOnly: "C977B3",
+    }),
+    null,
+  );
+});
+
 Deno.test("bare yes is treated as admin flow when an admin step is already pending", () => {
   assertEquals(
     shouldPrioritizeAdminBranch({
