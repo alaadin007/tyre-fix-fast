@@ -3047,8 +3047,25 @@ Deno.serve(async (req) => {
             return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
           }
           if (list.length > 1) {
+            const sampleRef = `#${String(list[0].id).slice(0, 6).toUpperCase()}`;
+            const techHint = techId || "Hassan";
+            const exampleByIntent: Record<string, string> = {
+              SHOW_TECHNICIAN_LIST: `techs for ${sampleRef}`,
+              BROADCAST_ALL: `broadcast ${sampleRef}`,
+              BROADCAST_ONE: `${sampleRef} send to ${techHint}`,
+              BROADCAST_MULTIPLE_SPECIFIC: `${sampleRef} send to ${techHint} and Omar`,
+              FORWARD_QUOTE_ONE: `send ${techHint} quote for ${sampleRef} to customer`,
+              FORWARD_QUOTE_MULTIPLE: `send all quotes for ${sampleRef} to customer`,
+              FORWARD_QUOTE_UPDATED: `send updated quotes for ${sampleRef} to customer`,
+              UPDATE_TECHNICIAN_PRICE: `update ${techHint} price for ${sampleRef} to £45`,
+              ASSIGN: `assign ${sampleRef}`,
+              STATUS: `status ${sampleRef}`,
+              CANCEL: `cancel ${sampleRef}`,
+              CONFIRM_CANCEL: `CONFIRM CANCEL ${sampleRef}`,
+            };
+            const example = exampleByIntent[classification.intent] ?? `status ${sampleRef}`;
             await sendReply(from,
-              `There are currently ${list.length} active jobs. Please include the job reference number so I know which one to action. Example: "broadcast #${String(list[0].id).slice(0, 6).toUpperCase()}"`,
+              `There are currently ${list.length} active jobs. Please include the job reference number so I know which one to action.\n\nExample: "${example}"\n\nOr type "show active jobs" to see all open jobs.`,
               channel,
             );
             return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
