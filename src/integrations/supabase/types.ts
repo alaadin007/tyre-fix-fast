@@ -345,6 +345,39 @@ export type Database = {
           },
         ]
       }
+      pending_admin_actions: {
+        Row: {
+          admin_phone: string
+          awaiting: string
+          created_at: string
+          expires_at: string
+          extra_data: Json | null
+          intent: string
+          job_reference: string | null
+          technician_id: string | null
+        }
+        Insert: {
+          admin_phone: string
+          awaiting: string
+          created_at?: string
+          expires_at?: string
+          extra_data?: Json | null
+          intent: string
+          job_reference?: string | null
+          technician_id?: string | null
+        }
+        Update: {
+          admin_phone?: string
+          awaiting?: string
+          created_at?: string
+          expires_at?: string
+          extra_data?: Json | null
+          intent?: string
+          job_reference?: string | null
+          technician_id?: string | null
+        }
+        Relationships: []
+      }
       quotes: {
         Row: {
           callout_fee_gbp: number | null
