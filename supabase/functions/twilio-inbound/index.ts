@@ -3168,11 +3168,18 @@ Deno.serve(async (req) => {
               CONFIRM_CANCEL: `CONFIRM CANCEL ${sampleRef}`,
             };
             const example = exampleByIntent[classification.intent] ?? `status ${sampleRef}`;
+            // Persist the original intent so a bare ref reply (e.g. "#C977B3")
+            // completes that intent instead of falling back to STATUS.
+            const intentPayload = techId
+              ? `${classification.intent}|${techId}`
+              : classification.intent;
+            await setAdminState(`await_ref_for_intent:${intentPayload}`, null);
             await sendReply(from,
               `There are currently ${list.length} active jobs. Please include the job reference number so I know which one to action.\n\nExample: "${example}"\n\nOr type "show active jobs" to see all open jobs.`,
               channel,
             );
             return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+
           }
           // Single active job — confirm with admin first.
           const onlyJob = list[0];
