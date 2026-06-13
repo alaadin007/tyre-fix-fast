@@ -1489,6 +1489,25 @@ Deno.serve(async (req) => {
         supabase.from("admin_states").upsert({
           phone: fromN, step, job_id, updated_at: new Date().toISOString(),
         });
+      const clearPendingAdminAction = () =>
+        supabase.from("pending_admin_actions").delete().eq("admin_phone", fromN);
+      const setPendingAdminAction = (
+        intent: string,
+        awaiting: string,
+        opts?: { jobReference?: string | null; technicianId?: string | null; extraData?: Record<string, unknown> | null; expiresInMinutes?: number },
+      ) => {
+        const expiresInMinutes = opts?.expiresInMinutes ?? 10;
+        return supabase.from("pending_admin_actions").upsert({
+          admin_phone: fromN,
+          intent,
+          awaiting,
+          job_reference: opts?.jobReference ?? null,
+          technician_id: opts?.technicianId ?? null,
+          extra_data: opts?.extraData ?? null,
+          created_at: new Date().toISOString(),
+          expires_at: new Date(Date.now() + expiresInMinutes * 60 * 1000).toISOString(),
+        });
+      };
 
       // Helper: run the actual broadcast for a given job ref.
       const runBroadcastForRef = async (ref: string) => {
