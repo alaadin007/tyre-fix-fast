@@ -1386,6 +1386,34 @@ Deno.serve(async (req) => {
     if (isMaster && !hasActiveIntake) {
       const trimmed = body.trim();
 
+      const refOnlyMatch = trimmed.match(/^\s*#?\s*([0-9a-f]{6,8})\s*$/i);
+      const yesOnly = /^\s*(y|yes|ok|okay|sure|confirm|yep|yeah)\s*[.!]?\s*$/i.test(trimmed);
+      // "yes <ref>" / "yes #<ref>" / "<ref> yes" combined in one message →
+      // treat as a list request (share technicians, then ask broadcast confirm).
+      // "YES #<REF> CONFIRM" — final confirmation for irreversible actions (assignment).
+      const yesRefConfirmMatch = trimmed.match(
+        /^\s*(?:y|yes|ok|okay|sure|yep|yeah)[\s,:.!#-]+([0-9a-f]{6,8})[\s,:.!#-]+confirm\s*[*.!]?\s*$/i,
+      );
+      const yesPlusRefMatch = !yesRefConfirmMatch && (trimmed.match(
+        /^\s*(?:y|yes|ok|okay|sure|confirm|yep|yeah)[\s,:.!#-]+([0-9a-f]{6,8})\s*[*.!]?\s*$/i,
+      ) ?? trimmed.match(
+        /^\s*#?\s*([0-9a-f]{6,8})[\s,:.!-]+(?:y|yes|ok|okay|sure|confirm|yep|yeah)\s*$/i,
+      ));
+      const nowIso = new Date().toISOString();
+      const { data: pendingAdminActionEarly } = await supabase
+        .from("pending_admin_actions")
+        .select("intent, awaiting, job_reference, technician_id, extra_data, expires_at")
+        .eq("admin_phone", fromN)
+        .gt("expires_at", nowIso)
+        .maybeSingle();
+      const pendingBareJobRef = refOnlyMatch && pendingAdminActionEarly?.awaiting === "job_reference"
+        ? {
+            ref: refOnlyMatch[1],
+            intent: pendingAdminActionEarly.intent,
+            technicianId: pendingAdminActionEarly.technician_id ?? null,
+          }
+        : null;
+
       // HELP
       if (/^\s*help\s*$/i.test(trimmed)) {
         await sendReply(
@@ -1405,19 +1433,6 @@ Deno.serve(async (req) => {
       // --- Stateful admin "yes → list → yes → ref → broadcast" flow ---
       // Triggered by the new_job_alert_to_admin template's CTA. State is kept in
       // public.admin_states keyed by the admin phone number.
-      const refOnlyMatch = trimmed.match(/^\s*#?\s*([0-9a-f]{6,8})\s*$/i);
-      const yesOnly = /^\s*(y|yes|ok|okay|sure|confirm|yep|yeah)\s*[.!]?\s*$/i.test(trimmed);
-      // "yes <ref>" / "yes #<ref>" / "<ref> yes" combined in one message →
-      // treat as a list request (share technicians, then ask broadcast confirm).
-      // "YES #<REF> CONFIRM" — final confirmation for irreversible actions (assignment).
-      const yesRefConfirmMatch = trimmed.match(
-        /^\s*(?:y|yes|ok|okay|sure|yep|yeah)[\s,:.!#-]+([0-9a-f]{6,8})[\s,:.!#-]+confirm\s*[*.!]?\s*$/i,
-      );
-      const yesPlusRefMatch = !yesRefConfirmMatch && (trimmed.match(
-        /^\s*(?:y|yes|ok|okay|sure|confirm|yep|yeah)[\s,:.!#-]+([0-9a-f]{6,8})\s*[*.!]?\s*$/i,
-      ) ?? trimmed.match(
-        /^\s*#?\s*([0-9a-f]{6,8})[\s,:.!-]+(?:y|yes|ok|okay|sure|confirm|yep|yeah)\s*$/i,
-      ));
 
       const { data: adminStateRow } = await supabase
         .from("admin_states")
@@ -2424,7 +2439,7 @@ Deno.serve(async (req) => {
       // after the bot asked "please include the job reference" must complete
       // the ORIGINAL intent (broadcast to TECH-0001, send quote to X, update
       // price for Y) instead of being treated as a fresh list/broadcast-all.
-      if (refOnlyMatch && adminState?.step) {
+      if (!pendingBareJobRef && refOnlyMatch && adminState?.step) {
         const step = adminState.step;
         const bareRef = refOnlyMatch[1];
         if (step.startsWith("await_ref_for_broadcast_to:")) {
@@ -2471,24 +2486,24 @@ Deno.serve(async (req) => {
         refOnly: refOnlyMatch ? refOnlyMatch[1] : null,
       });
 
-      if (refRouting?.action === "send_quote") {
+      if (!pendingBareJobRef && refRouting?.action === "send_quote") {
         await runSendQuoteForRef(refRouting.ref);
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
       }
 
-      if (refRouting?.action === "share_details") {
+      if (!pendingBareJobRef && refRouting?.action === "share_details") {
         await runShareContactsForRef(refRouting.ref);
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
       }
 
-      if (refRouting?.action === "broadcast") {
+      if (!pendingBareJobRef && refRouting?.action === "broadcast") {
         await runBroadcastForRef(refRouting.ref);
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
       }
 
       // Bare ref while waiting for list lookup, OR combined "yes <ref>" →
       // show available technicians and immediately ask broadcast confirmation.
-      if (refRouting?.action === "list") {
+      if (!pendingBareJobRef && refRouting?.action === "list") {
         const ref = refRouting.ref;
         const matches = await findJobByRef(ref);
         if (matches.length === 0) {
@@ -2951,25 +2966,11 @@ Deno.serve(async (req) => {
         }
       };
 
-      const { data: pendingAdminActionRow } = await supabase
-        .from("pending_admin_actions")
-        .select("intent, awaiting, job_reference, technician_id, extra_data, expires_at")
-        .eq("admin_phone", fromN)
-        .maybeSingle();
-      const pendingAdminAction = pendingAdminActionRow?.expires_at &&
-        new Date(pendingAdminActionRow.expires_at).getTime() > Date.now()
-        ? pendingAdminActionRow
-        : null;
-      if (pendingAdminActionRow && !pendingAdminAction) {
-        await clearPendingAdminAction();
-      }
-
-      if (refOnlyMatch && pendingAdminAction?.awaiting === "job_reference") {
-        const bareRef = refOnlyMatch[1];
+      if (pendingBareJobRef) {
         await clearPendingAdminAction();
         await clearAdminState();
-        await runPendingAdminIntent(pendingAdminAction.intent, bareRef, {
-          technicianId: pendingAdminAction.technician_id ?? null,
+        await runPendingAdminIntent(pendingBareJobRef.intent, pendingBareJobRef.ref, {
+          technicianId: pendingBareJobRef.technicianId,
         });
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
       }
