@@ -3226,6 +3226,10 @@ Deno.serve(async (req) => {
               ? `${classification.intent}|${techId}`
               : classification.intent;
             await setAdminState(`await_ref_for_intent:${intentPayload}`, null);
+            await setPendingAdminAction(classification.intent, "job_reference", {
+              technicianId: techId,
+              extraData: { source: "missing_job_reference" },
+            });
             await sendReply(from,
               `There are currently ${list.length} active jobs. Please include the job reference number so I know which one to action.\n\nExample: "${example}"\n\nOr type "show active jobs" to see all open jobs.`,
               channel,
