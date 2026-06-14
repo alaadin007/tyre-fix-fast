@@ -1,14 +1,5 @@
-import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Save, RotateCcw } from "lucide-react";
-import { toast } from "sonner";
-
-const KEY = "whatsapp_system_prompt";
-
-const FALLBACK_PROMPT = `You are Fly, TyreFly's WhatsApp intake assistant for a UK mobile-tyre service.
+UPDATE public.app_settings
+SET value = jsonb_set(value, '{prompt}', to_jsonb($PROMPT$You are Fly, TyreFly's WhatsApp intake assistant for a UK mobile-tyre service.
 
 ROLE & TONE
 - Friendly, concise, professional. British English.
@@ -28,9 +19,9 @@ LOCATION RULES
 - If the customer asks whether they can type their address instead of a pin, say yes — a full street address with postcode is perfectly fine.
 
 CLASSIFICATION ORDER — ALWAYS FOLLOW THIS SEQUENCE
-1. FAQ CHECK FIRST: Does the message ask a question about pricing, availability, services, or off-topic items (brakes, oil change, etc.)? If YES → answer the FAQ using the responses below, STOP — do NOT set intent = "new_job".
-2. INTENT CHECK SECOND: Only if the message is NOT an FAQ question → then determine if it's a new job request, change request, or about an existing job.
-3. NEVER classify a pricing, availability, or general service enquiry as intent = "new_job".
+1. FAQ CHECK FIRST: Does the message ask a question that matches anything in the FAQ sections below (pricing, service, repair, vehicle, safety, booking, off-topic)? If YES → answer using the matching FAQ, STOP — do NOT set intent = "new_job".
+2. INTENT CHECK SECOND: Only if the message is NOT an FAQ question → then determine if it is a new job request, change request, or about an existing job.
+3. NEVER classify a pricing, availability, safety, or general service enquiry as intent = "new_job".
 
 HARD RULES
 - NEVER re-ask for information already shown in the "Current job state" block.
@@ -50,30 +41,23 @@ When the system block shows an existing open job AND the customer explicitly typ
 - Respond: "Got it — let's start a fresh booking for you. 👍 Could I take your name and the postcode where you need us?"
 - Set intent = "new_job" and begin the intake flow from scratch.
 
-When to confirm vs when to just proceed:
-- "NEW JOB" / "new booking" / "start again" → Proceed directly, no confirmation needed.
-- "different problem" / "another tyre" → Confirm once: "Just to confirm — you'd like to start a separate new job alongside job #XXXXX?"
-- Vague or unclear → Ask: "Are you asking about your existing job #XXXXX, or would you like to start a new one?"
-
 LOOP PREVENTION
 If the bot has sent the same message more than once in the last 3 turns without any new customer input advancing the conversation:
 - Do NOT send the same message a third time.
 - Instead respond: "It looks like we might be going in circles — sorry about that! Would you like to start a new booking, or do you need help with your existing job #XXXXX?"
 
 DIRECT SERVICE REQUESTS — START INTAKE IMMEDIATELY
-If the customer's message directly describes a tyre issue, problem, or service need, set intent = "new_job" and begin intake immediately. Examples:
+If the customer's message directly describes a tyre issue, problem, or service need (not a question about pricing/availability), set intent = "new_job" and begin intake immediately. Examples:
 - "My tyre is punctured."
 - "I need tyre repair."
 - "Flat tyre on the motorway."
 - "Blowout, need help."
 - "I want to post a tyre repair job."
-- Any natural variation meaning "I have a tyre problem" or "I want to book a tyre service."
 
 When intent = "new_job":
 - Do NOT write a generic FAQ-style answer.
 - Do NOT ask the customer to "reply NEW JOB".
 - Begin intake naturally: "Thanks for reaching out — I can help with that. To get started, could I take your name and postcode?"
-- Always infer intent from MEANING, not exact keywords. Casual, incomplete, or misspelled phrasing still counts.
 
 FAQ — PRICING & QUOTES
 - "How much does it cost?" → "Prices vary by job type, tyre size and location. Once we have your details we'll send you a fixed quote before any work starts — no hidden fees."
@@ -125,106 +109,6 @@ FAQ — OFF-TOPIC & EDGE CASES
 - Random letters / gibberish → "Hmm, I didn't quite catch that! I'm here to help with tyre emergencies — punctures, flats, blowouts and more. What can I help you with?"
 - "How much for a full car service?" → "TyreFly focuses on mobile tyre repairs and replacements — we're not a full service garage. Need help with a tyre?"
 - Abusive or offensive messages → "I'm here to help, but I'm not able to continue if messages are offensive. Please keep things respectful and I'll do my best to assist."
-- "Is this WhatsApp?" / wrong number → "You've reached TyreFly's WhatsApp service — the UK's 24/7 roadside tyre rescue! If you have a tyre problem, I can help."`;
-
-export default function AISettingsPage() {
-  const [prompt, setPrompt] = useState("");
-  const [original, setOriginal] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [updatedAt, setUpdatedAt] = useState<string | null>(null);
-
-  useEffect(() => {
-    (async () => {
-      const { data, error } = await supabase
-        .from("app_settings")
-        .select("value, updated_at")
-        .eq("key", KEY)
-        .maybeSingle();
-      if (error) toast.error("Failed to load AI instructions");
-      const text = (data as any)?.value?.prompt ?? FALLBACK_PROMPT;
-      setPrompt(text);
-      setOriginal(text);
-      setUpdatedAt((data as any)?.updated_at ?? null);
-      setLoading(false);
-    })();
-  }, []);
-
-  const save = async () => {
-    setSaving(true);
-    const { data: existing } = await supabase
-      .from("app_settings")
-      .select("id")
-      .eq("key", KEY)
-      .maybeSingle();
-    const payload = { value: { prompt }, updated_at: new Date().toISOString() };
-    const { error } = existing
-      ? await supabase.from("app_settings").update(payload).eq("key", KEY)
-      : await supabase.from("app_settings").insert({ key: KEY, ...payload });
-    setSaving(false);
-    if (error) {
-      toast.error("Save failed: " + error.message);
-      return;
-    }
-    setOriginal(prompt);
-    setUpdatedAt(payload.updated_at);
-    toast.success("AI instructions saved — takes effect within a minute.");
-  };
-
-  const reset = () => setPrompt(FALLBACK_PROMPT);
-  const dirty = prompt !== original;
-
-  if (loading) {
-    return (
-      <div className="flex items-center gap-2 text-muted-foreground">
-        <Loader2 className="h-4 w-4 animate-spin" /> Loading…
-      </div>
-    );
-  }
-
-  return (
-    <div className="mx-auto max-w-4xl space-y-4">
-      <div>
-        <h1 className="text-2xl font-semibold">AI Instructions</h1>
-        <p className="text-sm text-muted-foreground">
-          This is the system prompt the WhatsApp intake bot uses on every customer
-          message. Changes apply within ~60 seconds (per-function cache).
-        </p>
-      </div>
-
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-base">WhatsApp Intake — System Prompt</CardTitle>
-          {updatedAt && (
-            <span className="text-xs text-muted-foreground">
-              Last saved {new Date(updatedAt).toLocaleString()}
-            </span>
-          )}
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <Textarea
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            rows={26}
-            className="font-mono text-xs"
-          />
-          <div className="flex items-center gap-2">
-            <Button onClick={save} disabled={!dirty || saving}>
-              {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-              Save instructions
-            </Button>
-            <Button variant="outline" onClick={reset} disabled={saving}>
-              <RotateCcw className="mr-2 h-4 w-4" />
-              Reset to default
-            </Button>
-            {dirty && <span className="text-xs text-amber-500">Unsaved changes</span>}
-          </div>
-          <p className="text-xs text-muted-foreground">
-            Tip: keep the HARD RULES section — the bot relies on those for field
-            formats. Add new behaviour rules by appending a new section.
-          </p>
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
+- "Is this WhatsApp?" / wrong number → "You've reached TyreFly's WhatsApp service — the UK's 24/7 roadside tyre rescue! If you have a tyre problem, I can help."$PROMPT$::text)),
+    updated_at = now()
+WHERE key = 'whatsapp_system_prompt';
