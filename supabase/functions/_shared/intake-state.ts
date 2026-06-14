@@ -279,6 +279,13 @@ On every customer message you call the tool save_extracted_fields with:
   customer_name, vehicle_reg, tyre_size, affected_wheels, issue_type, issue_description, postcode.
 - Detect change_request when the customer wants to update something already captured.
 
+LOCATION RULES
+- The customer can share location in TWO ways:
+  1. WhatsApp live location pin (preferred)
+  2. Typed street address with postcode (accepted if the pin isn't working)
+- If the customer types a full street address because the pin isn't working, do NOT tell them to send a pin. Accept the address as valid location input.
+- If the customer asks whether they can type their address instead of a pin, say yes — a full street address with postcode is perfectly fine.
+
 HARD RULES
 - NEVER re-ask for information already shown in the "Current job state" block.
 - NEVER invent a person's name from greetings, postcodes, or registration plates.
@@ -371,16 +378,18 @@ async function loadSystemPrompt(supabase: Supa): Promise<string> {
   }
 }
 
-function buildJobStateBlock(job: any, customer: any | null): string {
+function buildJobStateBlock(job: any, conversation: any | null, customer: any | null): string {
   const lines: string[] = ["Current job state (already captured — do NOT ask again):"];
   const has = (v: any) => v !== null && v !== undefined && v !== "" && v !== "unknown";
+  const ctx = conversation?.context ?? {};
+  const hasAddressText = !!ctx.address_text;
   lines.push(`- customer_name: ${has(job?.customer_name) && job.customer_name !== "Customer" ? job.customer_name : "(missing)"}`);
   lines.push(`- vehicle_reg: ${has(job?.vehicle_reg) ? job.vehicle_reg : "(missing)"}`);
   lines.push(`- tyre_size: ${has(job?.tyre_size) ? job.tyre_size : "(missing)"}`);
   lines.push(`- affected_wheels: ${Array.isArray(job?.affected_wheels) && job.affected_wheels.length ? job.affected_wheels.join(", ") : "(missing)"}`);
   lines.push(`- issue_type: ${has(job?.issue_type) ? job.issue_type : "(missing)"}`);
   lines.push(`- postcode: ${has(job?.postcode) ? job.postcode : "(missing)"}`);
-  lines.push(`- pin location: ${job?.lat != null && job?.lng != null ? "shared" : "(missing)"}`);
+  lines.push(`- location: ${job?.lat != null && job?.lng != null ? "shared (pin)" : hasAddressText ? "shared (typed address)" : "(missing)"}`);
   lines.push(`- photos received: ${(job?.photo_urls ?? []).length}`);
   if (customer) {
     lines.push("");
@@ -422,7 +431,7 @@ async function loadRecentHistory(supabase: Supa, phone: string, limit = 8): Prom
 async function classifyWithAI(
   supabase: Supa,
   body: string,
-  ctx: { job: any; customer: any | null; phone: string },
+  ctx: { job: any; conversation?: any | null; customer: any | null; phone: string },
 ): Promise<AiExtract> {
   const text = (body || "").trim();
   if (!text || text.length < 2) return {};
@@ -430,7 +439,7 @@ async function classifyWithAI(
   if (!apiKey) return {};
   try {
     const systemPrompt = await loadSystemPrompt(supabase) + "\n\n" + INTENT_CLASSIFIER_SUFFIX;
-    const stateBlock = buildJobStateBlock(ctx.job, ctx.customer);
+    const stateBlock = buildJobStateBlock(ctx.job, ctx.conversation ?? null, ctx.customer);
     const history = await loadRecentHistory(supabase, ctx.phone, 8);
     const historyBlock = history.length
       ? "Recent conversation:\n" + history.map((h) => `${h.role === "user" ? "Customer" : "TyreFly"}: ${h.content}`).join("\n")
@@ -876,7 +885,7 @@ export async function processCustomerIntake(
         .eq("id", conversation.id);
       conversation = null; // fall through to "new conversation" → welcome
     } else {
-      const ai = await classifyWithAI(supabase, body || "", { job: null, customer, phone: from });
+      const ai = await classifyWithAI(supabase, body || "", { job: null, conversation: conv ?? null, customer, phone: from });
       const intent = ai.intent ?? null;
       const faqReply = (ai.faq_answer ?? "").trim();
 
@@ -1203,7 +1212,7 @@ export async function processCustomerIntake(
     !extractCoords(trimmed) &&
     !(extractedAny && looksStructuredShort);
   if (shouldAskAI) {
-    const ai = await classifyWithAI(supabase, trimmed, { job, customer, phone: from });
+    const ai = await classifyWithAI(supabase, trimmed, { job, conversation, customer, phone: from });
     if (ai.customer_name && updates.customer_name == null) {
       const nm = ai.customer_name.trim();
       const currentName = job.customer_name;
