@@ -187,10 +187,14 @@ export default function AISettingsPage() {
       .select("id")
       .eq("key", KEY)
       .maybeSingle();
-    const payload = { value: { prompt }, updated_at: new Date().toISOString() };
+    const payload = {
+      value: { prompt, version: FALLBACK_VERSION },
+      updated_at: new Date().toISOString(),
+    };
     const { error } = existing
       ? await supabase.from("app_settings").update(payload).eq("key", KEY)
       : await supabase.from("app_settings").insert({ key: KEY, ...payload });
+
     setSaving(false);
     if (error) {
       toast.error("Save failed: " + error.message);
