@@ -644,7 +644,7 @@ function welcomeMessage(
   } else {
     yourDetails.push("👤 Full name:");
   }
-  yourDetails.push("📍 Live location — tap the pin icon in WhatsApp");
+  yourDetails.push("📍 Live location — tap the pin icon in WhatsApp\n_(if the pin isn't working, just type your full street address and postcode instead)_");
   if (known.reg) {
     yourDetails.push(`🚘 Vehicle reg number: ${known.reg} ✅`);
   } else {
