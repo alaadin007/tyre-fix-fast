@@ -7,6 +7,10 @@ import { Loader2, Save, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 
 const KEY = "whatsapp_system_prompt";
+// Bump this whenever FALLBACK_PROMPT changes so the new default
+// auto-applies to the live DB without needing "Reset to default".
+const FALLBACK_VERSION = 2;
+
 
 const FALLBACK_PROMPT = `You are Fly, TyreFly's WhatsApp intake assistant for a UK mobile-tyre service.
 
@@ -142,13 +146,39 @@ export default function AISettingsPage() {
         .eq("key", KEY)
         .maybeSingle();
       if (error) toast.error("Failed to load AI instructions");
-      const text = (data as any)?.value?.prompt ?? FALLBACK_PROMPT;
-      setPrompt(text);
-      setOriginal(text);
-      setUpdatedAt((data as any)?.updated_at ?? null);
+
+      const storedVersion = (data as any)?.value?.version ?? 0;
+      const storedPrompt = (data as any)?.value?.prompt as string | undefined;
+
+      // Auto-apply newer default: if the code-shipped FALLBACK is newer than
+      // what's in the DB, overwrite the DB so the latest classifier/FAQs go live
+      // without the admin having to click "Reset to default" + Save.
+      if (storedVersion < FALLBACK_VERSION) {
+        const payload = {
+          value: { prompt: FALLBACK_PROMPT, version: FALLBACK_VERSION },
+          updated_at: new Date().toISOString(),
+        };
+        if (data) {
+          await supabase.from("app_settings").update(payload).eq("key", KEY);
+        } else {
+          await supabase.from("app_settings").insert({ key: KEY, ...payload });
+        }
+        setPrompt(FALLBACK_PROMPT);
+        setOriginal(FALLBACK_PROMPT);
+        setUpdatedAt(payload.updated_at);
+        if (storedPrompt) {
+          toast.success("AI instructions updated to latest default (v" + FALLBACK_VERSION + ").");
+        }
+      } else {
+        const text = storedPrompt ?? FALLBACK_PROMPT;
+        setPrompt(text);
+        setOriginal(text);
+        setUpdatedAt((data as any)?.updated_at ?? null);
+      }
       setLoading(false);
     })();
   }, []);
+
 
   const save = async () => {
     setSaving(true);
@@ -157,10 +187,14 @@ export default function AISettingsPage() {
       .select("id")
       .eq("key", KEY)
       .maybeSingle();
-    const payload = { value: { prompt }, updated_at: new Date().toISOString() };
+    const payload = {
+      value: { prompt, version: FALLBACK_VERSION },
+      updated_at: new Date().toISOString(),
+    };
     const { error } = existing
       ? await supabase.from("app_settings").update(payload).eq("key", KEY)
       : await supabase.from("app_settings").insert({ key: KEY, ...payload });
+
     setSaving(false);
     if (error) {
       toast.error("Save failed: " + error.message);
