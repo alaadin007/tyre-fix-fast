@@ -706,9 +706,13 @@ type Missing = {
 };
 
 function evaluateJob(job: any, conversation: any | null): Missing {
+  const ctx = conversation?.context ?? {};
+  const hasLocation = ctx.location_pin_confirmed && (
+    (job?.lat != null && job?.lng != null) || !!ctx.address_text
+  );
   return {
     name: !(job?.customer_name && job.customer_name !== "Customer" && isValidPersonName(job.customer_name)),
-    pin: !(conversation?.context?.location_pin_confirmed && job?.lat != null && job?.lng != null),
+    pin: !hasLocation,
     reg: !job?.vehicle_reg,
     wheels: !(Array.isArray(job?.affected_wheels) && job.affected_wheels.length > 0),
     issue: !hasIncidentContext(job?.issue_description ?? "") && (!job?.issue_type || job?.issue_type === "unknown"),
@@ -716,6 +720,7 @@ function evaluateJob(job: any, conversation: any | null): Missing {
     photos: !((job?.photo_urls ?? []).length >= 2),
   };
 }
+
 
 function isComplete(missing: Missing): boolean {
   return !missing.name && !missing.pin && !missing.reg && !missing.wheels
