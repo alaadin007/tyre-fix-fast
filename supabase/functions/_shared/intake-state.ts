@@ -178,6 +178,55 @@ async function reverseGeocodePostcode(lat: number, lng: number): Promise<string 
   return null;
 }
 
+// Partial UK postcode outward code (e.g. N1, SW1A, EC1A) — used to detect
+// when a customer's typed address contains at least a recognisable area code.
+const UK_OUTWARD_RE = /\b([A-PR-UWYZ][A-HK-Y]?\d[A-Z\d]?)\b/i;
+// Common UK street-type keywords for detecting free-text addresses without a postcode.
+const STREET_KEYWORDS_RE = /\b(street|st\.?|road|rd\.?|avenue|ave\.?|lane|ln\.?|close|cl\.?|way|place|pl\.?|drive|dr\.?|court|ct\.?|crescent|terrace|square|sq\.?|park|mews|hill|grove|gardens?|walk|row|parade|boulevard|blvd|highway|hwy|estate|wharf|embankment|broadway)\b/i;
+
+export function looksLikePinTrouble(t: string): boolean {
+  if (!t) return false;
+  const s = t.toLowerCase();
+  if (/\bpin\b.*(not\s*work|isn'?t\s*work|won'?t\s*work|doesn'?t\s*work|broken|fail|not\s+sending|won'?t\s+send|no\s+work)/.test(s)) return true;
+  if (/(can'?t|cannot|unable\s+to|don'?t\s+know\s+how\s+to).*(share|send|drop|use).*(pin|location)/.test(s)) return true;
+  if (/\b(live\s+)?location\b.*(not\s*work|isn'?t\s*work|won'?t\s*share|won'?t\s*send|broken|fail)/.test(s)) return true;
+  return false;
+}
+
+export function looksLikeAddress(t: string): boolean {
+  if (!t) return false;
+  if (extractPostcode(t)) return true;
+  const hasStreet = STREET_KEYWORDS_RE.test(t);
+  const hasOutward = UK_OUTWARD_RE.test(t);
+  if (hasStreet) return true;
+  // Outward code alone (e.g. "N1") is too weak — require accompanying words.
+  if (hasOutward && t.trim().split(/\s+/).length >= 2) return true;
+  return false;
+}
+
+async function geocodeAddress(q: string): Promise<{ lat: number; lng: number; postcode: string | null } | null> {
+  const query = (q || "").trim();
+  if (!query) return null;
+  try {
+    const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&q=${encodeURIComponent(query)}&countrycodes=gb&limit=1&addressdetails=1`;
+    const r = await fetch(url, { headers: { "User-Agent": "tyre-fix-fast/1.0" } });
+    if (!r.ok) return null;
+    const j = await r.json();
+    const hit = Array.isArray(j) ? j[0] : null;
+    if (!hit) return null;
+    const lat = parseFloat(hit.lat);
+    const lng = parseFloat(hit.lon);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+    const pcRaw = hit.address?.postcode;
+    const postcode = typeof pcRaw === "string" && pcRaw.trim() ? pcRaw.trim().toUpperCase() : null;
+    return { lat, lng, postcode };
+  } catch (e) {
+    console.error("geocodeAddress failed", e);
+    return null;
+  }
+}
+
+
 // ───────────────────────── AI field classifier ─────────────────────────
 //
 // Customers rarely send fields in order. This calls the Lovable AI gateway
@@ -595,7 +644,7 @@ function welcomeMessage(
   } else {
     yourDetails.push("👤 Full name:");
   }
-  yourDetails.push("📍 Live location — tap the pin icon in WhatsApp");
+  yourDetails.push("📍 Live location — tap the pin icon in WhatsApp\n_(if the pin isn't working, just type your full street address and postcode instead)_");
   if (known.reg) {
     yourDetails.push(`🚘 Vehicle reg number: ${known.reg} ✅`);
   } else {
@@ -636,7 +685,7 @@ function summaryMessage(job: any): string {
     "Here's everything we have for your job:",
     "",
     `✅ Full name: ${job.customer_name}`,
-    `✅ Live pin location: shared${job.postcode ? ` (${job.postcode})` : ""}`,
+    `✅ Location: ${job.postcode ? `shared (${job.postcode})` : "shared"}`,
     `✅ Vehicle reg: ${job.vehicle_reg}`,
     `✅ Affected tyre(s): ${wheels}`,
     `✅ Nature of issue: ${job.issue_type || "noted"}`,
@@ -657,9 +706,13 @@ type Missing = {
 };
 
 function evaluateJob(job: any, conversation: any | null): Missing {
+  const ctx = conversation?.context ?? {};
+  const hasLocation = ctx.location_pin_confirmed && (
+    (job?.lat != null && job?.lng != null) || !!ctx.address_text
+  );
   return {
     name: !(job?.customer_name && job.customer_name !== "Customer" && isValidPersonName(job.customer_name)),
-    pin: !(conversation?.context?.location_pin_confirmed && job?.lat != null && job?.lng != null),
+    pin: !hasLocation,
     reg: !job?.vehicle_reg,
     wheels: !(Array.isArray(job?.affected_wheels) && job.affected_wheels.length > 0),
     issue: !hasIncidentContext(job?.issue_description ?? "") && (!job?.issue_type || job?.issue_type === "unknown"),
@@ -667,6 +720,7 @@ function evaluateJob(job: any, conversation: any | null): Missing {
     photos: !((job?.photo_urls ?? []).length >= 2),
   };
 }
+
 
 function isComplete(missing: Missing): boolean {
   return !missing.name && !missing.pin && !missing.reg && !missing.wheels
@@ -687,7 +741,7 @@ function checklistMessage(job: any, missing: Missing, opts: { header?: string; f
   const photoCount = (job?.photo_urls ?? []).length;
   const items: Array<[boolean, string, string]> = [
     [!missing.name,     "Full name",         !missing.name ? job.customer_name : "_missing_"],
-    [!missing.pin,      "Live pin location", !missing.pin ? `shared${job.postcode ? ` (${job.postcode})` : ""}` : "_missing — tap the 📎 pin icon in WhatsApp_"],
+    [!missing.pin,      "Location",          !missing.pin ? (job.postcode ? `shared (${job.postcode})` : "shared") : "_missing — tap the 📎 pin icon in WhatsApp, or type your full street address with postcode_"],
     [!missing.reg,      "Vehicle reg",       !missing.reg ? job.vehicle_reg : "_missing_"],
     [!missing.wheels,   "Affected tyre(s)",  !missing.wheels ? wheels : "_missing — e.g. front-left / all four_"],
     [!missing.issue,    "Nature of issue",   !missing.issue ? (job.issue_type || "noted") : "_missing — e.g. puncture / flat / blowout_"],
@@ -1019,21 +1073,75 @@ export async function processCustomerIntake(
   }
 
 
-  // Location pin
+  // ─── Location: accept either a live WhatsApp pin OR a typed street address ───
+  const locationAlreadyConfirmed = !!convContext.location_pin_confirmed
+    && ((job.lat != null && job.lng != null) || !!convContext.address_text);
+
   const coords = extractCoords(body);
   if (coords) {
     updates.lat = coords.lat;
     updates.lng = coords.lng;
     convContext.location_pin_confirmed = true;
+    delete convContext.address_text;
     contextChanged = true;
     if (!job.postcode) {
       const pc = extractPostcode(body) ?? await reverseGeocodePostcode(coords.lat, coords.lng);
       if (pc) updates.postcode = pc;
     }
+  } else if (!locationAlreadyConfirmed && looksLikePinTrouble(body)) {
+    // Customer is struggling with the pin — invite them to type an address instead.
+    await supabase.from("conversations").update({
+      last_message_at: new Date().toISOString(),
+    }).eq("id", conversation.id);
+    return {
+      reply: "No problem — just type your full street address including postcode and we'll use that instead. 📍",
+      job,
+      conversation,
+      justCompleted: false,
+    };
+  } else if (!locationAlreadyConfirmed && looksLikeAddress(body)) {
+    // Accept the typed address as the location. Geocode for lat/lng + postcode.
+    const cleaned = (body || "").trim().slice(0, 300);
+    convContext.address_text = cleaned;
+    convContext.location_pin_confirmed = true;
+    contextChanged = true;
+    const geo = await geocodeAddress(cleaned);
+    if (geo) {
+      updates.lat = geo.lat;
+      updates.lng = geo.lng;
+      if (geo.postcode && !job.postcode) updates.postcode = geo.postcode;
+    }
+    const pc = extractPostcode(body);
+    if (pc && !updates.postcode && !job.postcode) updates.postcode = pc;
+
+    // Persist immediately and reply with the address-accepted confirmation.
+    if (Object.keys(updates).length > 1) {
+      const { data: updated } = await supabase.from("jobs").update(updates).eq("id", job.id).select().single();
+      if (updated) job = updated;
+    }
+    await supabase.from("conversations").update({
+      context: convContext,
+      last_message_at: new Date().toISOString(),
+    }).eq("id", conversation.id);
+    conversation = { ...conversation, context: convContext };
+    const missing = evaluateJob(job, conversation);
+    if (isComplete(missing)) {
+      return {
+        reply: `Got it — noted your address. ✅\n\n${summaryMessage(job)}`,
+        job, conversation, justCompleted: false,
+      };
+    }
+    return {
+      reply: checklistMessage(job, missing, {
+        header: "Got it — noted your address. ✅\n\nHere's what we have so far:",
+      }),
+      job, conversation, justCompleted: false,
+    };
   } else {
     const pc = extractPostcode(body);
     if (pc && !job.postcode) updates.postcode = pc;
   }
+
 
   // Plate
   if (!job.vehicle_reg) {
