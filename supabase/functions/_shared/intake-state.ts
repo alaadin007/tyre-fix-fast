@@ -682,7 +682,7 @@ function welcomeMessage(
   } else {
     yourDetails.push("👤 Full name:");
   }
-  yourDetails.push("📍 Live location — tap the pin icon in WhatsApp\n_(if the pin isn't working, just type your full street address and postcode instead)_");
+  yourDetails.push("📍 Live location (preferred) — tap the pin icon in WhatsApp. If the pin isn't working, type your full street address and postcode instead.");
   if (known.reg) {
     yourDetails.push(`🚘 Vehicle reg number: ${known.reg} ✅`);
   } else {
@@ -779,7 +779,7 @@ function checklistMessage(job: any, missing: Missing, opts: { header?: string; f
   const photoCount = (job?.photo_urls ?? []).length;
   const items: Array<[boolean, string, string]> = [
     [!missing.name,     "Full name",         !missing.name ? job.customer_name : "_missing_"],
-    [!missing.pin,      "Location",          !missing.pin ? (job.postcode ? `shared (${job.postcode})` : "shared") : "_missing — tap the 📎 pin icon in WhatsApp, or type your full street address with postcode_"],
+    [!missing.pin,      "Location",          !missing.pin ? (job.postcode ? `shared (${job.postcode})` : "shared") : "_missing — share your live WhatsApp pin (preferred), or type your full street address with postcode if pin is not working_"],
     [!missing.reg,      "Vehicle reg",       !missing.reg ? job.vehicle_reg : "_missing_"],
     [!missing.wheels,   "Affected tyre(s)",  !missing.wheels ? wheels : "_missing — e.g. front-left / all four_"],
     [!missing.issue,    "Nature of issue",   !missing.issue ? (job.issue_type || "noted") : "_missing — e.g. puncture / flat / blowout_"],
@@ -1138,19 +1138,33 @@ export async function processCustomerIntake(
       justCompleted: false,
     };
   } else if (!locationAlreadyConfirmed && looksLikeAddress(body)) {
-    // Accept the typed address as the location. Geocode for lat/lng + postcode.
+    // Accept the typed address as the location — but only confirm if we have a postcode.
     const cleaned = (body || "").trim().slice(0, 300);
+    const geo = await geocodeAddress(cleaned);
+    const pcFromBody = extractPostcode(body);
+    const resolvedPostcode = pcFromBody ?? geo?.postcode ?? job.postcode ?? null;
+
+    if (!resolvedPostcode) {
+      // Address typed without a postcode — ask for it before marking location complete.
+      await supabase.from("conversations").update({
+        last_message_at: new Date().toISOString(),
+      }).eq("id", conversation.id);
+      return {
+        reply: "Thanks — could you also include the postcode for that address? We need it to dispatch the technician accurately. 📮",
+        job,
+        conversation,
+        justCompleted: false,
+      };
+    }
+
     convContext.address_text = cleaned;
     convContext.location_pin_confirmed = true;
     contextChanged = true;
-    const geo = await geocodeAddress(cleaned);
     if (geo) {
       updates.lat = geo.lat;
       updates.lng = geo.lng;
-      if (geo.postcode && !job.postcode) updates.postcode = geo.postcode;
     }
-    const pc = extractPostcode(body);
-    if (pc && !updates.postcode && !job.postcode) updates.postcode = pc;
+    if (!job.postcode) updates.postcode = resolvedPostcode;
 
     // Persist immediately and reply with the address-accepted confirmation.
     if (Object.keys(updates).length > 1) {
