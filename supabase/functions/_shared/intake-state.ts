@@ -439,7 +439,7 @@ async function classifyWithAI(
   if (!apiKey) return {};
   try {
     const systemPrompt = await loadSystemPrompt(supabase) + "\n\n" + INTENT_CLASSIFIER_SUFFIX;
-    const stateBlock = buildJobStateBlock(ctx.job, ctx.customer);
+    const stateBlock = buildJobStateBlock(ctx.job, ctx.conversation ?? null, ctx.customer);
     const history = await loadRecentHistory(supabase, ctx.phone, 8);
     const historyBlock = history.length
       ? "Recent conversation:\n" + history.map((h) => `${h.role === "user" ? "Customer" : "TyreFly"}: ${h.content}`).join("\n")
@@ -885,7 +885,7 @@ export async function processCustomerIntake(
         .eq("id", conversation.id);
       conversation = null; // fall through to "new conversation" → welcome
     } else {
-      const ai = await classifyWithAI(supabase, body || "", { job: null, customer, phone: from });
+      const ai = await classifyWithAI(supabase, body || "", { job: null, conversation: conv ?? null, customer, phone: from });
       const intent = ai.intent ?? null;
       const faqReply = (ai.faq_answer ?? "").trim();
 
@@ -1212,7 +1212,7 @@ export async function processCustomerIntake(
     !extractCoords(trimmed) &&
     !(extractedAny && looksStructuredShort);
   if (shouldAskAI) {
-    const ai = await classifyWithAI(supabase, trimmed, { job, customer, phone: from });
+    const ai = await classifyWithAI(supabase, trimmed, { job, conversation, customer, phone: from });
     if (ai.customer_name && updates.customer_name == null) {
       const nm = ai.customer_name.trim();
       const currentName = job.customer_name;
