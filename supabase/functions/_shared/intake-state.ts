@@ -779,7 +779,7 @@ function checklistMessage(job: any, missing: Missing, opts: { header?: string; f
   const photoCount = (job?.photo_urls ?? []).length;
   const items: Array<[boolean, string, string]> = [
     [!missing.name,     "Full name",         !missing.name ? job.customer_name : "_missing_"],
-    [!missing.pin,      "Location",          !missing.pin ? (job.postcode ? `shared (${job.postcode})` : "shared") : "_missing — tap the 📎 pin icon in WhatsApp, or type your full street address with postcode_"],
+    [!missing.pin,      "Location",          !missing.pin ? (job.postcode ? `shared (${job.postcode})` : "shared") : "_missing — share your live WhatsApp pin (preferred), or type your full street address with postcode if pin is not working_"],
     [!missing.reg,      "Vehicle reg",       !missing.reg ? job.vehicle_reg : "_missing_"],
     [!missing.wheels,   "Affected tyre(s)",  !missing.wheels ? wheels : "_missing — e.g. front-left / all four_"],
     [!missing.issue,    "Nature of issue",   !missing.issue ? (job.issue_type || "noted") : "_missing — e.g. puncture / flat / blowout_"],
