@@ -682,7 +682,7 @@ function welcomeMessage(
   } else {
     yourDetails.push("👤 Full name:");
   }
-  yourDetails.push("📍 Live location — tap the pin icon in WhatsApp\n_(if the pin isn't working, just type your full street address and postcode instead)_");
+  yourDetails.push("📍 Live location (preferred) — tap the pin icon in WhatsApp. If the pin isn't working, type your full street address and postcode instead.");
   if (known.reg) {
     yourDetails.push(`🚘 Vehicle reg number: ${known.reg} ✅`);
   } else {
