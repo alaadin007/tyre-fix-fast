@@ -178,6 +178,55 @@ async function reverseGeocodePostcode(lat: number, lng: number): Promise<string 
   return null;
 }
 
+// Partial UK postcode outward code (e.g. N1, SW1A, EC1A) — used to detect
+// when a customer's typed address contains at least a recognisable area code.
+const UK_OUTWARD_RE = /\b([A-PR-UWYZ][A-HK-Y]?\d[A-Z\d]?)\b/i;
+// Common UK street-type keywords for detecting free-text addresses without a postcode.
+const STREET_KEYWORDS_RE = /\b(street|st\.?|road|rd\.?|avenue|ave\.?|lane|ln\.?|close|cl\.?|way|place|pl\.?|drive|dr\.?|court|ct\.?|crescent|terrace|square|sq\.?|park|mews|hill|grove|gardens?|walk|row|parade|boulevard|blvd|highway|hwy|estate|wharf|embankment|broadway)\b/i;
+
+export function looksLikePinTrouble(t: string): boolean {
+  if (!t) return false;
+  const s = t.toLowerCase();
+  if (/\bpin\b.*(not\s*work|isn'?t\s*work|won'?t\s*work|doesn'?t\s*work|broken|fail|not\s+sending|won'?t\s+send|no\s+work)/.test(s)) return true;
+  if (/(can'?t|cannot|unable\s+to|don'?t\s+know\s+how\s+to).*(share|send|drop|use).*(pin|location)/.test(s)) return true;
+  if (/\b(live\s+)?location\b.*(not\s*work|isn'?t\s*work|won'?t\s*share|won'?t\s*send|broken|fail)/.test(s)) return true;
+  return false;
+}
+
+export function looksLikeAddress(t: string): boolean {
+  if (!t) return false;
+  if (extractPostcode(t)) return true;
+  const hasStreet = STREET_KEYWORDS_RE.test(t);
+  const hasOutward = UK_OUTWARD_RE.test(t);
+  if (hasStreet) return true;
+  // Outward code alone (e.g. "N1") is too weak — require accompanying words.
+  if (hasOutward && t.trim().split(/\s+/).length >= 2) return true;
+  return false;
+}
+
+async function geocodeAddress(q: string): Promise<{ lat: number; lng: number; postcode: string | null } | null> {
+  const query = (q || "").trim();
+  if (!query) return null;
+  try {
+    const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&q=${encodeURIComponent(query)}&countrycodes=gb&limit=1&addressdetails=1`;
+    const r = await fetch(url, { headers: { "User-Agent": "tyre-fix-fast/1.0" } });
+    if (!r.ok) return null;
+    const j = await r.json();
+    const hit = Array.isArray(j) ? j[0] : null;
+    if (!hit) return null;
+    const lat = parseFloat(hit.lat);
+    const lng = parseFloat(hit.lon);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+    const pcRaw = hit.address?.postcode;
+    const postcode = typeof pcRaw === "string" && pcRaw.trim() ? pcRaw.trim().toUpperCase() : null;
+    return { lat, lng, postcode };
+  } catch (e) {
+    console.error("geocodeAddress failed", e);
+    return null;
+  }
+}
+
+
 // ───────────────────────── AI field classifier ─────────────────────────
 //
 // Customers rarely send fields in order. This calls the Lovable AI gateway
