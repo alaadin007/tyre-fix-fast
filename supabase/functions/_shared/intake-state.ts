@@ -1073,21 +1073,75 @@ export async function processCustomerIntake(
   }
 
 
-  // Location pin
+  // ─── Location: accept either a live WhatsApp pin OR a typed street address ───
+  const locationAlreadyConfirmed = !!convContext.location_pin_confirmed
+    && ((job.lat != null && job.lng != null) || !!convContext.address_text);
+
   const coords = extractCoords(body);
   if (coords) {
     updates.lat = coords.lat;
     updates.lng = coords.lng;
     convContext.location_pin_confirmed = true;
+    delete convContext.address_text;
     contextChanged = true;
     if (!job.postcode) {
       const pc = extractPostcode(body) ?? await reverseGeocodePostcode(coords.lat, coords.lng);
       if (pc) updates.postcode = pc;
     }
+  } else if (!locationAlreadyConfirmed && looksLikePinTrouble(body)) {
+    // Customer is struggling with the pin — invite them to type an address instead.
+    await supabase.from("conversations").update({
+      last_message_at: new Date().toISOString(),
+    }).eq("id", conversation.id);
+    return {
+      reply: "No problem — just type your full street address including postcode and we'll use that instead. 📍",
+      job,
+      conversation,
+      justCompleted: false,
+    };
+  } else if (!locationAlreadyConfirmed && looksLikeAddress(body)) {
+    // Accept the typed address as the location. Geocode for lat/lng + postcode.
+    const cleaned = (body || "").trim().slice(0, 300);
+    convContext.address_text = cleaned;
+    convContext.location_pin_confirmed = true;
+    contextChanged = true;
+    const geo = await geocodeAddress(cleaned);
+    if (geo) {
+      updates.lat = geo.lat;
+      updates.lng = geo.lng;
+      if (geo.postcode && !job.postcode) updates.postcode = geo.postcode;
+    }
+    const pc = extractPostcode(body);
+    if (pc && !updates.postcode && !job.postcode) updates.postcode = pc;
+
+    // Persist immediately and reply with the address-accepted confirmation.
+    if (Object.keys(updates).length > 1) {
+      const { data: updated } = await supabase.from("jobs").update(updates).eq("id", job.id).select().single();
+      if (updated) job = updated;
+    }
+    await supabase.from("conversations").update({
+      context: convContext,
+      last_message_at: new Date().toISOString(),
+    }).eq("id", conversation.id);
+    conversation = { ...conversation, context: convContext };
+    const missing = evaluateJob(job, conversation);
+    if (isComplete(missing)) {
+      return {
+        reply: `Got it — noted your address. ✅\n\n${summaryMessage(job)}`,
+        job, conversation, justCompleted: false,
+      };
+    }
+    return {
+      reply: checklistMessage(job, missing, {
+        header: "Got it — noted your address. ✅\n\nHere's what we have so far:",
+      }),
+      job, conversation, justCompleted: false,
+    };
   } else {
     const pc = extractPostcode(body);
     if (pc && !job.postcode) updates.postcode = pc;
   }
+
 
   // Plate
   if (!job.vehicle_reg) {
