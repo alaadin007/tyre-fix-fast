@@ -378,16 +378,18 @@ async function loadSystemPrompt(supabase: Supa): Promise<string> {
   }
 }
 
-function buildJobStateBlock(job: any, customer: any | null): string {
+function buildJobStateBlock(job: any, conversation: any | null, customer: any | null): string {
   const lines: string[] = ["Current job state (already captured — do NOT ask again):"];
   const has = (v: any) => v !== null && v !== undefined && v !== "" && v !== "unknown";
+  const ctx = conversation?.context ?? {};
+  const hasAddressText = !!ctx.address_text;
   lines.push(`- customer_name: ${has(job?.customer_name) && job.customer_name !== "Customer" ? job.customer_name : "(missing)"}`);
   lines.push(`- vehicle_reg: ${has(job?.vehicle_reg) ? job.vehicle_reg : "(missing)"}`);
   lines.push(`- tyre_size: ${has(job?.tyre_size) ? job.tyre_size : "(missing)"}`);
   lines.push(`- affected_wheels: ${Array.isArray(job?.affected_wheels) && job.affected_wheels.length ? job.affected_wheels.join(", ") : "(missing)"}`);
   lines.push(`- issue_type: ${has(job?.issue_type) ? job.issue_type : "(missing)"}`);
   lines.push(`- postcode: ${has(job?.postcode) ? job.postcode : "(missing)"}`);
-  lines.push(`- pin location: ${job?.lat != null && job?.lng != null ? "shared" : "(missing)"}`);
+  lines.push(`- location: ${job?.lat != null && job?.lng != null ? "shared (pin)" : hasAddressText ? "shared (typed address)" : "(missing)"}`);
   lines.push(`- photos received: ${(job?.photo_urls ?? []).length}`);
   if (customer) {
     lines.push("");
