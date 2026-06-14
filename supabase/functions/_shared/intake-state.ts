@@ -431,7 +431,7 @@ async function loadRecentHistory(supabase: Supa, phone: string, limit = 8): Prom
 async function classifyWithAI(
   supabase: Supa,
   body: string,
-  ctx: { job: any; customer: any | null; phone: string },
+  ctx: { job: any; conversation?: any | null; customer: any | null; phone: string },
 ): Promise<AiExtract> {
   const text = (body || "").trim();
   if (!text || text.length < 2) return {};
