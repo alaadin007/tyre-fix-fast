@@ -4383,25 +4383,10 @@ Deno.serve(async (req) => {
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
       }
 
-      // Winner — build a fast, hardcoded confirmation based on total photos.
-      const { data: jobNow } = await supabase
-        .from("jobs")
-        .select("photo_urls, postcode, lat")
-        .eq("id", outcome.job.id)
-        .maybeSingle();
-      const photoCount = Array.isArray(jobNow?.photo_urls) ? jobNow!.photo_urls.length : 0;
-      const hasPin = jobNow?.lat != null;
-      let photoReply: string;
-      if (photoCount <= 0) {
-        photoReply = outcome.reply;
-      } else if (photoCount === 1) {
-        photoReply = "Got it — 1 photo received 📸 Please send one more clear photo of the tyre.";
-      } else {
-        photoReply = hasPin
-          ? `Perfect — ${photoCount} photos received ✅\n\n${outcome.reply}`
-          : `Perfect — ${photoCount} photos received ✅ Just need your live location 📍 pin to complete your booking.`;
-      }
-      await sendReply(from, photoReply, channel);
+      // Winner — always send the standard progress block (no hardcoded
+      // assumptions about which fields remain). intake-state already builds
+      // an accurate per-field summary in outcome.reply.
+      await sendReply(from, outcome.reply, channel);
       return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
     }
 
