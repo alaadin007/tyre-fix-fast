@@ -7,6 +7,10 @@ import { Loader2, Save, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 
 const KEY = "whatsapp_system_prompt";
+// Bump this whenever FALLBACK_PROMPT changes so the new default
+// auto-applies to the live DB without needing "Reset to default".
+const FALLBACK_VERSION = 2;
+
 
 const FALLBACK_PROMPT = `You are Fly, TyreFly's WhatsApp intake assistant for a UK mobile-tyre service.
 
