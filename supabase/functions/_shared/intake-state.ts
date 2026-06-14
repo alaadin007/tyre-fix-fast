@@ -685,7 +685,7 @@ function summaryMessage(job: any): string {
     "Here's everything we have for your job:",
     "",
     `✅ Full name: ${job.customer_name}`,
-    `✅ Live pin location: shared${job.postcode ? ` (${job.postcode})` : ""}`,
+    `✅ Location: ${job.postcode ? `shared (${job.postcode})` : "shared"}`,
     `✅ Vehicle reg: ${job.vehicle_reg}`,
     `✅ Affected tyre(s): ${wheels}`,
     `✅ Nature of issue: ${job.issue_type || "noted"}`,
