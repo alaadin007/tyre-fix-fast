@@ -1138,19 +1138,33 @@ export async function processCustomerIntake(
       justCompleted: false,
     };
   } else if (!locationAlreadyConfirmed && looksLikeAddress(body)) {
-    // Accept the typed address as the location. Geocode for lat/lng + postcode.
+    // Accept the typed address as the location — but only confirm if we have a postcode.
     const cleaned = (body || "").trim().slice(0, 300);
+    const geo = await geocodeAddress(cleaned);
+    const pcFromBody = extractPostcode(body);
+    const resolvedPostcode = pcFromBody ?? geo?.postcode ?? job.postcode ?? null;
+
+    if (!resolvedPostcode) {
+      // Address typed without a postcode — ask for it before marking location complete.
+      await supabase.from("conversations").update({
+        last_message_at: new Date().toISOString(),
+      }).eq("id", conversation.id);
+      return {
+        reply: "Thanks — could you also include the postcode for that address? We need it to dispatch the technician accurately. 📮",
+        job,
+        conversation,
+        justCompleted: false,
+      };
+    }
+
     convContext.address_text = cleaned;
     convContext.location_pin_confirmed = true;
     contextChanged = true;
-    const geo = await geocodeAddress(cleaned);
     if (geo) {
       updates.lat = geo.lat;
       updates.lng = geo.lng;
-      if (geo.postcode && !job.postcode) updates.postcode = geo.postcode;
     }
-    const pc = extractPostcode(body);
-    if (pc && !updates.postcode && !job.postcode) updates.postcode = pc;
+    if (!job.postcode) updates.postcode = resolvedPostcode;
 
     // Persist immediately and reply with the address-accepted confirmation.
     if (Object.keys(updates).length > 1) {
