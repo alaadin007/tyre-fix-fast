@@ -3729,11 +3729,11 @@ Deno.serve(async (req) => {
       }
 
 
-      // Enforce the 1.5-minute quote window. Any reply after the window
+      // Enforce the 3-minute quote window. Any reply after the window
       // closes — or once an allocation has been expired by the finalizer —
       // gets a single "job closed" notice and is not recorded as a quote.
       const allocCreatedMs = alloc.created_at ? new Date(alloc.created_at).getTime() : 0;
-      const windowMs = 90_000;
+      const windowMs = 180_000;
       const windowExpiresMs = alloc.quote_window_expires_at
         ? new Date(alloc.quote_window_expires_at).getTime()
         : allocCreatedMs + windowMs;
@@ -3746,7 +3746,7 @@ Deno.serve(async (req) => {
         }
         await sendReply(
           from,
-          `This job has been closed. The 1.5-minute quote window for Job Ref #${alloc.job_id.slice(0, 6)} has ended and it is no longer accepting quotes.`,
+          `This job has been closed. The 3-minute quote window for Job Ref #${alloc.job_id.slice(0, 6)} has ended and it is no longer accepting quotes.`,
           channel,
         );
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
