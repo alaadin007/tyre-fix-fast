@@ -3806,6 +3806,32 @@ Deno.serve(async (req) => {
       if (allocErr) console.error("tech alloc lookup failed", allocErr);
       const allOpen = openAllocs ?? [];
 
+      // Also load recently-closed allocations (expired in the last 60 min) so
+      // we can give a specific "window closed for #REF" reply when a quote
+      // arrives just after the 3-minute window. We only use this for
+      // *messaging context* — not to route the quote to a job.
+      const closedSinceIso = new Date(Date.now() - 60 * 60_000).toISOString();
+      const { data: closedAllocsRaw } = await supabase
+        .from("job_allocations")
+        .select("*")
+        .eq("technician_id", tech.id)
+        .eq("status", "expired")
+        .gte("created_at", closedSinceIso)
+        .order("created_at", { ascending: false });
+      const allClosed = closedAllocsRaw ?? [];
+
+      // Fetch postcodes for any open jobs (used when listing them back to
+      // the technician).
+      const openJobIds = Array.from(new Set(allOpen.map((a: any) => a.job_id).filter(Boolean)));
+      let postcodeByJob = new Map<string, string>();
+      if (openJobIds.length > 0) {
+        const { data: jobRows } = await supabase
+          .from("jobs")
+          .select("id, postcode")
+          .in("id", openJobIds);
+        postcodeByJob = new Map((jobRows ?? []).map((j: any) => [j.id, j.postcode ?? ""]));
+      }
+
       // If the technician included a job reference in their message, try to
       // route the quote to that specific allocation. This is essential when
       // they have multiple open broadcasts at once.
@@ -3820,45 +3846,53 @@ Deno.serve(async (req) => {
         return null;
       })();
 
-      let alloc: any = refInBody?.alloc ?? allOpen[0];
+      let alloc: any = refInBody?.alloc ?? (allOpen.length === 1 ? allOpen[0] : null);
+
+      const strippedBody = body.replace(GMAPS_URL_RE, "").replace(COORD_RE, "").replace(DMS_RE, "").replace(PLAIN_LATLNG_RE, "").trim();
+      const looksLikeQuoteMsg = !!strippedBody && /£|\bpound|\bgbp\b|\bquid\b|\bmin(s|ute)?\b|\d/i.test(strippedBody);
 
       // If they have 2+ open broadcasts and didn't include a reference, and
-      // the message looks like a quote (price/ETA digits — not a pure
-      // location pin), ask which job before saving anything.
-      if (!refInBody && allOpen.length > 1) {
-        const stripped = body.replace(GMAPS_URL_RE, "").replace(COORD_RE, "").replace(DMS_RE, "").replace(PLAIN_LATLNG_RE, "").trim();
-        const looksLikeQuote = !!stripped && /£|\bpound|\bgbp\b|\bquid\b|\bmin(s|ute)?\b|\d/i.test(stripped);
-        if (looksLikeQuote) {
-          const sampleRef = String(allOpen[0].job_id).slice(0, 6).toUpperCase();
-          const refsList = allOpen.slice(0, 5).map((a: any) => String(a.job_id).slice(0, 6).toUpperCase()).join(", ");
-          await sendReply(
-            from,
-            `Please include the job reference with your quote — you have ${allOpen.length} open jobs (${refsList}).\n\ne.g. £85, 25 mins — ${sampleRef}`,
-            channel,
-          );
-          return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
-        }
+      // the message looks like a quote, list the open jobs and ask for ref.
+      if (!refInBody && allOpen.length > 1 && looksLikeQuoteMsg) {
+        const sampleRef = String(allOpen[0].job_id).slice(0, 6).toUpperCase();
+        const lines = allOpen.slice(0, 5).map((a: any) => {
+          const ref = String(a.job_id).slice(0, 6).toUpperCase();
+          const pc = postcodeByJob.get(a.job_id);
+          return pc ? `• #${ref} — ${pc}` : `• #${ref}`;
+        }).join("\n");
+        await sendReply(
+          from,
+          `We couldn't attach your quote — please include a job reference.\n\nYour open jobs (quotes still accepted):\n${lines}\n\nTo quote, reply e.g: £85, 25 mins — ${sampleRef}`,
+          channel,
+        );
+        return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
       }
 
       if (!alloc?.job_id) {
-        // Decision is based purely on the technician's CURRENT open allocations
-        // (status in 'broadcast' | 'proposed'). We do NOT use time-based
-        // heuristics ("last 60 minutes") to guess which job a quote belongs to.
-        // If there are zero open allocations, the quote cannot be attached.
-        const strippedNoPin = body.replace(GMAPS_URL_RE, "").replace(COORD_RE, "").replace(DMS_RE, "").replace(PLAIN_LATLNG_RE, "").trim();
-        const looksLikeQuote = !!strippedNoPin && /£|\bpound|\bgbp\b|\bquid\b|\bmin(s|ute)?\b|\d/i.test(strippedNoPin);
-
-        if (looksLikeQuote) {
-          await sendReply(
-            from,
-            `Thanks — we don't have an open job for you right now, so we can't attach this quote.`,
-            channel,
-          );
+        // Decision is based purely on the technician's CURRENT open allocations.
+        // Branch on (open count, closed count) per spec.
+        if (looksLikeQuoteMsg) {
+          if (allOpen.length === 0 && allClosed.length > 0) {
+            // 0 open, 1+ recently closed → name the most recent closed job.
+            const closedRef = String(allClosed[0].job_id).slice(0, 6).toUpperCase();
+            await sendReply(
+              from,
+              `The quote window for Job #${closedRef} has closed (3-minute limit reached). No further quotes can be accepted for this job.`,
+              channel,
+            );
+          } else {
+            // 0 open, 0 closed
+            await sendReply(
+              from,
+              `Thanks — we don't have an open job for you right now, so we can't attach this quote.`,
+              channel,
+            );
+          }
           return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
         }
 
         // Pure location ping with no open job → just ack
-        if (techPin && !strippedNoPin) {
+        if (techPin && !strippedBody) {
           await sendReply(from, "Got your live location 📍 — tracking for the next 8 hours. We'll match you to nearby jobs.", channel);
         } else {
           await sendReply(from, "Thanks — no open job for you right now. We'll text when one matches.", channel);
