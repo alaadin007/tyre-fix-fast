@@ -217,8 +217,9 @@ Deno.serve(async (req) => {
       `📷 Photo 2: ${photo2}\n\n` +
       `Reply with: price (£), ETA (mins) AND a fresh 📍live location pin for THIS job (tap 📎 → Location → Share live location). All 3 are required — quotes missing the live pin for this job won't be accepted.`;
 
-    // 1.5-minute window for technician quote submissions.
-    const QUOTE_WINDOW_MS = 90_000;
+    // 3-minute window for technician quote submissions.
+    const QUOTE_WINDOW_SECONDS = 180;
+    const QUOTE_WINDOW_MS = QUOTE_WINDOW_SECONDS * 1000;
     const windowExpiresIso = new Date(Date.now() + QUOTE_WINDOW_MS).toISOString();
 
     let sent = 0;
