@@ -138,6 +138,7 @@ Deno.serve(async (req) => {
       `🛞 Job Details`,
       `━━━━━━━━━━━━━━━`,
       `Issue:  ${issue}`,
+      ...(job.issue_description && job.issue_description.trim() ? [`📝 Customer description: ${job.issue_description.trim()}`] : []),
       `Reg:    ${vehicleReg}`,
       `Wheels: ${wheels}`,
       ``,
