@@ -4,7 +4,7 @@ import { z } from "zod";
 import { toast } from "sonner";
 import {
   Plus, Trash2, Star, Phone, MapPin, RefreshCw, Upload, Settings,
-  MessageSquare, MessageCircle, CheckCircle2, Clock, Sparkles, Users, ArrowLeft, Navigation,
+  MessageSquare, MessageCircle, CheckCircle2, Clock, Sparkles, Users, ArrowLeft, Navigation, AlertTriangle,
   ShieldCheck, Zap, Check, X, ChevronsUpDown, Send, ChevronDown, ChevronUp, Image as ImageIcon, PoundSterling, User as UserIcon,
 } from "lucide-react";
 import { parseTechniciansFile, type ParsedTechnician } from "@/lib/parseTechnicians";
@@ -1081,6 +1081,7 @@ function ConversationThread({ thread }: { thread: Thread }) {
       <div className="mt-2 space-y-1.5">
         {visible.map((m) => {
           const inbound = m.direction === "inbound";
+          const failed = !inbound && (m.status || "").toLowerCase().startsWith("failed");
           const loc = inbound ? extractLocation(m.body) : null;
           return (
             <div key={m.id} className={`flex ${inbound ? "justify-start" : "justify-end"}`}>
@@ -1089,9 +1090,11 @@ function ConversationThread({ thread }: { thread: Thread }) {
                   "max-w-[85%] rounded-2xl px-3 py-1.5 text-sm break-words",
                   inbound
                     ? "rounded-tl-sm bg-white border border-border"
-                    : isWA
-                      ? "rounded-tr-sm bg-[hsl(142_71%_92%)] text-foreground"
-                      : "rounded-tr-sm bg-[hsl(var(--accent))] text-white",
+                    : failed
+                      ? "rounded-tr-sm border border-destructive/50 bg-destructive/15 text-foreground"
+                      : isWA
+                        ? "rounded-tr-sm bg-[hsl(142_71%_92%)] text-foreground"
+                        : "rounded-tr-sm bg-[hsl(var(--accent))] text-white",
                 ].join(" ")}
               >
                 {m.body ? (
@@ -1103,6 +1106,11 @@ function ConversationThread({ thread }: { thread: Thread }) {
                   <a href={loc.url} target="_blank" rel="noreferrer" className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-[hsl(var(--accent))] hover:underline">
                     <Navigation className="h-3 w-3" /> Live location
                   </a>
+                )}
+                {failed && (
+                  <div className="mt-2 inline-flex items-center gap-1 rounded border border-destructive/40 bg-destructive/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-destructive">
+                    <AlertTriangle className="h-3 w-3" /> Delivery failed
+                  </div>
                 )}
                 {m.media_urls?.length > 0 && (
                   <div className="mt-2 flex flex-wrap gap-2">
@@ -1122,6 +1130,7 @@ function ConversationThread({ thread }: { thread: Thread }) {
                 )}
                 <div className={`mt-0.5 text-[9px] ${inbound ? "text-muted-foreground" : "opacity-70"}`}>
                   {relTime(m.created_at)}
+                  {failed ? " · failed" : ""}
                 </div>
               </div>
             </div>
