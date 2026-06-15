@@ -49,14 +49,20 @@ export function TechConversation({ phone }: { phone: string }) {
       .channel(`conv-${d}`)
       .on(
         "postgres_changes",
-        { event: "INSERT", schema: "public", table: "sms_messages" },
+        { event: "*", schema: "public", table: "sms_messages" },
         (payload) => {
           const m = payload.new as Msg;
           if (
             digits(m.from_number).endsWith(d.slice(-9)) ||
             digits(m.to_number).endsWith(d.slice(-9))
           ) {
-            setMsgs((prev) => [...prev, m]);
+            setMsgs((prev) => {
+              const idx = prev.findIndex((x) => x.id === m.id);
+              if (idx === -1) return [...prev, m];
+              const next = [...prev];
+              next[idx] = m;
+              return next;
+            });
           }
         },
       )
