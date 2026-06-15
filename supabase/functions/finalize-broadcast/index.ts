@@ -1,9 +1,9 @@
-// Finalize a job broadcast: close the 1.5-minute quote window, expire any
+// Finalize a job broadcast: close the 3-minute quote window, expire any
 // open allocations, then send a single consolidated WhatsApp summary of every
 // quote received to the admin master numbers.
 //
 // Idempotent: if jobs.quote_summary_sent_at is already set we exit early.
-// Invoked by broadcast-job ~90s after the broadcast goes out.
+// Invoked by broadcast-job ~180s after the broadcast goes out.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { z } from "https://esm.sh/zod@3.23.8";
 
@@ -15,7 +15,8 @@ const corsHeaders = {
 
 const BodySchema = z.object({ job_id: z.string().uuid() });
 
-const QUOTE_WINDOW_MS = 90_000; // 1.5 minutes
+const QUOTE_WINDOW_SECONDS = 180;
+const QUOTE_WINDOW_MS = QUOTE_WINDOW_SECONDS * 1000; // 3 minutes
 
 function dedupeQuotesByTechnician(quotes: any[]): any[] {
   const latestByKey = new Map<string, any>();
@@ -240,6 +241,7 @@ Deno.serve(async (req) => {
 
     const lines: string[] = [];
     lines.push(`📋 Quotes Received — Job #${jobRef}`);
+    lines.push("⏱ Quote window closed (3 min)");
     lines.push("");
     lines.push(`👤 Customer: ${customerName}`);
     lines.push(`🚗 Vehicle Reg: ${vehicleReg}`);
@@ -248,7 +250,7 @@ Deno.serve(async (req) => {
     if (uniqueQuotes.length === 0) {
       lines.push("Received 0 quote(s):");
       lines.push("");
-      lines.push("No quotes were received within the 1.5-minute window.");
+      lines.push("No quotes were received within the 3-minute window.");
     } else {
       lines.push(`Received ${uniqueQuotes.length} quote(s):`);
       lines.push("");
