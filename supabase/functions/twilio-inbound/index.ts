@@ -3706,19 +3706,52 @@ Deno.serve(async (req) => {
         console.log("tech location updated", JSON.stringify({ tech: tech.id, lat, lng, expires: expires.toISOString() }));
       }
 
-      // Find their most recent open allocation
+      // Find the technician's open allocation(s).
       // NOTE: no FK from job_allocations.job_id → jobs.id, so we cannot use
       // PostgREST embedded select (`jobs(*)`) here — it errors silently and
       // makes us reply "no open job" even when a broadcast exists.
-      const { data: allocs, error: allocErr } = await supabase
+      const { data: openAllocs, error: allocErr } = await supabase
         .from("job_allocations")
         .select("*")
         .eq("technician_id", tech.id)
         .in("status", ["broadcast", "proposed"])
-        .order("created_at", { ascending: false })
-        .limit(1);
+        .order("created_at", { ascending: false });
       if (allocErr) console.error("tech alloc lookup failed", allocErr);
-      let alloc: any = allocs?.[0];
+      const allOpen = openAllocs ?? [];
+
+      // If the technician included a job reference in their message, try to
+      // route the quote to that specific allocation. This is essential when
+      // they have multiple open broadcasts at once.
+      const refInBody = (() => {
+        const matches = Array.from(body.matchAll(/#?\b([0-9a-fA-F]{6})\b/g))
+          .map((m) => m[1].toUpperCase())
+          .filter((r) => /^[0-9A-F]{6}$/.test(r));
+        for (const r of matches) {
+          const hit = allOpen.find((a: any) => String(a.job_id).slice(0, 6).toUpperCase() === r);
+          if (hit) return { ref: r, alloc: hit };
+        }
+        return null;
+      })();
+
+      let alloc: any = refInBody?.alloc ?? allOpen[0];
+
+      // If they have 2+ open broadcasts and didn't include a reference, and
+      // the message looks like a quote (price/ETA digits — not a pure
+      // location pin), ask which job before saving anything.
+      if (!refInBody && allOpen.length > 1) {
+        const stripped = body.replace(GMAPS_URL_RE, "").replace(COORD_RE, "").replace(DMS_RE, "").replace(PLAIN_LATLNG_RE, "").trim();
+        const looksLikeQuote = !!stripped && /£|\bpound|\bgbp\b|\bquid\b|\bmin(s|ute)?\b|\d/i.test(stripped);
+        if (looksLikeQuote) {
+          const sampleRef = String(allOpen[0].job_id).slice(0, 6).toUpperCase();
+          const refsList = allOpen.slice(0, 5).map((a: any) => String(a.job_id).slice(0, 6).toUpperCase()).join(", ");
+          await sendReply(
+            from,
+            `Please include the job reference with your quote — you have ${allOpen.length} open jobs (${refsList}).\n\ne.g. £85, 25 mins — ${sampleRef}`,
+            channel,
+          );
+          return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+        }
+      }
 
       if (!alloc?.job_id) {
         // No open allocation — check if the technician's most recent allocation
