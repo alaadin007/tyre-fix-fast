@@ -283,13 +283,13 @@ Deno.serve(async (req) => {
       .eq("job_id", job_id)
       .in("status", ["collecting", "pending"]);
 
-    // Schedule a single consolidated quote summary 1.5 minutes after broadcast.
+    // Schedule a single consolidated quote summary 3 minutes after broadcast.
     // EdgeRuntime.waitUntil keeps the function alive past the HTTP response.
     if (sent > 0) {
       // Reliable fallback: enqueue a scheduled task so the runner (pg_cron,
       // every minute) will invoke finalize-broadcast even if the in-process
       // timer below gets dropped after the HTTP response.
-      // Add a 5s buffer beyond the 90s window so any in-flight quote saves
+      // Add a 5s buffer beyond the 180s window so any in-flight quote saves
       // have time to commit before the summary query runs.
       const FINALIZE_BUFFER_MS = 5_000;
       await supabase.from("scheduled_tasks").insert({
