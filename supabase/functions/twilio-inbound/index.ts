@@ -3870,7 +3870,7 @@ Deno.serve(async (req) => {
         // Branch on (open count, closed count) per spec.
         if (looksLikeQuoteMsg) {
           if (allOpen.length === 0 && allClosed.length > 0) {
-            // 0 open, 1+ recently closed → name the most recent closed job.
+            // 0 open, 1+ closed → name the most recent closed job.
             const closedRef = String(allClosed[0].job_id).slice(0, 6).toUpperCase();
             await sendReply(
               from,
