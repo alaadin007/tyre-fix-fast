@@ -68,7 +68,7 @@ Deno.serve(async (req) => {
         },
         body: JSON.stringify({
           to: job.customer_phone,
-          body: "FlatTyreNearMe: sorry — your technician couldn't attend. Your £20 has been refunded. Reply HELP and we'll find you another tech.",
+          body: "Tyre Fly: we've refunded your payment in full. We're sorry for the inconvenience.",
           channel: "sms",
         }),
       });
