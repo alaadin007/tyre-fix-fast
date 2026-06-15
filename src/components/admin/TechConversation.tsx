@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowDownLeft, ArrowUpRight, Loader2 } from "lucide-react";
+import { AlertTriangle, ArrowDownLeft, ArrowUpRight, Loader2 } from "lucide-react";
 
 type Msg = {
   id: string;
@@ -12,6 +12,7 @@ type Msg = {
   channel: string;
   num_media: number;
   media_urls: string[];
+  status: string;
 };
 
 function digits(p: string) {
@@ -86,6 +87,7 @@ export function TechConversation({ phone }: { phone: string }) {
     <div className="max-h-80 space-y-2 overflow-y-auto rounded-lg bg-muted/30 p-3">
       {msgs.map((m) => {
         const inbound = m.direction === "inbound" || m.direction === "in";
+        const failed = !inbound && (m.status || "").toLowerCase().startsWith("failed");
         return (
           <div
             key={m.id}
@@ -95,7 +97,9 @@ export function TechConversation({ phone }: { phone: string }) {
               className={`max-w-[80%] rounded-2xl px-3 py-2 text-sm shadow-sm ${
                 inbound
                   ? "rounded-bl-sm bg-white text-foreground"
-                  : "rounded-br-sm bg-emerald-500 text-white"
+                  : failed
+                    ? "rounded-br-sm border border-destructive/50 bg-destructive/15 text-foreground"
+                    : "rounded-br-sm bg-emerald-500 text-white"
               }`}
             >
               <div className="flex items-center gap-1 text-[10px] opacity-70">
@@ -112,6 +116,11 @@ export function TechConversation({ phone }: { phone: string }) {
                 <p className="mt-0.5 whitespace-pre-wrap break-words">
                   {m.body}
                 </p>
+              )}
+              {failed && (
+                <div className="mt-2 inline-flex items-center gap-1 rounded border border-destructive/40 bg-destructive/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-destructive">
+                  <AlertTriangle className="h-3 w-3" /> Delivery failed
+                </div>
               )}
               {m.num_media > 0 && (
                 <div className="mt-1 flex flex-wrap gap-1">
