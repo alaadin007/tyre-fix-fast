@@ -3841,30 +3841,60 @@ Deno.serve(async (req) => {
       }
 
       if (!alloc?.job_id) {
-        // No open allocation — check if the technician's most recent allocation
-        // was just expired (timed out). If so, tell them which job ref timed out
-        // instead of the generic "no open job" message.
+        // Did the technician send a quote-shaped message (price / ETA / £)?
+        const strippedNoPin = body.replace(GMAPS_URL_RE, "").replace(COORD_RE, "").replace(DMS_RE, "").replace(PLAIN_LATLNG_RE, "").trim();
+        const looksLikeQuote = !!strippedNoPin && /£|\bpound|\bgbp\b|\bquid\b|\bmin(s|ute)?\b|\d/i.test(strippedNoPin);
+
+        // Pull every allocation for this tech in the last 60 min so we can
+        // give a specific "window closed for #XYZ" reply even when the
+        // expiry happened well outside the previous 10-minute heuristic.
+        const sinceMs = Date.now() - 60 * 60_000;
         const { data: recentAllocs } = await supabase
           .from("job_allocations")
           .select("*")
           .eq("technician_id", tech.id)
+          .gte("created_at", new Date(sinceMs).toISOString())
           .order("created_at", { ascending: false })
-          .limit(1);
-        const recent: any = recentAllocs?.[0];
-        const recentExpired =
-          recent &&
-          recent.status === "expired" &&
-          recent.job_id &&
-          // Only treat as a timeout reply if the expiry happened recently
-          // (within the last 10 minutes) so old expired jobs don't keep
-          // surfacing the same message.
-          recent.created_at &&
-          Date.now() - new Date(recent.created_at).getTime() < 10 * 60_000;
+          .limit(10);
+        const recentList = recentAllocs ?? [];
 
-        if (recentExpired) {
+        // If a job reference appears in the body, prefer that one for the reply.
+        const refUpper = (() => {
+          const matches = Array.from(body.matchAll(/#?\b([0-9a-fA-F]{6})\b/g))
+            .map((m) => m[1].toUpperCase());
+          for (const r of matches) {
+            const hit = recentList.find((a: any) => String(a.job_id).slice(0, 6).toUpperCase() === r);
+            if (hit) return { ref: r, alloc: hit };
+          }
+          return null;
+        })();
+
+        if (refUpper) {
           await sendReply(
             from,
-            `⏰ You have timed out for Job Reference #${recent.job_id.slice(0, 6)}. The 3-minute quote window has ended and this job is no longer accepting quotes.`,
+            `This job has been closed. The 3-minute quote window for Job Ref #${refUpper.ref} has ended and it is no longer accepting quotes.`,
+            channel,
+          );
+          return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+        }
+
+        if (looksLikeQuote && recentList.length > 0) {
+          const refsList = recentList.slice(0, 5)
+            .map((a: any) => `#${String(a.job_id).slice(0, 6).toUpperCase()}`)
+            .join(", ");
+          const sampleRef = String(recentList[0].job_id).slice(0, 6).toUpperCase();
+          await sendReply(
+            from,
+            `Thanks for your quote — but the 3-minute quote window has already closed for your recent job${recentList.length > 1 ? "s" : ""} (${refsList}).\n\nIf you're quoting on a current job, please reply with the job reference, e.g. £85, 25 mins — ${sampleRef}.`,
+            channel,
+          );
+          return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+        }
+
+        if (looksLikeQuote) {
+          await sendReply(
+            from,
+            `Thanks — we don't have an open job for you right now, so we can't attach this quote. We'll text you as soon as a nearby job comes in.`,
             channel,
           );
           return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
