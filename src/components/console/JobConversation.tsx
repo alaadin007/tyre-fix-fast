@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { MessageCircle } from "lucide-react";
+import { AlertTriangle, MessageCircle } from "lucide-react";
 
 type Msg = {
   id: string;
@@ -11,6 +11,7 @@ type Msg = {
   media_urls: string[] | null;
   created_at: string;
   channel: string;
+  status: string;
 };
 
 export function JobConversation({
@@ -34,7 +35,7 @@ export function JobConversation({
         : `job_id.eq.${jobId}`;
       const { data, error } = await supabase
         .from("sms_messages")
-        .select("id,direction,from_number,to_number,body,media_urls,created_at,channel")
+        .select("id,direction,from_number,to_number,body,media_urls,created_at,channel,status")
         .or(orFilter)
         .order("created_at", { ascending: true })
         .limit(200);
@@ -50,7 +51,7 @@ export function JobConversation({
       .channel(`job-conv-${jobId}`)
       .on(
         "postgres_changes",
-        { event: "INSERT", schema: "public", table: "sms_messages" },
+        { event: "*", schema: "public", table: "sms_messages" },
         () => load(),
       )
       .subscribe();
@@ -73,19 +74,27 @@ export function JobConversation({
         )}
         {messages.map((m) => {
           const inbound = m.direction === "inbound";
+          const failed = !inbound && (m.status || "").toLowerCase().startsWith("failed");
           return (
             <div
               key={m.id}
               className={`flex ${inbound ? "justify-start" : "justify-end"}`}
             >
               <div
-                className={`max-w-[80%] rounded-lg px-3 py-2 text-sm ${
+                className={`max-w-[80%] rounded-lg border px-3 py-2 text-sm ${
                   inbound
-                    ? "bg-white/[0.06] text-foreground"
-                    : "bg-primary/20 text-foreground"
+                    ? "border-transparent bg-white/[0.06] text-foreground"
+                    : failed
+                      ? "border-destructive/70 bg-destructive/15 text-foreground"
+                      : "border-transparent bg-primary/20 text-foreground"
                 }`}
               >
                 {m.body && <div className="whitespace-pre-wrap break-words">{m.body}</div>}
+                {failed && (
+                  <div className="mt-2 inline-flex items-center gap-1 rounded border border-destructive/40 bg-destructive/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-destructive">
+                    <AlertTriangle className="h-3 w-3" /> Delivery failed
+                  </div>
+                )}
                 {m.media_urls && m.media_urls.length > 0 && (
                   <div className="mt-1.5 flex flex-wrap gap-1.5">
                     {m.media_urls.map((u, i) => (
@@ -104,6 +113,7 @@ export function JobConversation({
                     minute: "2-digit",
                   })}
                   {m.channel ? ` · ${m.channel}` : ""}
+                  {failed ? " · failed" : ""}
                 </div>
               </div>
             </div>

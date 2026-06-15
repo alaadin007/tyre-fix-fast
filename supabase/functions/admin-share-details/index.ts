@@ -15,7 +15,7 @@ const corsHeaders = {
 
 async function sendReply(to: string, body: string, channel = "whatsapp") {
   const url = `${Deno.env.get("SUPABASE_URL")}/functions/v1/twilio-send`;
-  await fetch(url, {
+  const r = await fetch(url, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -23,6 +23,12 @@ async function sendReply(to: string, body: string, channel = "whatsapp") {
     },
     body: JSON.stringify({ to, body, channel }),
   });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok || data?.error) {
+    console.error("sendReply failed", { to, channel, status: r.status, data });
+    throw new Error(data?.error ?? `Message delivery failed (${r.status})`);
+  }
+  return data;
 }
 
 Deno.serve(async (req) => {
