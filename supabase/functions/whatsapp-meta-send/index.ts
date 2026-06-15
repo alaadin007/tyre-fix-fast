@@ -152,19 +152,20 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
+    const primaryMessageId = results[0]?.data?.messages?.[0]?.id ?? null;
     await supabase.from("sms_messages").insert({
       direction: "outbound",
       channel: "whatsapp",
       from_number: Deno.env.get("TWILIO_WHATSAPP_NUMBER") ?? "",
       to_number: toClean,
       body: body ?? "",
-      twilio_sid: results[0]?.data?.messages?.[0]?.id ?? null,
+      twilio_sid: primaryMessageId,
       num_media: images.length,
       media_urls: images,
-      status: "sent",
+      status: "accepted",
     });
 
-    return new Response(JSON.stringify({ ok: true, id: results[0]?.data?.messages?.[0]?.id, count: results.length }), {
+    return new Response(JSON.stringify({ ok: true, id: primaryMessageId, count: results.length, status: "accepted" }), {
       status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
