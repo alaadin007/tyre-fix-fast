@@ -87,7 +87,7 @@ async function buildJobTemplateParams(j: any, photoUrls: string[]): Promise<stri
     clean(j.issue_type),                                              // {{6}}
     clean(j.severity, "Not assessed"),                                // {{7}}
     clean(wheels),                                                    // {{8}}
-    clean(j.damage_summary ?? j.issue_description, "No summary"),     // {{9}}
+    clean(j.damage_summary || j.issue_description, "No summary"),     // {{9}}
     clean(j.notes, "—"),                                              // {{10}}
     clean(j.vehicle_reg, "Not provided"),                             // {{11}}
     String(photoCount),                                               // {{12}}
