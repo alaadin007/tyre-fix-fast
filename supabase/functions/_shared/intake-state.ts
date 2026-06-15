@@ -158,11 +158,23 @@ export function hasIncidentContext(t: string): boolean { return hasIssueDetails(
 
 export function guessIssueType(t: string): string | null {
   const s = (t || "").toLowerCase();
-  if (/blow.?out|burst|busted|shred|exploded/.test(s)) return "blowout";
-  if (/low\s+pressure|psi/.test(s)) return "low pressure";
-  if (/flat|deflat/.test(s)) return "flat tyre";
-  if (/punct|nail|screw/.test(s)) return "puncture";
-  if (/not\s+sure|unsure|don'?t\s+know/.test(s)) return "not sure";
+  // Blowout / burst
+  if (/\bblow[- ]?out\b|\bblown\s*out\b|\bburst\b|\bbusted\b|\bshred(?:ded)?\b|\bexploded\b|\btyre\s+gone\b|\btire\s+gone\b/.test(s)) return "blowout";
+  // Low pressure — accept "low air pressure", "losing air/pressure", "needs air",
+  // "air low", "soft tyre", "tyre soft", "slowly going down", "pressure low", "psi"
+  if (
+    /\blow\s+(?:air\s+)?pressure\b|\bpressure\s+low\b|\blow\s+air\b|\bair\s+low\b/.test(s) ||
+    /\blosing\s+(?:air|pressure)\b|\bneeds?\s+air\b/.test(s) ||
+    /\bsoft\s+tyre\b|\btyre\s+soft\b|\bspongy\b|\bsoft\s+tire\b|\btire\s+soft\b/.test(s) ||
+    /\bslowly\s+going\s+down\b|\bgoing\s+down\s+slowly\b/.test(s) ||
+    /\bpsi\b/.test(s)
+  ) return "low pressure";
+  // Flat
+  if (/\bflat(?:\s+tyre|\s+tire)?\b|\bcompletely\s+flat\b|\bfully\s+flat\b|\bgone\s+flat\b|\btyre\s+is\s+flat\b|\btire\s+is\s+flat\b|\bdeflat/.test(s)) return "flat tyre";
+  // Puncture (incl. common misspelling "puncher")
+  if (/\bpunct\w*|\bpuncher\b|\bnail\b|\bscrew\b|\bslow\s+puncture\b/.test(s)) return "puncture";
+  // Not sure
+  if (/\bnot\s+sure\b|\bunsure\b|\bno\s+idea\b|\bdon'?t\s+know\b|\bcheck\s+it\b|\bsomething\s+wrong\b|\bfeels?\s+weird\b|\bpulling\s+to\s+one\s+side\b/.test(s)) return "not sure";
   return null;
 }
 
@@ -714,6 +726,23 @@ function welcomeMessage(
   return lines.join("\n");
 }
 
+function displayIssueType(job: any): string {
+  const raw = (job?.issue_type || "").toString().trim().toLowerCase();
+  const desc = (job?.issue_description || "").toString().trim().replace(/\s+/g, " ");
+  const typeKnown = raw && raw !== "unknown";
+  const shortDesc = desc.length > 80 ? desc.slice(0, 77) + "…" : desc;
+  if (typeKnown) {
+    // If customer used their own words (and they differ from the canonical
+    // type label), append "(customer described: …)" for technician context.
+    if (shortDesc && shortDesc.toLowerCase() !== raw) {
+      return `${job.issue_type} (customer described: ${shortDesc})`;
+    }
+    return job.issue_type;
+  }
+  // No canonical mapping — show their own words rather than "unknown".
+  return shortDesc || "noted";
+}
+
 function summaryMessage(job: any): string {
   const wheels = Array.isArray(job?.affected_wheels) && job.affected_wheels.length > 0
     ? job.affected_wheels.join(", ") : "—";
@@ -726,7 +755,7 @@ function summaryMessage(job: any): string {
     `✅ Location: ${job.postcode ? `shared (${job.postcode})` : "shared"}`,
     `✅ Vehicle reg: ${job.vehicle_reg}`,
     `✅ Affected tyre(s): ${wheels}`,
-    `✅ Nature of issue: ${job.issue_type || "noted"}`,
+    `✅ Nature of issue: ${displayIssueType(job)}`,
     `✅ Tyre photo(s): ${photos} received`,
     "",
     `Progress: ${greenBar} *100%* (6/6) ✅`,
@@ -782,7 +811,7 @@ function checklistMessage(job: any, missing: Missing, opts: { header?: string; f
     [!missing.pin,      "Location",          !missing.pin ? (job.postcode ? `shared (${job.postcode})` : "shared") : "_missing — share your live WhatsApp pin (preferred), or type your full street address with postcode if pin is not working_"],
     [!missing.reg,      "Vehicle reg",       !missing.reg ? job.vehicle_reg : "_missing_"],
     [!missing.wheels,   "Affected tyre(s)",  !missing.wheels ? wheels : "_missing — e.g. front-left / all four_"],
-    [!missing.issue,    "Nature of issue",   !missing.issue ? (job.issue_type || "noted") : "_missing — e.g. puncture / flat / blowout_"],
+    [!missing.issue,    "Nature of issue",   !missing.issue ? displayIssueType(job) : "_missing — e.g. puncture / flat / blowout_"],
     [!missing.photos,   "Tyre photo(s)",     !missing.photos ? `${photoCount} received` : `_${photoCount > 0 ? `${photoCount} received — need at least 2 valid tyre photos (JPEG/PNG)` : "missing — send at least 2 clear tyre photos (JPEG/PNG)"}_`],
   ];
   const received = items.filter(([ok]) => ok).length;
