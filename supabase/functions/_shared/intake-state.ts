@@ -158,11 +158,23 @@ export function hasIncidentContext(t: string): boolean { return hasIssueDetails(
 
 export function guessIssueType(t: string): string | null {
   const s = (t || "").toLowerCase();
-  if (/blow.?out|burst|busted|shred|exploded/.test(s)) return "blowout";
-  if (/low\s+pressure|psi/.test(s)) return "low pressure";
-  if (/flat|deflat/.test(s)) return "flat tyre";
-  if (/punct|nail|screw/.test(s)) return "puncture";
-  if (/not\s+sure|unsure|don'?t\s+know/.test(s)) return "not sure";
+  // Blowout / burst
+  if (/\bblow[- ]?out\b|\bblown\s*out\b|\bburst\b|\bbusted\b|\bshred(?:ded)?\b|\bexploded\b|\btyre\s+gone\b|\btire\s+gone\b/.test(s)) return "blowout";
+  // Low pressure — accept "low air pressure", "losing air/pressure", "needs air",
+  // "air low", "soft tyre", "tyre soft", "slowly going down", "pressure low", "psi"
+  if (
+    /\blow\s+(?:air\s+)?pressure\b|\bpressure\s+low\b|\blow\s+air\b|\bair\s+low\b/.test(s) ||
+    /\blosing\s+(?:air|pressure)\b|\bneeds?\s+air\b/.test(s) ||
+    /\bsoft\s+tyre\b|\btyre\s+soft\b|\bspongy\b|\bsoft\s+tire\b|\btire\s+soft\b/.test(s) ||
+    /\bslowly\s+going\s+down\b|\bgoing\s+down\s+slowly\b/.test(s) ||
+    /\bpsi\b/.test(s)
+  ) return "low pressure";
+  // Flat
+  if (/\bflat(?:\s+tyre|\s+tire)?\b|\bcompletely\s+flat\b|\bfully\s+flat\b|\bgone\s+flat\b|\btyre\s+is\s+flat\b|\btire\s+is\s+flat\b|\bdeflat/.test(s)) return "flat tyre";
+  // Puncture (incl. common misspelling "puncher")
+  if (/\bpunct\w*|\bpuncher\b|\bnail\b|\bscrew\b|\bslow\s+puncture\b/.test(s)) return "puncture";
+  // Not sure
+  if (/\bnot\s+sure\b|\bunsure\b|\bno\s+idea\b|\bdon'?t\s+know\b|\bcheck\s+it\b|\bsomething\s+wrong\b|\bfeels?\s+weird\b|\bpulling\s+to\s+one\s+side\b/.test(s)) return "not sure";
   return null;
 }
 
