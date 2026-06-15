@@ -529,6 +529,107 @@ async function sendReply(to: string, body: string, channel: "sms" | "whatsapp") 
   }
 }
 
+const PHOTO_DEBOUNCE_MS = 5000;
+const PHOTO_DEBOUNCE_POLL_MS = 500;
+const PHOTO_DEBOUNCE_MAX_BATCH_MS = 15000;
+const PHOTO_BATCH_LOOKBACK_MS = 8000;
+
+async function debounceCustomerPhotoBatch(
+  supabase: any,
+  args: { from: string; channel: "sms" | "whatsapp"; mediaUrls: string[] },
+): Promise<{ shouldProcess: boolean; mediaUrls: string[] }> {
+  const { from, channel, mediaUrls } = args;
+  const { data: conversation } = await supabase
+    .from("conversations")
+    .select("id, context")
+    .eq("customer_phone", from)
+    .neq("step", "complete")
+    .order("last_message_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (!conversation?.id) return { shouldProcess: true, mediaUrls };
+
+  const now = Date.now();
+  const nowIso = new Date(now).toISOString();
+  const ctx = (conversation.context ?? {}) as Record<string, any>;
+  const previousLastAt = typeof ctx.photo_batch_last_at === "string" ? Date.parse(ctx.photo_batch_last_at) : NaN;
+  const batchStillOpen = Number.isFinite(previousLastAt) && now - previousLastAt <= PHOTO_DEBOUNCE_MAX_BATCH_MS;
+  const startedAt = batchStillOpen && typeof ctx.photo_batch_started_at === "string"
+    ? ctx.photo_batch_started_at
+    : nowIso;
+  const token = `${now}-${crypto.randomUUID().slice(0, 8)}`;
+
+  await supabase.from("conversations").update({
+    context: {
+      ...ctx,
+      photo_batch_token: token,
+      photo_batch_started_at: startedAt,
+      photo_batch_last_at: nowIso,
+    },
+  }).eq("id", conversation.id);
+
+  let waited = 0;
+  while (waited < PHOTO_DEBOUNCE_MS) {
+    await new Promise((resolve) => setTimeout(resolve, PHOTO_DEBOUNCE_POLL_MS));
+    waited += PHOTO_DEBOUNCE_POLL_MS;
+    const { data: latest } = await supabase
+      .from("conversations")
+      .select("context")
+      .eq("id", conversation.id)
+      .maybeSingle();
+    const latestToken = (latest?.context as any)?.photo_batch_token;
+    if (latestToken && latestToken !== token) {
+      console.log("photo debounce: newer image arrived, suppressing this webhook", { token, latestToken });
+      return { shouldProcess: false, mediaUrls: [] };
+    }
+  }
+
+  const batchStart = new Date(Math.max(0, Date.parse(startedAt) - PHOTO_BATCH_LOOKBACK_MS)).toISOString();
+  const { data: rows, error } = await supabase
+    .from("sms_messages")
+    .select("media_urls, created_at")
+    .eq("direction", "inbound")
+    .eq("channel", channel)
+    .eq("from_number", from)
+    .gt("num_media", 0)
+    .gte("created_at", batchStart)
+    .order("created_at", { ascending: true })
+    .limit(25);
+  if (error) console.error("photo debounce: failed to load batched media", error);
+
+  const batched: string[] = [];
+  for (const row of rows ?? []) {
+    for (const url of (row.media_urls ?? []) as string[]) {
+      if (url && !batched.includes(url)) batched.push(url);
+    }
+  }
+  for (const url of mediaUrls) {
+    if (url && !batched.includes(url)) batched.push(url);
+  }
+
+  const { data: latest } = await supabase
+    .from("conversations")
+    .select("context")
+    .eq("id", conversation.id)
+    .maybeSingle();
+  const latestCtx = (latest?.context ?? {}) as Record<string, any>;
+  if (latestCtx.photo_batch_token === token) {
+    await supabase.from("conversations").update({
+      context: {
+        ...latestCtx,
+        photo_batch_token: null,
+        photo_batch_started_at: null,
+        photo_batch_last_at: null,
+        photo_batch_processed_at: new Date().toISOString(),
+      },
+    }).eq("id", conversation.id);
+  }
+
+  console.log("photo debounce: processing batched images", { from, count: batched.length, startedAt });
+  return { shouldProcess: true, mediaUrls: batched.length > 0 ? batched : mediaUrls };
+}
+
 // ───────────── Intent classifier (pre-intake gate) ─────────────
 // Classifies an inbound customer message BEFORE we route to the intake state
 // machine. We only ever start the intake flow when the customer has clearly
