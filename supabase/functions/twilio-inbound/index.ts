@@ -3806,17 +3806,14 @@ Deno.serve(async (req) => {
       if (allocErr) console.error("tech alloc lookup failed", allocErr);
       const allOpen = openAllocs ?? [];
 
-      // Also load recently-closed allocations (expired in the last 60 min) so
-      // we can give a specific "window closed for #REF" reply when a quote
-      // arrives just after the 3-minute window. We only use this for
-      // *messaging context* — not to route the quote to a job.
-      const closedSinceIso = new Date(Date.now() - 60 * 60_000).toISOString();
+      // Also load ALL closed allocations for this technician so we can give a
+      // specific "window closed for #REF" reply even when a technician quotes
+      // after the 3-minute window has expired, regardless of how long ago.
       const { data: closedAllocsRaw } = await supabase
         .from("job_allocations")
         .select("*")
         .eq("technician_id", tech.id)
         .eq("status", "expired")
-        .gte("created_at", closedSinceIso)
         .order("created_at", { ascending: false });
       const allClosed = closedAllocsRaw ?? [];
 
@@ -3873,7 +3870,7 @@ Deno.serve(async (req) => {
         // Branch on (open count, closed count) per spec.
         if (looksLikeQuoteMsg) {
           if (allOpen.length === 0 && allClosed.length > 0) {
-            // 0 open, 1+ recently closed → name the most recent closed job.
+            // 0 open, 1+ closed → name the most recent closed job.
             const closedRef = String(allClosed[0].job_id).slice(0, 6).toUpperCase();
             await sendReply(
               from,
