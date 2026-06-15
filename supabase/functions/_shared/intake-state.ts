@@ -726,6 +726,23 @@ function welcomeMessage(
   return lines.join("\n");
 }
 
+function displayIssueType(job: any): string {
+  const raw = (job?.issue_type || "").toString().trim().toLowerCase();
+  const desc = (job?.issue_description || "").toString().trim().replace(/\s+/g, " ");
+  const typeKnown = raw && raw !== "unknown";
+  const shortDesc = desc.length > 80 ? desc.slice(0, 77) + "…" : desc;
+  if (typeKnown) {
+    // If customer used their own words (and they differ from the canonical
+    // type label), append "(customer described: …)" for technician context.
+    if (shortDesc && shortDesc.toLowerCase() !== raw) {
+      return `${job.issue_type} (customer described: ${shortDesc})`;
+    }
+    return job.issue_type;
+  }
+  // No canonical mapping — show their own words rather than "unknown".
+  return shortDesc || "noted";
+}
+
 function summaryMessage(job: any): string {
   const wheels = Array.isArray(job?.affected_wheels) && job.affected_wheels.length > 0
     ? job.affected_wheels.join(", ") : "—";
@@ -738,7 +755,7 @@ function summaryMessage(job: any): string {
     `✅ Location: ${job.postcode ? `shared (${job.postcode})` : "shared"}`,
     `✅ Vehicle reg: ${job.vehicle_reg}`,
     `✅ Affected tyre(s): ${wheels}`,
-    `✅ Nature of issue: ${job.issue_type || "noted"}`,
+    `✅ Nature of issue: ${displayIssueType(job)}`,
     `✅ Tyre photo(s): ${photos} received`,
     "",
     `Progress: ${greenBar} *100%* (6/6) ✅`,
