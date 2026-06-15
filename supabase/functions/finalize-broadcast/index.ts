@@ -241,6 +241,7 @@ Deno.serve(async (req) => {
 
     const lines: string[] = [];
     lines.push(`📋 Quotes Received — Job #${jobRef}`);
+    lines.push("⏱ Quote window closed (3 min)");
     lines.push("");
     lines.push(`👤 Customer: ${customerName}`);
     lines.push(`🚗 Vehicle Reg: ${vehicleReg}`);
@@ -249,7 +250,7 @@ Deno.serve(async (req) => {
     if (uniqueQuotes.length === 0) {
       lines.push("Received 0 quote(s):");
       lines.push("");
-      lines.push("No quotes were received within the 1.5-minute window.");
+      lines.push("No quotes were received within the 3-minute window.");
     } else {
       lines.push(`Received ${uniqueQuotes.length} quote(s):`);
       lines.push("");
