@@ -529,6 +529,93 @@ async function sendReply(to: string, body: string, channel: "sms" | "whatsapp") 
   }
 }
 
+const PHOTO_DEBOUNCE_MS = 5000;
+const PHOTO_DEBOUNCE_POLL_MS = 500;
+const PHOTO_DEBOUNCE_MAX_BATCH_MS = 15000;
+
+async function debounceCustomerPhotoBatch(
+  supabase: any,
+  args: {
+    from: string;
+    channel: "sms" | "whatsapp";
+    mediaUrls: string[];
+    inboundMessageId: string | null;
+    inboundCreatedAt: string | null;
+  },
+): Promise<{ shouldProcess: boolean; mediaUrls: string[] }> {
+  const { from, channel, mediaUrls, inboundMessageId, inboundCreatedAt } = args;
+  const currentAt = inboundCreatedAt ? Date.parse(inboundCreatedAt) : NaN;
+  if (!inboundMessageId || !Number.isFinite(currentAt)) return { shouldProcess: true, mediaUrls };
+
+  let waited = 0;
+  while (waited < PHOTO_DEBOUNCE_MS + PHOTO_DEBOUNCE_POLL_MS) {
+    await new Promise((resolve) => setTimeout(resolve, PHOTO_DEBOUNCE_POLL_MS));
+    waited += PHOTO_DEBOUNCE_POLL_MS;
+    const cutoff = new Date(currentAt + PHOTO_DEBOUNCE_MS).toISOString();
+    const { data: newer } = await supabase
+      .from("sms_messages")
+      .select("id")
+      .eq("direction", "inbound")
+      .eq("channel", channel)
+      .eq("from_number", from)
+      .eq("body", "")
+      .gt("num_media", 0)
+      .gt("created_at", inboundCreatedAt)
+      .lte("created_at", cutoff)
+      .limit(1);
+    if ((newer ?? []).length > 0) {
+      console.log("photo debounce: newer image arrived, suppressing this webhook", { inboundMessageId, newerId: newer![0].id });
+      return { shouldProcess: false, mediaUrls: [] };
+    }
+  }
+
+  const batchStart = new Date(Math.max(0, currentAt - PHOTO_DEBOUNCE_MAX_BATCH_MS)).toISOString();
+  const { data: rows, error } = await supabase
+    .from("sms_messages")
+    .select("id, media_urls, created_at")
+    .eq("direction", "inbound")
+    .eq("channel", channel)
+    .eq("from_number", from)
+    .eq("body", "")
+    .gt("num_media", 0)
+    .gte("created_at", batchStart)
+    .lte("created_at", new Date(currentAt + PHOTO_DEBOUNCE_MS).toISOString())
+    .order("created_at", { ascending: true })
+    .limit(25);
+  if (error) console.error("photo debounce: failed to load batched media", error);
+
+  const batchRows: any[] = [];
+  for (let i = (rows ?? []).length - 1; i >= 0; i--) {
+    const row = rows![i];
+    const rowAt = Date.parse(row.created_at);
+    if (!Number.isFinite(rowAt) || rowAt > currentAt + PHOTO_DEBOUNCE_MS) continue;
+    if (batchRows.length === 0) {
+      if (row.id !== inboundMessageId) continue;
+      batchRows.unshift(row);
+      continue;
+    }
+    const nextAt = Date.parse(batchRows[0].created_at);
+    if (Number.isFinite(nextAt) && nextAt - rowAt <= PHOTO_DEBOUNCE_MS) {
+      batchRows.unshift(row);
+    } else {
+      break;
+    }
+  }
+
+  const batched: string[] = [];
+  for (const row of batchRows) {
+    for (const url of (row.media_urls ?? []) as string[]) {
+      if (url && !batched.includes(url)) batched.push(url);
+    }
+  }
+  for (const url of mediaUrls) {
+    if (url && !batched.includes(url)) batched.push(url);
+  }
+
+  console.log("photo debounce: processing batched images", { from, count: batched.length, inboundMessageId });
+  return { shouldProcess: true, mediaUrls: batched.length > 0 ? batched : mediaUrls };
+}
+
 // ───────────── Intent classifier (pre-intake gate) ─────────────
 // Classifies an inbound customer message BEFORE we route to the intake state
 // machine. We only ever start the intake flow when the customer has clearly
@@ -1250,7 +1337,7 @@ Deno.serve(async (req) => {
     }
 
     // 1. Always log
-    await supabase.from("sms_messages").insert({
+    const { data: inboundLog } = await supabase.from("sms_messages").insert({
       direction: "inbound",
       channel,
       from_number: from,
@@ -1260,7 +1347,7 @@ Deno.serve(async (req) => {
       num_media: numMedia,
       media_urls: mediaUrls,
       status: "received",
-    });
+    }).select("id, created_at").single();
 
     const fromN = normPhone(from);
 
@@ -4311,15 +4398,31 @@ Deno.serve(async (req) => {
     //    This is the single source of truth for the 6-step information gathering.
     //    It handles brand-new customers, returning customers (with memory pre-fill),
     //    and continuing an in-flight intake — all without re-asking completed steps.
+    let customerMediaUrls = mediaUrls;
+    const isPhotoOnlyCustomerMsg = mediaUrls.length > 0 && !(body || "").trim();
+    if (isPhotoOnlyCustomerMsg) {
+      const batch = await debounceCustomerPhotoBatch(supabase, {
+        from,
+        channel,
+        mediaUrls,
+        inboundMessageId: inboundLog?.id ?? null,
+        inboundCreatedAt: inboundLog?.created_at ?? null,
+      });
+      if (!batch.shouldProcess) {
+        return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+      }
+      customerMediaUrls = batch.mediaUrls;
+    }
+
     const outcome = await processCustomerIntake(supabase, {
       from,
       body,
-      mediaUrls,
+      mediaUrls: customerMediaUrls,
       channel,
     });
 
     // Run vision analysis on any new photos (bounces back non-tyre photos).
-    if (mediaUrls.length > 0 && outcome.job?.id) {
+    if (customerMediaUrls.length > 0 && outcome.job?.id) {
       try {
         const ar = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/analyze-damage`, {
           method: "POST",
@@ -4329,7 +4432,7 @@ Deno.serve(async (req) => {
           },
           body: JSON.stringify({
             job_id: outcome.job.id,
-            photo_urls: mediaUrls,
+            photo_urls: customerMediaUrls,
             issue_description: outcome.job.issue_description,
             issue_type: outcome.job.issue_type,
           }),
@@ -4344,7 +4447,7 @@ Deno.serve(async (req) => {
               .select("photo_urls")
               .eq("id", outcome.job.id)
               .maybeSingle();
-            const bad = new Set(mediaUrls);
+            const bad = new Set(customerMediaUrls);
             const kept = ((jrow?.photo_urls as string[]) ?? []).filter((u) => !bad.has(u));
             await supabase.from("jobs").update({ photo_urls: kept }).eq("id", outcome.job.id);
           } catch (e) {
@@ -4392,66 +4495,6 @@ Deno.serve(async (req) => {
         body: `Job ${outcome.job.id.slice(0, 6)} is ready for technician matching.`,
         job_id: outcome.job.id,
       });
-    }
-
-    // ─── Photo batching ───
-    // WhatsApp delivers each image as a separate webhook event milliseconds
-    // apart. Without batching we'd reply with N confirmations. When a media-
-    // only message arrives, hold the reply for ~3.5s; if another photo arrives
-    // for the same conversation in that window it stamps a newer token, so the
-    // earlier request returns silently. The last writer wins and sends a single
-    // consolidated confirmation reflecting the total photo count on the job.
-    const isPhotoOnlyMsg = mediaUrls.length > 0 && !(body || "").trim();
-    if (isPhotoOnlyMsg && outcome.conversation?.id && outcome.job?.id) {
-      // Sliding-window debounce per conversation. Each photo writes its own
-      // token; whoever owns the latest token after a quiet 5s window fires the
-      // single consolidated reply. Superseded photos exit immediately on the
-      // next poll instead of waiting the full window.
-      const myToken = `${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
-      const baseCtx = (outcome.conversation.context ?? {}) as Record<string, any>;
-      await supabase.from("conversations")
-        .update({ context: { ...baseCtx, photo_batch_token: myToken } })
-        .eq("id", outcome.conversation.id);
-
-      const DEBOUNCE_MS = 5000;
-      const POLL_MS = 500;
-      const MAX_WAIT_MS = 15000;
-      let waited = 0;
-      let stableSince = Date.now();
-      let lastSeenToken = myToken;
-      let superseded = false;
-
-      while (waited < MAX_WAIT_MS) {
-        await new Promise((r) => setTimeout(r, POLL_MS));
-        waited += POLL_MS;
-        const { data: convNow } = await supabase
-          .from("conversations")
-          .select("context")
-          .eq("id", outcome.conversation.id)
-          .maybeSingle();
-        const latestToken = (convNow?.context as any)?.photo_batch_token;
-        if (latestToken && latestToken !== lastSeenToken) {
-          // A newer photo arrived — reset the quiet window.
-          lastSeenToken = latestToken;
-          stableSince = Date.now();
-          if (latestToken !== myToken) {
-            superseded = true;
-            break;
-          }
-        }
-        if (Date.now() - stableSince >= DEBOUNCE_MS) break;
-      }
-
-      if (superseded) {
-        console.log("photo batch: superseded, suppressing reply", { myToken, lastSeenToken });
-        return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
-      }
-
-      // Winner — always send the standard progress block (no hardcoded
-      // assumptions about which fields remain). intake-state already builds
-      // an accurate per-field summary in outcome.reply.
-      await sendReply(from, outcome.reply, channel);
-      return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
     }
 
     await sendReply(from, outcome.reply, channel);
