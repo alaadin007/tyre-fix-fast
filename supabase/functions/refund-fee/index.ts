@@ -25,7 +25,7 @@ Deno.serve(async (req) => {
     );
     const { data: job, error } = await supabase
       .from("jobs")
-      .select("id, stripe_payment_intent_id, platform_fee_status, customer_phone")
+      .select("id, stripe_payment_intent_id, platform_fee_status, customer_phone, customer_name")
       .eq("id", job_id)
       .single();
     if (error || !job) throw new Error(`Job not found: ${error?.message}`);
@@ -45,16 +45,21 @@ Deno.serve(async (req) => {
       metadata: { job_id, note: reason ?? "no-show" },
     });
 
+    const jobRef = job_id.slice(0, 6).toUpperCase();
+    const amountGbp = ((refund.amount ?? 0) / 100).toFixed(2);
+    const amountStr = amountGbp.endsWith(".00") ? `£${amountGbp.slice(0, -3)}` : `£${amountGbp}`;
+
     await supabase.from("jobs").update({
       platform_fee_status: "refunded",
       platform_fee_refunded_at: new Date().toISOString(),
       status: "cancelled",
     }).eq("id", job_id);
 
+    // Admin ops alert — include amount + job ref
     await supabase.from("ops_alerts").insert({
       level: "warning",
-      title: "Platform fee refunded",
-      body: `£20 refunded for job ${job_id.slice(0, 8)} — reason: ${reason ?? "no-show"}`,
+      title: "Customer refund processed",
+      body: `${amountStr} refunded to ${job.customer_name ?? "customer"} for job #${jobRef} — reason: ${reason ?? "no-show"}. Customer notified by SMS.`,
       job_id,
     });
 
@@ -68,11 +73,12 @@ Deno.serve(async (req) => {
         },
         body: JSON.stringify({
           to: job.customer_phone,
-          body: "Tyre Fly: we've refunded your payment in full. We're sorry for the inconvenience.",
+          body: `Tyre Fly: we've refunded your payment of ${amountStr} in full for job #${jobRef}. We're sorry for the inconvenience.`,
           channel: "sms",
         }),
       });
     }
+
 
     return new Response(JSON.stringify({ ok: true, refund_id: refund.id }), {
       status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
