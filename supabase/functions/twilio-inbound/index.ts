@@ -1264,68 +1264,99 @@ Deno.serve(async (req) => {
 
     const fromN = normPhone(from);
 
-    // 1a. Technician job-completion: "Done <REF>" from an approved technician.
-    // Closes the job immediately. (Review request flow not wired yet.)
+    // 1a. Technician job-completion. Matches any "Done"-style signal, with or
+    // without a job reference. Includes English + Roman-Urdu synonyms.
+    // If a ref is provided we close that job. If no ref, we look at the
+    // technician's active jobs: 1 → auto-close it; 2+ → ask which.
     {
-      const doneMatch = body.trim().match(/^\s*done\s+#?([0-9a-f]{6,12})\s*$/i);
+      const doneRe = /^\s*(done|finished|complete|completed|kar\s*diya|kardia|mukammal|ho\s*gaya|hogaya|khatam)\b[\s!.,:-]*#?([0-9a-fA-F]{6,12})?\s*$/i;
+      const doneMatch = body.trim().match(doneRe);
       if (doneMatch) {
-          const ref = normalizeJobReference(doneMatch[1]);
+        const ref = doneMatch[2] ? normalizeJobReference(doneMatch[2]) : null;
         const { data: tech } = await supabase
           .from("technicians")
           .select("id, name, phone, approval_status")
           .eq("phone", from)
           .maybeSingle();
         if (tech && tech.approval_status === "approved") {
-            const bounds = ref ? jobRefUuidBounds(ref) : null;
-          const { data: jobMatches } = await supabase
+          const closeJob = async (job: any, shortRef: string) => {
+            if (job.status === "completed" || job.status === "closed" || job.status === "closed_pending_review") {
+              await sendReply(from, `Job ${shortRef} is already closed ✅`, channel);
+              return;
+            }
+            await supabase
+              .from("jobs")
+              .update({ status: "completed", updated_at: new Date().toISOString() })
+              .eq("id", job.id);
+            await supabase.from("ops_alerts").insert({
+              level: "info",
+              title: "Job completed by technician",
+              body: `${tech.name} marked job ${shortRef} as done.`,
+              job_id: job.id,
+            });
+            await sendReply(from, `✅ Job ${shortRef} marked as complete. Thanks ${tech.name}! 👏`, channel);
+            if (job.customer_phone) {
+              await sendReply(
+                job.customer_phone,
+                `✅ Your tyre service is complete — Job #${shortRef}.\n\nThanks for choosing Tyre Fly! 🛞`,
+                "whatsapp",
+              );
+            }
+          };
+
+          if (ref) {
+            const bounds = jobRefUuidBounds(ref);
+            const { data: jobMatches } = await supabase
+              .from("jobs")
+              .select("id, status, customer_phone, customer_name, assigned_technician_id, created_at")
+              .gte("id", bounds.lower)
+              .lte("id", bounds.upper)
+              .order("created_at", { ascending: false })
+              .limit(5);
+            const jm = (jobMatches ?? []).filter((j: any) =>
+              String(j.id).slice(0, 6).toUpperCase() === ref
+            );
+            if (jm.length === 0) {
+              await sendReply(from, `No job found for ref "${ref}". Please double-check the reference.`, channel);
+              return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+            }
+            if (jm.length > 1) {
+              await sendReply(from, `Multiple jobs match "${ref}" — please use the full 6-character reference shown in your job message.`, channel);
+              return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+            }
+            const job: any = jm[0];
+            if (job.assigned_technician_id && job.assigned_technician_id !== tech.id) {
+              await sendReply(from, `Job ${ref} isn't assigned to you. Please contact admin if this is wrong.`, channel);
+              return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+            }
+            await closeJob(job, ref);
+            return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+          }
+
+          // No reference provided → look at this tech's active assigned jobs.
+          const { data: activeJobs } = await supabase
             .from("jobs")
             .select("id, status, customer_phone, customer_name, assigned_technician_id, created_at")
-              .gte("id", bounds?.lower ?? "00000000-0000-0000-0000-000000000000")
-              .lte("id", bounds?.upper ?? "ffffffff-ffff-ffff-ffff-ffffffffffff")
-            .order("created_at", { ascending: false })
-              .limit(5);
-           const jm = (jobMatches ?? []).filter((j: any) =>
-             ref && String(j.id).slice(0, 6).toUpperCase() === ref
-           );
-          if (jm.length === 0) {
-             await sendReply(from, `No job found for ref "${ref ?? doneMatch[1].toUpperCase()}". Please double-check the reference.`, channel);
+            .eq("assigned_technician_id", tech.id)
+            .not("status", "in", "(completed,closed,closed_pending_review,cancelled)")
+            .order("created_at", { ascending: false });
+          const active = activeJobs ?? [];
+          if (active.length === 0) {
+            await sendReply(from, `You don't have any active jobs right now. If you've just finished one, please reply: Done <ref>  e.g. Done E2C9FE`, channel);
             return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
           }
-          if (jm.length > 1) {
-             await sendReply(from, `Multiple jobs match "${ref}" — please use the full 6-character reference shown in your job message.`, channel);
+          if (active.length === 1) {
+            const job: any = active[0];
+            const shortRef = String(job.id).slice(0, 6).toUpperCase();
+            await closeJob(job, shortRef);
             return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
           }
-          const job: any = jm[0];
-          if (job.assigned_technician_id && job.assigned_technician_id !== tech.id) {
-             await sendReply(from, `Job ${ref} isn't assigned to you. Please contact admin if this is wrong.`, channel);
-            return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
-          }
-          if (job.status === "completed" || job.status === "closed" || job.status === "closed_pending_review") {
-             await sendReply(from, `Job ${ref} is already closed ✅`, channel);
-            return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
-          }
-          await supabase
-            .from("jobs")
-            .update({ status: "completed", updated_at: new Date().toISOString() })
-            .eq("id", job.id);
-          await supabase.from("ops_alerts").insert({
-            level: "info",
-            title: "Job completed by technician",
-             body: `${tech.name} marked job ${ref} as done.`,
-            job_id: job.id,
-          });
+          const refsList = active.slice(0, 5).map((j: any) => String(j.id).slice(0, 6).toUpperCase()).join(", ");
           await sendReply(
             from,
-             `✅ Job ${ref} closed. Thanks ${tech.name}! 👏`,
+            `Which job did you complete? You have ${active.length} active jobs (${refsList}).\n\nPlease reply:\nDone <ref>  e.g. Done ${String(active[0].id).slice(0, 6).toUpperCase()}`,
             channel,
           );
-          if (job.customer_phone) {
-            await sendReply(
-              job.customer_phone,
-               `✅ Your tyre service is complete — Job #${ref}.\n\nThanks for choosing Tyre Fly! 🛞`,
-              "whatsapp",
-            );
-          }
           return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
         }
       }
@@ -3675,19 +3706,52 @@ Deno.serve(async (req) => {
         console.log("tech location updated", JSON.stringify({ tech: tech.id, lat, lng, expires: expires.toISOString() }));
       }
 
-      // Find their most recent open allocation
+      // Find the technician's open allocation(s).
       // NOTE: no FK from job_allocations.job_id → jobs.id, so we cannot use
       // PostgREST embedded select (`jobs(*)`) here — it errors silently and
       // makes us reply "no open job" even when a broadcast exists.
-      const { data: allocs, error: allocErr } = await supabase
+      const { data: openAllocs, error: allocErr } = await supabase
         .from("job_allocations")
         .select("*")
         .eq("technician_id", tech.id)
         .in("status", ["broadcast", "proposed"])
-        .order("created_at", { ascending: false })
-        .limit(1);
+        .order("created_at", { ascending: false });
       if (allocErr) console.error("tech alloc lookup failed", allocErr);
-      let alloc: any = allocs?.[0];
+      const allOpen = openAllocs ?? [];
+
+      // If the technician included a job reference in their message, try to
+      // route the quote to that specific allocation. This is essential when
+      // they have multiple open broadcasts at once.
+      const refInBody = (() => {
+        const matches = Array.from(body.matchAll(/#?\b([0-9a-fA-F]{6})\b/g))
+          .map((m) => m[1].toUpperCase())
+          .filter((r) => /^[0-9A-F]{6}$/.test(r));
+        for (const r of matches) {
+          const hit = allOpen.find((a: any) => String(a.job_id).slice(0, 6).toUpperCase() === r);
+          if (hit) return { ref: r, alloc: hit };
+        }
+        return null;
+      })();
+
+      let alloc: any = refInBody?.alloc ?? allOpen[0];
+
+      // If they have 2+ open broadcasts and didn't include a reference, and
+      // the message looks like a quote (price/ETA digits — not a pure
+      // location pin), ask which job before saving anything.
+      if (!refInBody && allOpen.length > 1) {
+        const stripped = body.replace(GMAPS_URL_RE, "").replace(COORD_RE, "").replace(DMS_RE, "").replace(PLAIN_LATLNG_RE, "").trim();
+        const looksLikeQuote = !!stripped && /£|\bpound|\bgbp\b|\bquid\b|\bmin(s|ute)?\b|\d/i.test(stripped);
+        if (looksLikeQuote) {
+          const sampleRef = String(allOpen[0].job_id).slice(0, 6).toUpperCase();
+          const refsList = allOpen.slice(0, 5).map((a: any) => String(a.job_id).slice(0, 6).toUpperCase()).join(", ");
+          await sendReply(
+            from,
+            `Please include the job reference with your quote — you have ${allOpen.length} open jobs (${refsList}).\n\ne.g. £85, 25 mins — ${sampleRef}`,
+            channel,
+          );
+          return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+        }
+      }
 
       if (!alloc?.job_id) {
         // No open allocation — check if the technician's most recent allocation
