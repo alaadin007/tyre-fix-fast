@@ -3841,67 +3841,24 @@ Deno.serve(async (req) => {
       }
 
       if (!alloc?.job_id) {
-        // Did the technician send a quote-shaped message (price / ETA / £)?
+        // Decision is based purely on the technician's CURRENT open allocations
+        // (status in 'broadcast' | 'proposed'). We do NOT use time-based
+        // heuristics ("last 60 minutes") to guess which job a quote belongs to.
+        // If there are zero open allocations, the quote cannot be attached.
         const strippedNoPin = body.replace(GMAPS_URL_RE, "").replace(COORD_RE, "").replace(DMS_RE, "").replace(PLAIN_LATLNG_RE, "").trim();
         const looksLikeQuote = !!strippedNoPin && /£|\bpound|\bgbp\b|\bquid\b|\bmin(s|ute)?\b|\d/i.test(strippedNoPin);
-
-        // Pull every allocation for this tech in the last 60 min so we can
-        // give a specific "window closed for #XYZ" reply even when the
-        // expiry happened well outside the previous 10-minute heuristic.
-        const sinceMs = Date.now() - 60 * 60_000;
-        const { data: recentAllocs } = await supabase
-          .from("job_allocations")
-          .select("*")
-          .eq("technician_id", tech.id)
-          .gte("created_at", new Date(sinceMs).toISOString())
-          .order("created_at", { ascending: false })
-          .limit(10);
-        const recentList = recentAllocs ?? [];
-
-        // If a job reference appears in the body, prefer that one for the reply.
-        const refUpper = (() => {
-          const matches = Array.from(body.matchAll(/#?\b([0-9a-fA-F]{6})\b/g))
-            .map((m) => m[1].toUpperCase());
-          for (const r of matches) {
-            const hit = recentList.find((a: any) => String(a.job_id).slice(0, 6).toUpperCase() === r);
-            if (hit) return { ref: r, alloc: hit };
-          }
-          return null;
-        })();
-
-        if (refUpper) {
-          await sendReply(
-            from,
-            `This job has been closed. The 3-minute quote window for Job Ref #${refUpper.ref} has ended and it is no longer accepting quotes.`,
-            channel,
-          );
-          return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
-        }
-
-        if (looksLikeQuote && recentList.length > 0) {
-          const refsList = recentList.slice(0, 5)
-            .map((a: any) => `#${String(a.job_id).slice(0, 6).toUpperCase()}`)
-            .join(", ");
-          const sampleRef = String(recentList[0].job_id).slice(0, 6).toUpperCase();
-          await sendReply(
-            from,
-            `Thanks for your quote — but the 3-minute quote window has already closed for your recent job${recentList.length > 1 ? "s" : ""} (${refsList}).\n\nIf you're quoting on a current job, please reply with the job reference, e.g. £85, 25 mins — ${sampleRef}.`,
-            channel,
-          );
-          return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
-        }
 
         if (looksLikeQuote) {
           await sendReply(
             from,
-            `Thanks — we don't have an open job for you right now, so we can't attach this quote. We'll text you as soon as a nearby job comes in.`,
+            `Thanks — we don't have an open job for you right now, so we can't attach this quote.`,
             channel,
           );
           return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
         }
 
         // Pure location ping with no open job → just ack
-        if (techPin && !body.replace(GMAPS_URL_RE, "").replace(COORD_RE, "").replace(DMS_RE, "").replace(PLAIN_LATLNG_RE, "").trim()) {
+        if (techPin && !strippedNoPin) {
           await sendReply(from, "Got your live location 📍 — tracking for the next 8 hours. We'll match you to nearby jobs.", channel);
         } else {
           await sendReply(from, "Thanks — no open job for you right now. We'll text when one matches.", channel);
