@@ -180,19 +180,44 @@ Deno.serve(async (req) => {
     const change = entry?.changes?.[0];
     const value = change?.value;
     const messages = value?.messages;
+    const statuses = value?.statuses;
     const businessNumber = value?.metadata?.display_phone_number
       ? `+${String(value.metadata.display_phone_number).replace(/\D/g, "")}`
       : (Deno.env.get("TWILIO_WHATSAPP_NUMBER") ?? "");
 
-    // Status events (sent/delivered/read) — ack and ignore.
+    const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+    const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
+
+    // Status events (sent/delivered/read/failed) — persist them so the dashboard
+    // shows delivery failures instead of leaving accepted Meta sends as "sent".
+    if (Array.isArray(statuses) && statuses.length > 0) {
+      for (const s of statuses) {
+        const messageId = s?.id;
+        const status = String(s?.status ?? "").trim().toLowerCase();
+        const error = Array.isArray(s?.errors) && s.errors.length > 0 ? s.errors[0] : null;
+        if (!messageId || !status) continue;
+        const nextStatus = status === "failed" ? "failed" : status;
+        const { error: updErr } = await supabase
+          .from("sms_messages")
+          .update({ status: nextStatus })
+          .eq("twilio_sid", messageId);
+        if (updErr) console.error("meta status update failed", messageId, updErr);
+        if (status === "failed") {
+          console.error("meta outbound delivery failed", JSON.stringify({ messageId, error }));
+        } else {
+          console.log("meta outbound status", JSON.stringify({ messageId, status }));
+        }
+      }
+      return new Response("ok", { status: 200 });
+    }
+
+    // No inbound message and no useful status payload.
     if (!messages || messages.length === 0) {
       return new Response("ok", { status: 200 });
     }
 
-    const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-    const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const TWILIO_INBOUND_URL = `${SUPABASE_URL}/functions/v1/twilio-inbound`;
-    const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
 
     for (const msg of messages) {
       const from = `+${String(msg.from).replace(/\D/g, "")}`;
