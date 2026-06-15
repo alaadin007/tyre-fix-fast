@@ -532,74 +532,78 @@ async function sendReply(to: string, body: string, channel: "sms" | "whatsapp") 
 const PHOTO_DEBOUNCE_MS = 5000;
 const PHOTO_DEBOUNCE_POLL_MS = 500;
 const PHOTO_DEBOUNCE_MAX_BATCH_MS = 15000;
-const PHOTO_BATCH_LOOKBACK_MS = 8000;
 
 async function debounceCustomerPhotoBatch(
   supabase: any,
-  args: { from: string; channel: "sms" | "whatsapp"; mediaUrls: string[] },
+  args: {
+    from: string;
+    channel: "sms" | "whatsapp";
+    mediaUrls: string[];
+    inboundMessageId: string | null;
+    inboundCreatedAt: string | null;
+  },
 ): Promise<{ shouldProcess: boolean; mediaUrls: string[] }> {
-  const { from, channel, mediaUrls } = args;
-  const { data: conversation } = await supabase
-    .from("conversations")
-    .select("id, context")
-    .eq("customer_phone", from)
-    .neq("step", "complete")
-    .order("last_message_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (!conversation?.id) return { shouldProcess: true, mediaUrls };
-
-  const now = Date.now();
-  const nowIso = new Date(now).toISOString();
-  const ctx = (conversation.context ?? {}) as Record<string, any>;
-  const previousLastAt = typeof ctx.photo_batch_last_at === "string" ? Date.parse(ctx.photo_batch_last_at) : NaN;
-  const batchStillOpen = Number.isFinite(previousLastAt) && now - previousLastAt <= PHOTO_DEBOUNCE_MAX_BATCH_MS;
-  const startedAt = batchStillOpen && typeof ctx.photo_batch_started_at === "string"
-    ? ctx.photo_batch_started_at
-    : nowIso;
-  const token = `${now}-${crypto.randomUUID().slice(0, 8)}`;
-
-  await supabase.from("conversations").update({
-    context: {
-      ...ctx,
-      photo_batch_token: token,
-      photo_batch_started_at: startedAt,
-      photo_batch_last_at: nowIso,
-    },
-  }).eq("id", conversation.id);
+  const { from, channel, mediaUrls, inboundMessageId, inboundCreatedAt } = args;
+  const currentAt = inboundCreatedAt ? Date.parse(inboundCreatedAt) : NaN;
+  if (!inboundMessageId || !Number.isFinite(currentAt)) return { shouldProcess: true, mediaUrls };
 
   let waited = 0;
-  while (waited < PHOTO_DEBOUNCE_MS) {
+  while (waited < PHOTO_DEBOUNCE_MS + PHOTO_DEBOUNCE_POLL_MS) {
     await new Promise((resolve) => setTimeout(resolve, PHOTO_DEBOUNCE_POLL_MS));
     waited += PHOTO_DEBOUNCE_POLL_MS;
-    const { data: latest } = await supabase
-      .from("conversations")
-      .select("context")
-      .eq("id", conversation.id)
-      .maybeSingle();
-    const latestToken = (latest?.context as any)?.photo_batch_token;
-    if (latestToken && latestToken !== token) {
-      console.log("photo debounce: newer image arrived, suppressing this webhook", { token, latestToken });
+    const cutoff = new Date(currentAt + PHOTO_DEBOUNCE_MS).toISOString();
+    const { data: newer } = await supabase
+      .from("sms_messages")
+      .select("id")
+      .eq("direction", "inbound")
+      .eq("channel", channel)
+      .eq("from_number", from)
+      .eq("body", "")
+      .gt("num_media", 0)
+      .gt("created_at", inboundCreatedAt)
+      .lte("created_at", cutoff)
+      .limit(1);
+    if ((newer ?? []).length > 0) {
+      console.log("photo debounce: newer image arrived, suppressing this webhook", { inboundMessageId, newerId: newer![0].id });
       return { shouldProcess: false, mediaUrls: [] };
     }
   }
 
-  const batchStart = new Date(Math.max(0, Date.parse(startedAt) - PHOTO_BATCH_LOOKBACK_MS)).toISOString();
+  const batchStart = new Date(Math.max(0, currentAt - PHOTO_DEBOUNCE_MAX_BATCH_MS)).toISOString();
   const { data: rows, error } = await supabase
     .from("sms_messages")
-    .select("media_urls, created_at")
+    .select("id, media_urls, created_at")
     .eq("direction", "inbound")
     .eq("channel", channel)
     .eq("from_number", from)
+    .eq("body", "")
     .gt("num_media", 0)
     .gte("created_at", batchStart)
+    .lte("created_at", new Date(currentAt + PHOTO_DEBOUNCE_MS).toISOString())
     .order("created_at", { ascending: true })
     .limit(25);
   if (error) console.error("photo debounce: failed to load batched media", error);
 
+  const batchRows: any[] = [];
+  for (let i = (rows ?? []).length - 1; i >= 0; i--) {
+    const row = rows![i];
+    const rowAt = Date.parse(row.created_at);
+    if (!Number.isFinite(rowAt) || rowAt > currentAt + PHOTO_DEBOUNCE_MS) continue;
+    if (batchRows.length === 0) {
+      if (row.id !== inboundMessageId) continue;
+      batchRows.unshift(row);
+      continue;
+    }
+    const nextAt = Date.parse(batchRows[0].created_at);
+    if (Number.isFinite(nextAt) && nextAt - rowAt <= PHOTO_DEBOUNCE_MS) {
+      batchRows.unshift(row);
+    } else {
+      break;
+    }
+  }
+
   const batched: string[] = [];
-  for (const row of rows ?? []) {
+  for (const row of batchRows) {
     for (const url of (row.media_urls ?? []) as string[]) {
       if (url && !batched.includes(url)) batched.push(url);
     }
@@ -608,25 +612,7 @@ async function debounceCustomerPhotoBatch(
     if (url && !batched.includes(url)) batched.push(url);
   }
 
-  const { data: latest } = await supabase
-    .from("conversations")
-    .select("context")
-    .eq("id", conversation.id)
-    .maybeSingle();
-  const latestCtx = (latest?.context ?? {}) as Record<string, any>;
-  if (latestCtx.photo_batch_token === token) {
-    await supabase.from("conversations").update({
-      context: {
-        ...latestCtx,
-        photo_batch_token: null,
-        photo_batch_started_at: null,
-        photo_batch_last_at: null,
-        photo_batch_processed_at: new Date().toISOString(),
-      },
-    }).eq("id", conversation.id);
-  }
-
-  console.log("photo debounce: processing batched images", { from, count: batched.length, startedAt });
+  console.log("photo debounce: processing batched images", { from, count: batched.length, inboundMessageId });
   return { shouldProcess: true, mediaUrls: batched.length > 0 ? batched : mediaUrls };
 }
 
