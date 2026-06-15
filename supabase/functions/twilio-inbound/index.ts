@@ -1337,7 +1337,7 @@ Deno.serve(async (req) => {
     }
 
     // 1. Always log
-    await supabase.from("sms_messages").insert({
+    const { data: inboundLog } = await supabase.from("sms_messages").insert({
       direction: "inbound",
       channel,
       from_number: from,
@@ -1347,7 +1347,7 @@ Deno.serve(async (req) => {
       num_media: numMedia,
       media_urls: mediaUrls,
       status: "received",
-    });
+    }).select("id, created_at").single();
 
     const fromN = normPhone(from);
 
@@ -4401,7 +4401,13 @@ Deno.serve(async (req) => {
     let customerMediaUrls = mediaUrls;
     const isPhotoOnlyCustomerMsg = mediaUrls.length > 0 && !(body || "").trim();
     if (isPhotoOnlyCustomerMsg) {
-      const batch = await debounceCustomerPhotoBatch(supabase, { from, channel, mediaUrls });
+      const batch = await debounceCustomerPhotoBatch(supabase, {
+        from,
+        channel,
+        mediaUrls,
+        inboundMessageId: inboundLog?.id ?? null,
+        inboundCreatedAt: inboundLog?.created_at ?? null,
+      });
       if (!batch.shouldProcess) {
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
       }
