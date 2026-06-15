@@ -276,6 +276,25 @@ Deno.serve(async (req) => {
         .map((r) => r.status === "fulfilled" ? (r.value as any) : { ok: false, error: (r as any).reason?.message })
         .filter((r) => !r.ok);
       if (errors.length) console.error("notify-admins job template errors", JSON.stringify(errors));
+
+      // Send follow-up session message with full customer description if available
+      const customerDesc = (job.issue_description || "").toString().trim();
+      if (customerDesc) {
+        const descMsg = `📝 Customer description: ${customerDesc}`;
+        await Promise.allSettled(
+          numbers.map((to) =>
+            fetch(`${SUPABASE_URL}/functions/v1/twilio-send`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${SERVICE_KEY}`,
+              },
+              body: JSON.stringify({ to, body: descMsg, channel: "whatsapp" }),
+            })
+          ),
+        );
+      }
+
       return new Response(JSON.stringify({ ok: true, sent, total: numbers.length, errors }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });

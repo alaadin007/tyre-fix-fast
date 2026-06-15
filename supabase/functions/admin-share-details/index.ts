@@ -65,7 +65,7 @@ Deno.serve(async (req) => {
     if (quoteRow?.price_gbp != null) quotedAmount = String(quoteRow.price_gbp);
 
     const ref = String(job_id).slice(0, 6).toUpperCase();
-    const issue = job.damage_summary || job.issue_description || job.issue_type || "Tyre service";
+    const issue = job.damage_summary || job.issue_type || "Tyre service";
     const wheels = Array.isArray(job.affected_wheels) && job.affected_wheels.length
       ? job.affected_wheels.join(", ") : "—";
     const vehicleReg = job.vehicle_reg || "—";
