@@ -3713,7 +3713,7 @@ Deno.serve(async (req) => {
         if (recentExpired) {
           await sendReply(
             from,
-            `⏰ You have timed out for Job Reference #${recent.job_id.slice(0, 6)}. The 1.5-minute quote window has ended and this job is no longer accepting quotes.`,
+            `⏰ You have timed out for Job Reference #${recent.job_id.slice(0, 6)}. The 3-minute quote window has ended and this job is no longer accepting quotes.`,
             channel,
           );
           return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
