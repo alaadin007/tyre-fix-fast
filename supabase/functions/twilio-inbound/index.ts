@@ -3983,10 +3983,10 @@ Deno.serve(async (req) => {
 
       // NOTE: Per-quote WhatsApp notifications to admins are intentionally
       // disabled. Admins receive a single consolidated summary of every quote
-      // for this job from finalize-broadcast once the 1.5-minute window ends.
+      // for this job from finalize-broadcast once the 3-minute window ends.
 
       // Intentionally NO early-finalize here. The consolidated summary is
-      // sent only after the full 1.5-minute quote window closes, so admins
+      // sent only after the full 3-minute quote window closes, so admins
       // always receive every quote that came in during the window in a
       // single message (scheduled via scheduled_tasks → finalize-broadcast).
 
