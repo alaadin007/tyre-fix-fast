@@ -298,7 +298,7 @@ Deno.serve(async (req) => {
         run_at: new Date(Date.now() + QUOTE_WINDOW_MS + FINALIZE_BUFFER_MS).toISOString(),
       });
 
-      // Primary path: fire finalize-broadcast ~95s after broadcast.
+      // Primary path: fire finalize-broadcast ~185s after broadcast.
       // finalize-broadcast is idempotent (quote_summary_sent_at marker), so
       // whichever runs first wins.
       const finalize = (async () => {
