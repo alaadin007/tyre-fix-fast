@@ -104,6 +104,41 @@ function formatProviderError(data: any, fallback: string) {
   };
 }
 
+function providerErrorText(data: any, fallback: string): string {
+  return String(data?.error?.message ?? data?.message ?? data?.error ?? fallback);
+}
+
+async function logFailedOutbound(args: {
+  to: string;
+  body: string;
+  channel: "sms" | "whatsapp";
+  from?: string | null;
+  mediaUrls?: string[];
+  provider: string;
+  error: string;
+  code?: number | string | null;
+}) {
+  try {
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    );
+    await supabase.from("sms_messages").insert({
+      direction: "outbound",
+      channel: args.channel,
+      from_number: args.from ?? (args.channel === "whatsapp" ? FROM_WHATSAPP : FROM_SMS),
+      to_number: normalizePhone(args.to),
+      body: args.body,
+      twilio_sid: null,
+      num_media: args.mediaUrls?.length ?? 0,
+      media_urls: args.mediaUrls ?? [],
+      status: `failed: ${args.provider}${args.code ? ` ${args.code}` : ""} — ${args.error}`.slice(0, 240),
+    });
+  } catch (e) {
+    console.error("failed to log outbound failure", e);
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -158,7 +193,18 @@ Deno.serve(async (req) => {
 
       if (!twilioWa.ok) {
         const twilioErr = formatProviderError(twilioWa.data, "WhatsApp send failed");
+        const metaErrText = providerErrorText(metaData, "Meta WhatsApp send failed");
         console.error("twilio whatsapp fallback failed", twilioWa.status, twilioWa.data);
+        await logFailedOutbound({
+          to,
+          body,
+          channel,
+          mediaUrls: media_urls,
+          from: twilioWa.fromBase,
+          provider: "meta_and_twilio",
+          error: `${metaErrText}; fallback: ${twilioErr.error}`,
+          code: twilioErr.code ?? metaData?.code ?? metaData?.error?.code ?? null,
+        });
         return new Response(
           JSON.stringify({
             error: metaData?.error ?? twilioErr.error,
@@ -213,6 +259,16 @@ Deno.serve(async (req) => {
     if (!twilioSms.ok) {
       const twilioErr = formatProviderError(twilioSms.data, "Twilio send failed");
       console.error("twilio send failed", twilioSms.status, twilioSms.data);
+      await logFailedOutbound({
+        to,
+        body,
+        channel,
+        mediaUrls: media_urls,
+        from: twilioSms.fromBase,
+        provider: "twilio",
+        error: twilioErr.error,
+        code: twilioErr.code,
+      });
       return new Response(
         JSON.stringify({
           error: twilioErr.error,
