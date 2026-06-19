@@ -143,15 +143,22 @@ export function QuotesComparisonPanel({
                   <TableCell className="text-sm font-semibold">£{q.price_gbp ?? "—"}</TableCell>
                   <TableCell className="text-sm">{q.eta_minutes ?? "—"} min</TableCell>
                   <TableCell className="text-sm">
-                    {dist != null ? (
-                      <a
-                        href={tech?.last_lat != null ? `https://maps.google.com/?q=${tech!.last_lat},${tech!.last_lng}` : undefined}
-                        target="_blank" rel="noreferrer"
-                        className="inline-flex items-center gap-1 text-primary hover:underline"
-                      >
-                        {dist.toFixed(1)} mi <ExternalLink className="h-3 w-3" />
-                      </a>
-                    ) : "—"}
+                    {tech?.last_lat != null && tech?.last_lng != null ? (
+                      <div className="flex flex-col gap-0.5">
+                        <a
+                          href={`https://maps.google.com/?q=${tech.last_lat},${tech.last_lng}`}
+                          target="_blank" rel="noreferrer"
+                          className="inline-flex items-center gap-1 text-primary hover:underline"
+                        >
+                          {dist != null ? `${dist.toFixed(1)} mi` : "View"} <ExternalLink className="h-3 w-3" />
+                        </a>
+                        {tech.live_location_until && new Date(tech.live_location_until).getTime() > now ? (
+                          <span className="text-[10px] text-emerald-500">● Live location active</span>
+                        ) : null}
+                      </div>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">No location yet</span>
+                    )}
                   </TableCell>
                   <TableCell className="text-xs text-muted-foreground">{fmtRelative(q.created_at)}</TableCell>
                   <TableCell>
