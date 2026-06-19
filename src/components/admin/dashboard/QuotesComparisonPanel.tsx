@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { StatusBadge } from "@/components/admin/dashboard/StatusBadge";
@@ -6,18 +6,39 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { fmtRelative } from "@/hooks/useDashboardData";
-import type { DashJob, DashQuote, DashTech } from "@/hooks/useDashboardData";
+import type { DashJob, DashQuote, DashTech, DashAllocation } from "@/hooks/useDashboardData";
 import { distanceMiles } from "@/lib/techMatch";
-import { Check, X, Send, ExternalLink, Trophy } from "lucide-react";
+import { Check, X, Send, ExternalLink, Trophy, Clock } from "lucide-react";
 
 export function QuotesComparisonPanel({
-  job, quotes, techs,
+  job, quotes, techs, allocations,
 }: {
   job: DashJob;
   quotes: DashQuote[];
   techs: DashTech[];
+  allocations?: DashAllocation[];
 }) {
   const [busy, setBusy] = useState<string | null>(null);
+  const [now, setNow] = useState(() => Date.now());
+
+  const windowExpiresAt = useMemo(() => {
+    const times = (allocations ?? [])
+      .map((a) => a.quote_window_expires_at)
+      .filter((s): s is string => !!s)
+      .map((s) => new Date(s).getTime())
+      .filter((n) => !Number.isNaN(n));
+    return times.length ? Math.max(...times) : null;
+  }, [allocations]);
+
+  const windowOpen = windowExpiresAt != null && windowExpiresAt > now;
+  const secondsLeft = windowOpen ? Math.max(0, Math.ceil((windowExpiresAt! - now) / 1000)) : 0;
+
+  useEffect(() => {
+    if (!windowOpen) return;
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [windowOpen]);
+
 
   const rows = useMemo(() => {
     return quotes
@@ -69,6 +90,20 @@ export function QuotesComparisonPanel({
     } finally { setBusy(null); }
   };
 
+  if (windowOpen) {
+    return (
+      <div className="flex items-center gap-3 rounded-lg border border-primary/30 bg-primary/5 p-4">
+        <Clock className="h-5 w-5 text-primary animate-pulse" />
+        <div>
+          <div className="text-sm font-medium">Collecting quotes from technicians…</div>
+          <div className="text-xs text-muted-foreground">
+            Quote window closes in {secondsLeft}s · {rows.length} received so far (hidden until window closes)
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (rows.length === 0) {
     return <div className="text-sm text-muted-foreground">No quotes received yet for this job.</div>;
   }
@@ -108,15 +143,22 @@ export function QuotesComparisonPanel({
                   <TableCell className="text-sm font-semibold">£{q.price_gbp ?? "—"}</TableCell>
                   <TableCell className="text-sm">{q.eta_minutes ?? "—"} min</TableCell>
                   <TableCell className="text-sm">
-                    {dist != null ? (
-                      <a
-                        href={tech?.last_lat != null ? `https://maps.google.com/?q=${tech!.last_lat},${tech!.last_lng}` : undefined}
-                        target="_blank" rel="noreferrer"
-                        className="inline-flex items-center gap-1 text-primary hover:underline"
-                      >
-                        {dist.toFixed(1)} mi <ExternalLink className="h-3 w-3" />
-                      </a>
-                    ) : "—"}
+                    {tech?.last_lat != null && tech?.last_lng != null ? (
+                      <div className="flex flex-col gap-0.5">
+                        <a
+                          href={`https://maps.google.com/?q=${tech.last_lat},${tech.last_lng}`}
+                          target="_blank" rel="noreferrer"
+                          className="inline-flex items-center gap-1 text-primary hover:underline"
+                        >
+                          {dist != null ? `${dist.toFixed(1)} mi` : "View"} <ExternalLink className="h-3 w-3" />
+                        </a>
+                        {tech.live_location_until && new Date(tech.live_location_until).getTime() > now ? (
+                          <span className="text-[10px] text-emerald-500">● Live location active</span>
+                        ) : null}
+                      </div>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">No location yet</span>
+                    )}
                   </TableCell>
                   <TableCell className="text-xs text-muted-foreground">{fmtRelative(q.created_at)}</TableCell>
                   <TableCell>

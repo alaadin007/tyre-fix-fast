@@ -59,6 +59,7 @@ export type DashAllocation = {
   created_at: string;
   approved_at: string | null;
   approved_by: string | null;
+  quote_window_expires_at: string | null;
 };
 
 export type DashTech = {
