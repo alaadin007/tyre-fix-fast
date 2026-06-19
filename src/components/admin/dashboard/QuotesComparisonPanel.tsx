@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { StatusBadge } from "@/components/admin/dashboard/StatusBadge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
@@ -20,22 +21,40 @@ export function QuotesComparisonPanel({
 }) {
   const [busy, setBusy] = useState<string | null>(null);
   const [now, setNow] = useState(() => Date.now());
+  const [windowExpiresAt, setWindowExpiresAt] = useState<number | null>(null);
+  const [selected, setSelected] = useState<Record<string, boolean>>({});
+  const [forwarding, setForwarding] = useState(false);
 
-  const windowExpiresAt = useMemo(() => {
-    const times = (allocations ?? [])
-      .map((a) => a.quote_window_expires_at)
-      .filter((s): s is string => !!s)
-      .map((s) => new Date(s).getTime())
-      .filter((n) => !Number.isNaN(n));
-    return times.length ? Math.max(...times) : null;
-  }, [allocations]);
+  // Fetch quote_window_expires_at directly from supabase for this job
+  useEffect(() => {
+    let cancelled = false;
+    const fetchWindow = async () => {
+      const { data, error } = await supabase
+        .from("job_allocations")
+        .select("quote_window_expires_at")
+        .eq("job_id", job.id);
+      if (cancelled) return;
+      if (error || !data) {
+        setWindowExpiresAt(null);
+        return;
+      }
+      const times = data
+        .map((r: any) => r.quote_window_expires_at)
+        .filter((s: any): s is string => !!s)
+        .map((s: string) => new Date(s).getTime())
+        .filter((n: number) => !Number.isNaN(n));
+      setWindowExpiresAt(times.length ? Math.max(...times) : null);
+    };
+    fetchWindow();
+    return () => { cancelled = true; };
+  }, [job.id]);
 
   const windowOpen = windowExpiresAt != null && windowExpiresAt > now;
   const secondsLeft = windowOpen ? Math.max(0, Math.ceil((windowExpiresAt! - now) / 1000)) : 0;
 
   useEffect(() => {
     if (!windowOpen) return;
-    const id = setInterval(() => setNow(Date.now()), 1000);
+    const id = setInterval(() => setNow(Date.now()), 5000);
     return () => clearInterval(id);
   }, [windowOpen]);
 
@@ -65,18 +84,31 @@ export function QuotesComparisonPanel({
     return live.slice().sort((a, b) => score(a) - score(b))[0].q.id;
   }, [rows]);
 
-  const send = async (quoteId: string) => {
-    setBusy(quoteId + ":send");
+  const selectedIds = Object.entries(selected).filter(([, v]) => v).map(([k]) => k);
+
+  const forwardSelected = async () => {
+    if (selectedIds.length === 0) return;
+    setForwarding(true);
     try {
-      const { data, error } = await supabase.functions.invoke("admin-send-quote", {
-        body: { job_id: job.id, quote_id: quoteId },
-      });
-      if (error) throw error;
-      if (data?.ok === false) throw new Error(data.error || "Failed");
-      toast.success("Quote forwarded to customer");
+      const results = await Promise.all(
+        selectedIds.map((quoteId) =>
+          supabase.functions.invoke("admin-send-quote", {
+            body: { job_id: job.id, quote_id: quoteId },
+          })
+        )
+      );
+      const failed = results.filter((r) => r.error || (r.data as any)?.ok === false);
+      if (failed.length) {
+        toast.error(`${failed.length} of ${selectedIds.length} failed to send`);
+      } else {
+        toast.success(`Forwarded ${selectedIds.length} quote${selectedIds.length === 1 ? "" : "s"} to customer`);
+      }
+      setSelected({});
     } catch (e: any) {
-      toast.error(e.message ?? "Failed to send quote");
-    } finally { setBusy(null); }
+      toast.error(e.message ?? "Failed to forward quotes");
+    } finally {
+      setForwarding(false);
+    }
   };
 
   const setStatus = async (quoteId: string, status: "accepted" | "lost") => {
@@ -94,12 +126,7 @@ export function QuotesComparisonPanel({
     return (
       <div className="flex items-center gap-3 rounded-lg border border-primary/30 bg-primary/5 p-4">
         <Clock className="h-5 w-5 text-primary animate-pulse" />
-        <div>
-          <div className="text-sm font-medium">Collecting quotes from technicians…</div>
-          <div className="text-xs text-muted-foreground">
-            Quote window closes in {secondsLeft}s · {rows.length} received so far (hidden until window closes)
-          </div>
-        </div>
+        <div className="text-sm">Collecting quotes — window closes in {secondsLeft}s</div>
       </div>
     );
   }
@@ -117,6 +144,7 @@ export function QuotesComparisonPanel({
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-8"></TableHead>
               <TableHead>Technician</TableHead>
               <TableHead>Price</TableHead>
               <TableHead>ETA</TableHead>
@@ -131,6 +159,14 @@ export function QuotesComparisonPanel({
               const isBest = q.id === bestId;
               return (
                 <TableRow key={q.id} className={isBest ? "bg-primary/5" : ""}>
+                  <TableCell>
+                    <Checkbox
+                      checked={!!selected[q.id]}
+                      onCheckedChange={(v) =>
+                        setSelected((prev) => ({ ...prev, [q.id]: !!v }))
+                      }
+                    />
+                  </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
                       {isBest && <Trophy className="h-3.5 w-3.5 text-primary" />}
@@ -175,10 +211,6 @@ export function QuotesComparisonPanel({
                     <div className="flex justify-end gap-1">
                       {q.status === "pending" && (
                         <>
-                          <Button size="sm" onClick={() => send(q.id)} disabled={!!busy}>
-                            <Send className="mr-1 h-3 w-3" />
-                            {busy === q.id + ":send" ? "Sending…" : "Forward"}
-                          </Button>
                           <Button size="sm" variant="outline" onClick={() => setStatus(q.id, "accepted")} disabled={!!busy}>
                             <Check className="h-3 w-3" />
                           </Button>
@@ -194,6 +226,18 @@ export function QuotesComparisonPanel({
             })}
           </TableBody>
         </Table>
+      </div>
+      <div className="flex items-center justify-between pt-2">
+        <div className="text-xs text-muted-foreground">
+          {selectedIds.length} selected
+        </div>
+        <Button
+          onClick={forwardSelected}
+          disabled={selectedIds.length === 0 || forwarding}
+        >
+          <Send className="mr-1 h-3 w-3" />
+          {forwarding ? "Forwarding…" : "Forward Selected to Customer"}
+        </Button>
       </div>
     </div>
   );
