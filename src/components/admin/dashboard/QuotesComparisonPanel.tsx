@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { StatusBadge } from "@/components/admin/dashboard/StatusBadge";
@@ -6,16 +6,17 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { fmtRelative } from "@/hooks/useDashboardData";
-import type { DashJob, DashQuote, DashTech } from "@/hooks/useDashboardData";
+import type { DashJob, DashQuote, DashTech, DashAllocation } from "@/hooks/useDashboardData";
 import { distanceMiles } from "@/lib/techMatch";
-import { Check, X, Send, ExternalLink, Trophy } from "lucide-react";
+import { Check, X, Send, ExternalLink, Trophy, Clock } from "lucide-react";
 
 export function QuotesComparisonPanel({
-  job, quotes, techs,
+  job, quotes, techs, allocations,
 }: {
   job: DashJob;
   quotes: DashQuote[];
   techs: DashTech[];
+  allocations?: DashAllocation[];
 }) {
   const [busy, setBusy] = useState<string | null>(null);
 
