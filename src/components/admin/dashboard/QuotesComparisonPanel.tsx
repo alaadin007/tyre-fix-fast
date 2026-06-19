@@ -19,6 +19,26 @@ export function QuotesComparisonPanel({
   allocations?: DashAllocation[];
 }) {
   const [busy, setBusy] = useState<string | null>(null);
+  const [now, setNow] = useState(() => Date.now());
+
+  const windowExpiresAt = useMemo(() => {
+    const times = (allocations ?? [])
+      .map((a) => a.quote_window_expires_at)
+      .filter((s): s is string => !!s)
+      .map((s) => new Date(s).getTime())
+      .filter((n) => !Number.isNaN(n));
+    return times.length ? Math.max(...times) : null;
+  }, [allocations]);
+
+  const windowOpen = windowExpiresAt != null && windowExpiresAt > now;
+  const secondsLeft = windowOpen ? Math.max(0, Math.ceil((windowExpiresAt! - now) / 1000)) : 0;
+
+  useEffect(() => {
+    if (!windowOpen) return;
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [windowOpen]);
+
 
   const rows = useMemo(() => {
     return quotes
