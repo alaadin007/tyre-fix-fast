@@ -223,7 +223,7 @@ export function JobDetailDrawer({
               ))}
             </TabsContent>
             <TabsContent value="quotes" className="mt-4">
-              <QuotesComparisonPanel job={job} quotes={jobQuotes} techs={techs} />
+              <QuotesComparisonPanel job={job} quotes={jobQuotes} techs={techs} allocations={jobAllocs} />
             </TabsContent>
             <TabsContent value="payment" className="mt-4">
               <PaymentPanel job={job} quotes={jobQuotes} />
