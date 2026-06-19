@@ -90,6 +90,20 @@ export function QuotesComparisonPanel({
     } finally { setBusy(null); }
   };
 
+  if (windowOpen) {
+    return (
+      <div className="flex items-center gap-3 rounded-lg border border-primary/30 bg-primary/5 p-4">
+        <Clock className="h-5 w-5 text-primary animate-pulse" />
+        <div>
+          <div className="text-sm font-medium">Collecting quotes from technicians…</div>
+          <div className="text-xs text-muted-foreground">
+            Quote window closes in {secondsLeft}s · {rows.length} received so far (hidden until window closes)
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (rows.length === 0) {
     return <div className="text-sm text-muted-foreground">No quotes received yet for this job.</div>;
   }
