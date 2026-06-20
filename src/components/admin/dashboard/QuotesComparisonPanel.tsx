@@ -90,19 +90,13 @@ export function QuotesComparisonPanel({
     if (selectedIds.length === 0) return;
     setForwarding(true);
     try {
-      const results = await Promise.all(
-        selectedIds.map((quoteId) =>
-          supabase.functions.invoke("admin-send-quote", {
-            body: { job_id: job.id, quote_id: quoteId },
-          })
-        )
-      );
-      const failed = results.filter((r) => r.error || (r.data as any)?.ok === false);
-      if (failed.length) {
-        toast.error(`${failed.length} of ${selectedIds.length} failed to send`);
-      } else {
-        toast.success(`Forwarded ${selectedIds.length} quote${selectedIds.length === 1 ? "" : "s"} to customer`);
+      const { data, error } = await supabase.functions.invoke("admin-forward-quotes", {
+        body: { job_id: job.id, quote_ids: selectedIds },
+      });
+      if (error || (data as any)?.ok === false) {
+        throw new Error((data as any)?.error ?? error?.message ?? "Failed");
       }
+      toast.success(`Forwarded ${selectedIds.length} quote${selectedIds.length === 1 ? "" : "s"} to customer`);
       setSelected({});
     } catch (e: any) {
       toast.error(e.message ?? "Failed to forward quotes");
