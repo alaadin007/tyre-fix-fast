@@ -148,9 +148,21 @@ export function JobDetailDrawer({
                 <CreditCard className="mr-1.5 h-3.5 w-3.5" /> Mark paid
               </Button>
             )}
-            {job.status !== "completed" && job.status !== "paid" && (
+            {job.status !== "completed" && job.status !== "closed" && job.status !== "cancelled" && (
               <Button size="sm" variant="outline" onClick={markCompleted} disabled={!!busy || intakeIncomplete} title={intakeTitle}>
-                Mark completed
+                <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" /> Mark completed
+              </Button>
+            )}
+            {job.status !== "cancelled" && job.status !== "completed" && job.status !== "closed" && (
+              <Button size="sm" variant="outline" onClick={cancelJob} disabled={!!busy}
+                className="text-red-300 hover:bg-red-500/10 hover:text-red-200">
+                <XCircle className="mr-1.5 h-3.5 w-3.5" /> Cancel job
+              </Button>
+            )}
+            {job.platform_fee_status === "paid" && (
+              <Button size="sm" variant="outline" onClick={refundJob} disabled={!!busy}
+                className="text-amber-300 hover:bg-amber-500/10 hover:text-amber-200">
+                <Undo2 className="mr-1.5 h-3.5 w-3.5" /> Refund fee
               </Button>
             )}
             {job.stripe_checkout_url && (
