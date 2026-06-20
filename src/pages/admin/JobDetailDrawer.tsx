@@ -9,7 +9,7 @@ import { shortRef, fmtRelative } from "@/hooks/useDashboardData";
 import type { DashJob, DashQuote, DashAllocation, DashTech } from "@/hooks/useDashboardData";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Phone, MapPin, Car, ExternalLink, Send, CreditCard } from "lucide-react";
+import { Phone, MapPin, Car, ExternalLink, Send, CreditCard, CheckCircle2, XCircle, Undo2 } from "lucide-react";
 import { MatchingTechniciansPanel } from "@/components/admin/dashboard/MatchingTechniciansPanel";
 import { QuotesComparisonPanel } from "@/components/admin/dashboard/QuotesComparisonPanel";
 import { PaymentPanel } from "@/components/admin/dashboard/PaymentPanel";
@@ -60,23 +60,49 @@ export function JobDetailDrawer({
   };
 
   const markPaid = async () => {
+    if (!window.confirm("Mark this job's platform fee as paid? Use only if Stripe never confirmed (e.g. cash / manual reconciliation).")) return;
     setBusy("paid");
     try {
-      await supabase.from("jobs").update({
-        platform_fee_status: "paid",
-        platform_fee_paid_at: new Date().toISOString(),
-        status: "in_progress",
-      }).eq("id", job.id);
-      toast.success("Marked as paid");
-    } catch (e: any) { toast.error(e.message); } finally { setBusy(null); }
+      const { data, error } = await supabase.functions.invoke("admin-mark-paid", { body: { job_id: job.id } });
+      if (error) throw error;
+      if (data?.ok === false) throw new Error(data.error || "Failed");
+      toast.success(data?.already ? "Already marked paid" : "Marked as paid");
+    } catch (e: any) { toast.error(e.message ?? "Failed"); } finally { setBusy(null); }
   };
 
   const markCompleted = async () => {
+    if (!window.confirm("Mark this job as completed? The customer will receive a WhatsApp confirmation.")) return;
     setBusy("complete");
     try {
-      await supabase.from("jobs").update({ status: "completed" }).eq("id", job.id);
-      toast.success("Job completed");
-    } catch (e: any) { toast.error(e.message); } finally { setBusy(null); }
+      const { data, error } = await supabase.functions.invoke("admin-mark-completed", { body: { job_id: job.id } });
+      if (error) throw error;
+      if (data?.ok === false) throw new Error(data.error || "Failed");
+      toast.success(data?.already ? "Already completed" : "Job completed — customer notified");
+    } catch (e: any) { toast.error(e.message ?? "Failed"); } finally { setBusy(null); }
+  };
+
+  const cancelJob = async () => {
+    const reason = window.prompt("Cancel this job? Optionally enter a reason (for internal log).\n\nThe customer will receive a WhatsApp cancellation message.", "");
+    if (reason === null) return;
+    setBusy("cancel");
+    try {
+      const { data, error } = await supabase.functions.invoke("admin-cancel-job", { body: { job_id: job.id, reason: reason || undefined } });
+      if (error) throw error;
+      if (data?.ok === false) throw new Error(data.error || "Failed");
+      toast.success(data?.already ? "Already cancelled" : "Job cancelled — customer notified");
+    } catch (e: any) { toast.error(e.message ?? "Failed"); } finally { setBusy(null); }
+  };
+
+  const refundJob = async () => {
+    const reason = window.prompt("Refund the platform fee for this job?\n\nOptionally enter a reason (e.g. 'tech no-show').", "no-show");
+    if (reason === null) return;
+    setBusy("refund");
+    try {
+      const { data, error } = await supabase.functions.invoke("refund-fee", { body: { job_id: job.id, reason: reason || undefined } });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      toast.success("Refund issued — customer notified");
+    } catch (e: any) { toast.error(e.message ?? "Refund failed"); } finally { setBusy(null); }
   };
 
   const intakeIncomplete = job.status === "pending" || job.status === "intake_pending" || job.status === "unknown";
