@@ -89,52 +89,60 @@ export function PaymentPanel({ job, quotes }: { job: DashJob; quotes: DashQuote[
           </div>
           <StatusBadge status={job.platform_fee_status} />
         </div>
-        <dl className="grid grid-cols-2 gap-y-2 text-sm">
-          <dt className="text-muted-foreground">Amount requested</dt>
-          <dd className="font-semibold">{amount != null ? `£${amount}` : "—"}</dd>
+        {["awaiting_payment", "paid", "completed"].includes(job.status) ? (
+          <>
+            <dl className="grid grid-cols-2 gap-y-2 text-sm">
+              <dt className="text-muted-foreground">Amount requested</dt>
+              <dd className="font-semibold">{amount != null ? `£${amount}` : "—"}</dd>
 
-          <dt className="text-muted-foreground">Status</dt>
-          <dd>{paymentStatusLabel(job.platform_fee_status)}</dd>
+              <dt className="text-muted-foreground">Status</dt>
+              <dd>{paymentStatusLabel(job.platform_fee_status)}</dd>
 
-          <dt className="text-muted-foreground">Paid at</dt>
-          <dd>
-            {job.platform_fee_paid_at
-              ? `${new Date(job.platform_fee_paid_at).toLocaleString()} (${fmtRelative(job.platform_fee_paid_at)})`
-              : "—"}
-          </dd>
+              <dt className="text-muted-foreground">Paid at</dt>
+              <dd>
+                {job.platform_fee_paid_at
+                  ? `${new Date(job.platform_fee_paid_at).toLocaleString()} (${fmtRelative(job.platform_fee_paid_at)})`
+                  : "—"}
+              </dd>
 
-          <dt className="text-muted-foreground">Refunded at</dt>
-          <dd>
-            {job.platform_fee_refunded_at
-              ? `${new Date(job.platform_fee_refunded_at).toLocaleString()}`
-              : "—"}
-          </dd>
+              <dt className="text-muted-foreground">Refunded at</dt>
+              <dd>
+                {job.platform_fee_refunded_at
+                  ? `${new Date(job.platform_fee_refunded_at).toLocaleString()}`
+                  : "—"}
+              </dd>
 
-          <dt className="text-muted-foreground">Stripe session</dt>
-          <dd className="font-mono text-xs">{job.stripe_session_id ?? "—"}</dd>
+              <dt className="text-muted-foreground">Stripe session</dt>
+              <dd className="font-mono text-xs">{job.stripe_session_id ?? "—"}</dd>
 
-          <dt className="text-muted-foreground">Payment link</dt>
-          <dd>
-            {job.stripe_checkout_url ? (
-              <div className="flex items-center gap-1">
-                <a
-                  href={job.stripe_checkout_url}
-                  target="_blank" rel="noreferrer"
-                  className="flex items-center gap-1 text-primary hover:underline"
-                >
-                  Open <ExternalLink className="h-3 w-3" />
-                </a>
-                <Button size="sm" variant="ghost" onClick={copyLink}>
-                  <Copy className="h-3 w-3" />
-                </Button>
+              <dt className="text-muted-foreground">Payment link</dt>
+              <dd>
+                {job.stripe_checkout_url ? (
+                  <div className="flex items-center gap-1">
+                    <a
+                      href={job.stripe_checkout_url}
+                      target="_blank" rel="noreferrer"
+                      className="flex items-center gap-1 text-primary hover:underline"
+                    >
+                      Open <ExternalLink className="h-3 w-3" />
+                    </a>
+                    <Button size="sm" variant="ghost" onClick={copyLink}>
+                      <Copy className="h-3 w-3" />
+                    </Button>
+                  </div>
+                ) : "—"}
+              </dd>
+            </dl>
+
+            {job.platform_fee_status === "paid" && (
+              <div className="mt-3 flex items-center gap-1 text-xs text-emerald-300">
+                <CheckCircle2 className="h-3 w-3" /> Customer payment confirmed
               </div>
-            ) : "—"}
-          </dd>
-        </dl>
-
-        {job.platform_fee_status === "paid" && (
-          <div className="mt-3 flex items-center gap-1 text-xs text-emerald-300">
-            <CheckCircle2 className="h-3 w-3" /> Customer payment confirmed
+            )}
+          </>
+        ) : (
+          <div className="text-sm text-muted-foreground">
+            No payment requested yet. Details will appear here once the customer selects a quote and pays.
           </div>
         )}
       </Card>
