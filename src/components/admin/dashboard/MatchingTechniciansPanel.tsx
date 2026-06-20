@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, Phone, Send, ExternalLink } from "lucide-react";
+import { MapPin, Phone, Send, ExternalLink, UserCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { DashJob, DashTech, DashAllocation, DashQuote } from "@/hooks/useDashboardData";
