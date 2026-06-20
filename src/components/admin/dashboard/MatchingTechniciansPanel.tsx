@@ -167,6 +167,35 @@ export function MatchingTechniciansPanel({
                   )}
                 </div>
               </div>
+              <div className="flex shrink-0 flex-col items-end gap-1">
+                {assignedTechId === t.id && (
+                  <Badge variant="default" className="text-[10px]">Assigned</Badge>
+                )}
+                <Button
+                  size="sm"
+                  variant={assignedTechId === t.id ? "secondary" : "outline"}
+                  disabled={assignBusy !== null || intakeIncomplete || assignedTechId === t.id}
+                  onClick={() => assignTech(t.id)}
+                  title={
+                    intakeIncomplete
+                      ? "Waiting for customer to finish intake"
+                      : assignedTechId === t.id
+                        ? "Already assigned"
+                        : assignedTechId
+                          ? "Reassign job to this technician"
+                          : "Assign job to this technician"
+                  }
+                >
+                  <UserCheck className="mr-1 h-3.5 w-3.5" />
+                  {assignBusy === t.id
+                    ? "…"
+                    : assignedTechId === t.id
+                      ? "Assigned"
+                      : assignedTechId
+                        ? "Reassign"
+                        : "Assign"}
+                </Button>
+              </div>
             </div>
           );
         })}
