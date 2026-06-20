@@ -21,6 +21,33 @@ export function MatchingTechniciansPanel({
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [showAll, setShowAll] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [assignBusy, setAssignBusy] = useState<string | null>(null);
+
+  const assignedTechId = job.assigned_technician_id ?? null;
+
+  const assignTech = async (techId: string) => {
+    if (intakeIncomplete) {
+      toast.error("Customer hasn't finished the job intake yet");
+      return;
+    }
+    const isReassign = assignedTechId && assignedTechId !== techId;
+    if (isReassign && !window.confirm("Reassign this job to a different technician? The previous technician will be notified.")) {
+      return;
+    }
+    setAssignBusy(techId);
+    try {
+      const { data, error } = await supabase.functions.invoke("admin-assign-technician", {
+        body: { job_id: job.id, technician_id: techId },
+      });
+      if (error) throw error;
+      if (data?.ok === false) throw new Error(data.error || "Assign failed");
+      toast.success(data?.reassigned ? "Technician reassigned" : "Technician assigned");
+    } catch (e: any) {
+      toast.error(e.message ?? "Failed to assign");
+    } finally {
+      setAssignBusy(null);
+    }
+  };
 
   const covering = matches.filter((m) => m.covers);
   const visible = showAll ? matches : covering.length > 0 ? covering : matches.slice(0, 10);
