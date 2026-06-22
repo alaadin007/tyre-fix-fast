@@ -157,11 +157,14 @@ export function QuotesComparisonPanel({
           <TableBody>
             {rows.map(({ q, tech, dist }) => {
               const isBest = q.id === bestId;
+              const isForwarded = !!forwardedIds[q.id] || q.status === "sent" || q.status === "proposed";
+              const displayStatus = isForwarded ? "sent" : q.status;
               return (
                 <TableRow key={q.id} className={isBest ? "bg-primary/5" : ""}>
                   <TableCell>
                     <Checkbox
                       checked={!!selected[q.id]}
+                      disabled={isForwarded}
                       onCheckedChange={(v) =>
                         setSelected((prev) => ({ ...prev, [q.id]: !!v }))
                       }
