@@ -202,7 +202,13 @@ export function QuotesComparisonPanel({
                   <TableCell className="text-xs text-muted-foreground">{fmtRelative(q.created_at)}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1">
-                      <StatusBadge status={displayStatus} raw={isForwarded} />{isForwarded && false}
+                      {isForwarded ? (
+                        <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider bg-indigo-500/15 text-indigo-300 border-indigo-500/30">
+                          Quote Sent
+                        </span>
+                      ) : (
+                        <StatusBadge status={q.status} />
+                      )}
                       {q.tyre_included != null && (
                         <Badge variant="outline" className="text-[10px]">
                           {q.tyre_included ? "tyre incl" : "tyre excl"}
