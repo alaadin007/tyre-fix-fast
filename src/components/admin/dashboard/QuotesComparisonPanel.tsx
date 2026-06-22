@@ -24,6 +24,7 @@ export function QuotesComparisonPanel({
   const [windowExpiresAt, setWindowExpiresAt] = useState<number | null>(null);
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [forwarding, setForwarding] = useState(false);
+  const [forwardedIds, setForwardedIds] = useState<Record<string, boolean>>({});
 
   // Fetch quote_window_expires_at directly from supabase for this job
   useEffect(() => {
