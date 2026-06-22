@@ -24,6 +24,7 @@ export function QuotesComparisonPanel({
   const [windowExpiresAt, setWindowExpiresAt] = useState<number | null>(null);
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [forwarding, setForwarding] = useState(false);
+  const [forwardedIds, setForwardedIds] = useState<Record<string, boolean>>({});
 
   // Fetch quote_window_expires_at directly from supabase for this job
   useEffect(() => {
@@ -97,6 +98,11 @@ export function QuotesComparisonPanel({
         throw new Error((data as any)?.error ?? error?.message ?? "Failed");
       }
       toast.success(`Forwarded ${selectedIds.length} quote${selectedIds.length === 1 ? "" : "s"} to customer`);
+      setForwardedIds((prev) => {
+        const next = { ...prev };
+        selectedIds.forEach((id) => { next[id] = true; });
+        return next;
+      });
       setSelected({});
     } catch (e: any) {
       toast.error(e.message ?? "Failed to forward quotes");
@@ -151,11 +157,14 @@ export function QuotesComparisonPanel({
           <TableBody>
             {rows.map(({ q, tech, dist }) => {
               const isBest = q.id === bestId;
+              const isForwarded = !!forwardedIds[q.id] || q.status === "sent" || q.status === "proposed";
+              const displayStatus = isForwarded ? "sent" : q.status;
               return (
                 <TableRow key={q.id} className={isBest ? "bg-primary/5" : ""}>
                   <TableCell>
                     <Checkbox
                       checked={!!selected[q.id]}
+                      disabled={isForwarded}
                       onCheckedChange={(v) =>
                         setSelected((prev) => ({ ...prev, [q.id]: !!v }))
                       }
@@ -193,7 +202,13 @@ export function QuotesComparisonPanel({
                   <TableCell className="text-xs text-muted-foreground">{fmtRelative(q.created_at)}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1">
-                      <StatusBadge status={q.status} />
+                      {isForwarded ? (
+                        <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider bg-indigo-500/15 text-indigo-300 border-indigo-500/30">
+                          Quote Sent
+                        </span>
+                      ) : (
+                        <StatusBadge status={q.status} />
+                      )}
                       {q.tyre_included != null && (
                         <Badge variant="outline" className="text-[10px]">
                           {q.tyre_included ? "tyre incl" : "tyre excl"}
