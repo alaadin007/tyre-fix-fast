@@ -214,6 +214,15 @@ export function QuotesComparisonPanel({
   }
 
   if (rows.length === 0) {
+    if (windowExpiresAt != null && windowExpiresAt <= now) {
+      return (
+        <div className="text-sm text-muted-foreground">
+          No technicians responded within the 3-minute quote window.
+          <br />
+          You can rebroadcast this job to try again.
+        </div>
+      );
+    }
     return <div className="text-sm text-muted-foreground">No quotes received yet for this job.</div>;
   }
 
