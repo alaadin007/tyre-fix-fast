@@ -153,9 +153,9 @@ export default function DashboardLayout() {
         <div className="flex min-h-screen w-full bg-background text-foreground">
           <AppSidebar />
           <div className="flex flex-1 flex-col">
-            <header className="sticky top-0 z-30 flex h-12 items-center gap-2 border-b border-border/60 bg-background/80 px-3 backdrop-blur">
+            <header className="sticky top-0 z-30 flex h-12 items-center gap-2 border-b border-border/60 bg-background/80 px-2 backdrop-blur sm:px-3">
               <SidebarTrigger />
-              <div className="ml-2 text-sm font-medium text-muted-foreground">Admin</div>
+              <div className="ml-2 hidden text-sm font-medium text-muted-foreground sm:block">Admin</div>
               <div className="ml-auto">
                 <Button
                   size="sm"
