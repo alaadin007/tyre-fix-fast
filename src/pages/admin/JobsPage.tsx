@@ -202,7 +202,7 @@ export default function JobsPage() {
                     <TableCell className="hidden text-sm md:table-cell">
                       {tech?.name ?? <span className="text-muted-foreground">Unassigned</span>}
                     </TableCell>
-                    <TableCell className="whitespace-nowrap text-xs text-muted-foreground">{fmtRelative(j.created_at)}</TableCell>
+                    <TableCell className="hidden whitespace-nowrap text-xs text-muted-foreground md:table-cell">{fmtRelative(j.created_at)}</TableCell>
                   </TableRow>
                 );
               })}
