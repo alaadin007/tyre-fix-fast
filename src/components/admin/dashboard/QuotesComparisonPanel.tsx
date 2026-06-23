@@ -287,7 +287,7 @@ export function QuotesComparisonPanel({
                   <TableCell>
                     <div className="flex items-center gap-1">
                       {isForwarded ? (
-                        <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider bg-indigo-500/15 text-indigo-300 border-indigo-500/30">
+                        <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider bg-emerald-500/15 text-emerald-300 border-emerald-500/30">
                           Quote Sent
                         </span>
                       ) : (
