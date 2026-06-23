@@ -164,6 +164,12 @@ Deno.serve(async (req) => {
       .update({ status: "forwarded" })
       .in("id", quote_ids);
 
+    await supabase
+      .from("jobs")
+      .update({ status: "awaiting_payment" })
+      .eq("id", job_id);
+
+
     return new Response(JSON.stringify({ ok: true, count: options.length }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

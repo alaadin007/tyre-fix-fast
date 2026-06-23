@@ -210,6 +210,14 @@ Deno.serve(async (req) => {
     const { data: quotes } = await quotesQuery;
     const uniqueQuotes = dedupeQuotesByTechnician(quotes ?? []);
 
+    if (uniqueQuotes.length > 0) {
+      await supabase
+        .from("jobs")
+        .update({ status: "quoted" })
+        .eq("id", job_id)
+        .eq("status", "broadcasting");
+    }
+
     // Fetch job details for customer + vehicle context in the summary.
     const { data: jobFull } = await supabase
       .from("jobs")
