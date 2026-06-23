@@ -134,19 +134,27 @@ Deno.serve(async (req) => {
 
     if (options.length === 0) throw new Error("Could not prepare any quote options");
 
+    const isSingle = options.length === 1;
     const optionLines = options.map((o, i) =>
-      `Option ${i + 1} — ${o.name}\n` +
+      `${isSingle ? o.name : `Option ${i + 1} — ${o.name}`}\n` +
       `💷 Repair Cost: £${o.price}\n` +
       `⏱ Estimated Arrival: ${o.eta} minutes\n` +
       `🔗 Payment Link: ${o.link ?? "to be sent shortly"}`
     ).join("\n\n");
 
+    const introLine = isSingle
+      ? `We have received a quote from our technician for your vehicle ${vehicleReg}:`
+      : `We have received quotes from our technicians for your vehicle ${vehicleReg}. Please review and choose your preferred option:`;
+    const outroLine = isSingle
+      ? `Please tap the payment link above to confirm your booking. Once payment is confirmed, your technician will proceed to your location.`
+      : `Please tap your preferred payment link to confirm your booking. Once payment is confirmed, your technician will proceed to your location.`;
+
     const body =
       `Job Reference: #${shortRef}\n\n` +
       `Hello${jobRow.customer_name ? ` ${jobRow.customer_name}` : ""},\n\n` +
-      `We have received quotes from our technicians for your vehicle ${vehicleReg}. Please review and choose your preferred option:\n\n` +
+      `${introLine}\n\n` +
       `${optionLines}\n\n` +
-      `Please tap your preferred payment link to confirm your booking. Once payment is confirmed, your technician will proceed to your location.\n\n` +
+      `${outroLine}\n\n` +
       `Thank you.\n— Tyre Fly`;
 
     await sendReply(jobRow.customer_phone, body, "whatsapp");
