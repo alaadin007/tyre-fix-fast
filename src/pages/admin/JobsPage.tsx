@@ -65,7 +65,7 @@ export default function JobsPage() {
       </div>
 
       {/* KPI cards */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
         <StatCard label="Total" value={jobs.length} icon={Briefcase} tone="default" />
         <StatCard label="Open" value={stats.open} icon={Clock} tone="info" />
         <StatCard label="Needs Action" value={stats.urgent} icon={AlertTriangle} tone="warn" />
