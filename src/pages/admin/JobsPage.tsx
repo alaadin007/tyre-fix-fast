@@ -93,7 +93,7 @@ export default function JobsPage() {
               </button>
             )}
           </div>
-          <div className="flex flex-wrap gap-1.5">
+          <div className="-mx-3 flex flex-nowrap gap-1.5 overflow-x-auto whitespace-nowrap px-3 pb-1 md:mx-0 md:flex-wrap md:px-0 md:pb-0">
             {JOB_STATUS_FILTERS.map((s) => {
               const active = status === s.value;
               const n = counts[s.value] ?? 0;
@@ -132,15 +132,15 @@ export default function JobsPage() {
               <TableRow className="border-b border-border/60 hover:bg-transparent">
                 <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Ref</TableHead>
                 <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Customer</TableHead>
-                <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">WhatsApp</TableHead>
-                <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Postcode</TableHead>
+                <TableHead className="hidden text-[11px] font-semibold uppercase tracking-wider text-muted-foreground md:table-cell">WhatsApp</TableHead>
+                <TableHead className="hidden text-[11px] font-semibold uppercase tracking-wider text-muted-foreground md:table-cell">Postcode</TableHead>
                 <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Location</TableHead>
-                <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Vehicle</TableHead>
-                <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Tyre</TableHead>
+                <TableHead className="hidden text-[11px] font-semibold uppercase tracking-wider text-muted-foreground md:table-cell">Vehicle</TableHead>
+                <TableHead className="hidden text-[11px] font-semibold uppercase tracking-wider text-muted-foreground md:table-cell">Tyre</TableHead>
                 <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Issue</TableHead>
                 <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Status</TableHead>
-                <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Payment</TableHead>
-                <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Tech</TableHead>
+                <TableHead className="hidden text-[11px] font-semibold uppercase tracking-wider text-muted-foreground md:table-cell">Payment</TableHead>
+                <TableHead className="hidden text-[11px] font-semibold uppercase tracking-wider text-muted-foreground md:table-cell">Tech</TableHead>
                 <TableHead className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Created</TableHead>
               </TableRow>
             </TableHeader>
@@ -166,8 +166,8 @@ export default function JobsPage() {
                         <span className="text-sm font-medium">{j.customer_name ?? "—"}</span>
                       </div>
                     </TableCell>
-                    <TableCell className="text-sm tabular-nums text-muted-foreground">{j.customer_phone ?? "—"}</TableCell>
-                    <TableCell>
+                    <TableCell className="hidden text-sm tabular-nums text-muted-foreground md:table-cell">{j.customer_phone ?? "—"}</TableCell>
+                    <TableCell className="hidden md:table-cell">
                       {j.postcode ? (
                         <span className="inline-flex items-center rounded-md border border-border bg-muted/50 px-2 py-0.5 font-mono text-xs">
                           {j.postcode}
@@ -186,20 +186,20 @@ export default function JobsPage() {
                         </a>
                       ) : <span className="text-muted-foreground">—</span>}
                     </TableCell>
-                    <TableCell className="font-mono text-xs uppercase">{j.vehicle_reg ?? <span className="text-muted-foreground">—</span>}</TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
+                    <TableCell className="hidden font-mono text-xs uppercase md:table-cell">{j.vehicle_reg ?? <span className="text-muted-foreground">—</span>}</TableCell>
+                    <TableCell className="hidden text-xs text-muted-foreground md:table-cell">
                       {wheels && <div className="font-medium text-foreground">{wheels}</div>}
                       {tyre && <div>{tyre}</div>}
                       {!wheels && !tyre && "—"}
                     </TableCell>
-                    <TableCell className="max-w-[220px] truncate text-sm text-muted-foreground">
+                    <TableCell className="max-w-[160px] truncate text-sm text-muted-foreground md:max-w-[220px]">
                       {j.damage_summary || j.issue_type || "—"}
                     </TableCell>
                     <TableCell><StatusBadge status={j.status} /></TableCell>
-                    <TableCell>
+                    <TableCell className="hidden md:table-cell">
                       <PaymentPill status={j.platform_fee_status} />
                     </TableCell>
-                    <TableCell className="text-sm">
+                    <TableCell className="hidden text-sm md:table-cell">
                       {tech?.name ?? <span className="text-muted-foreground">Unassigned</span>}
                     </TableCell>
                     <TableCell className="whitespace-nowrap text-xs text-muted-foreground">{fmtRelative(j.created_at)}</TableCell>

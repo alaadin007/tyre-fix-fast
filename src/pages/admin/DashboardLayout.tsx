@@ -49,8 +49,11 @@ const items = [
 ];
 
 function AppSidebar() {
-  const { state } = useSidebar();
-  const collapsed = state === "collapsed";
+  const { state, isMobile, setOpenMobile } = useSidebar();
+  const collapsed = state === "collapsed" && !isMobile;
+  const closeOnMobile = () => {
+    if (isMobile) setOpenMobile(false);
+  };
   return (
     <Sidebar collapsible="icon">
       <SidebarContent>
@@ -72,6 +75,7 @@ function AppSidebar() {
                     <NavLink
                       to={item.url}
                       end={item.end}
+                      onClick={closeOnMobile}
                       className={({ isActive }) =>
                         `flex items-center gap-2 ${isActive ? "bg-primary/15 text-primary" : "hover:bg-muted/40"}`
                       }
@@ -91,7 +95,7 @@ function AppSidebar() {
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild>
-                  <NavLink to="/admin" className="flex items-center gap-2 hover:bg-muted/40">
+                  <NavLink to="/admin" onClick={closeOnMobile} className="flex items-center gap-2 hover:bg-muted/40">
                     <Map className="h-4 w-4" />
                     {!collapsed && <span>Live Console</span>}
                   </NavLink>
@@ -149,9 +153,9 @@ export default function DashboardLayout() {
         <div className="flex min-h-screen w-full bg-background text-foreground">
           <AppSidebar />
           <div className="flex flex-1 flex-col">
-            <header className="sticky top-0 z-30 flex h-12 items-center gap-2 border-b border-border/60 bg-background/80 px-3 backdrop-blur">
+            <header className="sticky top-0 z-30 flex h-12 items-center gap-2 border-b border-border/60 bg-background/80 px-2 backdrop-blur sm:px-3">
               <SidebarTrigger />
-              <div className="ml-2 text-sm font-medium text-muted-foreground">Admin</div>
+              <div className="ml-2 hidden text-sm font-medium text-muted-foreground sm:block">Admin</div>
               <div className="ml-auto">
                 <Button
                   size="sm"
