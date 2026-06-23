@@ -244,13 +244,13 @@ function StatCard({
     success: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
   };
   return (
-    <Card className="flex items-center gap-3 border-border/60 bg-card p-4 shadow-sm transition-shadow hover:shadow-md">
-      <div className={cn("flex h-10 w-10 items-center justify-center rounded-lg", tones[tone])}>
-        <Icon className="h-5 w-5" />
+    <Card className="flex items-center gap-2 border-border/60 bg-card p-3 shadow-sm transition-shadow hover:shadow-md md:gap-3 md:p-4">
+      <div className={cn("flex h-8 w-8 items-center justify-center rounded-lg md:h-10 md:w-10", tones[tone])}>
+        <Icon className="h-4 w-4 md:h-5 md:w-5" />
       </div>
       <div className="min-w-0">
-        <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{label}</div>
-        <div className="text-2xl font-semibold tabular-nums">{value}</div>
+        <div className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground md:text-xs">{label}</div>
+        <div className="text-lg font-semibold tabular-nums md:text-2xl">{value}</div>
       </div>
     </Card>
   );
