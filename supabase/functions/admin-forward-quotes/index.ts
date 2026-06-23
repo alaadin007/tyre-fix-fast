@@ -159,6 +159,11 @@ Deno.serve(async (req) => {
 
     await sendReply(jobRow.customer_phone, body, "whatsapp");
 
+    await supabase
+      .from("quotes")
+      .update({ status: "forwarded" })
+      .in("id", quote_ids);
+
     return new Response(JSON.stringify({ ok: true, count: options.length }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
