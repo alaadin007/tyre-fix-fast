@@ -174,7 +174,7 @@ export default function JobsPage() {
                         </span>
                       ) : "—"}
                     </TableCell>
-                    <TableCell className="text-sm">
+                    <TableCell className="hidden text-sm md:table-cell">
                       {j.lat != null && j.lng != null ? (
                         <a
                           href={`https://maps.google.com/?q=${j.lat},${j.lng}`}
@@ -192,7 +192,7 @@ export default function JobsPage() {
                       {tyre && <div>{tyre}</div>}
                       {!wheels && !tyre && "—"}
                     </TableCell>
-                    <TableCell className="max-w-[160px] truncate text-sm text-muted-foreground md:max-w-[220px]">
+                    <TableCell className="hidden max-w-[220px] truncate text-sm text-muted-foreground md:table-cell">
                       {j.damage_summary || j.issue_type || "—"}
                     </TableCell>
                     <TableCell><StatusBadge status={j.status} /></TableCell>
