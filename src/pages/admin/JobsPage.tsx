@@ -93,7 +93,7 @@ export default function JobsPage() {
               </button>
             )}
           </div>
-          <div className="flex flex-wrap gap-1.5">
+          <div className="-mx-3 flex flex-nowrap gap-1.5 overflow-x-auto whitespace-nowrap px-3 pb-1 md:mx-0 md:flex-wrap md:px-0 md:pb-0">
             {JOB_STATUS_FILTERS.map((s) => {
               const active = status === s.value;
               const n = counts[s.value] ?? 0;
