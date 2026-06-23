@@ -9,7 +9,91 @@ import { toast } from "sonner";
 import { fmtRelative } from "@/hooks/useDashboardData";
 import type { DashJob, DashQuote, DashTech, DashAllocation } from "@/hooks/useDashboardData";
 import { distanceMiles } from "@/lib/techMatch";
-import { Check, X, Send, ExternalLink, Trophy, Clock } from "lucide-react";
+import { Check, X, Send, ExternalLink, Trophy, Clock, Pencil } from "lucide-react";
+import { Input } from "@/components/ui/input";
+
+function PriceCell({ quoteId, price }: { quoteId: string; price: number | null | undefined }) {
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState<string>(price != null ? String(price) : "");
+  const [saving, setSaving] = useState(false);
+  const [current, setCurrent] = useState<number | null | undefined>(price);
+
+  useEffect(() => {
+    if (!editing) {
+      setCurrent(price);
+      setValue(price != null ? String(price) : "");
+    }
+  }, [price, editing]);
+
+  const save = async () => {
+    const num = Number(value);
+    if (!Number.isFinite(num) || num < 0) {
+      toast.error("Enter a valid price");
+      return;
+    }
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from("quotes")
+        .update({ price_gbp: num, price_updated_at: new Date().toISOString() })
+        .eq("id", quoteId);
+      if (error) throw error;
+      setCurrent(num);
+      setEditing(false);
+      toast.success("Price updated");
+    } catch (e: any) {
+      toast.error(e.message ?? "Failed to update price");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const cancel = () => {
+    setValue(current != null ? String(current) : "");
+    setEditing(false);
+  };
+
+  if (editing) {
+    return (
+      <div className="flex items-center gap-1">
+        <span className="text-sm">£</span>
+        <Input
+          autoFocus
+          type="number"
+          inputMode="decimal"
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") { e.preventDefault(); save(); }
+            else if (e.key === "Escape") { e.preventDefault(); cancel(); }
+          }}
+          onBlur={cancel}
+          disabled={saving}
+          className="h-7 w-20 px-2 text-sm"
+        />
+        <Button
+          size="sm" variant="ghost" className="h-6 w-6 p-0"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={save} disabled={saving}
+        >
+          <Check className="h-3 w-3" />
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => setEditing(true)}
+      className="group inline-flex items-center gap-1 text-sm font-semibold hover:text-primary"
+      title="Click to edit price"
+    >
+      £{current ?? "—"}
+      <Pencil className="h-3 w-3 opacity-0 group-hover:opacity-60" />
+    </button>
+  );
+}
 
 export function QuotesComparisonPanel({
   job, quotes, techs, allocations,
@@ -179,7 +263,7 @@ export function QuotesComparisonPanel({
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell className="text-sm font-semibold">£{q.price_gbp ?? "—"}</TableCell>
+                  <TableCell><PriceCell quoteId={q.id} price={q.price_gbp as any} /></TableCell>
                   <TableCell className="text-sm">{q.eta_minutes ?? "—"} min</TableCell>
                   <TableCell className="text-sm">
                     {tech?.last_lat != null && tech?.last_lng != null ? (
