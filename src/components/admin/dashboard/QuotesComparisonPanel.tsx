@@ -239,7 +239,7 @@ export function QuotesComparisonPanel({
           <TableBody>
             {rows.map(({ q, tech, dist }) => {
               const isBest = q.id === bestId;
-              const isForwarded = !!forwardedIds[q.id] || q.status === "sent" || q.status === "proposed";
+              const isForwarded = q.status === "forwarded" || q.status === "sent" || q.status === "proposed";
               const displayStatus = isForwarded ? "sent" : q.status;
               return (
                 <TableRow key={q.id} className={isBest ? "bg-primary/5" : ""}>
