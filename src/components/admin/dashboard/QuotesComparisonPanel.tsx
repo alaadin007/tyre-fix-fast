@@ -12,7 +12,7 @@ import { distanceMiles } from "@/lib/techMatch";
 import { Check, X, Send, ExternalLink, Trophy, Clock, Pencil } from "lucide-react";
 import { Input } from "@/components/ui/input";
 
-function PriceCell({ quoteId, price }: { quoteId: string; price: number | null | undefined }) {
+function PriceCell({ quoteId, price, locked }: { quoteId: string; price: number | null | undefined; locked?: boolean }) {
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState<string>(price != null ? String(price) : "");
   const [saving, setSaving] = useState(false);
@@ -82,6 +82,10 @@ function PriceCell({ quoteId, price }: { quoteId: string; price: number | null |
     );
   }
 
+  if (locked) {
+    return <span className="text-sm font-semibold">£{current ?? "—"}</span>;
+  }
+
   return (
     <button
       type="button"
@@ -108,7 +112,6 @@ export function QuotesComparisonPanel({
   const [windowExpiresAt, setWindowExpiresAt] = useState<number | null>(null);
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [forwarding, setForwarding] = useState(false);
-  const [forwardedIds, setForwardedIds] = useState<Record<string, boolean>>({});
 
   // Fetch quote_window_expires_at directly from supabase for this job
   useEffect(() => {
@@ -182,11 +185,6 @@ export function QuotesComparisonPanel({
         throw new Error((data as any)?.error ?? error?.message ?? "Failed");
       }
       toast.success(`Forwarded ${selectedIds.length} quote${selectedIds.length === 1 ? "" : "s"} to customer`);
-      setForwardedIds((prev) => {
-        const next = { ...prev };
-        selectedIds.forEach((id) => { next[id] = true; });
-        return next;
-      });
       setSelected({});
     } catch (e: any) {
       toast.error(e.message ?? "Failed to forward quotes");
@@ -241,7 +239,7 @@ export function QuotesComparisonPanel({
           <TableBody>
             {rows.map(({ q, tech, dist }) => {
               const isBest = q.id === bestId;
-              const isForwarded = !!forwardedIds[q.id] || q.status === "sent" || q.status === "proposed";
+              const isForwarded = q.status === "forwarded" || q.status === "sent" || q.status === "proposed";
               const displayStatus = isForwarded ? "sent" : q.status;
               return (
                 <TableRow key={q.id} className={isBest ? "bg-primary/5" : ""}>
@@ -263,7 +261,7 @@ export function QuotesComparisonPanel({
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell><PriceCell quoteId={q.id} price={q.price_gbp as any} /></TableCell>
+                  <TableCell><PriceCell quoteId={q.id} price={q.price_gbp as any} locked={isForwarded} /></TableCell>
                   <TableCell className="text-sm">{q.eta_minutes ?? "—"} min</TableCell>
                   <TableCell className="text-sm">
                     {tech?.last_lat != null && tech?.last_lng != null ? (
