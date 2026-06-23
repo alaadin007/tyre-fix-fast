@@ -49,8 +49,11 @@ const items = [
 ];
 
 function AppSidebar() {
-  const { state } = useSidebar();
-  const collapsed = state === "collapsed";
+  const { state, isMobile, setOpenMobile } = useSidebar();
+  const collapsed = state === "collapsed" && !isMobile;
+  const closeOnMobile = () => {
+    if (isMobile) setOpenMobile(false);
+  };
   return (
     <Sidebar collapsible="icon">
       <SidebarContent>
@@ -72,6 +75,7 @@ function AppSidebar() {
                     <NavLink
                       to={item.url}
                       end={item.end}
+                      onClick={closeOnMobile}
                       className={({ isActive }) =>
                         `flex items-center gap-2 ${isActive ? "bg-primary/15 text-primary" : "hover:bg-muted/40"}`
                       }
@@ -91,7 +95,7 @@ function AppSidebar() {
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild>
-                  <NavLink to="/admin" className="flex items-center gap-2 hover:bg-muted/40">
+                  <NavLink to="/admin" onClick={closeOnMobile} className="flex items-center gap-2 hover:bg-muted/40">
                     <Map className="h-4 w-4" />
                     {!collapsed && <span>Live Console</span>}
                   </NavLink>
