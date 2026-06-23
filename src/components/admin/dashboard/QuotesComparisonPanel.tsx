@@ -185,11 +185,6 @@ export function QuotesComparisonPanel({
         throw new Error((data as any)?.error ?? error?.message ?? "Failed");
       }
       toast.success(`Forwarded ${selectedIds.length} quote${selectedIds.length === 1 ? "" : "s"} to customer`);
-      setForwardedIds((prev) => {
-        const next = { ...prev };
-        selectedIds.forEach((id) => { next[id] = true; });
-        return next;
-      });
       setSelected({});
     } catch (e: any) {
       toast.error(e.message ?? "Failed to forward quotes");
