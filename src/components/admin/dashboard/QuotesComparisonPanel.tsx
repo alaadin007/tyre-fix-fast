@@ -12,7 +12,7 @@ import { distanceMiles } from "@/lib/techMatch";
 import { Check, X, Send, ExternalLink, Trophy, Clock, Pencil } from "lucide-react";
 import { Input } from "@/components/ui/input";
 
-function PriceCell({ quoteId, price }: { quoteId: string; price: number | null | undefined }) {
+function PriceCell({ quoteId, price, locked }: { quoteId: string; price: number | null | undefined; locked?: boolean }) {
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState<string>(price != null ? String(price) : "");
   const [saving, setSaving] = useState(false);
