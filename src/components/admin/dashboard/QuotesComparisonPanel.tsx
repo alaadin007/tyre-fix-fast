@@ -82,6 +82,10 @@ function PriceCell({ quoteId, price, locked }: { quoteId: string; price: number 
     );
   }
 
+  if (locked) {
+    return <span className="text-sm font-semibold">£{current ?? "—"}</span>;
+  }
+
   return (
     <button
       type="button"
