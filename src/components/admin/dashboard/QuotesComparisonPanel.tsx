@@ -263,7 +263,7 @@ export function QuotesComparisonPanel({
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell className="text-sm font-semibold">£{q.price_gbp ?? "—"}</TableCell>
+                  <TableCell><PriceCell quoteId={q.id} price={q.price_gbp as any} /></TableCell>
                   <TableCell className="text-sm">{q.eta_minutes ?? "—"} min</TableCell>
                   <TableCell className="text-sm">
                     {tech?.last_lat != null && tech?.last_lng != null ? (
