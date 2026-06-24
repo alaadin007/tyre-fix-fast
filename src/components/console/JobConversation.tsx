@@ -17,9 +17,11 @@ type Msg = {
 export function JobConversation({
   jobId,
   customerPhone,
+  jobCreatedAt,
 }: {
   jobId: string;
   customerPhone: string;
+  jobCreatedAt: string;
 }) {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [loading, setLoading] = useState(true);
@@ -31,7 +33,7 @@ export function JobConversation({
       // Match by job_id OR by customer phone (intake messages may not yet have job_id)
       const phone = (customerPhone || "").replace(/\s+/g, "");
       const orFilter = phone
-        ? `job_id.eq.${jobId},from_number.eq.${phone},to_number.eq.${phone}`
+        ? `job_id.eq.${jobId},and(from_number.eq.${phone},created_at.gte.${jobCreatedAt}),and(to_number.eq.${phone},created_at.gte.${jobCreatedAt})`
         : `job_id.eq.${jobId}`;
       const { data, error } = await supabase
         .from("sms_messages")
@@ -40,7 +42,15 @@ export function JobConversation({
         .order("created_at", { ascending: true })
         .limit(200);
       if (cancelled) return;
-      if (!error) setMessages((data ?? []) as Msg[]);
+      if (!error) {
+        const seen = new Set<string>();
+        const deduped = ((data ?? []) as Msg[]).filter((m) => {
+          if (seen.has(m.id)) return false;
+          seen.add(m.id);
+          return true;
+        });
+        setMessages(deduped);
+      }
       setLoading(false);
       requestAnimationFrame(() => {
         scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
