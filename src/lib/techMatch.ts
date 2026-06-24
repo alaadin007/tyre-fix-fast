@@ -68,10 +68,10 @@ export function rankMatches(
   const byTech = (id: string) => quotes.filter((q) => q.technician_id === id);
   const out = techs
     .filter((t) => t.active && t.approval_status === "approved")
+    .filter((t) => coversPostcode(t, job.postcode))
     .map((t) => {
-      const covers = coversPostcode(t, job.postcode);
+      const covers = true;
       const available = isAvailableNow(t);
-      const distance = distanceMiles({ lat: job.lat, lng: job.lng }, { lat: t.last_lat, lng: t.last_lng });
       const tQuotes = byTech(t.id);
       const acceptedJobs = tQuotes.filter((q) => q.status === "accepted").length;
       const cancelledJobs = tQuotes.filter((q) => q.status === "lost" || q.status === "cancelled").length;
@@ -80,12 +80,11 @@ export function rankMatches(
       if (available) score += 20;
       score += Number(t.rating ?? 0) * 5;
       score += Math.min(Number(t.jobs_completed ?? 0), 20);
-      if (distance != null) score += Math.max(0, 20 - distance);
       return {
         tech: t,
         covers,
         available,
-        distance,
+        distance: null,
         alreadyBroadcast: allocForJob.has(t.id),
         acceptedJobs,
         cancelledJobs,

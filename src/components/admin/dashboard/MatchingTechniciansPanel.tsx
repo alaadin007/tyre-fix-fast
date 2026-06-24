@@ -23,7 +23,7 @@ export function MatchingTechniciansPanel({
   const [busy, setBusy] = useState(false);
 
   const covering = matches.filter((m) => m.covers);
-  const visible = showAll ? matches : covering.length > 0 ? covering : matches.slice(0, 10);
+  const visible = showAll ? matches : matches;
 
   const toggle = (id: string) => {
     setSelected((prev) => {
