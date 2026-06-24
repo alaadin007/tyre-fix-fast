@@ -17,9 +17,11 @@ type Msg = {
 export function JobConversation({
   jobId,
   customerPhone,
+  jobCreatedAt,
 }: {
   jobId: string;
   customerPhone: string;
+  jobCreatedAt: string;
 }) {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [loading, setLoading] = useState(true);
