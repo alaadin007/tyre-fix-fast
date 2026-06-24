@@ -232,7 +232,7 @@ export function JobDetailDrawer({
               <ApprovalPanel job={job} quotes={jobQuotes} techs={techs} />
             </TabsContent>
             <TabsContent value="messages" className="mt-4">
-              <JobConversation jobId={job.id} customerPhone={job.customer_phone ?? ""} />
+              <JobConversation jobId={job.id} customerPhone={job.customer_phone ?? ""} jobCreatedAt={job.created_at} />
             </TabsContent>
           </Tabs>
         </div>
