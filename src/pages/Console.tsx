@@ -813,7 +813,7 @@ function DispatchModal({ job, allTechs, onClose, onDispatch }: DispatchModalProp
 
         {/* Conversation thread */}
         <div className="mt-4">
-          <JobConversation jobId={job.id} customerPhone={job.customer_phone} />
+          <JobConversation jobId={job.id} customerPhone={job.customer_phone} jobCreatedAt={job.created_at} />
         </div>
 
         {/* AI suggestions */}
