@@ -159,7 +159,7 @@ export function PaymentPanel({ job, quotes }: { job: DashJob; quotes: DashQuote[
           </Button>
         )}
         {job.platform_fee_status === "paid" && !job.platform_fee_refunded_at && (
-          <Button size="sm" variant="outline" onClick={refund} disabled={!!busy}>
+          <Button size="sm" variant="outline" onClick={refund} disabled={!!busy || job.status === "completed"}>
             Refund
           </Button>
         )}

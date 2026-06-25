@@ -75,12 +75,18 @@ export function ApprovalPanel({
           <Button
             size="sm"
             onClick={sendDetails}
-            disabled={!!busy || !assignedTech}
+            disabled={!!busy || !assignedTech || job.status === "completed"}
           >
             <CheckCircle2 className="mr-1 h-3.5 w-3.5" />
             {alreadyShared ? "Resend to Both Parties" : "Connect Both Parties"}
           </Button>
         </div>
+
+        {job.status === "completed" && (
+          <div className="mt-2 text-xs text-muted-foreground">
+            This job has been completed. No further action needed.
+          </div>
+        )}
 
         <p className="mt-3 text-xs text-muted-foreground">
           “Connect Both Parties” sends the technician's name, phone & live location to the customer via WhatsApp, and sends the customer's name, phone & job location to the technician. Job status will update to In Progress.
