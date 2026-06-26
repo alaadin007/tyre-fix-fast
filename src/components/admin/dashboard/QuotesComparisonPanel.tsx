@@ -255,7 +255,7 @@ export function QuotesComparisonPanel({
                   <TableCell>
                     <Checkbox
                       checked={!!selected[q.id]}
-                      disabled={isForwarded}
+                      disabled={isForwarded || job.status === "completed"}
                       onCheckedChange={(v) =>
                         setSelected((prev) => ({ ...prev, [q.id]: !!v }))
                       }
