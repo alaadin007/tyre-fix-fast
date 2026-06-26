@@ -58,7 +58,11 @@ function AppSidebar() {
     if (isMobile) setOpenMobile(false);
   };
   return (
-    <Sidebar collapsible="offcanvas" className="bg-background border-r border-border">
+    <Sidebar
+      collapsible="offcanvas"
+      className="bg-background border-r border-border"
+      style={{ backgroundColor: "hsl(var(--background))", color: "hsl(var(--foreground))" }}
+    >
       <SidebarHeader className="flex flex-row items-center justify-between px-4 py-3 border-b border-border">
         <div className="flex items-center gap-2">
           <img src={tyreflyLogo} alt="Tyre Fly" className="h-7 w-7 object-contain" />
