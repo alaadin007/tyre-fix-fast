@@ -189,10 +189,9 @@ export function JobDetailDrawer({
             </div>
           )}
 
-          <Tabs defaultValue="timeline" className="pt-1">
+          <Tabs defaultValue="matching" className="pt-1">
             <TabsList className="scrollbar-thin h-auto w-full justify-start gap-1 overflow-x-auto bg-muted/40 p-1">
-              <TabsTrigger value="timeline">Timeline</TabsTrigger>
-              <TabsTrigger value="matching">Matching</TabsTrigger>
+              <TabsTrigger value="matching">Technicians</TabsTrigger>
               <TabsTrigger value="broadcasts">Broadcasts ({jobAllocs.length})</TabsTrigger>
               <TabsTrigger value="quotes">Quotes ({jobQuotes.length})</TabsTrigger>
               <TabsTrigger value="payment">Payment</TabsTrigger>
@@ -200,9 +199,6 @@ export function JobDetailDrawer({
               <TabsTrigger value="messages">Messages</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="timeline" className="mt-4">
-              <JobTimeline job={job} quotes={jobQuotes} allocations={jobAllocs} techs={techs} />
-            </TabsContent>
             <TabsContent value="matching" className="mt-4">
               <MatchingTechniciansPanel job={job} techs={techs} allocations={allocations} quotes={quotes} />
             </TabsContent>
