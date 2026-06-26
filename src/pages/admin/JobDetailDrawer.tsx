@@ -114,14 +114,6 @@ export function JobDetailDrawer({
 
           {/* Actions */}
           <div className="mt-3 flex flex-wrap gap-2">
-            <Button size="sm" variant="outline" onClick={rebroadcast} disabled={!!busy || intakeIncomplete} title={intakeTitle}>
-              <Send className="mr-1.5 h-3.5 w-3.5" /> Rebroadcast
-            </Button>
-            {job.platform_fee_status !== "paid" && (
-              <Button size="sm" variant="outline" onClick={markPaid} disabled={!!busy || intakeIncomplete} title={intakeTitle}>
-                <CreditCard className="mr-1.5 h-3.5 w-3.5" /> Mark paid
-              </Button>
-            )}
             {job.status !== "completed" && job.status !== "paid" && (
               <Button size="sm" variant="outline" onClick={markCompleted} disabled={!!busy || intakeIncomplete} title={intakeTitle}>
                 Mark completed
