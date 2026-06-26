@@ -8,7 +8,9 @@ import { useDashboardData, shortRef, fmtRelative } from "@/hooks/useDashboardDat
 import { JobDetailDrawer } from "@/pages/admin/JobDetailDrawer";
 import { Button } from "@/components/ui/button";
 import { Search, MapPin, Briefcase, Clock, CheckCircle2, AlertTriangle, X } from "lucide-react";
-import { JOB_STATUS_FILTERS, paymentStatusLabel } from "@/lib/jobStatus";
+import { JOB_STATUS_FILTERS as ALL_JOB_STATUS_FILTERS, paymentStatusLabel } from "@/lib/jobStatus";
+
+const JOB_STATUS_FILTERS = ALL_JOB_STATUS_FILTERS.filter((s) => s.value !== "closed");
 import { cn } from "@/lib/utils";
 
 export default function JobsPage() {
