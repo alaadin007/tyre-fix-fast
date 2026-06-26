@@ -101,13 +101,6 @@ export function MatchingTechniciansPanel({
                     <Badge variant="outline" className="font-mono text-[10px]">{t.tech_code}</Badge>
                   )}
                   <span className="font-medium">{t.name}</span>
-                  {m.covers && <Badge variant="secondary" className="text-xs">Covers area</Badge>}
-                  {m.available ? (
-                    <Badge variant="default" className="text-xs">Available now</Badge>
-                  ) : (
-                    <Badge variant="outline" className="text-xs">Offline</Badge>
-                  )}
-                  {m.alreadyBroadcast && <Badge variant="outline" className="text-xs">Already broadcast</Badge>}
                 </div>
                 <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
                   {wa && (
@@ -119,26 +112,8 @@ export function MatchingTechniciansPanel({
                       <Phone className="h-3 w-3" /> {wa}
                     </a>
                   )}
-                  {(t.service_postcodes?.length ?? 0) > 0 && (
-                    <span>Areas: {t.service_postcodes!.join(", ")}</span>
-                  )}
-                  {m.distance != null && (
-                    <span className="flex items-center gap-1">
-                      <MapPin className="h-3 w-3" /> {m.distance.toFixed(1)} mi
-                    </span>
-                  )}
-                  <span>★ {t.rating ?? "—"}</span>
                   <span>{t.jobs_completed ?? 0} done</span>
                   <span>{m.acceptedJobs} accepted · {m.cancelledJobs} lost</span>
-                  {t.last_lat != null && t.last_lng != null && (
-                    <a
-                      href={`https://maps.google.com/?q=${t.last_lat},${t.last_lng}`}
-                      target="_blank" rel="noreferrer"
-                      className="flex items-center gap-1 hover:text-foreground"
-                    >
-                      <ExternalLink className="h-3 w-3" /> Location
-                    </a>
-                  )}
                 </div>
               </div>
             </div>
