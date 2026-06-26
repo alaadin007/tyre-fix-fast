@@ -93,7 +93,18 @@ export default function JobsPage() {
               </button>
             )}
           </div>
-          <div className="-mx-3 flex flex-nowrap gap-1.5 overflow-x-auto whitespace-nowrap px-3 pb-1 md:mx-0 md:flex-wrap md:px-0 md:pb-0">
+          <select
+            value={status}
+            onChange={(e) => setStatus(e.target.value)}
+            className="md:hidden w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
+          >
+            {JOB_STATUS_FILTERS.map((s) => (
+              <option key={s.value} value={s.value}>
+                {s.label} ({counts[s.value] ?? 0})
+              </option>
+            ))}
+          </select>
+          <div className="-mx-3 hidden flex-nowrap gap-1.5 overflow-x-auto whitespace-nowrap px-3 pb-1 md:mx-0 md:flex md:flex-wrap md:px-0 md:pb-0">
             {JOB_STATUS_FILTERS.map((s) => {
               const active = status === s.value;
               const n = counts[s.value] ?? 0;
