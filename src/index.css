@@ -217,3 +217,13 @@
   background-color: hsl(var(--sidebar-background)) !important;
 }
 
+/* Force dark background on mobile sidebar sheet */
+[data-mobile="true"] {
+  background-color: hsl(222, 42%, 6%) !important;
+  color: hsl(215, 16%, 70%) !important;
+}
+
+[data-mobile="true"] * {
+  --sidebar-background: 222 42% 6%;
+  --sidebar-foreground: 215 16% 70%;
+}
