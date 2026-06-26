@@ -89,6 +89,13 @@ export function JobDetailDrawer({
       <SheetContent className="dark w-full overflow-y-auto border-l border-border/60 bg-background p-0 text-foreground sm:max-w-2xl">
         {/* Sticky header */}
         <div className="sticky top-0 z-10 border-b border-border/60 bg-card/80 px-6 py-4 backdrop-blur">
+          <button
+            onClick={() => onOpenChange(false)}
+            className="md:hidden flex items-center gap-1.5 text-sm text-muted-foreground mb-3 hover:text-foreground transition-colors"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            Back to Jobs
+          </button>
           <SheetHeader className="space-y-0">
             <div className="flex items-start gap-3">
               <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-sm font-semibold text-primary">
