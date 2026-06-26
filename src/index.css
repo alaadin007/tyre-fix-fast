@@ -190,3 +190,9 @@
 .scrollbar-thin::-webkit-scrollbar-thumb:hover {
   background: hsl(var(--accent) / 0.7);
 }
+
+[data-sidebar="sidebar"] {
+  background-color: hsl(var(--background)) !important;
+  color: hsl(var(--foreground)) !important;
+}
+
