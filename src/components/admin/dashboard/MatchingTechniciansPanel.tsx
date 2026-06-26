@@ -91,6 +91,7 @@ export function MatchingTechniciansPanel({
               <Checkbox
                 checked={selected.has(t.id)}
                 onCheckedChange={() => toggle(t.id)}
+                disabled={job.status === "completed"}
                 className="mt-1"
                 aria-label={`Select ${t.name}`}
               />
