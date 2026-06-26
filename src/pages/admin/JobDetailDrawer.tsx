@@ -98,22 +98,24 @@ export function JobDetailDrawer({
           </button>
           <SheetHeader className="space-y-0">
             <div className="flex items-start gap-3">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-sm font-semibold text-primary">
-                {initials}
+              <div className="flex-shrink-0">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/15 text-sm font-semibold text-primary">
+                  {initials}
+                </div>
               </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
                   <span className="font-mono text-xs font-semibold text-primary">#{shortRef(job.id)}</span>
                   <StatusBadge status={job.status} />
                 </div>
-                <SheetTitle className="mt-0.5 truncate text-base font-semibold">
+                <SheetTitle className="mt-0.5 truncate text-base font-semibold text-left">
                   {job.customer_name ?? "Unknown customer"}
                 </SheetTitle>
-                <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                <div className="mt-0.5 flex items-center gap-2 flex-wrap text-xs text-muted-foreground">
                   {job.customer_phone && (
-                    <span className="inline-flex items-center gap-1"><Phone className="h-3 w-3" />{job.customer_phone}</span>
+                    <span className="inline-flex items-center gap-1 truncate"><Phone className="h-3 w-3 shrink-0" />{job.customer_phone}</span>
                   )}
-                  <span>Created {fmtRelative(job.created_at)}</span>
+                  <span className="truncate">Created {fmtRelative(job.created_at)}</span>
                 </div>
               </div>
             </div>
