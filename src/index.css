@@ -227,3 +227,10 @@
   --sidebar-background: 222 42% 6%;
   --sidebar-foreground: 215 16% 70%;
 }
+
+[data-mobile="true"] {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+

@@ -63,20 +63,21 @@ function AppSidebar() {
       className="bg-background border-r border-border"
       style={{ backgroundColor: "hsl(var(--background))", color: "hsl(var(--foreground))" }}
     >
-      <SidebarHeader className="flex flex-row items-center justify-between px-4 py-3 border-b border-border">
+      <SidebarHeader className="flex flex-row items-center justify-between px-4 py-3 border-b border-white/10">
         <div className="flex items-center gap-2">
-          <img src={tyreflyLogo} alt="Tyre Fly" className="h-7 w-7 object-contain" />
-          <span className="text-sm font-bold text-foreground">Tyre Fly</span>
+          <img src={tyreflyLogo} alt="TyreFly" className="h-6 w-6 object-contain" />
+          <span className="font-bold text-white text-sm">Tyre Fly</span>
         </div>
         <button
           type="button"
           onClick={() => setOpenMobile(false)}
-          className="md:hidden inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted/40"
+          className="md:hidden text-white/60 hover:text-white"
           aria-label="Close sidebar"
         >
           <X className="h-4 w-4" />
         </button>
       </SidebarHeader>
+
       <SidebarContent>
         <div className="px-3 py-4">
           {!collapsed && (
