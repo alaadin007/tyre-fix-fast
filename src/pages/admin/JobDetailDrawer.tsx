@@ -9,7 +9,7 @@ import { shortRef, fmtRelative } from "@/hooks/useDashboardData";
 import type { DashJob, DashQuote, DashAllocation, DashTech } from "@/hooks/useDashboardData";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Phone, MapPin, Car, ExternalLink, Send, CreditCard } from "lucide-react";
+import { Phone, MapPin, Car, ExternalLink, Send, CreditCard, ChevronLeft } from "lucide-react";
 import { MatchingTechniciansPanel } from "@/components/admin/dashboard/MatchingTechniciansPanel";
 import { QuotesComparisonPanel } from "@/components/admin/dashboard/QuotesComparisonPanel";
 import { PaymentPanel } from "@/components/admin/dashboard/PaymentPanel";
