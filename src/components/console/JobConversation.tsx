@@ -32,8 +32,9 @@ export function JobConversation({
     const load = async () => {
       // Match by job_id OR by customer phone (intake messages may not yet have job_id)
       const phone = (customerPhone || "").replace(/\s+/g, "");
+      const jobStartTime = new Date(new Date(jobCreatedAt).getTime() - 10 * 60 * 1000).toISOString();
       const orFilter = phone
-        ? `job_id.eq.${jobId},and(from_number.eq.${phone},created_at.gte.${jobCreatedAt}),and(to_number.eq.${phone},created_at.gte.${jobCreatedAt})`
+        ? `job_id.eq.${jobId},and(from_number.eq.${phone},created_at.gte.${jobStartTime}),and(to_number.eq.${phone},created_at.gte.${jobStartTime})`
         : `job_id.eq.${jobId}`;
       const { data, error } = await supabase
         .from("sms_messages")
