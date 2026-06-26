@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import tyreflyLogo from "@/assets/tyrefly-logo.png";
+import { X } from "lucide-react";
 import {
   LayoutDashboard,
   Briefcase,
