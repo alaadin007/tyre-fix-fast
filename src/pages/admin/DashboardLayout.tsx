@@ -55,7 +55,7 @@ function AppSidebar() {
     if (isMobile) setOpenMobile(false);
   };
   return (
-    <Sidebar collapsible="icon">
+    <Sidebar collapsible="offcanvas">
       <SidebarContent>
         <div className="px-3 py-4">
           {!collapsed && (
