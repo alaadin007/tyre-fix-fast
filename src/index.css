@@ -196,3 +196,24 @@
   color: hsl(var(--foreground)) !important;
 }
 
+[data-radix-popper-content-wrapper],
+[data-sidebar="sidebar"],
+[vaul-drawer],
+.sidebar-mobile,
+[data-state="open"] [data-sidebar="sidebar"] {
+  background-color: hsl(var(--sidebar-background)) !important;
+  color: hsl(var(--sidebar-foreground)) !important;
+}
+
+/* Target Sheet overlay content used by Shadcn Sidebar on mobile */
+[role="dialog"] [data-sidebar="sidebar"],
+[data-sheet-content] {
+  background-color: hsl(var(--sidebar-background)) !important;
+  color: hsl(var(--sidebar-foreground)) !important;
+}
+
+/* Force sheet content dark */
+.fixed.inset-y-0 [data-sidebar="sidebar"] {
+  background-color: hsl(var(--sidebar-background)) !important;
+}
+
