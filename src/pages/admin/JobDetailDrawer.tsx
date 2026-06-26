@@ -146,7 +146,7 @@ export function JobDetailDrawer({
         {/* Body */}
         <div className="space-y-5 px-6 py-5">
           {/* Info cards */}
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <div className="grid grid-cols-2 gap-3">
             <InfoTile icon={MapPin} label="Location"
               value={job.postcode ? `${job.postcode}${job.region ? ` · ${job.region}` : ""}` : "—"}
               action={job.lat != null && job.lng != null ? (
