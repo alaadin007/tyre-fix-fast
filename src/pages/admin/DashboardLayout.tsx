@@ -152,7 +152,7 @@ export default function DashboardLayout() {
       <SidebarProvider>
         <div className="flex min-h-screen w-full bg-background text-foreground">
           <AppSidebar />
-          <div className="flex flex-1 flex-col">
+          <div className="flex flex-1 flex-col min-w-0 overflow-hidden">
             <header className="sticky top-0 z-30 flex h-12 items-center gap-2 border-b border-border/60 bg-background/80 px-2 backdrop-blur sm:px-3">
               <SidebarTrigger />
               <div className="ml-2 hidden text-sm font-medium text-muted-foreground sm:block">Admin</div>
