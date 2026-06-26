@@ -255,7 +255,7 @@ export function QuotesComparisonPanel({
                   <TableCell>
                     <Checkbox
                       checked={!!selected[q.id]}
-                      disabled={isForwarded}
+                      disabled={isForwarded || job.status === "completed"}
                       onCheckedChange={(v) =>
                         setSelected((prev) => ({ ...prev, [q.id]: !!v }))
                       }
@@ -333,12 +333,17 @@ export function QuotesComparisonPanel({
         </div>
         <Button
           onClick={forwardSelected}
-          disabled={selectedIds.length === 0 || forwarding}
+          disabled={selectedIds.length === 0 || forwarding || job.status === "completed"}
         >
           <Send className="mr-1 h-3 w-3" />
           {forwarding ? "Forwarding…" : "Forward Selected to Customer"}
         </Button>
       </div>
+      {job.status === "completed" && (
+        <div className="text-xs text-muted-foreground">
+          This job has been completed. No further actions available.
+        </div>
+      )}
     </div>
   );
 }
