@@ -91,6 +91,7 @@ export function MatchingTechniciansPanel({
               <Checkbox
                 checked={selected.has(t.id)}
                 onCheckedChange={() => toggle(t.id)}
+                disabled={job.status === "completed"}
                 className="mt-1"
                 aria-label={`Select ${t.name}`}
               />
@@ -147,11 +148,16 @@ export function MatchingTechniciansPanel({
 
       <div className="flex items-center justify-between gap-2 pt-2">
         <div className="text-xs text-muted-foreground">{selected.size} selected</div>
-        <Button size="sm" onClick={broadcast} disabled={busy || selected.size === 0 || intakeIncomplete} title={intakeIncomplete ? "Waiting for customer to finish intake" : undefined}>
+        <Button size="sm" onClick={broadcast} disabled={busy || selected.size === 0 || intakeIncomplete || job.status === "completed"} title={intakeIncomplete ? "Waiting for customer to finish intake" : undefined}>
           <Send className="mr-1 h-3.5 w-3.5" />
           {busy ? "Broadcasting…" : "Broadcast to selected"}
         </Button>
       </div>
+      {job.status === "completed" && (
+        <div className="text-xs text-muted-foreground">
+          This job has been completed. No further actions available.
+        </div>
+      )}
     </div>
   );
 }
