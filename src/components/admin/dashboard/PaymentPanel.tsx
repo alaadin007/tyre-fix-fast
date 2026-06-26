@@ -16,7 +16,7 @@ export function PaymentPanel({ job, quotes }: { job: DashJob; quotes: DashQuote[
 
   const awaitingRelease =
     job.platform_fee_status === "paid" &&
-    !["in_progress", "completed", "paid", "closed", "cancelled"].includes(job.status);
+    !["in_progress", "completed", "paid", "closed", "cancelled", "both_parties_connected"].includes(job.status);
 
   const markPaid = async () => {
     setBusy("paid");
@@ -89,7 +89,7 @@ export function PaymentPanel({ job, quotes }: { job: DashJob; quotes: DashQuote[
           </div>
           <StatusBadge status={job.platform_fee_status} />
         </div>
-        {["awaiting_payment", "paid", "completed"].includes(job.status) ? (
+        {["awaiting_payment", "paid", "completed", "in_progress", "both_parties_connected"].includes(job.status) ? (
           <>
             <dl className="grid grid-cols-2 gap-y-2 text-sm">
               <dt className="text-muted-foreground">Amount requested</dt>
