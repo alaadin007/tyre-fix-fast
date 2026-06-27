@@ -258,3 +258,19 @@
 *::-webkit-scrollbar-thumb:hover {
   background: hsl(var(--muted-foreground));
 }
+
+/* Force dark theme on Radix UI portals (Dialog, Select, Tooltip etc) */
+[data-radix-portal] > *,
+[data-radix-dialog-content],
+[role="dialog"] {
+  --background: 222 42% 6%;
+  --foreground: 30 25% 92%;
+  --card: 222 35% 8%;
+  --card-foreground: 30 25% 92%;
+  --border: 222 25% 14%;
+  --input: 222 25% 14%;
+  --muted: 222 30% 12%;
+  --muted-foreground: 215 16% 55%;
+  background-color: hsl(222, 35%, 8%) !important;
+  color: hsl(30, 25%, 92%) !important;
+}
