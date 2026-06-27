@@ -93,7 +93,7 @@ export default function TechniciansPage() {
         </div>
       </Card>
 
-      <Card className="border-white/10 bg-white/[0.03]">
+      <Card className="hidden md:block border-white/10 bg-white/[0.03]">
         <Table>
           <TableHeader>
             <TableRow>
