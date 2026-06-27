@@ -234,3 +234,21 @@
   box-shadow: none !important;
 }
 
+
+/* Custom scrollbar for quotes table */
+.overflow-x-auto::-webkit-scrollbar {
+  height: 4px;
+}
+
+.overflow-x-auto::-webkit-scrollbar-track {
+  background: hsl(var(--background));
+}
+
+.overflow-x-auto::-webkit-scrollbar-thumb {
+  background: hsl(var(--border));
+  border-radius: 999px;
+}
+
+.overflow-x-auto::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground));
+}
