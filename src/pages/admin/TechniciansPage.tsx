@@ -177,6 +177,48 @@ export default function TechniciansPage() {
         </Table>
       </Card>
 
+      <div className="md:hidden space-y-2">
+        {filtered.map((t) => (
+          <div
+            key={t.id}
+            className="rounded-lg border border-white/10 bg-white/[0.03] p-3 cursor-pointer"
+            onClick={() => openDetail(t)}
+          >
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 min-w-0">
+                {t.tech_code && (
+                  <span className="rounded bg-primary/15 px-1.5 py-0.5 text-xs font-mono text-primary flex-shrink-0">
+                    {t.tech_code}
+                  </span>
+                )}
+                <span className="font-medium text-sm truncate">{t.name}</span>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <Switch checked={t.active} onCheckedChange={() => toggleActive(t)} onClick={(e) => e.stopPropagation()} />
+                <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); openEdit(t); }}>Edit</Button>
+              </div>
+            </div>
+            <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+              {(t.whatsapp || t.phone) && (
+                <span className="inline-flex items-center gap-1">
+                  <Phone className="h-3 w-3" />{t.whatsapp || t.phone}
+                </span>
+              )}
+              <span>{(t.service_postcodes ?? []).slice(0, 4).join(", ") || "—"}{(t.service_postcodes?.length ?? 0) > 4 ? ` +${t.service_postcodes!.length - 4}` : ""}</span>
+            </div>
+            <div className="mt-1 flex gap-3 text-xs text-muted-foreground items-center">
+              <span>✓ {t.completed} done</span>
+              <span>★ {t.rating?.toFixed(1) ?? "—"}</span>
+              <StatusBadge status={t.approval_status} />
+            </div>
+          </div>
+        ))}
+        {filtered.length === 0 && (
+          <p className="py-8 text-center text-sm text-muted-foreground">No technicians match.</p>
+        )}
+      </div>
+
+
       <TechnicianEditDialog
         open={editOpen}
         onOpenChange={setEditOpen}
