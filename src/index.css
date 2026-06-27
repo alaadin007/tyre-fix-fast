@@ -235,20 +235,26 @@
 }
 
 
-/* Custom scrollbar for quotes table */
-.overflow-x-auto::-webkit-scrollbar {
+/* Global themed scrollbar for all elements */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--border)) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 4px;
   height: 4px;
 }
 
-.overflow-x-auto::-webkit-scrollbar-track {
-  background: hsl(var(--background));
+*::-webkit-scrollbar-track {
+  background: transparent;
 }
 
-.overflow-x-auto::-webkit-scrollbar-thumb {
+*::-webkit-scrollbar-thumb {
   background: hsl(var(--border));
-  border-radius: 999px;
+  border-radius: 9999px;
 }
 
-.overflow-x-auto::-webkit-scrollbar-thumb:hover {
+*::-webkit-scrollbar-thumb:hover {
   background: hsl(var(--muted-foreground));
 }
