@@ -84,7 +84,7 @@ export function TechnicianEditDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg bg-background text-foreground border-white/10">
         <DialogHeader>
           <DialogTitle>{mode === "edit" ? "Edit technician" : "Add technician"}</DialogTitle>
         </DialogHeader>
