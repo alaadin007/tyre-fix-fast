@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -13,7 +13,7 @@ import TechnicianOnboarding from "./pages/TechnicianOnboarding.tsx";
 import TechnicianDashboard from "./pages/TechnicianDashboard.tsx";
 import Privacy from "./pages/Privacy.tsx";
 import Terms from "./pages/Terms.tsx";
-import Console from "./pages/Console.tsx";
+
 import AreasIndex from "./pages/AreasIndex.tsx";
 import AreaPage from "./pages/AreaPage.tsx";
 import ShortLinkRedirect from "./pages/ShortLinkRedirect.tsx";
@@ -49,7 +49,7 @@ const App = () => (
         <Route path="/areas/:slug" element={<AreaPage />} />
         <Route path="/job/:id" element={<JobStatus />} />
         <Route path="/admin/login" element={<AdminLogin />} />
-        <Route path="/admin" element={<Console />} />
+        <Route path="/admin" element={<Navigate to="/admin/dashboard/jobs" replace />} />
         <Route path="/admin/dashboard" element={<DashboardLayout />}>
           <Route index element={<Overview />} />
           <Route path="jobs" element={<JobsPage />} />
@@ -70,7 +70,7 @@ const App = () => (
         <Route path="/technician" element={<TechnicianDashboard />} />
         <Route path="/privacy" element={<Privacy />} />
         <Route path="/terms" element={<Terms />} />
-        <Route path="/console" element={<Console />} />
+        <Route path="/console" element={<Navigate to="/admin/dashboard/jobs" replace />} />
         <Route path="/p/:code" element={<ShortLinkRedirect />} />
         <Route path="/dash2" element={<Dash2 />} />
         <Route path="/blog" element={<Blog />} />
