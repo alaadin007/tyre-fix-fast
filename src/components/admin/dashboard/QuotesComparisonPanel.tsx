@@ -222,6 +222,16 @@ export function QuotesComparisonPanel({
   }
 
   if (rows.length === 0) {
+    const jobAllocs = allocations.filter((a) => a.job_id === job.id);
+
+    if (jobAllocs.length === 0) {
+      return (
+        <div className="text-sm text-muted-foreground">
+          This job has not been broadcast to technicians yet. Go to the Technicians tab to broadcast.
+        </div>
+      );
+    }
+
     return (
       <div className="text-sm text-muted-foreground">
         No technicians responded within the 3-minute quote window.
