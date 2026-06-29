@@ -234,23 +234,16 @@ export function QuotesComparisonPanel({
     );
   }
 
+  if (windowExpiresAt === null) {
+    return (
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <Clock className="h-4 w-4 animate-spin" />
+        Loading quote window…
+      </div>
+    );
+  }
+
   if (rows.length === 0) {
-    if (windowExpiresAt === null) {
-      return (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Clock className="h-4 w-4 animate-spin" />
-          Loading quote window…
-        </div>
-      );
-    }
-    if (windowExpiresAt > now) {
-      return (
-        <div className="flex items-center gap-3 rounded-lg border border-primary/30 bg-primary/5 p-4">
-          <Clock className="h-5 w-5 text-primary animate-pulse" />
-          <div className="text-sm">Collecting quotes — window closes in {secondsLeft}s</div>
-        </div>
-      );
-    }
     return (
       <div className="text-sm text-muted-foreground">
         No technicians responded within the 3-minute quote window.
