@@ -141,10 +141,9 @@ export function QuotesComparisonPanel({
   const secondsLeft = windowOpen ? Math.max(0, Math.ceil((windowExpiresAt! - now) / 1000)) : 0;
 
   useEffect(() => {
-    if (!windowOpen) return;
-    const id = setInterval(() => setNow(Date.now()), 5000);
+    const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
-  }, [windowOpen]);
+  }, []);
 
 
   const rows = useMemo(() => {
