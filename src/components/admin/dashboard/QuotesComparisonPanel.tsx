@@ -116,16 +116,14 @@ export function QuotesComparisonPanel({
   // Fetch quote_window_expires_at directly from supabase for this job
   useEffect(() => {
     let cancelled = false;
+
     const fetchWindow = async () => {
       const { data, error } = await supabase
         .from("job_allocations")
         .select("quote_window_expires_at")
         .eq("job_id", job.id);
       if (cancelled) return;
-      if (error || !data) {
-        setWindowExpiresAt(null);
-        return;
-      }
+      if (error || !data) { setWindowExpiresAt(null); return; }
       const times = data
         .map((r: any) => r.quote_window_expires_at)
         .filter((s: any): s is string => !!s)
@@ -133,8 +131,22 @@ export function QuotesComparisonPanel({
         .filter((n: number) => !Number.isNaN(n));
       setWindowExpiresAt(times.length ? Math.max(...times) : null);
     };
+
     fetchWindow();
-    return () => { cancelled = true; };
+
+    const channel = supabase
+      .channel(`quote-window-${job.id}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "job_allocations", filter: `job_id=eq.${job.id}` },
+        () => { fetchWindow(); }
+      )
+      .subscribe();
+
+    return () => {
+      cancelled = true;
+      supabase.removeChannel(channel);
+    };
   }, [job.id]);
 
   const windowOpen = windowExpiresAt != null && windowExpiresAt > now;
