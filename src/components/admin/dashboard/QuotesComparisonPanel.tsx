@@ -126,7 +126,8 @@ export function QuotesComparisonPanel({
   const windowLoaded = allocations !== undefined;
 
 
-  const windowOpen = windowExpiresAt != null && windowExpiresAt > now;
+  const CLOCK_SKEW_BUFFER_MS = 60 * 1000; // 60 second buffer for device clock skew
+  const windowOpen = windowExpiresAt != null && (windowExpiresAt + CLOCK_SKEW_BUFFER_MS) > now;
   const secondsLeft = windowOpen ? Math.max(0, Math.ceil((windowExpiresAt! - now) / 1000)) : 0;
 
   useEffect(() => {
