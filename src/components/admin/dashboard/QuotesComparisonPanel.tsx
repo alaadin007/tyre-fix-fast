@@ -202,36 +202,52 @@ export function QuotesComparisonPanel({
     } finally { setBusy(null); }
   };
 
+  const debugBlock = (
+    <div className="text-xs text-yellow-400 mb-2 p-2 bg-yellow-400/10 rounded break-all">
+      allocs:{allocations.length} jobAllocs:{allocations.filter((a) => a.job_id === job.id).length} exp:{windowExpiresAt ? new Date(windowExpiresAt).toISOString() : "null"} now:{new Date(now).toISOString()} open:{String(windowOpen)}
+    </div>
+  );
+
   if (windowOpen) {
     return (
-      <div className="flex items-center gap-3 rounded-lg border border-primary/30 bg-primary/5 p-4">
-        <Clock className="h-5 w-5 text-primary animate-pulse" />
-        <div className="text-sm">Collecting quotes — window closes in {secondsLeft}s</div>
+      <div>
+        {debugBlock}
+        <div className="flex items-center gap-3 rounded-lg border border-primary/30 bg-primary/5 p-4">
+          <Clock className="h-5 w-5 text-primary animate-pulse" />
+          <div className="text-sm">Collecting quotes — window closes in {secondsLeft}s</div>
+        </div>
       </div>
     );
   }
 
   if (!windowLoaded) {
     return (
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Clock className="h-4 w-4 animate-spin" />
-        Loading quote window…
+      <div>
+        {debugBlock}
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Clock className="h-4 w-4 animate-spin" />
+          Loading quote window…
+        </div>
       </div>
     );
   }
 
   if (rows.length === 0) {
     return (
-      <div className="text-sm text-muted-foreground">
-        No technicians responded within the 3-minute quote window.
-        <br />
-        You can rebroadcast this job to try again.
+      <div>
+        {debugBlock}
+        <div className="text-sm text-muted-foreground">
+          No technicians responded within the 3-minute quote window.
+          <br />
+          You can rebroadcast this job to try again.
+        </div>
       </div>
     );
   }
 
   return (
     <div className="space-y-3">
+      {debugBlock}
       <div className="text-xs text-muted-foreground">
         {rows.length} quote{rows.length === 1 ? "" : "s"} · best value highlighted
       </div>
