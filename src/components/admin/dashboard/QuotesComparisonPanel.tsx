@@ -105,56 +105,26 @@ export function QuotesComparisonPanel({
   job: DashJob;
   quotes: DashQuote[];
   techs: DashTech[];
-  allocations?: DashAllocation[];
+  allocations: DashAllocation[];
 }) {
   const [busy, setBusy] = useState<string | null>(null);
   const [now, setNow] = useState(() => Date.now());
-  const [windowExpiresAt, setWindowExpiresAt] = useState<number | null>(null);
-  const [windowLoaded, setWindowLoaded] = useState(false);
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [forwarding, setForwarding] = useState(false);
 
-  // Fetch quote_window_expires_at directly from supabase for this job
-  useEffect(() => {
-    let cancelled = false;
+  const windowExpiresAt = useMemo(() => {
+    if (!allocations || allocations.length === 0) return null;
+    const jobAllocs = allocations.filter((a) => a.job_id === job.id);
+    const times = jobAllocs
+      .map((a) => a.quote_window_expires_at)
+      .filter((s): s is string => !!s)
+      .map((s) => new Date(s).getTime())
+      .filter((n) => !Number.isNaN(n));
+    return times.length ? Math.max(...times) : null;
+  }, [allocations, job.id]);
 
-    const fetchWindow = async () => {
-      const { data, error } = await supabase
-        .from("job_allocations")
-        .select("quote_window_expires_at")
-        .eq("job_id", job.id);
-      if (cancelled) return;
-      if (error || !data) {
-        setWindowExpiresAt(null);
-        setWindowLoaded(true);
-        return;
-      }
-      const times = data
-        .map((r: any) => r.quote_window_expires_at)
-        .filter((s: any): s is string => !!s)
-        .map((s: string) => new Date(s).getTime())
-        .filter((n: number) => !Number.isNaN(n));
-      setWindowExpiresAt(times.length ? Math.max(...times) : null);
-      setWindowLoaded(true);
-    };
+  const windowLoaded = allocations !== undefined;
 
-    fetchWindow();
-
-    const channel = supabase
-      .channel(`quote-window-${job.id}`)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "job_allocations", filter: `job_id=eq.${job.id}` },
-        () => { fetchWindow(); }
-      )
-      .subscribe();
-
-    return () => {
-      cancelled = true;
-      setWindowLoaded(false);
-      supabase.removeChannel(channel);
-    };
-  }, [job.id]);
 
   const windowOpen = windowExpiresAt != null && windowExpiresAt > now;
   const secondsLeft = windowOpen ? Math.max(0, Math.ceil((windowExpiresAt! - now) / 1000)) : 0;
