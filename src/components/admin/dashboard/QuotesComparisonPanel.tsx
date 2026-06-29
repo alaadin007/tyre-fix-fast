@@ -110,6 +110,7 @@ export function QuotesComparisonPanel({
   const [busy, setBusy] = useState<string | null>(null);
   const [now, setNow] = useState(() => Date.now());
   const [windowExpiresAt, setWindowExpiresAt] = useState<number | null>(null);
+  const [windowLoaded, setWindowLoaded] = useState(false);
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [forwarding, setForwarding] = useState(false);
 
@@ -123,13 +124,18 @@ export function QuotesComparisonPanel({
         .select("quote_window_expires_at")
         .eq("job_id", job.id);
       if (cancelled) return;
-      if (error || !data) { setWindowExpiresAt(null); return; }
+      if (error || !data) {
+        setWindowExpiresAt(null);
+        setWindowLoaded(true);
+        return;
+      }
       const times = data
         .map((r: any) => r.quote_window_expires_at)
         .filter((s: any): s is string => !!s)
         .map((s: string) => new Date(s).getTime())
         .filter((n: number) => !Number.isNaN(n));
       setWindowExpiresAt(times.length ? Math.max(...times) : null);
+      setWindowLoaded(true);
     };
 
     fetchWindow();
@@ -145,6 +151,7 @@ export function QuotesComparisonPanel({
 
     return () => {
       cancelled = true;
+      setWindowLoaded(false);
       supabase.removeChannel(channel);
     };
   }, [job.id]);
@@ -234,7 +241,7 @@ export function QuotesComparisonPanel({
     );
   }
 
-  if (windowExpiresAt === null) {
+  if (!windowLoaded) {
     return (
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
         <Clock className="h-4 w-4 animate-spin" />
