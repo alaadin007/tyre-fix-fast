@@ -58,8 +58,47 @@ export function MatchingTechniciansPanel({
     }
   };
 
+  const jobAllocs = allocations.filter((a) => a.job_id === job.id);
+  const problemAllocs = jobAllocs.filter(
+    (a) => a.broadcast_status === "failed" || a.broadcast_status === "fallback_used",
+  );
+  const rebroadcastAll = async () => {
+    if (intakeIncomplete) {
+      toast.error("Customer hasn't finished the job intake yet");
+      return;
+    }
+    const techIds = Array.from(new Set(problemAllocs.map((a) => a.technician_id).filter(Boolean) as string[]));
+    if (techIds.length === 0) return;
+    setBusy(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("broadcast-job", {
+        body: { job_id: job.id, mode: "specific", technician_ids: techIds },
+      });
+      if (error) throw error;
+      if (data?.ok === false) throw new Error(data.error || "Broadcast failed");
+      toast.success(`Rebroadcast sent to ${data?.sent ?? techIds.length} technician(s)`);
+    } catch (e: any) {
+      toast.error(e.message ?? "Failed to rebroadcast");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <div className="space-y-3">
+      {problemAllocs.length > 0 && (
+        <div className="flex items-start justify-between gap-3 rounded border border-rose-500/40 bg-rose-500/10 p-3 text-xs text-rose-100">
+          <div>
+            <div className="font-semibold">Broadcast issue</div>
+            <div className="mt-0.5 text-rose-200/90">
+              {problemAllocs.length} of {jobAllocs.length} technicians may not have received this job.
+            </div>
+          </div>
+          <Button size="sm" variant="outline" onClick={rebroadcastAll} disabled={busy || job.status === "completed"}>
+            Rebroadcast
+          </Button>
+        </div>
+      )}
       <div className="flex items-center justify-between gap-2">
         <div className="text-sm text-muted-foreground">
           Matching uses the same logic as the WhatsApp dispatcher: outward postcode{" "}

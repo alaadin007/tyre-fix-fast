@@ -230,6 +230,9 @@ Deno.serve(async (req) => {
     const windowExpiresIso = new Date(Date.now() + QUOTE_WINDOW_MS).toISOString();
 
     let sent = 0;
+    let cleanSent = 0;
+    let fallbackCount = 0;
+    let failedCount = 0;
     const failures: string[] = [];
     const allocations: any[] = [];
     for (const t of techs) {
@@ -237,6 +240,18 @@ Deno.serve(async (req) => {
       const to = t.phone || t.whatsapp;
       if (!to) {
         failures.push(`${t.name ?? t.id}: no signup number saved`);
+        failedCount++;
+        allocations.push({
+          job_id,
+          technician_id: t.id,
+          status: "send_failed",
+          quote_window_expires_at: windowExpiresIso,
+          broadcast_status: "failed",
+          broadcast_error: "no signup number saved",
+          ai_reasoning:
+            (mode === "all" ? "manual broadcast (all)" : "manual broadcast (specific)") +
+            " · no number on file",
+        });
         continue;
       }
       // Send via approved Meta WhatsApp template — works even outside the 24h window.
@@ -255,16 +270,49 @@ Deno.serve(async (req) => {
           `${t.name ?? t.id}: WhatsApp ${finalRes.code ?? "fail"}${finalRes.error ? ` (${finalRes.error})` : ""}`,
         );
       }
+
+      let broadcast_status: "sent" | "fallback_used" | "failed";
+      let broadcast_error: string | null = null;
+      if (wa.ok) {
+        broadcast_status = "sent";
+        cleanSent++;
+      } else if (finalRes.ok) {
+        broadcast_status = "fallback_used";
+        broadcast_error = `meta ${wa.code ?? "fail"}${wa.error ? `: ${wa.error}` : ""}`;
+        fallbackCount++;
+      } else {
+        broadcast_status = "failed";
+        broadcast_error =
+          `meta ${wa.code ?? "fail"}${wa.error ? `: ${wa.error}` : ""}` +
+          ` | twilio ${finalRes.code ?? "fail"}${finalRes.error ? `: ${finalRes.error}` : ""}`;
+        failedCount++;
+      }
+
       allocations.push({
         job_id,
         technician_id: t.id,
         status: ok ? "broadcast" : "send_failed",
         quote_window_expires_at: windowExpiresIso,
+        broadcast_status,
+        broadcast_error,
         ai_reasoning:
           (mode === "all" ? "manual broadcast (all)" : "manual broadcast (specific)") +
           ` · template=new_job_alert_to_technician to=${to}` +
           ` meta=${wa.ok ? "ok" : `fail:${wa.code ?? "unknown"}`}` +
           (wa.ok ? "" : ` twilio=${finalRes.ok ? "ok" : `fail:${finalRes.code ?? "unknown"}`}`),
+      });
+    }
+
+    // Per-recipient delivery health alert: if more than half of the targeted
+    // technicians didn't get a clean Meta template send, surface it in ops_alerts.
+    const problemCount = failedCount + fallbackCount;
+    if (techs.length > 0 && problemCount * 2 > techs.length) {
+      const allFailed = cleanSent === 0 && fallbackCount === 0;
+      await supabase.from("ops_alerts").insert({
+        level: allFailed ? "critical" : "warn",
+        title: `Broadcast issue for job #${job_id.slice(0, 6)}`,
+        body: `${cleanSent}/${techs.length} delivered cleanly. ${failedCount} failed, ${fallbackCount} used session fallback.`,
+        job_id,
       });
     }
 

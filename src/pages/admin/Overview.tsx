@@ -7,6 +7,7 @@ import {
 import { KpiCard } from "@/components/admin/dashboard/KpiCard";
 import { StatusBadge } from "@/components/admin/dashboard/StatusBadge";
 import { Card } from "@/components/ui/card";
+import { OpsAlertsPanel } from "@/components/admin/dashboard/OpsAlertsPanel";
 import { useDashboardData, fmtRelative, shortRef } from "@/hooks/useDashboardData";
 
 const CLOSED_STATUSES = ["completed", "paid", "cancelled", "closed"];
@@ -104,6 +105,8 @@ export default function Overview() {
           accent="emerald"
         />
       </div>
+
+      <OpsAlertsPanel />
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card className="border-white/10 bg-white/[0.03] p-4">
