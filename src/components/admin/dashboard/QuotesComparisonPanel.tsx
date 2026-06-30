@@ -261,6 +261,7 @@ export function QuotesComparisonPanel({
 
   return (
     <div className="space-y-3">
+      {debugBlock}
       <div className="text-xs text-muted-foreground">
         {rows.length} quote{rows.length === 1 ? "" : "s"} · best value highlighted
       </div>
