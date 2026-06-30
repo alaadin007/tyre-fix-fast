@@ -106,6 +106,8 @@ export default function Overview() {
         />
       </div>
 
+      <OpsAlertsPanel />
+
       <div className="grid gap-4 lg:grid-cols-2">
         <Card className="border-white/10 bg-white/[0.03] p-4">
           <div className="mb-3 flex items-center justify-between">
