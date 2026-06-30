@@ -6,7 +6,7 @@ export const JOB_STATUS_LABELS: Record<string, string> = {
   intake_pending: "Waiting for Customer Details",
   intake_complete: "Ready for Admin Review",
   awaiting_approval: "Ready for Admin Review",
-  broadcasting: "Broadcast to Technicians",
+  broadcasting: "Broadcasted — Waiting for Quote",
   quoted: "Quote Received",
   sent: "Quote Sent to Customer",
   awaiting_payment: "Quote Sent to Customer",
