@@ -133,6 +133,8 @@ export type Database = {
           ai_reasoning: string | null
           approved_at: string | null
           approved_by: string | null
+          broadcast_error: string | null
+          broadcast_status: string | null
           created_at: string
           id: string
           job_id: string | null
@@ -145,6 +147,8 @@ export type Database = {
           ai_reasoning?: string | null
           approved_at?: string | null
           approved_by?: string | null
+          broadcast_error?: string | null
+          broadcast_status?: string | null
           created_at?: string
           id?: string
           job_id?: string | null
@@ -157,6 +161,8 @@ export type Database = {
           ai_reasoning?: string | null
           approved_at?: string | null
           approved_by?: string | null
+          broadcast_error?: string | null
+          broadcast_status?: string | null
           created_at?: string
           id?: string
           job_id?: string | null
