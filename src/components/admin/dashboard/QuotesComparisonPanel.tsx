@@ -126,7 +126,7 @@ export function QuotesComparisonPanel({
   const windowLoaded = allocations !== undefined;
 
 
-  const CLOCK_SKEW_BUFFER_MS = 120 * 1000; // 120 second buffer for device clock skew (internal use only)
+  const CLOCK_SKEW_BUFFER_MS = 15 * 1000; // 15 second buffer for minor device clock skew
   const windowOpen = windowExpiresAt != null && (windowExpiresAt + CLOCK_SKEW_BUFFER_MS) > now;
   const secondsLeft = windowExpiresAt != null ? Math.max(0, Math.ceil((windowExpiresAt - now) / 1000)) : 0;
 
@@ -203,11 +203,6 @@ export function QuotesComparisonPanel({
     } finally { setBusy(null); }
   };
 
-  const debugBlock = (
-    <div className="text-xs text-yellow-400 mb-2 p-2 bg-yellow-400/10 rounded break-all">
-      jobAllocs:{allocations.filter(a => a.job_id === job.id).length} | times:{allocations.filter(a => a.job_id === job.id).map(a => a.quote_window_expires_at).join(', ')} | windowExpiresAt:{windowExpiresAt ? new Date(windowExpiresAt).toISOString() : 'null'} | now:{new Date(now).toISOString()} | secondsLeft:{secondsLeft}
-    </div>
-  );
 
   if (windowOpen) {
     return (
