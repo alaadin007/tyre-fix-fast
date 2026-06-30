@@ -200,7 +200,16 @@ Deno.serve(async (req) => {
     // Template body variables (mapped to new_job_alert_to_technician):
     // {{1}}=Job Ref, {{2}}=Vehicle Reg, {{3}}=Wheels, {{4}}=Details,
     // {{5}}=Postcode, {{6}}=Map Link, {{7}}=Photo 1, {{8}}=Photo 2
-    const body_params = [jobRef, reg, wheels, details, postcode, mapsLink, photo1, photo2];
+    // Meta rejects template params that contain newlines, tabs, or 4+ consecutive
+    // spaces with a 400 error. Sanitize every param so a single odd intake message
+    // (e.g. a multi-line description) doesn't break the whole broadcast.
+    const sanitizeParam = (v: string) =>
+      String(v ?? "")
+        .replace(/[\r\n\t]+/g, " ")
+        .replace(/ {4,}/g, "   ")
+        .trim();
+    const body_params = [jobRef, reg, wheels, details, postcode, mapsLink, photo1, photo2]
+      .map(sanitizeParam);
 
     // Plain-text fallback for SMS / Twilio path (best-effort, not used for Meta template).
     const msg =
