@@ -60,6 +60,8 @@ export type DashAllocation = {
   approved_at: string | null;
   approved_by: string | null;
   quote_window_expires_at: string | null;
+  broadcast_status: string | null;
+  broadcast_error: string | null;
 };
 
 export type DashTech = {
