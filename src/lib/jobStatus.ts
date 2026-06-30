@@ -28,7 +28,7 @@ export const JOB_STATUS_FILTERS: { value: string; label: string }[] = [
   { value: "pending", label: "New Job" },
   { value: "intake_pending", label: "Waiting for Customer Details" },
   { value: "awaiting_approval", label: "Ready for Admin Review" },
-  { value: "broadcasting", label: "Broadcast to Technicians" },
+  { value: "broadcasting", label: "Awaiting Quotes" },
   { value: "quoted", label: "Quote Received" },
   { value: "awaiting_payment", label: "Quote Sent to Customer" },
   { value: "paid", label: "Customer Paid" },
