@@ -7,6 +7,7 @@ import {
 import { KpiCard } from "@/components/admin/dashboard/KpiCard";
 import { StatusBadge } from "@/components/admin/dashboard/StatusBadge";
 import { Card } from "@/components/ui/card";
+import { OpsAlertsPanel } from "@/components/admin/dashboard/OpsAlertsPanel";
 import { useDashboardData, fmtRelative, shortRef } from "@/hooks/useDashboardData";
 
 const CLOSED_STATUSES = ["completed", "paid", "cancelled", "closed"];
