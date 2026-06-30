@@ -207,7 +207,6 @@ export function QuotesComparisonPanel({
   if (windowOpen) {
     return (
       <>
-        {debugBlock}
         <div className="flex items-center gap-3 rounded-lg border border-primary/30 bg-primary/5 p-4">
           <Clock className="h-5 w-5 text-primary animate-pulse" />
           <div className="text-sm">Collecting quotes — window closes in {secondsLeft}s</div>
@@ -219,7 +218,6 @@ export function QuotesComparisonPanel({
   if (!windowLoaded) {
     return (
       <>
-        {debugBlock}
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Clock className="h-4 w-4 animate-spin" />
           Loading quote window…
@@ -234,7 +232,6 @@ export function QuotesComparisonPanel({
     if (jobAllocs.length === 0) {
       return (
         <>
-          {debugBlock}
           <div className="text-sm text-muted-foreground">
             This job has not been broadcast to technicians yet. Go to the Technicians tab to broadcast.
           </div>
@@ -244,7 +241,6 @@ export function QuotesComparisonPanel({
 
     return (
       <>
-        {debugBlock}
         <div className="text-sm text-muted-foreground">
           No technicians responded within the 3-minute quote window.
           <br />
@@ -256,7 +252,6 @@ export function QuotesComparisonPanel({
 
   return (
     <div className="space-y-3">
-      {debugBlock}
       <div className="text-xs text-muted-foreground">
         {rows.length} quote{rows.length === 1 ? "" : "s"} · best value highlighted
       </div>
