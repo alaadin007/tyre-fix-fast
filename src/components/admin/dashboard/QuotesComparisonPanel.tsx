@@ -99,6 +99,15 @@ function PriceCell({ quoteId, price, locked }: { quoteId: string; price: number 
   );
 }
 
+const quoteStatusLabel = (status: string) => {
+  switch (status) {
+    case "forwarded": return { label: "Quote Sent", className: "bg-violet-500/15 text-violet-300 border-violet-500/30" };
+    case "accepted": return { label: "Customer Paid", className: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30" };
+    case "lost": return { label: "Lost", className: "bg-rose-500/15 text-rose-300 border-rose-500/30" };
+    default: return { label: "New Quote", className: "bg-sky-500/15 text-sky-300 border-sky-500/30" };
+  }
+};
+
 export function QuotesComparisonPanel({
   job, quotes, techs, allocations,
 }: {
