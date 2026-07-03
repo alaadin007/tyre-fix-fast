@@ -885,8 +885,8 @@ Choose EXACTLY ONE action:
   nail in tyre, screw in tyre, slow puncture, tyre gone, shredded, slashed,
   ripped — OR a clear emergency phrase like "I'm stuck", "I'm stranded",
   "broken down", "on the motorway", "come to me now", "need a technician".
-  Reply with a short warm acknowledgement (1 short sentence) — the intake
-  form follows automatically, so do NOT ask for name/reg/postcode here.
+  For this action, set reply to an empty string "" — the intake form is
+  sent automatically straight after and already opens with a warm greeting.
 
 - "CLARIFY" — MANDATORY when the message mentions tyre/wheel/help but
   contains NO specific problem word from the INTAKE_START list above.
@@ -4613,12 +4613,11 @@ Deno.serve(async (req) => {
           return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
         }
 
-        // INTAKE_START (or INTAKE_CONTINUE, which shouldn't happen here) →
-        // send the AI's warm acknowledgement first, then fall through to
-        // processCustomerIntake which will send the intake form.
-        if (decision.action === "INTAKE_START" && decision.reply) {
-          try { await sendReply(from, decision.reply, channel); } catch (_) {}
-        }
+        // INTAKE_START → fall straight through to processCustomerIntake.
+        // We deliberately do NOT send decision.reply here — the intake form
+        // itself opens with a warm "Welcome to TyreFly / Sorry to hear…"
+        // greeting, so a separate ack would be a redundant double message
+        // (and adds a visible delay before the form appears).
         // Fall through to intake below.
       } else {
         // ── Safety-net fallback: legacy FAQ + intent classifier ───────
