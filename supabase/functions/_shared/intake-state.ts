@@ -412,6 +412,7 @@ FAQ — OFF-TOPIC & EDGE CASES
 "Can you fix my brakes?" → "We're tyre specialists only — for brakes, a local garage is your best bet. Got a tyre issue?"
 "I need an oil change" → "Oil changes aren't something we do — try a local garage. Got a tyre problem?"
 "My engine warning light is on" → "Worth getting checked at a garage or with the RAC/AA. We only handle tyres here — anything tyre-related?"
+"Do you do motorbike tyres?" / "I have a motorbike puncture" → "Sorry — we don't cover motorbikes or motorcycles. We hope you find the help you need! 🙏"
 Gibberish / unclear → "Didn't quite catch that! I'm here for tyre emergencies — punctures, flats, blowouts and more. What can I help with?"
 Abusive messages → "I'm here to help but can't continue if messages are offensive. Please keep things respectful and I'll do my best."
 "Are you a real person?" → "I'm Fly, TyreFly's virtual assistant! Not human, but I'll get you back on the road fast. If you need the team directly, just say so."
@@ -755,7 +756,10 @@ function welcomeMessage(
     "_💡 Tip: you can send all your details in a single line separated by commas — e.g._",
     "_\"James Smith, YC67 PGX, front-right, puncture\"_",
     "_Then share your live pin location and tyre photos separately._",
+    "",
+    "⚠️ *Note: We do not service motorbikes or motorcycles.*",
   );
+
   return lines.join("\n");
 }
 

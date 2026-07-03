@@ -802,6 +802,12 @@ function matchFaq(text: string): string | null {
   const t = (text || "").trim().toLowerCase();
   if (!t || t.length > 200) return null;
 
+  // ── Off-topic: motorbikes / motorcycles (check early, bypasses guards) ──
+  if (/\b(motorbike|motorcycle|motorcycles|motorbikes|moped|scooter|bike\s+tyre|two\s+wheel|2\s+wheel)\b/.test(t)) {
+    return "Sorry — we don't cover motorbikes or motorcycles. We hope you find the help you need! 🙏";
+  }
+
+
   // Must look like a question / enquiry, not a problem statement.
   // Heuristics: starts with question word, contains "?", or uses
   // "do you / can you / are you / is this / how much / how long".
