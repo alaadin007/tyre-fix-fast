@@ -208,8 +208,15 @@ export function looksLikePinTrouble(t: string): boolean {
   return false;
 }
 
+const WHAT3WORDS_RE = /^[a-z]+\.[a-z]+\.[a-z]+$/i;
+
+export function isWhat3Words(t: string): boolean {
+  return !!t && WHAT3WORDS_RE.test(t.trim());
+}
+
 export function looksLikeAddress(t: string): boolean {
   if (!t) return false;
+  if (isWhat3Words(t)) return true;
   if (extractPostcode(t)) return true;
   const hasStreet = STREET_KEYWORDS_RE.test(t);
   const hasOutward = UK_OUTWARD_RE.test(t);
