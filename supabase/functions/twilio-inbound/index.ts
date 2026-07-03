@@ -4613,12 +4613,11 @@ Deno.serve(async (req) => {
           return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
         }
 
-        // INTAKE_START (or INTAKE_CONTINUE, which shouldn't happen here) →
-        // send the AI's warm acknowledgement first, then fall through to
-        // processCustomerIntake which will send the intake form.
-        if (decision.action === "INTAKE_START" && decision.reply) {
-          try { await sendReply(from, decision.reply, channel); } catch (_) {}
-        }
+        // INTAKE_START → fall straight through to processCustomerIntake.
+        // We deliberately do NOT send decision.reply here — the intake form
+        // itself opens with a warm "Welcome to TyreFly / Sorry to hear…"
+        // greeting, so a separate ack would be a redundant double message
+        // (and adds a visible delay before the form appears).
         // Fall through to intake below.
       } else {
         // ── Safety-net fallback: legacy FAQ + intent classifier ───────
