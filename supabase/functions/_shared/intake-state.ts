@@ -59,7 +59,10 @@ export function extractCoords(t: string): { lat: number; lng: number } | null {
   return { lat, lng };
 }
 
+const NO_REG_RE = /^\s*(n\/?a|no\s*reg|none|not\s+available|no\s+registration|no\s+(number\s+)?plate|vehicle\s+reg\s+(not\s+)?available)\s*$/i;
+
 export function extractReg(t: string): string | null {
+  if (t && NO_REG_RE.test(t)) return "NOT AVAILABLE";
   if (!t) return null;
   const upper = t.toUpperCase();
   const hinted = t.match(PLATE_HINT_RE);
