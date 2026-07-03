@@ -4181,7 +4181,21 @@ Deno.serve(async (req) => {
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
       }
 
-      // 3b. Quote acceptance on a job awaiting customer choice
+      // 3b. Quote acceptance on a job awaiting customer choice.
+      // Guard: "YES CANCEL" must be routed to cancellation, not acceptance.
+      const isYesCancel = /^\s*yes\s+cancel\s*$/i.test(body);
+      if (isYesCancel) {
+        await supabase.from("jobs").update({
+          status: "cancelled",
+          updated_at: new Date().toISOString(),
+        }).eq("id", recentJob.id);
+        await sendReply(
+          from,
+          `Your job ${jobRefOf(recentJob)} has been cancelled. If this was a mistake, just reply and we'll help.`,
+          channel,
+        );
+        return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+      }
       const isAccept = /^\s*(yes|y|accept|ok|book it)\b/i.test(body);
       const acceptableStates = ["broadcasting", "awaiting_approval", "intake_complete", "pending"];
       if (isAccept && acceptableStates.includes(recentJob.status)) {
