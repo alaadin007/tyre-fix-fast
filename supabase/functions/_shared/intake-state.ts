@@ -1199,6 +1199,27 @@ export async function processCustomerIntake(
       conversation,
       justCompleted: false,
     };
+  } else if (!locationAlreadyConfirmed && isWhat3Words(body)) {
+    // What3Words address — accept as valid location, no postcode required.
+    const cleaned = body.trim().toLowerCase();
+    convContext.address_text = `///${cleaned}`;
+    convContext.location_pin_confirmed = true;
+    contextChanged = true;
+    if (Object.keys(updates).length > 0) {
+      const { data: updated } = await supabase.from("jobs").update(updates).eq("id", job.id).select().single();
+      if (updated) job = updated;
+    }
+    await supabase.from("conversations").update({
+      context: convContext,
+      last_message_at: new Date().toISOString(),
+    }).eq("id", conversation.id);
+    conversation = { ...conversation, context: convContext };
+    return {
+      reply: "Got it, noted your location. ✅",
+      job,
+      conversation,
+      justCompleted: false,
+    };
   } else if (!locationAlreadyConfirmed && looksLikeAddress(body)) {
     // Accept the typed address as the location — but only confirm if we have a postcode.
     const cleaned = (body || "").trim().slice(0, 300);
