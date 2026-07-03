@@ -755,7 +755,10 @@ function welcomeMessage(
     "_💡 Tip: you can send all your details in a single line separated by commas — e.g._",
     "_\"James Smith, YC67 PGX, front-right, puncture\"_",
     "_Then share your live pin location and tyre photos separately._",
+    "",
+    "⚠️ *Note: We do not service motorbikes or motorcycles.*",
   );
+
   return lines.join("\n");
 }
 
