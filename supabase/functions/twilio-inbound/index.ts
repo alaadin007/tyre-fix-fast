@@ -4181,7 +4181,21 @@ Deno.serve(async (req) => {
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
       }
 
-      // 3b. Quote acceptance on a job awaiting customer choice
+      // 3b. Quote acceptance on a job awaiting customer choice.
+      // Guard: "YES CANCEL" must be routed to cancellation, not acceptance.
+      const isYesCancel = /^\s*yes\s+cancel\s*$/i.test(body);
+      if (isYesCancel) {
+        await supabase.from("jobs").update({
+          status: "cancelled",
+          updated_at: new Date().toISOString(),
+        }).eq("id", recentJob.id);
+        await sendReply(
+          from,
+          `Your job ${jobRefOf(recentJob)} has been cancelled. If this was a mistake, just reply and we'll help.`,
+          channel,
+        );
+        return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+      }
       const isAccept = /^\s*(yes|y|accept|ok|book it)\b/i.test(body);
       const acceptableStates = ["broadcasting", "awaiting_approval", "intake_complete", "pending"];
       if (isAccept && acceptableStates.includes(recentJob.status)) {
@@ -4337,11 +4351,19 @@ Deno.serve(async (req) => {
               ? `Just to confirm — do you want to cancel job ${jobRefOf(activeJob)}? Reply *YES CANCEL* to confirm.`
               : `No problem — you don't have any active job with us right now. 🙂`;
             break;
-          case "INTENT_COMPLAINT_OR_QUESTION":
-            reply = `Happy to help! TyreFly is a 24/7 mobile tyre repair & replacement service. Could you share a bit more detail about what you'd like to know?`;
+          case "INTENT_COMPLAINT_OR_QUESTION": {
+            const faq = matchFaq(body);
+            reply = faq ?? `Happy to help — what would you like to know about our service?`;
             break;
-          default:
-            reply = `I want to make sure I help you properly — could you tell me a bit more about what you need? 😊`;
+          }
+          default: {
+            const unknownReplies = [
+              `Not quite sure what you mean — are you looking to book a tyre repair, or did you have a question about our service?`,
+              `Hmm, didn't quite catch that. Got a tyre emergency? Just tell us what's happened.`,
+              `Happy to help — what are you looking for today?`,
+            ];
+            reply = unknownReplies[Math.floor(Math.random() * unknownReplies.length)];
+          }
         }
         await sendReply(from, reply, channel);
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
