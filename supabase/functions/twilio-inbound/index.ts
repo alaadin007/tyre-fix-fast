@@ -741,6 +741,58 @@ async function classifyCustomerIntent(text: string): Promise<IntentResult> {
   }
 }
 
+// ───────────── AI general answer (fallback for any question) ─────────────
+// When the customer asks a question that isn't a hardcoded FAQ, let the AI
+// answer naturally in-scope (tyre repair / replacement) or politely redirect
+// off-topic questions. NEVER opens intake.
+function isQuestionShape(t: string): boolean {
+  const s = (t || "").trim().toLowerCase();
+  if (!s) return false;
+  if (/\?/.test(s)) return true;
+  return /^(do|does|did|can|could|are|is|was|were|will|would|should|how|what|where|when|why|who|which|tell\s+me|please)\b/.test(s)
+    || /\b(do you|can you|will you|are you|is this|is there|have you|any chance|how much|how long|how do)\b/.test(s);
+}
+
+async function aiGeneralAnswer(text: string): Promise<string | null> {
+  const apiKey = Deno.env.get("LOVABLE_API_KEY");
+  if (!apiKey) return null;
+  try {
+    const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "google/gemini-3-flash-preview",
+        messages: [
+          {
+            role: "system",
+            content:
+              "You are Fly, TyreFly's WhatsApp assistant. TyreFly ONLY does mobile tyre repairs and replacements — nothing else " +
+              "(no brakes, oil, MOT, batteries, alloys/rims, wheel alignment, servicing, insurance, recovery/towing, spare wheels supply, etc.). " +
+              "If the customer asks about anything outside this scope, politely explain we don't offer that and redirect to tyre services. " +
+              "If it IS tyre-related, answer helpfully and accurately. " +
+              "Keep replies to 1–3 short sentences, friendly, natural, British English. " +
+              "Never start an intake form, never ask for name/reg/postcode/location, never claim to book anything here. " +
+              "If the customer clearly wants to book, end with a short nudge like 'Want me to get you booked in?'.",
+          },
+          { role: "user", content: text || "" },
+        ],
+      }),
+    });
+    if (!r.ok) {
+      console.error("aiGeneralAnswer failed", r.status, await r.text().catch(() => ""));
+      return null;
+    }
+    const j = await r.json();
+    const out = j?.choices?.[0]?.message?.content;
+    const reply = typeof out === "string" ? out.trim() : "";
+    return reply || null;
+  } catch (e) {
+    console.error("aiGeneralAnswer error", e);
+    return null;
+  }
+}
+
+
 // ───────────── FAQ matcher (runs BEFORE intent detection) ─────────────
 // Customer questions like "do you offer tyre replacement", "how much does
 // it cost", "do you work 24/7" must be answered as FAQs and must NOT
