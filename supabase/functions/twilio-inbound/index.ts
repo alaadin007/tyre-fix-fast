@@ -792,6 +792,175 @@ async function aiGeneralAnswer(text: string): Promise<string | null> {
   }
 }
 
+// ───────────── Unified customer AI decision layer ─────────────
+// ONE AI call that decides what to do with every non-mid-intake customer
+// message. Uses the editable Customer AI Instructions prompt from
+// app_settings.whatsapp_system_prompt as its knowledge base, then appends a
+// strict decision instruction that forces a JSON response with an action
+// enum. The webhook uses `action` to route (FAQ/OUT_OF_SCOPE/OTHER/CLARIFY
+// stop here with `reply`; INTAKE_START falls through to processCustomerIntake).
+type CustomerAIAction =
+  | "FAQ"
+  | "INTAKE_START"
+  | "INTAKE_CONTINUE"
+  | "CLARIFY"
+  | "OUT_OF_SCOPE"
+  | "OTHER";
+
+interface CustomerAIDecision {
+  action: CustomerAIAction;
+  reply: string;
+}
+
+let CACHED_CUSTOMER_PROMPT: { text: string; at: number } | null = null;
+const CUSTOMER_PROMPT_TTL_MS = 60_000;
+
+async function loadCustomerKnowledgeBase(supabase: any): Promise<string> {
+  if (CACHED_CUSTOMER_PROMPT && Date.now() - CACHED_CUSTOMER_PROMPT.at < CUSTOMER_PROMPT_TTL_MS) {
+    return CACHED_CUSTOMER_PROMPT.text;
+  }
+  try {
+    const { data } = await supabase
+      .from("app_settings")
+      .select("value")
+      .eq("key", "whatsapp_system_prompt")
+      .maybeSingle();
+    const text = (data as any)?.value?.prompt;
+    const out = typeof text === "string" && text.trim().length > 0
+      ? text
+      : "You are Fly, TyreFly's WhatsApp assistant. TyreFly is a 24/7 UK mobile tyre repair service.";
+    CACHED_CUSTOMER_PROMPT = { text: out, at: Date.now() };
+    return out;
+  } catch {
+    return "You are Fly, TyreFly's WhatsApp assistant. TyreFly is a 24/7 UK mobile tyre repair service.";
+  }
+}
+
+async function callCustomerAI(
+  supabase: any,
+  args: {
+    body: string;
+    firstName: string;
+    activeJob: any | null;
+    recentJob: any | null;
+  },
+): Promise<CustomerAIDecision | null> {
+  const apiKey = Deno.env.get("LOVABLE_API_KEY");
+  if (!apiKey) return null;
+  const kb = await loadCustomerKnowledgeBase(supabase);
+
+  const contextLines: string[] = [];
+  if (args.firstName) contextLines.push(`Customer first name: ${args.firstName}`);
+  if (args.activeJob) {
+    contextLines.push(
+      `Active job on file: ref ${jobRefOf(args.activeJob)}, status ${String(args.activeJob.status).replace(/_/g, " ")}.`,
+    );
+  } else if (args.recentJob) {
+    contextLines.push(
+      `Most recent job: ref ${jobRefOf(args.recentJob)}, status ${String(args.recentJob.status).replace(/_/g, " ")}.`,
+    );
+  } else {
+    contextLines.push("No prior job on file for this customer.");
+  }
+  const contextBlock = contextLines.join("\n");
+
+  const decisionInstruction = `
+You must classify the customer's message and craft the reply in ONE step.
+
+Use everything in the KNOWLEDGE BASE above (FAQ answers, tone, off-topic
+redirects, tyre-only scope, empathy rules, service coverage) as your source of
+truth. Never invent policies that aren't in the knowledge base.
+
+Choose EXACTLY ONE action:
+
+- "FAQ" — Customer is asking a question or making an enquiry (pricing,
+  hours, coverage, service scope, "do you do X?", "are you 24/7?", motorway,
+  vans, etc.). Answer naturally in 1–3 sentences using the knowledge base.
+  NEVER open intake for a question — even if the message contains the word
+  "tyre".
+
+- "INTAKE_START" — Customer clearly has a tyre emergency or wants to book:
+  puncture, flat, blowout, low pressure, "I need help with my flat tyre",
+  "come to me", "I'm stuck", "my tyre is losing air". Reply with a short
+  warm acknowledgement (1 short sentence) — the intake form will follow
+  automatically, so do NOT ask for name/reg/postcode here.
+
+- "CLARIFY" — Message mentions tyre/wheel/help but it's genuinely ambiguous
+  whether it's an emergency or a general question ("I need help with my
+  tyre", "tyre issue", "can someone look at my wheel"). Ask ONE short,
+  friendly clarifying question. Do NOT open intake yet.
+
+- "OUT_OF_SCOPE" — Customer needs something TyreFly doesn't do (motorbikes,
+  motorcycles, mopeds, alloys/rims, wheel alignment, tracking, balancing,
+  MOT, servicing, oil, brakes, batteries, exhaust, clutch, suspension,
+  recovery/towing, spare wheel supply, etc.). Politely explain we don't
+  cover that and redirect to tyres. NEVER open intake.
+
+- "OTHER" — Greetings, thanks, acknowledgements, complaints, cancel
+  requests, gibberish, wrong number, "are you a real person?", small talk.
+  Handle naturally with empathy and the tone from the knowledge base.
+
+- "INTAKE_CONTINUE" — Do NOT use this action. Mid-intake messages are
+  handled by a separate state machine and never reach you.
+
+CONTEXT
+${contextBlock}
+
+CUSTOMER MESSAGE
+${args.body}
+
+Respond by calling the "decide" function with { action, reply }. The reply
+must be the exact WhatsApp message we will send — short, natural, British
+English, friendly, no markdown headers, no placeholders.`;
+
+  try {
+    const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "google/gemini-3-flash-preview",
+        messages: [
+          { role: "system", content: `KNOWLEDGE BASE\n\n${kb}` },
+          { role: "user", content: decisionInstruction },
+        ],
+        tools: [{
+          type: "function",
+          function: {
+            name: "decide",
+            parameters: {
+              type: "object",
+              properties: {
+                action: {
+                  type: "string",
+                  enum: ["FAQ", "INTAKE_START", "INTAKE_CONTINUE", "CLARIFY", "OUT_OF_SCOPE", "OTHER"],
+                },
+                reply: { type: "string" },
+              },
+              required: ["action", "reply"],
+              additionalProperties: false,
+            },
+          },
+        }],
+        tool_choice: { type: "function", function: { name: "decide" } },
+      }),
+    });
+    if (!r.ok) {
+      console.error("callCustomerAI failed", r.status, await r.text().catch(() => ""));
+      return null;
+    }
+    const j = await r.json();
+    const rawArgs = j?.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments;
+    const parsed = typeof rawArgs === "string" ? JSON.parse(rawArgs) : rawArgs;
+    const action = parsed?.action as CustomerAIAction | undefined;
+    const reply = typeof parsed?.reply === "string" ? parsed.reply.trim() : "";
+    if (!action || !reply) return null;
+    return { action, reply };
+  } catch (e) {
+    console.error("callCustomerAI error", e);
+    return null;
+  }
+}
+
 
 // ───────────── FAQ matcher (runs BEFORE intent detection) ─────────────
 // Customer questions like "do you offer tyre replacement", "how much does
