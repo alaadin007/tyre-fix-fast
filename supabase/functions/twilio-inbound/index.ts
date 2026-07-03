@@ -816,8 +816,9 @@ function matchFaq(text: string): string | null {
   // my tyre right now"), it's NOT an FAQ — let intake handle it.
   const isProblemStatement =
     /\b(my|our)\s+(tyre|tire|car|van|wheel)\b/.test(t) ||
-    /\b(i\s*(have|got|need)|i'm|im|im\s+stuck|stuck|stranded|broke(n)?\s*down)\b/.test(t) ||
-    /\b(help me|need help|need a (tech|technician|fix|repair))\b/.test(t);
+    /\b(i\s*(have|got|need)\s+a?\s*(flat|puncture|blowout|tyre|tire|wheel))\b/.test(t) ||
+    /\b(i'm|im)\s+(stuck|stranded|broken\s*down|on\s+the\s+side)\b/.test(t) ||
+    /\b(help me|need help\s+with\s+my|need a (tech|technician|fix|repair))\b/.test(t);
   if (isProblemStatement) return null;
 
   // ── Service & pricing FAQs ──
