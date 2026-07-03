@@ -4329,6 +4329,7 @@ Deno.serve(async (req) => {
         .select("id,step,last_message_at")
         .eq("customer_phone", from)
         .neq("step", "complete")
+        .neq("step", "awaiting_clarification")
         .gte("last_message_at", cutoff)
         .order("last_message_at", { ascending: false })
         .limit(1)
