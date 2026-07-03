@@ -676,7 +676,7 @@ function welcomeMessage(
     "_\"James Smith, YC67 PGX, front-right, puncture\"_",
     "_Then share your live pin location and tyre photos separately._",
     "",
-    "⚠️ *Note: We do not service motorbikes or motorcycles.*",
+    "⚠️ *Note: We do not cover motorbike or motorcycle tyres.*",
   );
 
   return lines.join("\n");
