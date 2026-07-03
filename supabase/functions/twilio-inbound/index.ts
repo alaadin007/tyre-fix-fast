@@ -4405,10 +4405,20 @@ Deno.serve(async (req) => {
             break;
           case "INTENT_COMPLAINT_OR_QUESTION": {
             const faq = matchFaq(body);
-            reply = faq ?? `Happy to help — what would you like to know about our service?`;
+            if (faq) { reply = faq; break; }
+            const ai = await aiGeneralAnswer(body);
+            reply = ai ?? `Happy to help — what would you like to know about our service?`;
             break;
           }
           default: {
+            // If it's shaped like a question, let the AI answer generally
+            // instead of dumping a canned "not sure what you mean" reply.
+            if (isQuestionShape(body)) {
+              const faq = matchFaq(body);
+              if (faq) { reply = faq; break; }
+              const ai = await aiGeneralAnswer(body);
+              if (ai) { reply = ai; break; }
+            }
             const unknownReplies = [
               `Not quite sure what you mean — are you looking to book a tyre repair, or did you have a question about our service?`,
               `Hmm, didn't quite catch that. Got a tyre emergency? Just tell us what's happened.`,
@@ -4416,6 +4426,7 @@ Deno.serve(async (req) => {
             ];
             reply = unknownReplies[Math.floor(Math.random() * unknownReplies.length)];
           }
+
         }
         await sendReply(from, reply, channel);
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
