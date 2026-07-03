@@ -76,8 +76,21 @@ export function extractReg(t: string): string | null {
     if (POSTCODE_RE.test(raw)) continue;
     return m[1].trim();
   }
+  // Multi-line/comma scan — check each token for a plate-like pattern
+  const tokens = (t || "").split(/[\n,]+/).map((l) => l.trim()).filter(Boolean);
+  if (tokens.length > 1) {
+    for (const line of tokens) {
+      if (/^[A-Z0-9]{2,4}\s?[A-Z0-9]{2,4}$/i.test(line) && /\d/.test(line) && /[A-Z]/i.test(line)) {
+        const cand = line.toUpperCase().replace(/\s+/g, " ").trim();
+        if (!POSTCODE_RE.test(cand.replace(/\s/g, ""))) {
+          return cand;
+        }
+      }
+    }
+  }
   return null;
 }
+
 
 export function extractTyreSize(t: string): string | null {
   const m = (t || "").match(TYRE_SIZE_RE);
