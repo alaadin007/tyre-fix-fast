@@ -302,7 +302,22 @@ const INTENT_CLASSIFIER_SUFFIX = `OUTPUT CONTRACT (always honour these, even if 
 - "faq" / "smalltalk" / "off_topic" → also set "faq_answer" to a short (1–3 sentences), natural, friendly, human-sounding reply in British English. Do not write robotic boilerplate, do not paste the FAQ verbatim — rephrase for this specific customer. Do not include "Reply NEW JOB" — the system appends the right CTA.
 - "intake_detail" means they're answering an intake question (name, reg, postcode, wheels, photo description, etc.). Do not set faq_answer in that case.
 - Only extract fields you are confident about. Omit unknown fields entirely.
-- Never invent a person's name from greetings, postcodes, or registration plates.`;
+- Never invent a person's name from greetings, postcodes, or registration plates.
+
+FIELD EXTRACTION — CRITICAL RULES:
+When calling save_extracted_fields, you MUST:
+1. customer_name: Extract any human name present. Single word OK (Qamar, John). Multiple words OK (Zameer Khan, John Smith). A name is NOT a reg plate, postcode, or wheel position. Look for tokens that are only letters with no digits.
+2. vehicle_reg: Extract any alphanumeric plate. Format: letters+digits mixed, e.g. GB3344, YC67PGX, AB12 CDE. Pure digits = not a reg. Pure letters that are a name = not a reg. A UK postcode (letters+digits+space+digit+letters, e.g. SW1A 1AA) is NOT a reg.
+3. NEVER dump name, reg, postcode, or wheel position into issue_description. issue_description is ONLY for sentences describing the tyre problem (e.g. "my tyre seems flat", "nail in the sidewall").
+4. Fields can appear in ANY order across commas, spaces, or newlines — classify by FORMAT, never by position.
+5. Each line or comma-separated token must be classified independently. Walk the input token by token and assign each to the correct field before deciding what remains as issue_description.
+
+Worked example — input:
+"Zameer Khan
+Front Left
+GB3344
+My tyre is seems flat"
+→ customer_name="Zameer Khan", affected_wheels=["front-left"], vehicle_reg="GB3344", issue_type="flat tyre", issue_description="My tyre seems flat". Do NOT put the whole message into issue_description.`;
 
 let CACHED_SYSTEM_PROMPT: { text: string; at: number } | null = null;
 const PROMPT_TTL_MS = 60_000;
