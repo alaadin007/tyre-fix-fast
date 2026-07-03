@@ -4348,6 +4348,39 @@ Deno.serve(async (req) => {
 
 
     if (!midIntake && mediaUrls.length === 0 && body) {
+      // ── Ambiguous "tyre help" clarification gate ─────────────────────
+      // Detect vague messages that mention a tyre/wheel but don't describe
+      // a specific problem or emergency. Instead of opening intake, ask
+      // ONE clarifying question and remember we're awaiting a reply.
+      const bodyLc = body.trim().toLowerCase();
+      const EMERGENCY_RE = /\b(flat|puncture[d]?|blow(?:out|n)?|burst|deflat|losing\s+pressure|low\s+pressure|no\s+pressure|nail|screw|slashed|ripped|torn|shredded|damag(?:e|ed)|stuck|stranded|broken\s*down|on\s+the\s+(?:m\d+|motorway|hard\s*shoulder|side))\b/i;
+      const OFFTOPIC_RE = /\b(alloy|rim|spare\s+wheel|wheel\s+alignment|tracking|balanc(?:e|ing)|mot|service|oil|brake|battery|exhaust|clutch|suspension)\b/i;
+      const AMBIGUOUS_TYRE_HELP_RE = /\b(?:(?:need|want|require|get)\s+(?:some\s+)?(?:help|assistance|service)\s+(?:with\s+)?(?:my\s+|the\s+)?(?:tyre|tire|wheel)s?|(?:tyre|tire|wheel)s?\s+(?:help|issue|problem|trouble|attention)|(?:have|got)\s+(?:a\s+|an\s+)?(?:tyre|tire|wheel)\s+(?:issue|problem|trouble)|(?:some(?:thing|body)?|any(?:one|body))\s+(?:wrong|up|off)\s+with\s+(?:my\s+|the\s+)?(?:tyre|tire|wheel)|(?:can|could)\s+(?:some(?:one|body)|you)\s+(?:look\s+at|check|see)\s+(?:my\s+|the\s+)?(?:tyre|tire|wheel)|my\s+(?:tyre|tire|wheel)\s+(?:needs?\s+(?:attention|help|looking\s+at|checking))|need\s+(?:tyre|tire|wheel)\s+help)\b/i;
+
+      // 1. If we previously asked a clarifying question, resolve it now.
+      try {
+        const { data: pending } = await supabase
+          .from("conversations")
+          .select("id,last_message_at")
+          .eq("customer_phone", from)
+          .eq("step", "awaiting_clarification")
+          .gte("last_message_at", new Date(Date.now() - 30 * 60 * 1000).toISOString())
+          .order("last_message_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (pending?.id) {
+          // Clear the clarification state either way.
+          await supabase.from("conversations").update({ step: "complete" }).eq("id", pending.id);
+          if (OFFTOPIC_RE.test(bodyLc) && !EMERGENCY_RE.test(bodyLc)) {
+            const reply = `Ah, that isn't something we offer — we specialise in tyre repairs and replacements only. If you ever get a puncture or flat, we're here 24/7! 🚗`;
+            await sendReply(from, reply, channel);
+            return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+          }
+          // Otherwise fall through — emergency answer will hit intake below,
+          // FAQ-shaped answer will hit FAQ/intent gate normally.
+        }
+      } catch (_) { /* best-effort */ }
+
       // FAQ matcher runs BEFORE intent detection. If the message is a
       // recognised FAQ (e.g. "do you offer tyre replacement"), reply with
       // the canned answer and STOP — never start the intake flow.
@@ -4357,6 +4390,36 @@ Deno.serve(async (req) => {
         await sendReply(from, faqAnswer, channel);
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
       }
+
+      // 2. Ambiguous tyre-help message with no emergency detail → ask ONE
+      //    clarifying question and remember to wait for their answer.
+      if (AMBIGUOUS_TYRE_HELP_RE.test(bodyLc) && !EMERGENCY_RE.test(bodyLc) && !OFFTOPIC_RE.test(bodyLc)) {
+        try {
+          const { data: existing } = await supabase
+            .from("conversations")
+            .select("id")
+            .eq("customer_phone", from)
+            .maybeSingle();
+          const nowIso = new Date().toISOString();
+          if (existing?.id) {
+            await supabase.from("conversations").update({
+              step: "awaiting_clarification",
+              last_message_at: nowIso,
+            }).eq("id", existing.id);
+          } else {
+            await supabase.from("conversations").insert({
+              customer_phone: from,
+              step: "awaiting_clarification",
+              last_message_at: nowIso,
+            });
+          }
+        } catch (e) { console.error("clarification state save failed", e); }
+        const reply = `Sure, happy to help! What's happened with the tyre — is it flat, punctured, losing pressure, or something else?`;
+        await sendReply(from, reply, channel);
+        return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+      }
+
+
 
       const intent = await classifyCustomerIntent(body);
       console.log("intent classify", { from, body: body.slice(0, 80), intent });
