@@ -76,8 +76,21 @@ export function extractReg(t: string): string | null {
     if (POSTCODE_RE.test(raw)) continue;
     return m[1].trim();
   }
+  // Multi-line/comma scan — check each token for a plate-like pattern
+  const tokens = (t || "").split(/[\n,]+/).map((l) => l.trim()).filter(Boolean);
+  if (tokens.length > 1) {
+    for (const line of tokens) {
+      if (/^[A-Z0-9]{2,4}\s?[A-Z0-9]{2,4}$/i.test(line) && /\d/.test(line) && /[A-Z]/i.test(line)) {
+        const cand = line.toUpperCase().replace(/\s+/g, " ").trim();
+        if (!POSTCODE_RE.test(cand.replace(/\s/g, ""))) {
+          return cand;
+        }
+      }
+    }
+  }
   return null;
 }
+
 
 export function extractTyreSize(t: string): string | null {
   const m = (t || "").match(TYRE_SIZE_RE);
@@ -143,10 +156,26 @@ export function extractName(t: string): string | null {
   // Bare short message that looks like a name
   const s = t.trim();
   if (/^[A-Za-z][A-Za-z .'-]{1,38}$/.test(s) && s.split(/\s+/).length <= 4) {
-    return isValidPersonName(s) ? s : null;
+    if (isValidPersonName(s)) return s;
+  }
+  // Multi-line/comma scan — check each token
+  const tokens = t.split(/[\n,]+/).map((l) => l.trim()).filter(Boolean);
+  if (tokens.length > 1) {
+    for (const line of tokens) {
+      if (extractReg(line)) continue;
+      if (extractPostcode(line)) continue;
+      if (extractWheels(line).length > 0) continue;
+      if (INCIDENT_RE.test(line)) continue;
+      if (/\d/.test(line)) continue;
+      if (/^[A-Za-z][A-Za-z .'-]{1,38}$/.test(line)) {
+        const cand = line.trim().replace(/\s+/g, " ");
+        if (isValidPersonName(cand)) return cand;
+      }
+    }
   }
   return null;
 }
+
 
 const INCIDENT_RE = /(nail|screw|slow\s+puncture|flat|puncture|blow[- ]?out|blew|burst|bust(?:ed)?|popp(?:ed|ing)|shred|ripped|gash|leak|leaking|losing\s+air|going\s+down|psi|valve|damage|damaged|broken|snapp(?:ed|ing)|tear|tore|torn|cut|slash|deflat|low\s+pressure|pressure|bulge|split|crack|cracked|sidewall|kerb|curb|pothole|hit|stuck|stranded|hiss(?:ing)?|vibrat|wobbl|soft|spongy|tpms|not\s+sure|don'?t\s+know|unsure)/i;
 
