@@ -792,6 +792,175 @@ async function aiGeneralAnswer(text: string): Promise<string | null> {
   }
 }
 
+// ───────────── Unified customer AI decision layer ─────────────
+// ONE AI call that decides what to do with every non-mid-intake customer
+// message. Uses the editable Customer AI Instructions prompt from
+// app_settings.whatsapp_system_prompt as its knowledge base, then appends a
+// strict decision instruction that forces a JSON response with an action
+// enum. The webhook uses `action` to route (FAQ/OUT_OF_SCOPE/OTHER/CLARIFY
+// stop here with `reply`; INTAKE_START falls through to processCustomerIntake).
+type CustomerAIAction =
+  | "FAQ"
+  | "INTAKE_START"
+  | "INTAKE_CONTINUE"
+  | "CLARIFY"
+  | "OUT_OF_SCOPE"
+  | "OTHER";
+
+interface CustomerAIDecision {
+  action: CustomerAIAction;
+  reply: string;
+}
+
+let CACHED_CUSTOMER_PROMPT: { text: string; at: number } | null = null;
+const CUSTOMER_PROMPT_TTL_MS = 60_000;
+
+async function loadCustomerKnowledgeBase(supabase: any): Promise<string> {
+  if (CACHED_CUSTOMER_PROMPT && Date.now() - CACHED_CUSTOMER_PROMPT.at < CUSTOMER_PROMPT_TTL_MS) {
+    return CACHED_CUSTOMER_PROMPT.text;
+  }
+  try {
+    const { data } = await supabase
+      .from("app_settings")
+      .select("value")
+      .eq("key", "whatsapp_system_prompt")
+      .maybeSingle();
+    const text = (data as any)?.value?.prompt;
+    const out = typeof text === "string" && text.trim().length > 0
+      ? text
+      : "You are Fly, TyreFly's WhatsApp assistant. TyreFly is a 24/7 UK mobile tyre repair service.";
+    CACHED_CUSTOMER_PROMPT = { text: out, at: Date.now() };
+    return out;
+  } catch {
+    return "You are Fly, TyreFly's WhatsApp assistant. TyreFly is a 24/7 UK mobile tyre repair service.";
+  }
+}
+
+async function callCustomerAI(
+  supabase: any,
+  args: {
+    body: string;
+    firstName: string;
+    activeJob: any | null;
+    recentJob: any | null;
+  },
+): Promise<CustomerAIDecision | null> {
+  const apiKey = Deno.env.get("LOVABLE_API_KEY");
+  if (!apiKey) return null;
+  const kb = await loadCustomerKnowledgeBase(supabase);
+
+  const contextLines: string[] = [];
+  if (args.firstName) contextLines.push(`Customer first name: ${args.firstName}`);
+  if (args.activeJob) {
+    contextLines.push(
+      `Active job on file: ref ${jobRefOf(args.activeJob)}, status ${String(args.activeJob.status).replace(/_/g, " ")}.`,
+    );
+  } else if (args.recentJob) {
+    contextLines.push(
+      `Most recent job: ref ${jobRefOf(args.recentJob)}, status ${String(args.recentJob.status).replace(/_/g, " ")}.`,
+    );
+  } else {
+    contextLines.push("No prior job on file for this customer.");
+  }
+  const contextBlock = contextLines.join("\n");
+
+  const decisionInstruction = `
+You must classify the customer's message and craft the reply in ONE step.
+
+Use everything in the KNOWLEDGE BASE above (FAQ answers, tone, off-topic
+redirects, tyre-only scope, empathy rules, service coverage) as your source of
+truth. Never invent policies that aren't in the knowledge base.
+
+Choose EXACTLY ONE action:
+
+- "FAQ" — Customer is asking a question or making an enquiry (pricing,
+  hours, coverage, service scope, "do you do X?", "are you 24/7?", motorway,
+  vans, etc.). Answer naturally in 1–3 sentences using the knowledge base.
+  NEVER open intake for a question — even if the message contains the word
+  "tyre".
+
+- "INTAKE_START" — Customer clearly has a tyre emergency or wants to book:
+  puncture, flat, blowout, low pressure, "I need help with my flat tyre",
+  "come to me", "I'm stuck", "my tyre is losing air". Reply with a short
+  warm acknowledgement (1 short sentence) — the intake form will follow
+  automatically, so do NOT ask for name/reg/postcode here.
+
+- "CLARIFY" — Message mentions tyre/wheel/help but it's genuinely ambiguous
+  whether it's an emergency or a general question ("I need help with my
+  tyre", "tyre issue", "can someone look at my wheel"). Ask ONE short,
+  friendly clarifying question. Do NOT open intake yet.
+
+- "OUT_OF_SCOPE" — Customer needs something TyreFly doesn't do (motorbikes,
+  motorcycles, mopeds, alloys/rims, wheel alignment, tracking, balancing,
+  MOT, servicing, oil, brakes, batteries, exhaust, clutch, suspension,
+  recovery/towing, spare wheel supply, etc.). Politely explain we don't
+  cover that and redirect to tyres. NEVER open intake.
+
+- "OTHER" — Greetings, thanks, acknowledgements, complaints, cancel
+  requests, gibberish, wrong number, "are you a real person?", small talk.
+  Handle naturally with empathy and the tone from the knowledge base.
+
+- "INTAKE_CONTINUE" — Do NOT use this action. Mid-intake messages are
+  handled by a separate state machine and never reach you.
+
+CONTEXT
+${contextBlock}
+
+CUSTOMER MESSAGE
+${args.body}
+
+Respond by calling the "decide" function with { action, reply }. The reply
+must be the exact WhatsApp message we will send — short, natural, British
+English, friendly, no markdown headers, no placeholders.`;
+
+  try {
+    const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "google/gemini-3-flash-preview",
+        messages: [
+          { role: "system", content: `KNOWLEDGE BASE\n\n${kb}` },
+          { role: "user", content: decisionInstruction },
+        ],
+        tools: [{
+          type: "function",
+          function: {
+            name: "decide",
+            parameters: {
+              type: "object",
+              properties: {
+                action: {
+                  type: "string",
+                  enum: ["FAQ", "INTAKE_START", "INTAKE_CONTINUE", "CLARIFY", "OUT_OF_SCOPE", "OTHER"],
+                },
+                reply: { type: "string" },
+              },
+              required: ["action", "reply"],
+              additionalProperties: false,
+            },
+          },
+        }],
+        tool_choice: { type: "function", function: { name: "decide" } },
+      }),
+    });
+    if (!r.ok) {
+      console.error("callCustomerAI failed", r.status, await r.text().catch(() => ""));
+      return null;
+    }
+    const j = await r.json();
+    const rawArgs = j?.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments;
+    const parsed = typeof rawArgs === "string" ? JSON.parse(rawArgs) : rawArgs;
+    const action = parsed?.action as CustomerAIAction | undefined;
+    const reply = typeof parsed?.reply === "string" ? parsed.reply.trim() : "";
+    if (!action || !reply) return null;
+    return { action, reply };
+  } catch (e) {
+    console.error("callCustomerAI error", e);
+    return null;
+  }
+}
+
 
 // ───────────── FAQ matcher (runs BEFORE intent detection) ─────────────
 // Customer questions like "do you offer tyre replacement", "how much does
@@ -4354,82 +4523,26 @@ Deno.serve(async (req) => {
 
 
     if (!midIntake && mediaUrls.length === 0 && body) {
-      // ── Ambiguous "tyre help" clarification gate ─────────────────────
-      // Detect vague messages that mention a tyre/wheel but don't describe
-      // a specific problem or emergency. Instead of opening intake, ask
-      // ONE clarifying question and remember we're awaiting a reply.
-      const bodyLc = body.trim().toLowerCase();
-      const EMERGENCY_RE = /\b(flat|puncture[d]?|blow(?:out|n)?|burst|deflat|losing\s+pressure|low\s+pressure|no\s+pressure|nail|screw|slashed|ripped|torn|shredded|damag(?:e|ed)|stuck|stranded|broken\s*down|on\s+the\s+(?:m\d+|motorway|hard\s*shoulder|side))\b/i;
-      const OFFTOPIC_RE = /\b(alloy|rim|spare\s+wheel|wheel\s+alignment|tracking|balanc(?:e|ing)|mot|service|oil|brake|battery|exhaust|clutch|suspension)\b/i;
-      const AMBIGUOUS_TYRE_HELP_RE = /\b(?:(?:need|want|require|get)\s+(?:some\s+)?(?:help|assistance|service)\s+(?:with\s+)?(?:my\s+|the\s+)?(?:tyre|tire|wheel)s?|(?:tyre|tire|wheel)s?\s+(?:help|issue|problem|trouble|attention)|(?:have|got)\s+(?:a\s+|an\s+)?(?:tyre|tire|wheel)\s+(?:issue|problem|trouble)|(?:some(?:thing|body)?|any(?:one|body))\s+(?:wrong|up|off)\s+with\s+(?:my\s+|the\s+)?(?:tyre|tire|wheel)|(?:can|could)\s+(?:some(?:one|body)|you)\s+(?:look\s+at|check|see)\s+(?:my\s+|the\s+)?(?:tyre|tire|wheel)|my\s+(?:tyre|tire|wheel)\s+(?:needs?\s+(?:attention|help|looking\s+at|checking))|need\s+(?:tyre|tire|wheel)\s+help)\b/i;
+      // ── Unified AI decision layer ──────────────────────────────────
+      // One AI call decides FAQ / INTAKE_START / CLARIFY / OUT_OF_SCOPE
+      // / OTHER using the editable Customer AI Instructions prompt as
+      // its knowledge base. Legacy matchFaq() + classifyCustomerIntent()
+      // remain in the file as a safety-net fallback if the AI call fails.
 
-      // 1. If we previously asked a clarifying question, resolve it now.
+      // Clear any prior "awaiting_clarification" state — the AI now
+      // interprets the customer's answer directly.
       try {
         const { data: pending } = await supabase
           .from("conversations")
-          .select("id,last_message_at")
+          .select("id")
           .eq("customer_phone", from)
           .eq("step", "awaiting_clarification")
           .gte("last_message_at", new Date(Date.now() - 30 * 60 * 1000).toISOString())
-          .order("last_message_at", { ascending: false })
-          .limit(1)
           .maybeSingle();
         if (pending?.id) {
-          // Clear the clarification state either way.
           await supabase.from("conversations").update({ step: "complete" }).eq("id", pending.id);
-          if (OFFTOPIC_RE.test(bodyLc) && !EMERGENCY_RE.test(bodyLc)) {
-            const reply = `Ah, that isn't something we offer — we specialise in tyre repairs and replacements only. If you ever get a puncture or flat, we're here 24/7! 🚗`;
-            await sendReply(from, reply, channel);
-            return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
-          }
-          // Otherwise fall through — emergency answer will hit intake below,
-          // FAQ-shaped answer will hit FAQ/intent gate normally.
         }
       } catch (_) { /* best-effort */ }
-
-      // FAQ matcher runs BEFORE intent detection. If the message is a
-      // recognised FAQ (e.g. "do you offer tyre replacement"), reply with
-      // the canned answer and STOP — never start the intake flow.
-      const faqAnswer = matchFaq(body);
-      if (faqAnswer) {
-        console.log("faq match", { from, body: body.slice(0, 80) });
-        await sendReply(from, faqAnswer, channel);
-        return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
-      }
-
-      // 2. Ambiguous tyre-help message with no emergency detail → ask ONE
-      //    clarifying question and remember to wait for their answer.
-      if (AMBIGUOUS_TYRE_HELP_RE.test(bodyLc) && !EMERGENCY_RE.test(bodyLc) && !OFFTOPIC_RE.test(bodyLc)) {
-        try {
-          const { data: existing } = await supabase
-            .from("conversations")
-            .select("id")
-            .eq("customer_phone", from)
-            .maybeSingle();
-          const nowIso = new Date().toISOString();
-          if (existing?.id) {
-            await supabase.from("conversations").update({
-              step: "awaiting_clarification",
-              last_message_at: nowIso,
-            }).eq("id", existing.id);
-          } else {
-            await supabase.from("conversations").insert({
-              customer_phone: from,
-              step: "awaiting_clarification",
-              last_message_at: nowIso,
-            });
-          }
-        } catch (e) { console.error("clarification state save failed", e); }
-        const reply = `Sure, happy to help! What's happened with the tyre — is it flat, punctured, losing pressure, or something else?`;
-        await sendReply(from, reply, channel);
-        return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
-      }
-
-
-
-      const intent = await classifyCustomerIntent(body);
-      console.log("intent classify", { from, body: body.slice(0, 80), intent });
-
 
       // Pull customer name + active job for contextual replies.
       const { data: custRow } = await supabase
@@ -4438,72 +4551,121 @@ Deno.serve(async (req) => {
       const activeJob = recentJob && ACTIVE_JOB_STATUSES.has(String(recentJob.status))
         ? recentJob : null;
 
-      const shouldStartIntake =
-        intent.intent === "INTENT_JOB_REQUEST" || intent.has_vehicle_issue === true;
+      const decision = await callCustomerAI(supabase, {
+        body,
+        firstName,
+        activeJob,
+        recentJob,
+      });
 
-      if (!shouldStartIntake) {
-        let reply = "";
-        switch (intent.intent) {
-          case "INTENT_GREETING":
-            reply = firstName
-              ? `Hi ${firstName}! 👋 Welcome back to TyreFly. How can I help you today?`
-              : `Hi there! 👋 Welcome to TyreFly, your 24/7 roadside tyre service. How can I help you today?`;
-            break;
-          case "INTENT_GRATITUDE":
-            reply = activeJob
-              ? `You're welcome${firstName ? `, ${firstName}` : ""}! 😊 We've received your job (Ref: ${jobRefOf(activeJob)}) and are taking care of it. We'll update you shortly.`
-              : `You're welcome${firstName ? `, ${firstName}` : ""}! If you ever need tyre assistance, we're available 24/7. 🚗`;
-            break;
-          case "INTENT_ACKNOWLEDGEMENT":
-            reply = activeJob
-              ? `Got it${firstName ? `, ${firstName}` : ""} 👍 We'll keep you updated on job ${jobRefOf(activeJob)}.`
-              : `Great! If you need anything else, just message us anytime. 🚗`;
-            break;
-          case "INTENT_JOB_STATUS_ENQUIRY":
-            reply = activeJob
-              ? `Your job ${jobRefOf(activeJob)} is currently *${String(activeJob.status).replace(/_/g, " ")}*. We'll send you an update as soon as there's progress.`
-              : `I don't see an active job for your number. Would you like to report a tyre issue?`;
-            break;
-          case "INTENT_PAYMENT_ENQUIRY":
-            reply = activeJob
-              ? `Thanks${firstName ? `, ${firstName}` : ""} — let me check the payment status on job ${jobRefOf(activeJob)} and a team member will confirm shortly.`
-              : `I don't see an active job for your number. If you've made a payment, please send the reference and we'll look into it.`;
-            break;
-          case "INTENT_CANCELLATION":
-            reply = activeJob
-              ? `Just to confirm — do you want to cancel job ${jobRefOf(activeJob)}? Reply *YES CANCEL* to confirm.`
-              : `No problem — you don't have any active job with us right now. 🙂`;
-            break;
-          case "INTENT_COMPLAINT_OR_QUESTION": {
-            const faq = matchFaq(body);
-            if (faq) { reply = faq; break; }
-            const ai = await aiGeneralAnswer(body);
-            reply = ai ?? `Happy to help — what would you like to know about our service?`;
-            break;
-          }
-          default: {
-            // If it's shaped like a question, let the AI answer generally
-            // instead of dumping a canned "not sure what you mean" reply.
-            if (isQuestionShape(body)) {
-              const faq = matchFaq(body);
-              if (faq) { reply = faq; break; }
-              const ai = await aiGeneralAnswer(body);
-              if (ai) { reply = ai; break; }
+      if (decision) {
+        console.log("customer AI decision", { from, body: body.slice(0, 80), action: decision.action });
+
+        // CLARIFY → save awaiting_clarification so we know the next
+        // reply is answering our question.
+        if (decision.action === "CLARIFY") {
+          try {
+            const { data: existing } = await supabase
+              .from("conversations")
+              .select("id")
+              .eq("customer_phone", from)
+              .maybeSingle();
+            const nowIso = new Date().toISOString();
+            if (existing?.id) {
+              await supabase.from("conversations").update({
+                step: "awaiting_clarification",
+                last_message_at: nowIso,
+              }).eq("id", existing.id);
+            } else {
+              await supabase.from("conversations").insert({
+                customer_phone: from,
+                step: "awaiting_clarification",
+                last_message_at: nowIso,
+              });
             }
-            const unknownReplies = [
-              `Not quite sure what you mean — are you looking to book a tyre repair, or did you have a question about our service?`,
-              `Hmm, didn't quite catch that. Got a tyre emergency? Just tell us what's happened.`,
-              `Happy to help — what are you looking for today?`,
-            ];
-            reply = unknownReplies[Math.floor(Math.random() * unknownReplies.length)];
-          }
-
+          } catch (e) { console.error("clarification state save failed", e); }
+          await sendReply(from, decision.reply, channel);
+          return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
         }
-        await sendReply(from, reply, channel);
-        return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+
+        // FAQ / OUT_OF_SCOPE / OTHER → send AI reply and STOP.
+        if (
+          decision.action === "FAQ" ||
+          decision.action === "OUT_OF_SCOPE" ||
+          decision.action === "OTHER"
+        ) {
+          await sendReply(from, decision.reply, channel);
+          return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+        }
+
+        // INTAKE_START (or INTAKE_CONTINUE, which shouldn't happen here) →
+        // send the AI's warm acknowledgement first, then fall through to
+        // processCustomerIntake which will send the intake form.
+        if (decision.action === "INTAKE_START" && decision.reply) {
+          try { await sendReply(from, decision.reply, channel); } catch (_) {}
+        }
+        // Fall through to intake below.
+      } else {
+        // ── Safety-net fallback: legacy FAQ + intent classifier ───────
+        // Only runs if the unified AI call failed (missing key, gateway
+        // error, invalid JSON). Keeps prior behaviour intact.
+        console.warn("callCustomerAI returned null — using legacy fallback", { from });
+
+        const faqAnswer = matchFaq(body);
+        if (faqAnswer) {
+          await sendReply(from, faqAnswer, channel);
+          return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+        }
+
+        const intent = await classifyCustomerIntent(body);
+        const shouldStartIntake =
+          intent.intent === "INTENT_JOB_REQUEST" || intent.has_vehicle_issue === true;
+
+        if (!shouldStartIntake) {
+          let reply = "";
+          switch (intent.intent) {
+            case "INTENT_GREETING":
+              reply = firstName
+                ? `Hi ${firstName}! 👋 Welcome back to TyreFly. How can I help you today?`
+                : `Hi there! 👋 Welcome to TyreFly, your 24/7 roadside tyre service. How can I help you today?`;
+              break;
+            case "INTENT_GRATITUDE":
+              reply = activeJob
+                ? `You're welcome${firstName ? `, ${firstName}` : ""}! 😊 We've received your job (Ref: ${jobRefOf(activeJob)}) and are taking care of it.`
+                : `You're welcome${firstName ? `, ${firstName}` : ""}! If you ever need tyre assistance, we're available 24/7. 🚗`;
+              break;
+            case "INTENT_ACKNOWLEDGEMENT":
+              reply = activeJob
+                ? `Got it${firstName ? `, ${firstName}` : ""} 👍 We'll keep you updated on job ${jobRefOf(activeJob)}.`
+                : `Great! If you need anything else, just message us anytime. 🚗`;
+              break;
+            case "INTENT_JOB_STATUS_ENQUIRY":
+              reply = activeJob
+                ? `Your job ${jobRefOf(activeJob)} is currently *${String(activeJob.status).replace(/_/g, " ")}*. We'll send you an update as soon as there's progress.`
+                : `I don't see an active job for your number. Would you like to report a tyre issue?`;
+              break;
+            case "INTENT_PAYMENT_ENQUIRY":
+              reply = activeJob
+                ? `Thanks${firstName ? `, ${firstName}` : ""} — let me check the payment status on job ${jobRefOf(activeJob)} and a team member will confirm shortly.`
+                : `I don't see an active job for your number. If you've made a payment, please send the reference and we'll look into it.`;
+              break;
+            case "INTENT_CANCELLATION":
+              reply = activeJob
+                ? `Just to confirm — do you want to cancel job ${jobRefOf(activeJob)}? Reply *YES CANCEL* to confirm.`
+                : `No problem — you don't have any active job with us right now. 🙂`;
+              break;
+            default: {
+              const ai = await aiGeneralAnswer(body);
+              reply = ai ?? `Happy to help — what would you like to know about our service?`;
+            }
+          }
+          await sendReply(from, reply, channel);
+          return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+        }
+        // shouldStartIntake → fall through to intake.
       }
-      // Intent says job request / vehicle issue → fall through to intake.
     }
+
 
 
     // 3d. Guard: if the customer already has a very recent active job (intake
