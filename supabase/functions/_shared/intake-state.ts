@@ -1215,7 +1215,23 @@ export async function processCustomerIntake(
 
   // Issue description / type
   if (hasIssueDetails(body)) {
-    updates.issue_description = [job.issue_description, body].filter(Boolean).join("\n").slice(0, 2000);
+    // Strip tokens that were classified as structured fields (name, reg,
+    // wheels, postcode, bare issue keyword) so issue_description only holds
+    // genuine free-text problem descriptions.
+    const tokens = body.split(/[\n,;]+/).map((s) => s.trim()).filter(Boolean);
+    const kept = tokens.filter((p) => {
+      if (extractReg(p)) return false;
+      if (extractWheels(p).length > 0) return false;
+      if (extractPostcode(p)) return false;
+      if (extractName(p) && !INCIDENT_RE.test(p)) return false;
+      // Bare issue-type keyword (e.g. "flat", "puncture") with no other context
+      if (p.split(/\s+/).length <= 3 && guessIssueType(p) && !/\b(nail|screw|sidewall|leak|hiss|kerb|curb|pothole|hit|bulge|split|crack|valve|tpms)\b/i.test(p)) return false;
+      return true;
+    });
+    const cleaned = kept.join(", ").trim();
+    if (cleaned && hasIssueDetails(cleaned)) {
+      updates.issue_description = [job.issue_description, cleaned].filter(Boolean).join("\n").slice(0, 2000);
+    }
     const it = guessIssueType(body);
     if (it) updates.issue_type = it;
   }
