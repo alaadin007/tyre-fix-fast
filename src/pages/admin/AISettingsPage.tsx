@@ -277,8 +277,10 @@ export default function AISettingsPage() {
       <div>
         <h1 className="text-2xl font-semibold">AI Instructions</h1>
         <p className="text-sm text-muted-foreground">
-          This is the system prompt the WhatsApp intake bot uses on every customer
-          message. Changes apply within ~60 seconds (per-function cache).
+          This is the <strong>single source of truth</strong> for the WhatsApp intake bot.
+          Every customer message reads from here — changes apply within ~60 seconds
+          (per-function cache). The edge function keeps only a tiny offline safety
+          string, so anything you save here is automatically what the bot uses.
         </p>
       </div>
 
