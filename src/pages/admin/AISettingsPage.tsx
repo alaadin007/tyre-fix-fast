@@ -9,7 +9,7 @@ import { toast } from "sonner";
 const KEY = "whatsapp_system_prompt";
 // Bump this whenever FALLBACK_PROMPT changes so the new default
 // auto-applies to the live DB without needing "Reset to default".
-const FALLBACK_VERSION = 3;
+const FALLBACK_VERSION = 4;
 
 
 const FALLBACK_PROMPT = `You are Fly, TyreFly's WhatsApp assistant for a UK 24/7 mobile tyre repair service.
