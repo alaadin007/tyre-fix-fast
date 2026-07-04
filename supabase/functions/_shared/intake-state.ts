@@ -950,7 +950,7 @@ export async function processCustomerIntake(
   // no active intake), don't restart intake and don't fall through to the
   // "we cover most of the UK" FAQ. Either re-check coverage on a new postcode,
   // or gently repeat that we don't cover their area yet.
-  if (!conversation) {
+  {
     const { data: lastJob } = await supabase
       .from("jobs")
       .select("id, status, postcode, created_at")
@@ -966,8 +966,12 @@ export async function processCustomerIntake(
       if (newPc) {
         const covered = await checkTechnicianCoverage(supabase, newPc);
         if (covered) {
-          // Coverage now available on the new postcode — let intake restart
-          // fresh below. Nothing else to do here.
+          // Coverage now available — close the OOC job so intake can restart
+          // fresh below without re-tripping this gate.
+          await supabase
+            .from("jobs")
+            .update({ status: "cancelled" })
+            .eq("id", (lastJob as any).id);
         } else {
           const outward = (newPc.split(" ")[0] || newPc).toUpperCase();
           return {
@@ -979,7 +983,7 @@ export async function processCustomerIntake(
         }
       } else {
         return {
-          reply: "We currently cover parts of London and surrounding areas. We're adding new technicians regularly — we hope to reach your area soon! 🙏",
+          reply: "We currently cover parts of London and surrounding areas, with more regions being added. Drop your postcode and I'll check availability! 📍",
           job: null,
           conversation: null,
           justCompleted: false,
