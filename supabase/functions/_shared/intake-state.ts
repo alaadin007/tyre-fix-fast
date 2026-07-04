@@ -945,6 +945,50 @@ export async function processCustomerIntake(
   let conversation = await loadActiveConversation(supabase, from);
   let job: any = null;
 
+  // ─── Post out-of-coverage follow-up gate ───────────────────────────────
+  // If the customer's most recent job was marked out_of_coverage (and there's
+  // no active intake), don't restart intake and don't fall through to the
+  // "we cover most of the UK" FAQ. Either re-check coverage on a new postcode,
+  // or gently repeat that we don't cover their area yet.
+  if (!conversation) {
+    const { data: lastJob } = await supabase
+      .from("jobs")
+      .select("id, status, postcode, created_at")
+      .eq("customer_phone", from)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const lastOOC = lastJob && (lastJob as any).status === "out_of_coverage";
+    const withinWindow = lastOOC
+      && (Date.now() - new Date((lastJob as any).created_at).getTime()) < 24 * 60 * 60 * 1000;
+    if (withinWindow) {
+      const newPc = extractPostcode(body || "");
+      if (newPc) {
+        const covered = await checkTechnicianCoverage(supabase, newPc);
+        if (covered) {
+          // Coverage now available on the new postcode — let intake restart
+          // fresh below. Nothing else to do here.
+        } else {
+          const outward = (newPc.split(" ")[0] || newPc).toUpperCase();
+          return {
+            reply: `Thanks — unfortunately ${outward} is also outside our current coverage. We're adding new technicians regularly and hope to reach your area soon! 🙏`,
+            job: null,
+            conversation: null,
+            justCompleted: false,
+          };
+        }
+      } else {
+        return {
+          reply: "We currently cover parts of London and surrounding areas. We're adding new technicians regularly — we hope to reach your area soon! 🙏",
+          job: null,
+          conversation: null,
+          justCompleted: false,
+        };
+      }
+    }
+  }
+
+
   // ─── Intent gate ────────────────────────────────────────────────────────
   // When the customer isn't yet in an active job, route their message through
   // the AI to figure out whether they want to book, are asking a general
