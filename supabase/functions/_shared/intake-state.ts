@@ -1351,8 +1351,15 @@ export async function processCustomerIntake(
     // Strip tokens that were classified as structured fields (name, reg,
     // wheels, postcode, bare issue keyword) so issue_description only holds
     // genuine free-text problem descriptions.
+    const extractedReg = (updates.vehicle_reg ?? job.vehicle_reg ?? "").toString().toUpperCase().replace(/\s+/g, "");
+    const extractedName = (updates.customer_name ?? (job.customer_name && job.customer_name !== "Customer" ? job.customer_name : "") ?? "").toString().toLowerCase().trim();
     const tokens = body.split(/[\n,;]+/).map((s) => s.trim()).filter(Boolean);
     const kept = tokens.filter((p) => {
+      const pNorm = p.toUpperCase().replace(/\s+/g, "");
+      // Match against the reg we actually extracted (handles "GB1122" tokens
+      // that per-token extractReg wouldn't recognise on their own).
+      if (extractedReg && pNorm === extractedReg) return false;
+      if (extractedName && p.toLowerCase().trim() === extractedName) return false;
       if (extractReg(p)) return false;
       if (extractWheels(p).length > 0) return false;
       if (extractPostcode(p)) return false;
@@ -1368,6 +1375,7 @@ export async function processCustomerIntake(
     const it = guessIssueType(body);
     if (it) updates.issue_type = it;
   }
+
 
   // Wheels
   const wheels = extractWheels(body);
