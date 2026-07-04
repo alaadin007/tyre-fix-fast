@@ -861,6 +861,76 @@ function intentPromptMessage(customer: any | null, isReturning: boolean): string
   ].join("\n");
 }
 
+// ─── Silent technician coverage gate ────────────────────────────────────
+// After a customer's postcode is captured, check whether ANY active/approved
+// technician covers that area. If not, stop intake and reply with a friendly
+// "not covered" message. Fail-safe: any error → allow intake to continue.
+export async function checkTechnicianCoverage(
+  supabase: Supa,
+  postcode: string,
+): Promise<boolean> {
+  try {
+    const outward = (postcode.split(" ")[0] || postcode).toUpperCase().trim();
+    if (!outward) return true;
+    const prefix = outward.replace(/\d.*$/, ""); // letters-only area prefix
+    const { data, error } = await supabase
+      .from("technicians")
+      .select("service_postcodes")
+      .eq("active", true)
+      .eq("approval_status", "approved");
+    if (error || !data) return true; // fail-safe: never block on DB error
+    for (const t of data as any[]) {
+      const codes: string[] = (t.service_postcodes ?? [])
+        .map((c: string) => (c || "").toString().toUpperCase().trim())
+        .filter(Boolean);
+      if (codes.includes(outward)) return true;
+      if (prefix && codes.includes(prefix)) return true;
+    }
+    return false;
+  } catch {
+    return true;
+  }
+}
+
+function outOfCoverageMessage(outward: string): string {
+  return `Thanks for sharing your location. Unfortunately we don't currently have any technicians covering ${outward} at this time.\n\nWe're growing our network and hope to serve your area soon. Sorry we can't help right now! 🙏`;
+}
+
+async function applyCoverageGate(
+  supabase: Supa,
+  job: any,
+  conversation: any,
+  convContext: Record<string, any>,
+): Promise<IntakeOutcome | null> {
+  if (!job || !conversation) return null;
+  if (convContext.coverage_checked) return null;
+  const pc = (job.postcode || "").toString().trim();
+  if (!pc) return null;
+  const outward = (pc.split(" ")[0] || pc).toUpperCase();
+  const covered = await checkTechnicianCoverage(supabase, pc);
+  convContext.coverage_checked = true;
+  try {
+    await supabase.from("conversations")
+      .update({ context: convContext })
+      .eq("id", conversation.id);
+  } catch { /* ignore */ }
+  if (covered) return null;
+  try {
+    await supabase.from("jobs")
+      .update({ status: "out_of_coverage" })
+      .eq("id", job.id);
+    await supabase.from("conversations")
+      .update({ step: "complete" })
+      .eq("id", conversation.id);
+  } catch { /* ignore — still send reply */ }
+  return {
+    reply: outOfCoverageMessage(outward),
+    job: { ...job, status: "out_of_coverage" },
+    conversation: { ...conversation, step: "complete", context: convContext },
+    justCompleted: false,
+  };
+}
+
 export async function processCustomerIntake(
   supabase: Supa,
   input: { from: string; body: string; mediaUrls: string[]; channel: "sms" | "whatsapp" },
