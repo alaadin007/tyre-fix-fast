@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { Link } from "react-router-dom";
 import {
   Briefcase, FileText, CheckCircle2, PoundSterling, Users, AlertCircle,
-  FolderOpen, FolderClosed, Clock, MapPin, ClipboardCheck,
+  FolderOpen, FolderClosed, Clock, MapPin, ClipboardCheck, MapPinOff,
 } from "lucide-react";
 import { KpiCard } from "@/components/admin/dashboard/KpiCard";
 import { StatusBadge } from "@/components/admin/dashboard/StatusBadge";
@@ -52,6 +52,21 @@ export default function Overview() {
     return jobs.filter((j) =>
       ["awaiting_approval", "awaiting_payment", "broadcasting"].includes(j.status),
     ).slice(0, 10);
+  }, [jobs]);
+
+  // Uncovered-area demand — jobs where no active technician covered the postcode.
+  const outOfCoverage = useMemo(() => {
+    const norm = (s: string) => s.trim().toUpperCase().split(/\s+/)[0];
+    const rows = jobs.filter((j) => j.status === "out_of_coverage");
+    const byArea = new Map<string, number>();
+    for (const j of rows) {
+      const code = j.postcode ? norm(j.postcode) : "—";
+      byArea.set(code, (byArea.get(code) ?? 0) + 1);
+    }
+    const areas = Array.from(byArea.entries())
+      .map(([code, count]) => ({ code, count }))
+      .sort((a, b) => b.count - a.count);
+    return { rows, areas, total: rows.length };
   }, [jobs]);
 
   // Technician coverage by postcode (UK outward code)
