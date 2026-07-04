@@ -1100,17 +1100,53 @@ export async function processCustomerIntake(
     const seededName = isValidPersonName(customer?.full_name) ? customer!.full_name : "Customer";
     const seededReg = customer?.vehicle_reg ?? null;
 
+    // Pre-fill any fields the customer already gave us in this first message
+    // (e.g. after a CLARIFY reply like "I need two punctures fixed on my
+    // Mercedes van"). Never waste information the customer already provided —
+    // it saves them from re-typing it into the intake form.
+    const prefillReg = seededReg ?? extractReg(body) ?? null;
+    const parsedName = extractName(body);
+    const prefillName = (seededName && seededName !== "Customer")
+      ? seededName
+      : (isValidPersonName(parsedName ?? "") ? parsedName! : "Customer");
+    const prefillWheels = extractWheels(body);
+    const prefillTyreSize = extractTyreSize(body);
+    const prefillIssueType = guessIssueType(body);
+
+    // issue_description: strip out tokens that were already captured as
+    // structured fields so only genuine free-text problem description remains.
+    let prefillIssueDescription: string | null = null;
+    if (hasIssueDetails(body)) {
+      const extractedRegNorm = (prefillReg ?? "").toString().toUpperCase().replace(/\s+/g, "");
+      const extractedNameNorm = (prefillName && prefillName !== "Customer" ? prefillName : "").toLowerCase().trim();
+      const tokens = body.split(/[\n,;]+/).map((s) => s.trim()).filter(Boolean);
+      const kept = tokens.filter((p) => {
+        const pNorm = p.toUpperCase().replace(/\s+/g, "");
+        if (extractedRegNorm && pNorm === extractedRegNorm) return false;
+        if (extractedNameNorm && p.toLowerCase().trim() === extractedNameNorm) return false;
+        if (extractReg(p)) return false;
+        if (extractWheels(p).length > 0) return false;
+        if (extractPostcode(p)) return false;
+        if (extractName(p) && !INCIDENT_RE.test(p)) return false;
+        if (p.split(/\s+/).length <= 3 && guessIssueType(p) && !/\b(nail|screw|sidewall|leak|hiss|kerb|curb|pothole|hit|bulge|split|crack|valve|tpms)\b/i.test(p)) return false;
+        return true;
+      });
+      const cleaned = kept.join(", ").trim();
+      if (cleaned && hasIssueDetails(cleaned)) prefillIssueDescription = cleaned.slice(0, 2000);
+    }
+
     const initial: Record<string, any> = {
       customer_phone: from,
-      customer_name: seededName,
+      customer_name: prefillName,
       postcode: postcode ?? "",
       lat: coords?.lat ?? null,
       lng: coords?.lng ?? null,
-      issue_type: "unknown",
-      issue_description: null,
+      issue_type: prefillIssueType ?? "unknown",
+      issue_description: prefillIssueDescription,
       photo_urls: mediaUrls,
-      vehicle_reg: seededReg,
-      affected_wheels: [],
+      vehicle_reg: prefillReg,
+      affected_wheels: prefillWheels,
+      tyre_size: prefillTyreSize ?? null,
       status: "intake_pending",
     };
 
@@ -1135,10 +1171,38 @@ export async function processCustomerIntake(
     const gated = await applyCoverageGate(supabase, job, conversation, context);
     if (gated) return gated;
 
+    // If the customer's first message already filled in a substantive field
+    // beyond what we had on file, open with the checklist form so they can see
+    // exactly what's been captured and what's still needed — instead of the
+    // generic welcome message that would ignore their information.
+    const prefilledSomething = !!(
+      prefillIssueType ||
+      prefillIssueDescription ||
+      (prefillWheels && prefillWheels.length > 0) ||
+      prefillTyreSize ||
+      (prefillReg && !seededReg) ||
+      (prefillName !== "Customer" && !isValidPersonName(customer?.full_name)) ||
+      postcode
+    );
+
+    if (prefilledSomething) {
+      const missing = evaluateJob(job, conversation);
+      const greeting = (isReturning && isValidPersonName(customer?.full_name))
+        ? `Welcome back, ${customer!.full_name.trim().split(/\s+/)[0]} 👋`
+        : (isReturning ? "Welcome back 👋" : "Welcome to TyreFly 🚗");
+      const header = `${greeting}\n\nSorry to hear you've got a tyre problem — we've noted what you've already told us. Here's what we have so far:`;
+      return {
+        reply: checklistMessage(job, missing, { header }),
+        job,
+        conversation,
+        justCompleted: false,
+      };
+    }
+
     return {
       reply: welcomeMessage(customer, isReturning, {
-        name: isValidPersonName(seededName) ? seededName : null,
-        reg: seededReg,
+        name: isValidPersonName(prefillName) ? prefillName : null,
+        reg: prefillReg,
       }),
       job,
       conversation,
