@@ -962,32 +962,38 @@ export async function processCustomerIntake(
     const withinWindow = lastOOC
       && (Date.now() - new Date((lastJob as any).created_at).getTime()) < 24 * 60 * 60 * 1000;
     if (withinWindow) {
-      const newPc = extractPostcode(body || "");
-      if (newPc) {
-        const covered = await checkTechnicianCoverage(supabase, newPc);
-        if (covered) {
-          // Coverage now available — close the OOC job so intake can restart
-          // fresh below without re-tripping this gate.
-          await supabase
-            .from("jobs")
-            .update({ status: "cancelled" })
-            .eq("id", (lastJob as any).id);
+      // If customer is describing a tyre problem, skip coverage gate —
+      // go straight to intake (they may now be at a different location).
+      if (hasTyreServiceIntent(body || "")) {
+        // fall through — do nothing here
+      } else {
+        const newPc = extractPostcode(body || "");
+        if (newPc) {
+          const covered = await checkTechnicianCoverage(supabase, newPc);
+          if (covered) {
+            // Coverage now available — close the OOC job so intake can restart
+            // fresh below without re-tripping this gate.
+            await supabase
+              .from("jobs")
+              .update({ status: "cancelled" })
+              .eq("id", (lastJob as any).id);
+          } else {
+            const outward = (newPc.split(" ")[0] || newPc).toUpperCase();
+            return {
+              reply: `Thanks — unfortunately ${outward} is also outside our current coverage. We're adding technicians regularly and hope to reach your area soon! 🙏`,
+              job: null,
+              conversation: null,
+              justCompleted: false,
+            };
+          }
         } else {
-          const outward = (newPc.split(" ")[0] || newPc).toUpperCase();
           return {
-            reply: `Thanks — unfortunately ${outward} is also outside our current coverage. We're adding new technicians regularly and hope to reach your area soon! 🙏`,
+            reply: "We currently cover parts of London and surrounding areas, with more regions being added. Drop your postcode and I'll check availability! 📍",
             job: null,
             conversation: null,
             justCompleted: false,
           };
         }
-      } else {
-        return {
-          reply: "We currently cover parts of London and surrounding areas, with more regions being added. Drop your postcode and I'll check availability! 📍",
-          job: null,
-          conversation: null,
-          justCompleted: false,
-        };
       }
     }
   }
