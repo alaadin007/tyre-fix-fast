@@ -1036,7 +1036,7 @@ function matchFaq(text: string): string | null {
     return "Yes, we cover motorway breakdowns. Please make sure you're in a safe position, ideally behind the barrier, before the technician arrives.";
   }
   if (/\b(my\s+area|cover|available|service)\b/.test(t) && /\b(area|postcode|town|city|location|uk|here)\b/.test(t)) {
-    return "We cover most of the UK. Share your live location and we'll confirm availability instantly.";
+    return "We currently cover parts of London and surrounding areas, with more regions being added regularly. Drop your postcode and I'll check if we have a technician near you right now. 📍";
   }
   if (/\b(hgv|lorry|truck|van|commercial|vehicle\s+type|all\s+vehicles)\b/.test(t)) {
     return "We cover cars, vans, and most light commercial vehicles. For HGVs or specialist vehicles, please contact our team directly.";
