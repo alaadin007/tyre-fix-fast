@@ -42,11 +42,20 @@ const POSTCODE_RE = /\b([A-Z]{1,2}\d[A-Z\d]?)\s*(\d[A-Z]{2})\b/i;
 const COORD_RE = /\((-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\)/;
 const PLATE_HINT_RE = /\b(?:reg(?:istration)?|plate|number\s*plate|licen[cs]e\s*plate|tag)\s*[:\-]?\s*([A-Z0-9][A-Z0-9\s\-]{2,12}[A-Z0-9])\b/i;
 const PLATE_LOOSE_RE = /\b([A-Z]{2}\d{2}[\s\-]?[A-Z]{3})\b/g; // UK style e.g. YC67 PGX
+// Standard UK plate: AB12 CDE (2 letters + 2 digits + optional space/dash + 3 letters).
+// This shape is UNAMBIGUOUSLY a vehicle plate — it can never be a UK postcode
+// (postcodes always end with digit + 2 letters). Used to protect plate tokens
+// like "LP21 DZE" from being mis-parsed as postcode "LP2 1DZ".
+const PLATE_STANDARD_RE = /\b([A-Z]{2}\d{2}[\s\-]?[A-Z]{3})\b/i;
+const PLATE_STANDARD_STRICT_RE = /^[A-Z]{2}\d{2}[\s\-]?[A-Z]{3}$/i;
 const TYRE_SIZE_RE = /\b(\d{3})\s*\/\s*(\d{2,3})\s*[rR]\s*(\d{2})\b/;
 const DONE_RE = /^\s*done\b[\s.!?]*$/i;
 
 export function extractPostcode(t: string): string | null {
-  const m = (t || "").match(POSTCODE_RE);
+  const raw = (t || "").trim();
+  // Never mis-classify a standard UK plate (e.g. "LP21 DZE") as a postcode.
+  if (PLATE_STANDARD_STRICT_RE.test(raw)) return null;
+  const m = raw.match(POSTCODE_RE);
   return m ? `${m[1].toUpperCase()} ${m[2].toUpperCase()}` : null;
 }
 
@@ -65,6 +74,9 @@ export function extractReg(t: string): string | null {
   if (t && NO_REG_RE.test(t)) return "NOT AVAILABLE";
   if (!t) return null;
   const upper = t.toUpperCase();
+  // Standard UK plate ALWAYS wins over any postcode-like interpretation.
+  const std = upper.match(PLATE_STANDARD_RE);
+  if (std) return std[1].trim().replace(/\s+/g, " ");
   const hinted = t.match(PLATE_HINT_RE);
   if (hinted) {
     const cand = hinted[1].toUpperCase().trim().replace(/\s+/g, " ");
@@ -80,6 +92,10 @@ export function extractReg(t: string): string | null {
   const tokens = (t || "").split(/[\n,]+/).map((l) => l.trim()).filter(Boolean);
   if (tokens.length > 1) {
     for (const line of tokens) {
+      // Standard plate token — classify as reg first, skip postcode veto.
+      if (PLATE_STANDARD_STRICT_RE.test(line)) {
+        return line.toUpperCase().replace(/\s+/g, " ").trim();
+      }
       if (/^[A-Z0-9]{2,4}\s?[A-Z0-9]{2,4}$/i.test(line) && /\d/.test(line) && /[A-Z]/i.test(line)) {
         const cand = line.toUpperCase().replace(/\s+/g, " ").trim();
         if (!POSTCODE_RE.test(cand.replace(/\s/g, ""))) {

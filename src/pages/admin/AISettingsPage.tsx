@@ -7,7 +7,7 @@ import { Loader2, Save, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 
 const KEY = "whatsapp_system_prompt";
-const FALLBACK_VERSION = 10;
+const FALLBACK_VERSION = 11;
 
 
 const FALLBACK_PROMPT = `You are Fly, TyreFly's WhatsApp assistant for a UK 24/7 mobile tyre repair service.
@@ -88,8 +88,8 @@ Customers may list fields in ANY order across commas, spaces, or newlines.
 Identify each value by its FORMAT and CONTEXT, never by its position.
 
 - customer_name → human name word(s); NOT a reg plate, postcode, wheel position, or issue word. Single ("Qamar") or multiple ("Hilal Hussain") words both OK.
-- vehicle_reg → alphanumeric plate (UK "AB12 CDE", "GB2133", "YC67PGX", or any country format — usually letters+numbers mixed). "N/A"/"no reg"/"not available" → store as NOT AVAILABLE.
-- postcode / location → UK postcode (e.g. SW1A 1AA, E14 3RU), OR full street address with postcode, OR What3Words (three.words.like.this), OR a WhatsApp live pin.
+- vehicle_reg → alphanumeric plate (UK "AB12 CDE", "GB2133", "YC67PGX", or any country format — usually letters+numbers mixed). "N/A"/"no reg"/"not available" → store as NOT AVAILABLE. IMPORTANT: standard UK plate shape (2 letters + 2 digits + optional space + 3 letters, e.g. "LP21 DZE", "YC67 PGX", "AB12 CDE") is ALWAYS a vehicle_reg — never a postcode. Classify as reg first and do NOT run postcode checks on that token.
+- postcode / location → UK postcode (e.g. SW1A 1AA, E14 3RU), OR full street address with postcode, OR What3Words (three.words.like.this), OR a WhatsApp live pin. A token that matches the AB12 CDE plate shape (like "LP21 DZE") is NOT a postcode — ignore it here.
 - affected_wheels → position words: front, rear, left, right, front-left, rear-right, both front, all four.
 - issue_type → problem words: puncture, flat, blowout, low pressure, not sure.
 
