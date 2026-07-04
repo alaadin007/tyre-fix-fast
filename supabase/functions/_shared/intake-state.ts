@@ -1077,6 +1077,10 @@ export async function processCustomerIntake(
     if (convErr) throw convErr;
     conversation = newConv;
 
+    // Silent coverage gate on initial postcode (if any).
+    const gated = await applyCoverageGate(supabase, job, conversation, context);
+    if (gated) return gated;
+
     return {
       reply: welcomeMessage(customer, isReturning, {
         name: isValidPersonName(seededName) ? seededName : null,
@@ -1252,6 +1256,11 @@ export async function processCustomerIntake(
       last_message_at: new Date().toISOString(),
     }).eq("id", conversation.id);
     conversation = { ...conversation, context: convContext };
+
+    // Silent coverage gate — customer just gave us a resolvable postcode.
+    const gated = await applyCoverageGate(supabase, job, conversation, convContext);
+    if (gated) return gated;
+
     const missing = evaluateJob(job, conversation);
     if (isComplete(missing)) {
       return {
@@ -1441,6 +1450,10 @@ export async function processCustomerIntake(
     conversation = { ...conversation, context: convContext };
   }
   await supabase.from("conversations").update({ last_message_at: new Date().toISOString() }).eq("id", conversation.id);
+
+  // Silent coverage gate — runs once per intake, after any postcode update.
+  const gated = await applyCoverageGate(supabase, job, conversation, convContext);
+  if (gated) return gated;
 
   // ─── Handle DONE ───
   if (DONE_RE.test(body || "")) {
