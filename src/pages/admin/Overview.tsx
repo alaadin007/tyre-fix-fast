@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { Link } from "react-router-dom";
 import {
   Briefcase, FileText, CheckCircle2, PoundSterling, Users, AlertCircle,
-  FolderOpen, FolderClosed, Clock, MapPin, ClipboardCheck,
+  FolderOpen, FolderClosed, Clock, MapPin, ClipboardCheck, MapPinOff,
 } from "lucide-react";
 import { KpiCard } from "@/components/admin/dashboard/KpiCard";
 import { StatusBadge } from "@/components/admin/dashboard/StatusBadge";
@@ -52,6 +52,21 @@ export default function Overview() {
     return jobs.filter((j) =>
       ["awaiting_approval", "awaiting_payment", "broadcasting"].includes(j.status),
     ).slice(0, 10);
+  }, [jobs]);
+
+  // Uncovered-area demand — jobs where no active technician covered the postcode.
+  const outOfCoverage = useMemo(() => {
+    const norm = (s: string) => s.trim().toUpperCase().split(/\s+/)[0];
+    const rows = jobs.filter((j) => j.status === "out_of_coverage");
+    const byArea = new Map<string, number>();
+    for (const j of rows) {
+      const code = j.postcode ? norm(j.postcode) : "—";
+      byArea.set(code, (byArea.get(code) ?? 0) + 1);
+    }
+    const areas = Array.from(byArea.entries())
+      .map(([code, count]) => ({ code, count }))
+      .sort((a, b) => b.count - a.count);
+    return { rows, areas, total: rows.length };
   }, [jobs]);
 
   // Technician coverage by postcode (UK outward code)
@@ -186,6 +201,71 @@ export default function Overview() {
           )}
         </Card>
       </div>
+
+      <Card className="border-white/10 bg-white/[0.03] p-4">
+        <div className="mb-3 flex items-center justify-between">
+          <div className="flex items-center gap-2 text-sm font-semibold">
+            <MapPinOff className="h-4 w-4 text-rose-300" /> Out-of-coverage demand
+            <span className="ml-2 rounded bg-rose-500/10 px-2 py-0.5 text-xs text-rose-200">
+              {outOfCoverage.total}
+            </span>
+          </div>
+          <Link
+            to="/admin/dashboard/jobs?status=out_of_coverage"
+            className="text-xs text-primary hover:underline"
+          >
+            View all →
+          </Link>
+        </div>
+        {outOfCoverage.total === 0 ? (
+          <div className="text-sm text-muted-foreground">
+            No uncovered requests yet. All customer postcodes were served.
+          </div>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2">
+            <div>
+              <div className="mb-1 text-xs uppercase tracking-wider text-muted-foreground">
+                Areas with unmet demand
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {outOfCoverage.areas.map((a) => (
+                  <span
+                    key={a.code}
+                    className="rounded border border-rose-400/20 bg-rose-500/5 px-2 py-1 text-xs"
+                  >
+                    <span className="font-mono">{a.code}</span>
+                    <span className="ml-1 text-muted-foreground">× {a.count}</span>
+                  </span>
+                ))}
+              </div>
+            </div>
+            <div>
+              <div className="mb-1 text-xs uppercase tracking-wider text-muted-foreground">
+                Recent uncovered requests
+              </div>
+              <div className="divide-y divide-white/5">
+                {outOfCoverage.rows.slice(0, 6).map((j) => (
+                  <Link
+                    key={j.id}
+                    to={`/admin/dashboard/jobs?open=${j.id}`}
+                    className="flex items-center gap-3 py-1.5 text-sm hover:bg-white/[0.03]"
+                  >
+                    <span className="font-mono text-xs text-muted-foreground">
+                      #{shortRef(j.id)}
+                    </span>
+                    <span className="truncate">
+                      {j.customer_name ?? "Unknown"} · {j.postcode ?? "—"}
+                    </span>
+                    <span className="ml-auto w-20 text-right text-xs text-muted-foreground">
+                      {fmtRelative(j.created_at)}
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+      </Card>
 
       <Card className="border-white/10 bg-white/[0.03] p-4">
         <div className="mb-3 flex items-center gap-2 text-sm font-semibold">
