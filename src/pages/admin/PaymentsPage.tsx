@@ -31,8 +31,8 @@ export default function PaymentsPage() {
   const navigate = useNavigate();
 
   const filtered = useMemo(() => {
-    const fromTs = fromDate ? new Date(fromDate).getTime() : null;
-    const toTs = toDate ? new Date(toDate).getTime() + 24 * 60 * 60 * 1000 - 1 : null;
+    const fromTs = fromDate ? new Date(fromDate.getFullYear(), fromDate.getMonth(), fromDate.getDate()).getTime() : null;
+    const toTs = toDate ? new Date(toDate.getFullYear(), toDate.getMonth(), toDate.getDate()).getTime() + 24 * 60 * 60 * 1000 - 1 : null;
     return jobs
       .filter((j) => j.stripe_session_id || j.platform_fee_status !== "pending")
       .filter((j) => status === "all" || j.platform_fee_status === status)
