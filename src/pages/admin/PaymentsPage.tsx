@@ -4,6 +4,15 @@ import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { StatusBadge } from "@/components/admin/dashboard/StatusBadge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useDashboardData, shortRef, fmtRelative } from "@/hooks/useDashboardData";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -12,14 +21,29 @@ import { ExternalLink } from "lucide-react";
 export default function PaymentsPage() {
   const { jobs, quotes, techs } = useDashboardData();
   const [status, setStatus] = useState("all");
+  const [techFilter, setTechFilter] = useState<string>("all");
+  const [fromDate, setFromDate] = useState<string>("");
+  const [toDate, setToDate] = useState<string>("");
   const [busy, setBusy] = useState<string | null>(null);
   const navigate = useNavigate();
 
-  const filtered = useMemo(
-    () => jobs.filter((j) => j.stripe_session_id || j.platform_fee_status !== "pending")
-      .filter((j) => status === "all" || j.platform_fee_status === status),
-    [jobs, status],
-  );
+  const filtered = useMemo(() => {
+    const fromTs = fromDate ? new Date(fromDate).getTime() : null;
+    const toTs = toDate ? new Date(toDate).getTime() + 24 * 60 * 60 * 1000 - 1 : null;
+    return jobs
+      .filter((j) => j.stripe_session_id || j.platform_fee_status !== "pending")
+      .filter((j) => status === "all" || j.platform_fee_status === status)
+      .filter((j) => techFilter === "all" || j.assigned_technician_id === techFilter)
+      .filter((j) => {
+        if (!fromTs && !toTs) return true;
+        const dateStr = j.platform_fee_paid_at ?? j.created_at;
+        if (!dateStr) return false;
+        const ts = new Date(dateStr).getTime();
+        if (fromTs && ts < fromTs) return false;
+        if (toTs && ts > toTs) return false;
+        return true;
+      });
+  }, [jobs, status, techFilter, fromDate, toDate]);
 
   const totals = useMemo(() => {
     const paid = jobs.filter((j) => j.platform_fee_status === "paid").length;
@@ -67,6 +91,40 @@ export default function PaymentsPage() {
         ))}
       </div>
 
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="flex flex-col gap-1">
+          <Label className="text-xs text-muted-foreground">Technician</Label>
+          <Select value={techFilter} onValueChange={setTechFilter}>
+            <SelectTrigger className="h-9 w-[220px]">
+              <SelectValue placeholder="All technicians" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All technicians</SelectItem>
+              {techs.map((t) => (
+                <SelectItem key={t.id} value={t.id}>{t.name ?? t.tech_code ?? t.id.slice(0, 8)}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex flex-col gap-1">
+          <Label className="text-xs text-muted-foreground">From</Label>
+          <Input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="h-9 w-[160px]" />
+        </div>
+        <div className="flex flex-col gap-1">
+          <Label className="text-xs text-muted-foreground">To</Label>
+          <Input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="h-9 w-[160px]" />
+        </div>
+        {(techFilter !== "all" || fromDate || toDate) && (
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => { setTechFilter("all"); setFromDate(""); setToDate(""); }}
+          >
+            Clear
+          </Button>
+        )}
+      </div>
+
       <Card className="border-white/10 bg-white/[0.03]">
         <Table>
           <TableHeader>
@@ -74,6 +132,7 @@ export default function PaymentsPage() {
               <TableHead>Job</TableHead>
               <TableHead>Customer</TableHead>
               <TableHead>Tech</TableHead>
+              <TableHead>Tech ID</TableHead>
               <TableHead>Amount</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Paid</TableHead>
@@ -96,6 +155,7 @@ export default function PaymentsPage() {
                   </TableCell>
                   <TableCell className="text-sm">{j.customer_name ?? "—"}</TableCell>
                   <TableCell className="text-sm">{tech?.name ?? "—"}</TableCell>
+                  <TableCell className="font-mono text-xs text-muted-foreground">{tech?.tech_code ?? "—"}</TableCell>
                   <TableCell className="text-sm font-semibold">£{acceptedQuote?.price_gbp ?? "—"}</TableCell>
                   <TableCell><StatusBadge status={j.platform_fee_status} /></TableCell>
                   <TableCell className="text-xs text-muted-foreground">
@@ -124,7 +184,7 @@ export default function PaymentsPage() {
               );
             })}
             {filtered.length === 0 && (
-              <TableRow><TableCell colSpan={7} className="text-center text-sm text-muted-foreground">No payments.</TableCell></TableRow>
+              <TableRow><TableCell colSpan={8} className="text-center text-sm text-muted-foreground">No payments.</TableCell></TableRow>
             )}
           </TableBody>
         </Table>
