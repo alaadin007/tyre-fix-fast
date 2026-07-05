@@ -177,13 +177,13 @@ export default function PaymentsPage() {
           <TableHeader>
             <TableRow>
               <TableHead>Job</TableHead>
-              <TableHead>Customer</TableHead>
+              <TableHead className="hidden md:table-cell">Customer</TableHead>
               <TableHead>Tech</TableHead>
-              <TableHead>Tech ID</TableHead>
+              <TableHead className="hidden md:table-cell">Tech ID</TableHead>
               <TableHead>Amount</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>Paid</TableHead>
-              <TableHead className="text-right">Action</TableHead>
+              <TableHead className="hidden md:table-cell">Paid</TableHead>
+              <TableHead className="hidden md:table-cell text-right">Action</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
