@@ -25,8 +25,8 @@ export default function PaymentsPage() {
   const { jobs, quotes, techs } = useDashboardData();
   const [status, setStatus] = useState("all");
   const [techFilter, setTechFilter] = useState<string>("all");
-  const [fromDate, setFromDate] = useState<string>("");
-  const [toDate, setToDate] = useState<string>("");
+  const [fromDate, setFromDate] = useState<Date | undefined>(undefined);
+  const [toDate, setToDate] = useState<Date | undefined>(undefined);
   const [busy, setBusy] = useState<string | null>(null);
   const navigate = useNavigate();
 
