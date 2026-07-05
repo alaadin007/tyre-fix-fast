@@ -1,11 +1,13 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { format } from "date-fns";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { StatusBadge } from "@/components/admin/dashboard/StatusBadge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -15,21 +17,22 @@ import {
 } from "@/components/ui/select";
 import { useDashboardData, shortRef, fmtRelative } from "@/hooks/useDashboardData";
 import { supabase } from "@/integrations/supabase/client";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { ExternalLink } from "lucide-react";
+import { CalendarIcon, ExternalLink } from "lucide-react";
 
 export default function PaymentsPage() {
   const { jobs, quotes, techs } = useDashboardData();
   const [status, setStatus] = useState("all");
   const [techFilter, setTechFilter] = useState<string>("all");
-  const [fromDate, setFromDate] = useState<string>("");
-  const [toDate, setToDate] = useState<string>("");
+  const [fromDate, setFromDate] = useState<Date | undefined>(undefined);
+  const [toDate, setToDate] = useState<Date | undefined>(undefined);
   const [busy, setBusy] = useState<string | null>(null);
   const navigate = useNavigate();
 
   const filtered = useMemo(() => {
-    const fromTs = fromDate ? new Date(fromDate).getTime() : null;
-    const toTs = toDate ? new Date(toDate).getTime() + 24 * 60 * 60 * 1000 - 1 : null;
+    const fromTs = fromDate ? new Date(fromDate.getFullYear(), fromDate.getMonth(), fromDate.getDate()).getTime() : null;
+    const toTs = toDate ? new Date(toDate.getFullYear(), toDate.getMonth(), toDate.getDate()).getTime() + 24 * 60 * 60 * 1000 - 1 : null;
     return jobs
       .filter((j) => j.stripe_session_id || j.platform_fee_status !== "pending")
       .filter((j) => status === "all" || j.platform_fee_status === status)
@@ -108,17 +111,61 @@ export default function PaymentsPage() {
         </div>
         <div className="flex flex-col gap-1">
           <Label className="text-xs text-muted-foreground">From</Label>
-          <Input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="h-9 w-[160px]" />
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className={cn(
+                  "h-9 w-[180px] justify-start text-left font-normal",
+                  !fromDate && "text-muted-foreground",
+                )}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {fromDate ? format(fromDate, "PPP") : <span>Pick a date</span>}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={fromDate}
+                onSelect={setFromDate}
+                initialFocus
+                className={cn("p-3 pointer-events-auto")}
+              />
+            </PopoverContent>
+          </Popover>
         </div>
         <div className="flex flex-col gap-1">
           <Label className="text-xs text-muted-foreground">To</Label>
-          <Input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="h-9 w-[160px]" />
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className={cn(
+                  "h-9 w-[180px] justify-start text-left font-normal",
+                  !toDate && "text-muted-foreground",
+                )}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {toDate ? format(toDate, "PPP") : <span>Pick a date</span>}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={toDate}
+                onSelect={setToDate}
+                initialFocus
+                className={cn("p-3 pointer-events-auto")}
+              />
+            </PopoverContent>
+          </Popover>
         </div>
         {(techFilter !== "all" || fromDate || toDate) && (
           <Button
             size="sm"
             variant="ghost"
-            onClick={() => { setTechFilter("all"); setFromDate(""); setToDate(""); }}
+            onClick={() => { setTechFilter("all"); setFromDate(undefined); setToDate(undefined); }}
           >
             Clear
           </Button>
