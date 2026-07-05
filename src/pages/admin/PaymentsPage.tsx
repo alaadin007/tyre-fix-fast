@@ -177,13 +177,13 @@ export default function PaymentsPage() {
           <TableHeader>
             <TableRow>
               <TableHead>Job</TableHead>
-              <TableHead>Customer</TableHead>
+              <TableHead className="hidden md:table-cell">Customer</TableHead>
               <TableHead>Tech</TableHead>
-              <TableHead>Tech ID</TableHead>
+              <TableHead className="hidden md:table-cell">Tech ID</TableHead>
               <TableHead>Amount</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>Paid</TableHead>
-              <TableHead className="text-right">Action</TableHead>
+              <TableHead className="hidden md:table-cell">Paid</TableHead>
+              <TableHead className="hidden md:table-cell text-right">Action</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -200,15 +200,15 @@ export default function PaymentsPage() {
                       #{shortRef(j.id)}
                     </button>
                   </TableCell>
-                  <TableCell className="text-sm">{j.customer_name ?? "—"}</TableCell>
+                  <TableCell className="hidden md:table-cell text-sm">{j.customer_name ?? "—"}</TableCell>
                   <TableCell className="text-sm">{tech?.name ?? "—"}</TableCell>
-                  <TableCell className="font-mono text-xs text-muted-foreground">{tech?.tech_code ?? "—"}</TableCell>
+                  <TableCell className="hidden md:table-cell font-mono text-xs text-muted-foreground">{tech?.tech_code ?? "—"}</TableCell>
                   <TableCell className="text-sm font-semibold">£{acceptedQuote?.price_gbp ?? "—"}</TableCell>
                   <TableCell><StatusBadge status={j.platform_fee_status} /></TableCell>
-                  <TableCell className="text-xs text-muted-foreground">
+                  <TableCell className="hidden md:table-cell text-xs text-muted-foreground">
                     {j.platform_fee_paid_at ? fmtRelative(j.platform_fee_paid_at) : "—"}
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="hidden md:table-cell text-right">
                     <div className="flex justify-end gap-1">
                       {j.stripe_checkout_url && (
                         <a href={j.stripe_checkout_url} target="_blank" rel="noreferrer">
