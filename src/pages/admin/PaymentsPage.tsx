@@ -111,17 +111,61 @@ export default function PaymentsPage() {
         </div>
         <div className="flex flex-col gap-1">
           <Label className="text-xs text-muted-foreground">From</Label>
-          <Input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="h-9 w-[160px]" />
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className={cn(
+                  "h-9 w-[180px] justify-start text-left font-normal",
+                  !fromDate && "text-muted-foreground",
+                )}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {fromDate ? format(fromDate, "PPP") : <span>Pick a date</span>}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={fromDate}
+                onSelect={setFromDate}
+                initialFocus
+                className={cn("p-3 pointer-events-auto")}
+              />
+            </PopoverContent>
+          </Popover>
         </div>
         <div className="flex flex-col gap-1">
           <Label className="text-xs text-muted-foreground">To</Label>
-          <Input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="h-9 w-[160px]" />
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className={cn(
+                  "h-9 w-[180px] justify-start text-left font-normal",
+                  !toDate && "text-muted-foreground",
+                )}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {toDate ? format(toDate, "PPP") : <span>Pick a date</span>}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={toDate}
+                onSelect={setToDate}
+                initialFocus
+                className={cn("p-3 pointer-events-auto")}
+              />
+            </PopoverContent>
+          </Popover>
         </div>
         {(techFilter !== "all" || fromDate || toDate) && (
           <Button
             size="sm"
             variant="ghost"
-            onClick={() => { setTechFilter("all"); setFromDate(""); setToDate(""); }}
+            onClick={() => { setTechFilter("all"); setFromDate(undefined); setToDate(undefined); }}
           >
             Clear
           </Button>
