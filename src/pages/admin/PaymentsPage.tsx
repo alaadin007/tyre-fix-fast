@@ -1,11 +1,13 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { format } from "date-fns";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { StatusBadge } from "@/components/admin/dashboard/StatusBadge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -15,8 +17,9 @@ import {
 } from "@/components/ui/select";
 import { useDashboardData, shortRef, fmtRelative } from "@/hooks/useDashboardData";
 import { supabase } from "@/integrations/supabase/client";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { ExternalLink } from "lucide-react";
+import { CalendarIcon, ExternalLink } from "lucide-react";
 
 export default function PaymentsPage() {
   const { jobs, quotes, techs } = useDashboardData();
