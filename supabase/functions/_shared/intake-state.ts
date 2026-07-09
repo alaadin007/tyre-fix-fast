@@ -141,11 +141,18 @@ const NAME_BLOCKLIST = new Set([
   "tyre","tire","tyres","tires","wheel","flat","puncture","car","emergency","name","full",
 ]);
 
+// Single-word tyre issue keywords that must NEVER be treated as a customer name.
+// Keep in sync with the Customer AI Instructions page (fallback prompt) so the
+// AI-driven path and the offline regex path stay consistent.
+const ISSUE_WORDS_RE = /^\s*(puncture[d]?|flat|blowout|blown|burst|bust(?:ed)?|popp(?:ed)?|low\s*pressure|not\s*sure|unsure|damaged?|shredded?|deflated?|losing\s*air|leak(?:ing)?|nail|screw)\s*$/i;
+
 export function isValidPersonName(s: string | null | undefined): boolean {
   if (!s) return false;
   const cleaned = s.trim();
   if (cleaned.length < 2) return false;
   if (cleaned.toLowerCase() === "customer") return false;
+  // Guard: single-word tyre issue keywords are never valid names.
+  if (ISSUE_WORDS_RE.test(cleaned)) return false;
   const lower = cleaned.toLowerCase();
   if (NAME_BLOCKLIST.has(lower)) return false;
   if (!/^[A-Za-z][A-Za-z .'-]{1,38}$/.test(cleaned)) return false;
@@ -158,6 +165,8 @@ export function isValidPersonName(s: string | null | undefined): boolean {
 
 export function extractName(t: string): string | null {
   if (!t) return null;
+  // Early guard — a bare issue keyword is never a name.
+  if (ISSUE_WORDS_RE.test(t.trim())) return null;
   const explicit = t.match(/(?:my name is|i am|i'm|im|this is|name[:\-])\s+([A-Za-z][A-Za-z .'-]{1,38})/i);
   if (explicit) {
     const cand = explicit[1].trim().replace(/\s+/g, " ");
@@ -178,6 +187,7 @@ export function extractName(t: string): string | null {
   const tokens = t.split(/[\n,]+/).map((l) => l.trim()).filter(Boolean);
   if (tokens.length > 1) {
     for (const line of tokens) {
+      if (ISSUE_WORDS_RE.test(line)) continue;
       if (extractReg(line)) continue;
       if (extractPostcode(line)) continue;
       if (extractWheels(line).length > 0) continue;
