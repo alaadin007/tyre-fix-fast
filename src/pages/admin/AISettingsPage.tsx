@@ -7,7 +7,7 @@ import { Loader2, Save, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 
 const KEY = "whatsapp_system_prompt";
-const FALLBACK_VERSION = 12;
+const FALLBACK_VERSION = 13;
 
 
 const FALLBACK_PROMPT = `You are Fly, TyreFly's WhatsApp assistant for a UK 24/7 mobile tyre repair service.
@@ -87,7 +87,7 @@ ORDER-INDEPENDENT FIELD RECOGNITION — CRITICAL
 Customers may list fields in ANY order across commas, spaces, or newlines.
 Identify each value by its FORMAT and CONTEXT, never by its position.
 
-- customer_name → human name word(s); NOT a reg plate, postcode, wheel position, or issue word. Single ("Qamar") or multiple ("Hilal Hussain") words both OK. CRITICAL: single-word tyre issue keywords (puncture, punctured, flat, blowout, blown, burst, busted, popped, low pressure, not sure, unsure, damaged, shredded, deflated, losing air, leaking, nail, screw) are NEVER a customer_name — leave customer_name null and set issue_type instead.
+- customer_name → human name word(s); NOT a reg plate, postcode, wheel position, or issue word. Single ("Qamar") or multiple ("Hilal Hussain") words both OK. CRITICAL: tyre issue keywords or issue-like phrases (puncture, punctured, flat, blowout, blown, burst, busted, popped, low pressure, low air pressure, losing air, losing pressure, losing air pressure, air pressure low, pressure low, tyre losing air, not sure, unsure, damaged, shredded, deflated, leaking, nail, screw, valve, rim, sidewall) are NEVER a customer_name — leave customer_name null and set issue_type instead.
 - vehicle_reg → alphanumeric plate (UK "AB12 CDE", "GB2133", "YC67PGX", or any country format — usually letters+numbers mixed). "N/A"/"no reg"/"not available" → store as NOT AVAILABLE. IMPORTANT: standard UK plate shape (2 letters + 2 digits + optional space + 3 letters, e.g. "LP21 DZE", "YC67 PGX", "AB12 CDE") is ALWAYS a vehicle_reg — never a postcode. Classify as reg first and do NOT run postcode checks on that token.
 - postcode / location → UK postcode (e.g. SW1A 1AA, E14 3RU), OR full street address with postcode, OR What3Words (three.words.like.this), OR a WhatsApp live pin. A token that matches the AB12 CDE plate shape (like "LP21 DZE") is NOT a postcode — ignore it here.
 - affected_wheels → position words: front, rear, left, right, front-left, rear-right, both front, all four.
@@ -126,7 +126,7 @@ Map natural language to system values:
 puncture → "puncture", "puncher", "nail in tyre", "screw in tyre", "slow puncture", "tyre punctured"
 flat tyre → "flat", "completely flat", "gone flat", "tyre is flat", "fully flat"
 blowout → "blowout", "blown out", "tyre exploded", "tyre burst", "burst tyre", "shredded"
-low pressure → "low pressure", "low air pressure", "losing air", "losing pressure", "air low", "needs air", "soft tyre", "slowly going down"
+low pressure → "low pressure", "low air pressure", "losing air", "losing pressure", "losing air pressure", "air pressure low", "pressure low", "tyre losing air", "air low", "needs air", "soft tyre", "slowly going down"
 not sure → "not sure", "don't know", "unsure", "something wrong", "feels weird"
 
 If description doesn't match any — store as issue_description only and ask ONE question:
