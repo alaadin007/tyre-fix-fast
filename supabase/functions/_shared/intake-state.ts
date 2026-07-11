@@ -607,20 +607,31 @@ function buildJobStateBlock(job: any, conversation: any | null, customer: any | 
   return lines.join("\n");
 }
 
-async function loadRecentHistory(supabase: Supa, phone: string, limit = 8): Promise<Array<{ role: "user" | "assistant"; content: string }>> {
+async function loadRecentHistory(
+  supabase: Supa,
+  phone: string,
+  jobId: string | null,
+  limit = 8,
+): Promise<Array<{ role: "user" | "assistant"; content: string }>> {
   try {
-    const { data } = await supabase
+    let inQ = supabase
       .from("sms_messages")
       .select("direction, body, created_at")
       .eq("from_number", phone)
       .order("created_at", { ascending: false })
       .limit(limit);
-    const { data: out } = await supabase
+    if (jobId) inQ = inQ.eq("job_id", jobId);
+
+    let outQ = supabase
       .from("sms_messages")
       .select("direction, body, created_at")
       .eq("to_number", phone)
       .order("created_at", { ascending: false })
       .limit(limit);
+    if (jobId) outQ = outQ.eq("job_id", jobId);
+
+    const { data } = await inQ;
+    const { data: out } = await outQ;
     const merged = [...(data ?? []), ...(out ?? [])]
       .filter((m: any) => m?.body)
       .sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
@@ -646,7 +657,7 @@ async function classifyWithAI(
   try {
     const systemPrompt = await loadSystemPrompt(supabase) + "\n\n" + INTENT_CLASSIFIER_SUFFIX;
     const stateBlock = buildJobStateBlock(ctx.job, ctx.conversation ?? null, ctx.customer);
-    const history = await loadRecentHistory(supabase, ctx.phone, 8);
+    const history = await loadRecentHistory(supabase, ctx.phone, ctx.job?.id ?? null, 8);
     const historyBlock = history.length
       ? "Recent conversation:\n" + history.map((h) => `${h.role === "user" ? "Customer" : "TyreFly"}: ${h.content}`).join("\n")
       : "";

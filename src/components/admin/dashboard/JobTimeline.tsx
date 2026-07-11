@@ -64,14 +64,10 @@ export function JobTimeline({
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
-      const phone = (job.customer_phone ?? "").replace(/\s+/g, "");
-      const orFilter = phone
-        ? `job_id.eq.${job.id},from_number.eq.${phone},to_number.eq.${phone}`
-        : `job_id.eq.${job.id}`;
       const { data } = await supabase
         .from("sms_messages")
         .select("id,direction,from_number,to_number,body,created_at,channel")
-        .or(orFilter)
+        .eq("job_id", job.id)
         .order("created_at", { ascending: true })
         .limit(300);
       if (!cancelled) setMessages((data ?? []) as Msg[]);
@@ -82,7 +78,7 @@ export function JobTimeline({
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "sms_messages" }, load)
       .subscribe();
     return () => { cancelled = true; supabase.removeChannel(ch); };
-  }, [job.id, job.customer_phone]);
+  }, [job.id]);
 
   const techById = useMemo(() => {
     const m = new Map<string, DashTech>();

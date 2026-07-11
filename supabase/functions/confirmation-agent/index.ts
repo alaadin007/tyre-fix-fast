@@ -16,7 +16,7 @@ const BodySchema = z.object({
   quote_id: z.string().uuid(),
 });
 
-async function send(to: string, body: string) {
+async function send(to: string, body: string, jobId: string | null = null) {
   const url = `${Deno.env.get("SUPABASE_URL")}/functions/v1/twilio-send`;
   await fetch(url, {
     method: "POST",
@@ -24,7 +24,7 @@ async function send(to: string, body: string) {
       "Content-Type": "application/json",
       Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
     },
-    body: JSON.stringify({ to, body, channel: "sms" }),
+    body: JSON.stringify({ to, body, channel: "sms", job_id: jobId }),
   });
 }
 
@@ -73,12 +73,14 @@ Deno.serve(async (req) => {
     await send(
       job.customer_phone,
       `Confirmed! ${techName} is on the way to ${job.postcode}. ETA ${quote.eta_minutes} min. Reply HELP if you need anything.`,
+      job_id,
     );
     // Technician SMS
     if (techPhone) {
       await send(
         techPhone,
         `Job confirmed: ${job.customer_name} at ${job.postcode}. £${quote.price_gbp}, ETA ${quote.eta_minutes} min. Customer phone: ${job.customer_phone}`,
+        job_id,
       );
     }
 

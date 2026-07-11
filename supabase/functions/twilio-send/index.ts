@@ -21,6 +21,7 @@ const BodySchema = z.object({
   channel: z.enum(["sms", "whatsapp"]).default("sms"),
   media_urls: z.array(z.string().url()).max(10).optional(),
   provider_preference: z.enum(["auto", "twilio", "meta"]).optional().default("auto"),
+  job_id: z.string().uuid().nullable().optional(),
 });
 
 function normalizePhone(raw: string): string {
@@ -113,6 +114,7 @@ async function logFailedOutbound(args: {
   body: string;
   channel: "sms" | "whatsapp";
   from?: string | null;
+  jobId?: string | null;
   mediaUrls?: string[];
   provider: string;
   error: string;
@@ -129,6 +131,7 @@ async function logFailedOutbound(args: {
       from_number: args.from ?? (args.channel === "whatsapp" ? FROM_WHATSAPP : FROM_SMS),
       to_number: normalizePhone(args.to),
       body: args.body,
+      job_id: args.jobId ?? null,
       twilio_sid: null,
       num_media: args.mediaUrls?.length ?? 0,
       media_urls: args.mediaUrls ?? [],
@@ -155,7 +158,7 @@ Deno.serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
-    const { to, body, channel, media_urls, provider_preference } = parsed.data;
+    const { to, body, channel, media_urls, provider_preference, job_id } = parsed.data;
 
     // For technician broadcast we can force direct Twilio WhatsApp delivery instead of
     // treating Meta's accepted-but-undelivered response as success.
@@ -168,7 +171,7 @@ Deno.serve(async (req) => {
             "Content-Type": "application/json",
             Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
           },
-          body: JSON.stringify({ to, body, media_urls }),
+          body: JSON.stringify({ to, body, media_urls, job_id }),
         },
       );
       const metaData = await metaRes.json();
@@ -200,6 +203,7 @@ Deno.serve(async (req) => {
           body,
           channel,
           mediaUrls: media_urls,
+          jobId: job_id,
           from: twilioWa.fromBase,
           provider: "meta_and_twilio",
           error: `${metaErrText}; fallback: ${twilioErr.error}`,
@@ -229,6 +233,7 @@ Deno.serve(async (req) => {
         from_number: twilioWa.fromBase,
         to_number: normalizePhone(to),
         body,
+        job_id: job_id ?? null,
         twilio_sid: twilioWa.data?.sid ?? null,
         num_media: media_urls?.length ?? 0,
         media_urls: media_urls ?? [],
@@ -264,6 +269,7 @@ Deno.serve(async (req) => {
         body,
         channel,
         mediaUrls: media_urls,
+        jobId: job_id,
         from: twilioSms.fromBase,
         provider: "twilio",
         error: twilioErr.error,
@@ -294,6 +300,7 @@ Deno.serve(async (req) => {
       from_number: twilioSms.fromBase,
       to_number: normalizePhone(to),
       body,
+      job_id: job_id ?? null,
       twilio_sid: twilioSms.data?.sid ?? null,
       num_media: media_urls?.length ?? 0,
       media_urls: media_urls ?? [],
