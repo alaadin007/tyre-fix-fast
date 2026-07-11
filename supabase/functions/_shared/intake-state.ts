@@ -210,6 +210,102 @@ export function extractName(t: string): string | null {
   return null;
 }
 
+// Words that indicate a candidate "name" is really an issue/vehicle phrase.
+// Used to decide when the regex extractor is not trustworthy and we should
+// defer to the AI classifier instead.
+const SUSPICIOUS_NAME_WORDS_RE = /\b(tyre|tire|wheel|pressure|air|flat|puncture|punctured|blowout|blown|burst|low|losing|leak|leaking|damaged|nail|screw|valve|rim|sidewall|deflated|shredded|slashed)\b/i;
+
+export function isSuspiciousNameCandidate(s: string | null | undefined): boolean {
+  if (!s) return false;
+  return SUSPICIOUS_NAME_WORDS_RE.test(s);
+}
+
+// AI-backed name extractor. Uses regex first, and only falls back to the
+// LLM when the regex result is null OR looks suspicious (contains tyre/issue
+// words). This lets natural-language variations like "low air pressure",
+// "tyre seems soft", "losing air slowly" be correctly classified as NOT a
+// name without needing an ever-growing regex.
+export async function extractNameSmart(body: string): Promise<string | null> {
+  const text = (body || "").trim();
+  if (!text) return null;
+
+  const regex = extractName(text);
+  if (regex && !isSuspiciousNameCandidate(regex)) return regex;
+
+  // Only invoke AI when there's plausibly a name to find (multi-token / mixed
+  // content). A bare issue keyword like "punctured" should just return null.
+  const tokens = text.split(/[\n,;]+/).map((s) => s.trim()).filter(Boolean);
+  const looksLikeBareIssue = tokens.length === 1 && ISSUE_WORDS_RE.test(text);
+  if (looksLikeBareIssue) return null;
+
+  const apiKey = Deno.env.get("LOVABLE_API_KEY");
+  if (!apiKey) return regex && !isSuspiciousNameCandidate(regex) ? regex : null;
+
+  try {
+    const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-3-flash-preview",
+        messages: [
+          {
+            role: "system",
+            content:
+              "You extract the customer's personal name from a WhatsApp message sent to a UK mobile tyre service. " +
+              "A name contains ONLY letters and spaces (first name, last name, or both). It is NEVER a description of a tyre problem, vehicle detail, location, wheel position, registration plate, postcode, or anything mechanical. " +
+              "If no clear personal name is present, return null. Do NOT guess. Do NOT return an issue phrase.\n" +
+              "Examples:\n" +
+              "'Kamran Zahdi' → 'Kamran Zahdi'\n" +
+              "'low air pressure' → null\n" +
+              "'tyre seems soft' → null\n" +
+              "'losing air slowly' → null\n" +
+              "'front left' → null\n" +
+              "'GB1122' → null\n" +
+              "'punctured' → null\n" +
+              "'my tyre is flat' → null\n" +
+              "'Hilal Hussain, GB1122, Front Left, Puncture' → 'Hilal Hussain'",
+          },
+          { role: "user", content: text.slice(0, 800) },
+        ],
+        tools: [{
+          type: "function",
+          function: {
+            name: "return_customer_name",
+            description: "Return the customer's personal name, or null if none present.",
+            parameters: {
+              type: "object",
+              properties: {
+                customer_name: { type: ["string", "null"] },
+              },
+              required: ["customer_name"],
+              additionalProperties: false,
+            },
+          },
+        }],
+        tool_choice: { type: "function", function: { name: "return_customer_name" } },
+      }),
+    });
+    if (!r.ok) return null;
+    const j = await r.json();
+    const call = j?.choices?.[0]?.message?.tool_calls?.[0];
+    const args = call?.function?.arguments;
+    if (!args) return null;
+    const parsed = typeof args === "string" ? JSON.parse(args) : args;
+    const raw = parsed?.customer_name;
+    if (!raw || typeof raw !== "string") return null;
+    const cleaned = raw.trim().replace(/\s+/g, " ");
+    if (!isValidPersonName(cleaned)) return null;
+    if (isSuspiciousNameCandidate(cleaned)) return null;
+    return cleaned;
+  } catch (e) {
+    console.error("extractNameSmart AI error", e);
+    return null;
+  }
+}
+
 
 const INCIDENT_RE = /(nail|screw|slow\s+puncture|flat|puncture|blow[- ]?out|blew|burst|bust(?:ed)?|popp(?:ed|ing)|shred|ripped|gash|leak|leaking|losing\s+air|going\s+down|psi|valve|damage|damaged|broken|snapp(?:ed|ing)|tear|tore|torn|cut|slash|deflat|low\s+pressure|pressure|bulge|split|crack|cracked|sidewall|kerb|curb|pothole|hit|stuck|stranded|hiss(?:ing)?|vibrat|wobbl|soft|spongy|tpms|not\s+sure|don'?t\s+know|unsure)/i;
 
