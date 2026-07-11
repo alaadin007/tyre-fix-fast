@@ -1671,8 +1671,8 @@ export async function processCustomerIntake(
       // structured fields so issue_description only holds genuine free-text.
       const extractedReg = (updates.vehicle_reg ?? job.vehicle_reg ?? "").toString().toUpperCase().replace(/\s+/g, "");
       const extractedName = (updates.customer_name ?? (job.customer_name && job.customer_name !== "Customer" ? job.customer_name : "") ?? "").toString().toLowerCase().trim();
-      const tokens = body.split(/[\n,;]+/).map((s) => s.trim()).filter(Boolean);
-      const kept = tokens.filter((p) => {
+      const issueTokens = body.split(/[\n,;]+/).map((s) => s.trim()).filter(Boolean);
+      const kept = issueTokens.filter((p) => {
         const pNorm = p.toUpperCase().replace(/\s+/g, "");
         if (extractedReg && pNorm === extractedReg) return false;
         if (extractedName && p.toLowerCase().trim() === extractedName) return false;
