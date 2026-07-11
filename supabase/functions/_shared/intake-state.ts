@@ -340,6 +340,88 @@ export function guessIssueType(t: string): string | null {
   return null;
 }
 
+const ALLOWED_ISSUE_TYPES = ["puncture", "flat tyre", "blowout", "low pressure", "not sure"] as const;
+
+// AI-backed natural-language issue classifier. Regex first for obvious phrasing;
+// AI fallback for anything the regex misses ("blew out", "went bang", "died on
+// me", "pressure dropping fast", etc). Mirrors the extractNameSmart pattern so
+// we never need to keep patching new synonyms into a regex.
+export async function guessIssueTypeSmart(text: string): Promise<string | null> {
+  const body = (text || "").trim();
+  if (!body) return null;
+  const quick = guessIssueType(body);
+  if (quick) return quick;
+  if (!hasIssueDetails(body) && body.split(/\s+/).length < 4) return null;
+
+  const apiKey = Deno.env.get("LOVABLE_API_KEY");
+  if (!apiKey) return null;
+
+  try {
+    const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "google/gemini-3-flash-preview",
+        messages: [
+          {
+            role: "system",
+            content:
+              "You classify a customer's free-text tyre problem description into ONE of: " +
+              "'puncture' (nail, screw, slow leak, hole), " +
+              "'flat tyre' (completely flat, no air, deflated), " +
+              "'blowout' (sudden explosion, loud bang, blew out, shredded, burst at speed), " +
+              "'low pressure' (gradual loss, soft, needs air, pressure dropping slowly), " +
+              "'not sure' (unclear or customer unsure). " +
+              "Return null if the message does not describe a tyre problem at all. " +
+              "Examples: 'my tyre blew out'→blowout; 'heard a loud bang and lost control'→blowout; " +
+              "'tyre seems soft'→low pressure; 'pressure dropping fast'→low pressure; " +
+              "'ran over something sharp'→puncture; 'completely flat this morning'→flat tyre; " +
+              "'not sure whats wrong'→not sure; 'hello'→null.",
+          },
+          { role: "user", content: body.slice(0, 1000) },
+        ],
+        tools: [{
+          type: "function",
+          function: {
+            name: "return_issue_type",
+            description: "Return the classified issue type, or null if not a tyre problem.",
+            parameters: {
+              type: "object",
+              properties: {
+                issue_type: { type: ["string", "null"], enum: [...ALLOWED_ISSUE_TYPES, null] },
+              },
+              required: ["issue_type"],
+              additionalProperties: false,
+            },
+          },
+        }],
+        tool_choice: { type: "function", function: { name: "return_issue_type" } },
+      }),
+    });
+    if (!r.ok) return null;
+    const j = await r.json();
+    const args = j?.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments;
+    if (!args) return null;
+    const parsed = typeof args === "string" ? JSON.parse(args) : args;
+    const raw = (parsed?.issue_type ?? "").toString().trim().toLowerCase();
+    return (ALLOWED_ISSUE_TYPES as readonly string[]).includes(raw) ? raw : null;
+  } catch (e) {
+    console.error("guessIssueTypeSmart AI error", e);
+    return null;
+  }
+}
+
+// A message longer than 8 words that clearly describes a tyre problem is
+// valuable technician context — keep the FULL original text as
+// issue_description instead of stripping structured tokens out of it.
+export function shouldKeepFullDescription(body: string): boolean {
+  const t = (body || "").trim();
+  if (!t) return false;
+  const wordCount = t.split(/\s+/).filter(Boolean).length;
+  return wordCount > 8 && hasIssueDetails(t);
+}
+
+
 async function reverseGeocodePostcode(lat: number, lng: number): Promise<string | null> {
   try {
     const r = await fetch(`https://api.postcodes.io/postcodes?lon=${lng}&lat=${lat}&limit=1`);
