@@ -4782,6 +4782,7 @@ Deno.serve(async (req) => {
       mediaUrls: customerMediaUrls,
       channel,
     });
+    await attachInboundToJob(supabase, inboundLog, outcome.job?.id ?? null);
 
     // Run vision analysis on any new photos (bounces back non-tyre photos).
     if (customerMediaUrls.length > 0 && outcome.job?.id) {
@@ -4819,6 +4820,7 @@ Deno.serve(async (req) => {
             from,
             aj.damage_summary || "That doesn't look like a tyre photo 🤔 Could you send a clear photo of the tyre/wheel?",
             channel,
+            outcome.job.id,
           );
           return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
         }
@@ -4859,7 +4861,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    await sendReply(from, outcome.reply, channel);
+    await sendReply(from, outcome.reply, channel, outcome.job?.id ?? null);
     return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
   } catch (e) {
     console.error("twilio-inbound error", e);
