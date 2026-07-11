@@ -4088,6 +4088,7 @@ Deno.serve(async (req) => {
       })();
 
       let alloc: any = refInBody?.alloc ?? (allOpen.length === 1 ? allOpen[0] : null);
+      if (alloc?.job_id) await attachInboundToJob(supabase, inboundLog, alloc.job_id);
 
       const strippedBody = body.replace(GMAPS_URL_RE, "").replace(COORD_RE, "").replace(DMS_RE, "").replace(PLAIN_LATLNG_RE, "").trim();
       const looksLikeQuoteMsg = !!strippedBody && /£|\bpound|\bgbp\b|\bquid\b|\bmin(s|ute)?\b|\d/i.test(strippedBody);
@@ -4116,10 +4117,12 @@ Deno.serve(async (req) => {
           if (allOpen.length === 0 && allClosed.length > 0) {
             // 0 open, 1+ closed → name the most recent closed job.
             const closedRef = String(allClosed[0].job_id).slice(0, 6).toUpperCase();
+            await attachInboundToJob(supabase, inboundLog, allClosed[0].job_id);
             await sendReply(
               from,
               `The quote window for Job #${closedRef} has closed (3-minute limit reached). No further quotes can be accepted for this job.`,
               channel,
+              allClosed[0].job_id,
             );
           } else {
             // 0 open, 0 closed
@@ -4161,6 +4164,7 @@ Deno.serve(async (req) => {
           from,
           `This job has been closed. The 3-minute quote window for Job Ref #${alloc.job_id.slice(0, 6)} has ended and it is no longer accepting quotes.`,
           channel,
+          alloc.job_id,
         );
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
       }
@@ -4175,7 +4179,7 @@ Deno.serve(async (req) => {
           .from("job_allocations")
           .update({ status: "declined" })
           .eq("id", alloc.id);
-        await sendReply(from, "Got it — passing on this one. Thanks for the quick reply.", channel);
+        await sendReply(from, "Got it — passing on this one. Thanks for the quick reply.", channel, alloc.job_id);
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
       }
 
@@ -4221,7 +4225,7 @@ Deno.serve(async (req) => {
           technician_id: tech.id,
           raw_body: body,
         });
-        await sendReply(from, "Sorry — we hit a snag saving your quote. Please resend price, ETA and your live location.", channel);
+        await sendReply(from, "Sorry — we hit a snag saving your quote. Please resend price, ETA and your live location.", channel, alloc.job_id);
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
       }
 
@@ -4313,6 +4317,7 @@ Deno.serve(async (req) => {
           from,
           `Thanks! For job ${shortRef} I still need:\n• ${missing.join("\n• ")}\n\n${gotLine}Please send the missing detail(s) so we can put your quote to the customer.`,
           channel,
+          alloc.job_id,
         );
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
       }
