@@ -4354,6 +4354,7 @@ Deno.serve(async (req) => {
           `We'll text you as soon as the customer makes a decision. Thank you!`,
         ].join("\n"),
         channel,
+        alloc.job_id,
       );
 
       // Notify admin/operations console with the full picture.
@@ -4428,6 +4429,7 @@ Deno.serve(async (req) => {
       // 3a. Review rating (1-5) on a closed_pending_review job
       const ratingMatch = body.match(/^\s*([1-5])\b/);
       if (ratingMatch && recentJob.status === "closed_pending_review") {
+        await attachInboundToJob(supabase, inboundLog, recentJob.id);
         const score = parseInt(ratingMatch[1], 10);
         const { data: q } = await supabase
           .from("quotes")
@@ -4442,7 +4444,7 @@ Deno.serve(async (req) => {
           comment: body,
         });
         await supabase.from("jobs").update({ status: "closed" }).eq("id", recentJob.id);
-        await sendReply(from, `Thanks for the ${score}★ rating!`, channel);
+        await sendReply(from, `Thanks for the ${score}★ rating!`, channel, recentJob.id);
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
       }
 
@@ -4450,6 +4452,7 @@ Deno.serve(async (req) => {
       // Guard: "YES CANCEL" must be routed to cancellation, not acceptance.
       const isYesCancel = /^\s*yes\s+cancel\s*$/i.test(body);
       if (isYesCancel) {
+        await attachInboundToJob(supabase, inboundLog, recentJob.id);
         await supabase.from("jobs").update({
           status: "cancelled",
           updated_at: new Date().toISOString(),
@@ -4458,12 +4461,14 @@ Deno.serve(async (req) => {
           from,
           `Your job ${jobRefOf(recentJob)} has been cancelled. If this was a mistake, just reply and we'll help.`,
           channel,
+          recentJob.id,
         );
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
       }
       const isAccept = /^\s*(yes|y|accept|ok|book it)\b/i.test(body);
       const acceptableStates = ["broadcasting", "awaiting_approval", "intake_complete", "pending"];
       if (isAccept && acceptableStates.includes(recentJob.status)) {
+        await attachInboundToJob(supabase, inboundLog, recentJob.id);
         const { data: pending } = await supabase
           .from("quotes")
           .select("*")
@@ -4503,8 +4508,8 @@ Deno.serve(async (req) => {
           const confirmMsg = payUrl
             ? `Booked! ${sym}${cheapest.price_gbp} total, ETA ${cheapest.eta_minutes} min. Pay the ${feeDisp} booking fee to confirm (deducted from final bill): ${payUrl}. Remaining ${sym}${Math.max(0, Number(cheapest.price_gbp) - feeAmt)} paid to technician on-site.`
             : `Booked! ${sym}${cheapest.price_gbp} total, ETA ${cheapest.eta_minutes} min. We'll text the ${feeDisp} booking fee link shortly (deducted from final bill).`;
-          await sendReply(from, confirmMsg, "whatsapp");
-          await sendReply(from, confirmMsg, "sms");
+          await sendReply(from, confirmMsg, "whatsapp", recentJob.id);
+          await sendReply(from, confirmMsg, "sms", recentJob.id);
           return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
         }
         // No pending quote to accept — fall through so the open-job
@@ -4737,13 +4742,14 @@ Deno.serve(async (req) => {
               },
             });
         if (relation === "same_job") {
+          await attachInboundToJob(supabase, inboundLog, recentJob.id);
           const ref = jobRefOf(recentJob);
           const statusTxt = String(recentJob.status).replace(/_/g, " ");
           const reply =
             `Thanks! We've already got your job *#${ref}* (${statusTxt}) on file ` +
             `and our team is working on it — we'll be in touch shortly with a price and ETA.\n\n` +
             `If this is a *different* tyre problem, reply *NEW JOB* to start a new booking.`;
-          await sendReply(from, reply, channel);
+          await sendReply(from, reply, channel, recentJob.id);
           return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
         }
         // relation === "new_job" → fall through to intake (starts a fresh job).
