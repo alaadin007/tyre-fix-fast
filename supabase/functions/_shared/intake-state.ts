@@ -144,7 +144,13 @@ const NAME_BLOCKLIST = new Set([
 // Single-word tyre issue keywords that must NEVER be treated as a customer name.
 // Keep in sync with the Customer AI Instructions page (fallback prompt) so the
 // AI-driven path and the offline regex path stay consistent.
-const ISSUE_WORDS_RE = /^\s*(puncture[d]?|flat|blowout|blown|burst|bust(?:ed)?|popp(?:ed)?|low\s*pressure|not\s*sure|unsure|damaged?|shredded?|deflated?|losing\s*air|leak(?:ing)?|nail|screw)\s*$/i;
+const ISSUE_WORDS_RE = /^\s*(puncture[d]?|slow\s*puncture|flat(?:\s*tyre)?|blowout|blown(?:\s*out)?|burst|bust(?:ed)?|popp(?:ed)?|low[\s\w]{0,10}pressure|losing[\s\w]{0,10}(?:air|pressure)|air[\s\w]{0,10}pressure(?:[\s\w]{0,10}low)?|pressure[\s\w]{0,10}low|not\s*sure|unsure|damaged?|shredded?|deflated?|leak(?:ing)?|nail(?:\s*in\s*(?:tyre)?)?|screw(?:\s*in\s*(?:tyre)?)?|tyre\s*(?:gone|damaged|burst|flat|blown|losing\s*air))\s*$/i;
+
+function isIssueLikeNameCandidate(s: string): boolean {
+  const hasTyreWord = /\b(tyre|tire|wheel|pressure|air|puncture|flat|blowout|nail|screw|valve|rim|sidewall)\b/i.test(s);
+  const hasProblemWord = /\b(low|flat|burst|blown|losing|leaking|damaged|gone|deflated|pressure|punctured|slow)\b/i.test(s);
+  return hasTyreWord || hasProblemWord;
+}
 
 export function isValidPersonName(s: string | null | undefined): boolean {
   if (!s) return false;
@@ -153,6 +159,7 @@ export function isValidPersonName(s: string | null | undefined): boolean {
   if (cleaned.toLowerCase() === "customer") return false;
   // Guard: single-word tyre issue keywords are never valid names.
   if (ISSUE_WORDS_RE.test(cleaned)) return false;
+  if (isIssueLikeNameCandidate(cleaned)) return false;
   const lower = cleaned.toLowerCase();
   if (NAME_BLOCKLIST.has(lower)) return false;
   if (!/^[A-Za-z][A-Za-z .'-]{1,38}$/.test(cleaned)) return false;
@@ -188,6 +195,7 @@ export function extractName(t: string): string | null {
   if (tokens.length > 1) {
     for (const line of tokens) {
       if (ISSUE_WORDS_RE.test(line)) continue;
+      if (isIssueLikeNameCandidate(line)) continue;
       if (extractReg(line)) continue;
       if (extractPostcode(line)) continue;
       if (extractWheels(line).length > 0) continue;
