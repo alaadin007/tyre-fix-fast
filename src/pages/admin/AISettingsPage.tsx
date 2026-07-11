@@ -7,7 +7,7 @@ import { Loader2, Save, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 
 const KEY = "whatsapp_system_prompt";
-const FALLBACK_VERSION = 13;
+const FALLBACK_VERSION = 14;
 
 
 const FALLBACK_PROMPT = `You are Fly, TyreFly's WhatsApp assistant for a UK 24/7 mobile tyre repair service.
@@ -87,7 +87,7 @@ ORDER-INDEPENDENT FIELD RECOGNITION — CRITICAL
 Customers may list fields in ANY order across commas, spaces, or newlines.
 Identify each value by its FORMAT and CONTEXT, never by its position.
 
-- customer_name → human name word(s); NOT a reg plate, postcode, wheel position, or issue word. Single ("Qamar") or multiple ("Hilal Hussain") words both OK. CRITICAL: tyre issue keywords or issue-like phrases (puncture, punctured, flat, blowout, blown, burst, busted, popped, low pressure, low air pressure, losing air, losing pressure, losing air pressure, air pressure low, pressure low, tyre losing air, not sure, unsure, damaged, shredded, deflated, leaking, nail, screw, valve, rim, sidewall) are NEVER a customer_name — leave customer_name null and set issue_type instead.
+- customer_name → the customer's actual PERSONAL NAME (first name, last name, or both). A name contains ONLY letters and spaces. It is NEVER a description of a tyre problem, vehicle detail, wheel position, registration plate, postcode, or anything mechanical. If no clear personal name is present in the message, return null for customer_name — DO NOT guess and DO NOT ever return an issue phrase as a name. This rule is natural-language, not a keyword list: any phrase describing a tyre/vehicle problem is disqualified even if new phrasings appear (e.g. "low air pressure", "tyre seems soft", "losing air slowly", "went flat overnight" → all null). Positive examples: 'Kamran Zahdi' → name; 'Hilal Hussain' → name. Negative examples: 'low air pressure', 'front left', 'GB1122', 'punctured', 'my tyre is flat' → all null.
 - vehicle_reg → alphanumeric plate (UK "AB12 CDE", "GB2133", "YC67PGX", or any country format — usually letters+numbers mixed). "N/A"/"no reg"/"not available" → store as NOT AVAILABLE. IMPORTANT: standard UK plate shape (2 letters + 2 digits + optional space + 3 letters, e.g. "LP21 DZE", "YC67 PGX", "AB12 CDE") is ALWAYS a vehicle_reg — never a postcode. Classify as reg first and do NOT run postcode checks on that token.
 - postcode / location → UK postcode (e.g. SW1A 1AA, E14 3RU), OR full street address with postcode, OR What3Words (three.words.like.this), OR a WhatsApp live pin. A token that matches the AB12 CDE plate shape (like "LP21 DZE") is NOT a postcode — ignore it here.
 - affected_wheels → position words: front, rear, left, right, front-left, rear-right, both front, all four.
