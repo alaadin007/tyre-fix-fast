@@ -1322,7 +1322,7 @@ async function sendQuoteToCustomer(
       paymentSection +
       `Thank you.\n— Tyre Fly`;
 
-    await sendReply(jobRow.customer_phone, customerBody, "whatsapp");
+    await sendReply(jobRow.customer_phone, customerBody, "whatsapp", jobId);
     return {
       ok: true,
       price: Number(mergedPrice),
@@ -1439,7 +1439,7 @@ async function shareContactsForJobId(
         ``,
         `— Tyre Fly`,
       ].join("\n");
-      await sendReply(job.customer_phone, customerMsg, "whatsapp");
+      await sendReply(job.customer_phone, customerMsg, "whatsapp", jobId);
     }
 
     // ===== Technician message: customer details =====
@@ -1466,7 +1466,7 @@ async function shareContactsForJobId(
       ``,
       `When the job is complete, reply: Done ${ref}`,
     ].join("\n");
-    await sendReply(tech.phone, techMsg, "whatsapp");
+    await sendReply(tech.phone, techMsg, "whatsapp", jobId);
 
     await supabase.from("jobs").update({
       status: "in_progress",
@@ -1623,8 +1623,9 @@ Deno.serve(async (req) => {
           .maybeSingle();
         if (tech && tech.approval_status === "approved") {
           const closeJob = async (job: any, shortRef: string) => {
+            await attachInboundToJob(supabase, inboundLog, job.id);
             if (job.status === "completed" || job.status === "closed" || job.status === "closed_pending_review") {
-              await sendReply(from, `Job ${shortRef} is already closed ✅`, channel);
+              await sendReply(from, `Job ${shortRef} is already closed ✅`, channel, job.id);
               return;
             }
             await supabase
@@ -1637,12 +1638,13 @@ Deno.serve(async (req) => {
               body: `${tech.name} marked job ${shortRef} as done.`,
               job_id: job.id,
             });
-            await sendReply(from, `✅ Job ${shortRef} marked as complete. Thanks ${tech.name}! 👏`, channel);
+            await sendReply(from, `✅ Job ${shortRef} marked as complete. Thanks ${tech.name}! 👏`, channel, job.id);
             if (job.customer_phone) {
               await sendReply(
                 job.customer_phone,
                 `✅ Your tyre service is complete — Job #${shortRef}.\n\nThanks for choosing Tyre Fly! 🛞`,
                 "whatsapp",
+                job.id,
               );
             }
           };
