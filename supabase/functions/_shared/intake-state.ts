@@ -1630,33 +1630,38 @@ export async function processCustomerIntake(
 
   // Issue description / type
   if (hasIssueDetails(body)) {
-    // Strip tokens that were classified as structured fields (name, reg,
-    // wheels, postcode, bare issue keyword) so issue_description only holds
-    // genuine free-text problem descriptions.
-    const extractedReg = (updates.vehicle_reg ?? job.vehicle_reg ?? "").toString().toUpperCase().replace(/\s+/g, "");
-    const extractedName = (updates.customer_name ?? (job.customer_name && job.customer_name !== "Customer" ? job.customer_name : "") ?? "").toString().toLowerCase().trim();
-    const tokens = body.split(/[\n,;]+/).map((s) => s.trim()).filter(Boolean);
-    const kept = tokens.filter((p) => {
-      const pNorm = p.toUpperCase().replace(/\s+/g, "");
-      // Match against the reg we actually extracted (handles "GB1122" tokens
-      // that per-token extractReg wouldn't recognise on their own).
-      if (extractedReg && pNorm === extractedReg) return false;
-      if (extractedName && p.toLowerCase().trim() === extractedName) return false;
-      if (extractReg(p)) return false;
-      if (extractWheels(p).length > 0) return false;
-      if (extractPostcode(p)) return false;
-      if (extractName(p) && !INCIDENT_RE.test(p)) return false;
-      // Bare issue-type keyword (e.g. "flat", "puncture") with no other context
-      if (p.split(/\s+/).length <= 3 && guessIssueType(p) && !/\b(nail|screw|sidewall|leak|hiss|kerb|curb|pothole|hit|bulge|split|crack|valve|tpms)\b/i.test(p)) return false;
-      return true;
-    });
-    const cleaned = kept.join(", ").trim();
-    if (cleaned && hasIssueDetails(cleaned)) {
-      updates.issue_description = [job.issue_description, cleaned].filter(Boolean).join("\n").slice(0, 2000);
+    if (shouldKeepFullDescription(body)) {
+      // Rich natural-language description — keep the FULL original text so
+      // technicians get the customer's own context ("driving on the M25, heard
+      // a bang, tyre blew out and car pulled to one side").
+      const full = body.trim().slice(0, 2000);
+      updates.issue_description = [job.issue_description, full].filter(Boolean).join("\n").slice(0, 2000);
+    } else {
+      // Short / structured message — strip tokens already captured as
+      // structured fields so issue_description only holds genuine free-text.
+      const extractedReg = (updates.vehicle_reg ?? job.vehicle_reg ?? "").toString().toUpperCase().replace(/\s+/g, "");
+      const extractedName = (updates.customer_name ?? (job.customer_name && job.customer_name !== "Customer" ? job.customer_name : "") ?? "").toString().toLowerCase().trim();
+      const tokens = body.split(/[\n,;]+/).map((s) => s.trim()).filter(Boolean);
+      const kept = tokens.filter((p) => {
+        const pNorm = p.toUpperCase().replace(/\s+/g, "");
+        if (extractedReg && pNorm === extractedReg) return false;
+        if (extractedName && p.toLowerCase().trim() === extractedName) return false;
+        if (extractReg(p)) return false;
+        if (extractWheels(p).length > 0) return false;
+        if (extractPostcode(p)) return false;
+        if (extractName(p) && !INCIDENT_RE.test(p)) return false;
+        if (p.split(/\s+/).length <= 3 && guessIssueType(p) && !/\b(nail|screw|sidewall|leak|hiss|kerb|curb|pothole|hit|bulge|split|crack|valve|tpms)\b/i.test(p)) return false;
+        return true;
+      });
+      const cleaned = kept.join(", ").trim();
+      if (cleaned && hasIssueDetails(cleaned)) {
+        updates.issue_description = [job.issue_description, cleaned].filter(Boolean).join("\n").slice(0, 2000);
+      }
     }
-    const it = guessIssueType(body);
+    const it = await guessIssueTypeSmart(body);
     if (it) updates.issue_type = it;
   }
+
 
 
   // Wheels
