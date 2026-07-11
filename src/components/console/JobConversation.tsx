@@ -33,8 +33,27 @@ export function JobConversation({
       // Match by job_id OR by customer phone (intake messages may not yet have job_id)
       const phone = (customerPhone || "").replace(/\s+/g, "");
       const jobStartTime = new Date(new Date(jobCreatedAt).getTime() - 10 * 60 * 1000).toISOString();
+
+      // Upper bound: the next job for the same customer phone, so we don't
+      // pull in messages from later jobs by returning customers.
+      let nextJobCutoff: string | null = null;
+      if (phone) {
+        const { data: nextJob } = await supabase
+          .from("jobs")
+          .select("created_at")
+          .eq("customer_phone", phone)
+          .gt("created_at", jobCreatedAt)
+          .order("created_at", { ascending: true })
+          .limit(1)
+          .maybeSingle();
+        nextJobCutoff = nextJob?.created_at ?? null;
+      }
+
+      const phoneRange = nextJobCutoff
+        ? `created_at.gte.${jobStartTime},created_at.lt.${nextJobCutoff}`
+        : `created_at.gte.${jobStartTime}`;
       const orFilter = phone
-        ? `job_id.eq.${jobId},and(from_number.eq.${phone},created_at.gte.${jobStartTime}),and(to_number.eq.${phone},created_at.gte.${jobStartTime})`
+        ? `job_id.eq.${jobId},and(from_number.eq.${phone},${phoneRange}),and(to_number.eq.${phone},${phoneRange})`
         : `job_id.eq.${jobId}`;
       const { data, error } = await supabase
         .from("sms_messages")
