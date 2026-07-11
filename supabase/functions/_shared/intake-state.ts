@@ -1694,11 +1694,12 @@ export async function processCustomerIntake(
 
 
 
-  // Wheels
-  const wheels = extractWheels(body);
+  // Wheels — check each comma/newline token individually and merge with existing
+  const wheels = tokens.flatMap((t) => extractWheels(t)).filter(Boolean);
   if (wheels.length > 0) {
-    updates.affected_wheels = wheels;
+    updates.affected_wheels = [...new Set([...(job.affected_wheels ?? []), ...wheels])];
   }
+
 
   // Tyre size
   if (!job.tyre_size) {
