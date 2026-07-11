@@ -1536,7 +1536,7 @@ export async function processCustomerIntake(
 
   // Name
   if (!job.customer_name || job.customer_name === "Customer" || !isValidPersonName(job.customer_name)) {
-    const nm = extractName(body);
+    const nm = await extractNameSmart(body);
     if (nm) updates.customer_name = nm;
   }
 
