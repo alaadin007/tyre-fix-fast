@@ -1235,7 +1235,7 @@ export async function processCustomerIntake(
     // Mercedes van"). Never waste information the customer already provided —
     // it saves them from re-typing it into the intake form.
     const prefillReg = seededReg ?? extractReg(body) ?? null;
-    const parsedName = extractName(body);
+    const parsedName = await extractNameSmart(body);
     const prefillName = (seededName && seededName !== "Customer")
       ? seededName
       : (isValidPersonName(parsedName ?? "") ? parsedName! : "Customer");
