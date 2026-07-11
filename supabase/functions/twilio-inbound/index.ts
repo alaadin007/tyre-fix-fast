@@ -1898,6 +1898,7 @@ Deno.serve(async (req) => {
           return;
         }
         const job: any = matches[0];
+        await attachInboundToJob(supabase, inboundLog, job.id);
         const shortRef = String(job.id).slice(0, 6).toUpperCase();
         const scored = await scoreNearbyTechs(job);
         if (scored.length === 0) {
@@ -1939,11 +1940,11 @@ Deno.serve(async (req) => {
             `──────────────────────`,
             `Waiting for quotes...`,
           ].join("\n");
-          await sendReply(from, msg, channel);
+          await sendReply(from, msg, channel, job.id);
         } else {
           const err = bJson?.error ? ` (${String(bJson.error).slice(0, 140)})` : "";
           await sendReply(from,
-            `⚠️ Broadcast for job #${shortRef} failed — ${sent}/${total} delivered${err}.`, channel);
+            `⚠️ Broadcast for job #${shortRef} failed — ${sent}/${total} delivered${err}.`, channel, job.id);
         }
       };
 
@@ -2127,7 +2128,7 @@ Deno.serve(async (req) => {
           `Please tap your preferred payment link to confirm your booking. Once payment is confirmed, your technician will proceed to your location.\n\n` +
           `Thank you.\n— Tyre Fly`;
 
-        await sendReply(jobRow.customer_phone, body, "whatsapp");
+        await sendReply(jobRow.customer_phone, body, "whatsapp", jobIdFull);
         return { ok: true, count: options.length, customerPhone: jobRow.customer_phone };
       };
 
@@ -2513,11 +2514,12 @@ Deno.serve(async (req) => {
           sections.push(`✓ By tech ID: update TECH-XXXX price for #${shortRef} to £45`);
         }
 
-        await sendReply(from, sections.join("\n"), channel);
+        await sendReply(from, sections.join("\n"), channel, job.id);
       };
 
       // Helper: share customer ↔ technician contact details after admin approval.
       const runShareContactsForJobId = async (jobIdFull: string) => {
+        await attachInboundToJob(supabase, inboundLog, jobIdFull);
         const shortRef = String(jobIdFull).slice(0, 6).toUpperCase();
         const res = await shareContactsForJobId(supabase, jobIdFull);
         await clearAdminState();
