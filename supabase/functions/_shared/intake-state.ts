@@ -1627,11 +1627,24 @@ export async function processCustomerIntake(
   }
 
 
-  // Plate
+  // Split into tokens first for order-independent field extraction
+  const tokens = body.split(/[\n,]+/).map((t) => t.trim()).filter(Boolean);
+
+  // Plate — check each comma/newline token individually, then fall back to the full body
   if (!job.vehicle_reg) {
-    const reg = extractReg(body);
-    if (reg) updates.vehicle_reg = reg;
+    for (const token of tokens) {
+      const reg = extractReg(token);
+      if (reg) {
+        updates.vehicle_reg = reg;
+        break;
+      }
+    }
+    if (!updates.vehicle_reg) {
+      const reg = extractReg(body);
+      if (reg) updates.vehicle_reg = reg;
+    }
   }
+
 
   // Name
   if (!job.customer_name || job.customer_name === "Customer" || !isValidPersonName(job.customer_name)) {
