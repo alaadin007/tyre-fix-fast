@@ -13,7 +13,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-async function sendReply(to: string, body: string, channel = "whatsapp") {
+async function sendReply(to: string, body: string, channel = "whatsapp", jobId: string | null = null) {
   const url = `${Deno.env.get("SUPABASE_URL")}/functions/v1/twilio-send`;
   const r = await fetch(url, {
     method: "POST",
@@ -21,7 +21,7 @@ async function sendReply(to: string, body: string, channel = "whatsapp") {
       "Content-Type": "application/json",
       Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
     },
-    body: JSON.stringify({ to, body, channel }),
+    body: JSON.stringify({ to, body, channel, job_id: jobId }),
   });
   const data = await r.json().catch(() => ({}));
   if (!r.ok || data?.error) {
@@ -125,7 +125,7 @@ Deno.serve(async (req) => {
         ``,
         `— Tyre Fly`,
       ].join("\n");
-      await sendReply(job.customer_phone, customerMsg, "whatsapp");
+      await sendReply(job.customer_phone, customerMsg, "whatsapp", job_id);
     }
 
     const paidLine = `✅ Payment received.`;
@@ -152,7 +152,7 @@ Deno.serve(async (req) => {
       ``,
       `When the job is complete, reply: Done ${ref}`,
     ].join("\n");
-    await sendReply(tech.phone, techMsg, "whatsapp");
+    await sendReply(tech.phone, techMsg, "whatsapp", job_id);
 
     await supabase.from("jobs").update({ status: "in_progress", assignment_status: "details_sent" }).eq("id", job_id);
     await supabase.from("ops_alerts").insert({

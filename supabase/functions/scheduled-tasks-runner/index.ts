@@ -8,7 +8,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-async function send(to: string, body: string) {
+async function send(to: string, body: string, jobId: string | null = null) {
   const url = `${Deno.env.get("SUPABASE_URL")}/functions/v1/twilio-send`;
   await fetch(url, {
     method: "POST",
@@ -16,7 +16,7 @@ async function send(to: string, body: string) {
       "Content-Type": "application/json",
       Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
     },
-    body: JSON.stringify({ to, body, channel: "sms" }),
+    body: JSON.stringify({ to, body, channel: "sms", job_id: jobId }),
   });
 }
 
@@ -55,6 +55,7 @@ Deno.serve(async (req) => {
             await send(
               job.customer_phone,
               `Hi ${job.customer_name}, how was your tyre service today? Reply 1–5 (5 = great).`,
+              job_id,
             );
           }
         } else if (t.kind === "silence_check") {

@@ -497,7 +497,7 @@ async function aiExtractTechProfile(args: {
   }
 }
 
-async function sendReply(to: string, body: string, channel: "sms" | "whatsapp") {
+async function sendReply(to: string, body: string, channel: "sms" | "whatsapp", jobId: string | null = null) {
   const url = `${Deno.env.get("SUPABASE_URL")}/functions/v1/twilio-send`;
   try {
     const r = await fetch(url, {
@@ -506,7 +506,7 @@ async function sendReply(to: string, body: string, channel: "sms" | "whatsapp") 
         "Content-Type": "application/json",
         Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
       },
-      body: JSON.stringify({ to, body, channel }),
+      body: JSON.stringify({ to, body, channel, job_id: jobId }),
     });
     if (!r.ok) {
       const text = await r.text().catch(() => "");
@@ -526,6 +526,19 @@ async function sendReply(to: string, body: string, channel: "sms" | "whatsapp") 
       channel,
       error: e instanceof Error ? e.message : String(e),
     });
+  }
+}
+
+async function attachInboundToJob(supabase: any, inboundLog: any, jobId: string | null | undefined) {
+  if (!inboundLog?.id || !jobId) return;
+  try {
+    await supabase
+      .from("sms_messages")
+      .update({ job_id: jobId })
+      .eq("id", inboundLog.id)
+      .is("job_id", null);
+  } catch (e) {
+    console.error("attach inbound sms_messages.job_id failed", e);
   }
 }
 

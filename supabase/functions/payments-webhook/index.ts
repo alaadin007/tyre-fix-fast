@@ -15,7 +15,7 @@ function getSupabase() {
   return _supabase;
 }
 
-async function sendMsg(to: string, body: string, channel: "sms" | "whatsapp" = "whatsapp") {
+async function sendMsg(to: string, body: string, channel: "sms" | "whatsapp" = "whatsapp", jobId: string | null = null) {
   try {
     await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/twilio-send`, {
       method: "POST",
@@ -23,7 +23,7 @@ async function sendMsg(to: string, body: string, channel: "sms" | "whatsapp" = "
         "Content-Type": "application/json",
         Authorization: `Bearer ${Deno.env.get("SUPABASE_ANON_KEY")}`,
       },
-      body: JSON.stringify({ to, body, channel }),
+      body: JSON.stringify({ to, body, channel, job_id: jobId }),
     });
   } catch (e) {
     console.error("sendMsg failed:", e);
@@ -132,7 +132,7 @@ async function handleCheckoutCompleted(session: any) {
       `Thank you.`,
       `— Tyre Fly`,
     ].join("\n");
-    await sendMsg(job.customer_phone, customerMsg, "whatsapp");
+    await sendMsg(job.customer_phone, customerMsg, "whatsapp", jobId);
   }
 
   // ===== Fetch assigned technician + accepted quote for admin notification =====
@@ -203,7 +203,7 @@ async function handleCheckoutCompleted(session: any) {
   ].join("\n");
 
   for (const to of masterNumbers) {
-    await sendMsg(to, compactMsg, "whatsapp");
+    await sendMsg(to, compactMsg, "whatsapp", jobId);
 
     try {
       const normalized = to.replace(/^whatsapp:/, "").replace(/[^\d+]/g, "");
