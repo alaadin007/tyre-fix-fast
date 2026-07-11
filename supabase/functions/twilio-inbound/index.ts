@@ -497,7 +497,7 @@ async function aiExtractTechProfile(args: {
   }
 }
 
-async function sendReply(to: string, body: string, channel: "sms" | "whatsapp", jobId: string | null = null) {
+async function sendReply(to: string, body: string, channel: "sms" | "whatsapp") {
   const url = `${Deno.env.get("SUPABASE_URL")}/functions/v1/twilio-send`;
   try {
     const r = await fetch(url, {
@@ -506,7 +506,7 @@ async function sendReply(to: string, body: string, channel: "sms" | "whatsapp", 
         "Content-Type": "application/json",
         Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
       },
-      body: JSON.stringify({ to, body, channel, job_id: jobId }),
+      body: JSON.stringify({ to, body, channel }),
     });
     if (!r.ok) {
       const text = await r.text().catch(() => "");
@@ -526,19 +526,6 @@ async function sendReply(to: string, body: string, channel: "sms" | "whatsapp", 
       channel,
       error: e instanceof Error ? e.message : String(e),
     });
-  }
-}
-
-async function attachInboundToJob(supabase: any, inboundLog: any, jobId: string | null | undefined) {
-  if (!inboundLog?.id || !jobId) return;
-  try {
-    await supabase
-      .from("sms_messages")
-      .update({ job_id: jobId })
-      .eq("id", inboundLog.id)
-      .is("job_id", null);
-  } catch (e) {
-    console.error("attach inbound sms_messages.job_id failed", e);
   }
 }
 
@@ -1322,7 +1309,7 @@ async function sendQuoteToCustomer(
       paymentSection +
       `Thank you.\n— Tyre Fly`;
 
-    await sendReply(jobRow.customer_phone, customerBody, "whatsapp", jobId);
+    await sendReply(jobRow.customer_phone, customerBody, "whatsapp");
     return {
       ok: true,
       price: Number(mergedPrice),
@@ -1439,7 +1426,7 @@ async function shareContactsForJobId(
         ``,
         `— Tyre Fly`,
       ].join("\n");
-      await sendReply(job.customer_phone, customerMsg, "whatsapp", jobId);
+      await sendReply(job.customer_phone, customerMsg, "whatsapp");
     }
 
     // ===== Technician message: customer details =====
@@ -1466,7 +1453,7 @@ async function shareContactsForJobId(
       ``,
       `When the job is complete, reply: Done ${ref}`,
     ].join("\n");
-    await sendReply(tech.phone, techMsg, "whatsapp", jobId);
+    await sendReply(tech.phone, techMsg, "whatsapp");
 
     await supabase.from("jobs").update({
       status: "in_progress",
@@ -1599,7 +1586,6 @@ Deno.serve(async (req) => {
       from_number: from,
       to_number: to,
       body,
-      job_id: null,
       twilio_sid: sid,
       num_media: numMedia,
       media_urls: mediaUrls,
@@ -1624,9 +1610,8 @@ Deno.serve(async (req) => {
           .maybeSingle();
         if (tech && tech.approval_status === "approved") {
           const closeJob = async (job: any, shortRef: string) => {
-            await attachInboundToJob(supabase, inboundLog, job.id);
             if (job.status === "completed" || job.status === "closed" || job.status === "closed_pending_review") {
-              await sendReply(from, `Job ${shortRef} is already closed ✅`, channel, job.id);
+              await sendReply(from, `Job ${shortRef} is already closed ✅`, channel);
               return;
             }
             await supabase
@@ -1639,13 +1624,12 @@ Deno.serve(async (req) => {
               body: `${tech.name} marked job ${shortRef} as done.`,
               job_id: job.id,
             });
-            await sendReply(from, `✅ Job ${shortRef} marked as complete. Thanks ${tech.name}! 👏`, channel, job.id);
+            await sendReply(from, `✅ Job ${shortRef} marked as complete. Thanks ${tech.name}! 👏`, channel);
             if (job.customer_phone) {
               await sendReply(
                 job.customer_phone,
                 `✅ Your tyre service is complete — Job #${shortRef}.\n\nThanks for choosing Tyre Fly! 🛞`,
                 "whatsapp",
-                job.id,
               );
             }
           };
@@ -1899,7 +1883,6 @@ Deno.serve(async (req) => {
           return;
         }
         const job: any = matches[0];
-        await attachInboundToJob(supabase, inboundLog, job.id);
         const shortRef = String(job.id).slice(0, 6).toUpperCase();
         const scored = await scoreNearbyTechs(job);
         if (scored.length === 0) {
@@ -1941,11 +1924,11 @@ Deno.serve(async (req) => {
             `──────────────────────`,
             `Waiting for quotes...`,
           ].join("\n");
-          await sendReply(from, msg, channel, job.id);
+          await sendReply(from, msg, channel);
         } else {
           const err = bJson?.error ? ` (${String(bJson.error).slice(0, 140)})` : "";
           await sendReply(from,
-            `⚠️ Broadcast for job #${shortRef} failed — ${sent}/${total} delivered${err}.`, channel, job.id);
+            `⚠️ Broadcast for job #${shortRef} failed — ${sent}/${total} delivered${err}.`, channel);
         }
       };
 
@@ -2129,7 +2112,7 @@ Deno.serve(async (req) => {
           `Please tap your preferred payment link to confirm your booking. Once payment is confirmed, your technician will proceed to your location.\n\n` +
           `Thank you.\n— Tyre Fly`;
 
-        await sendReply(jobRow.customer_phone, body, "whatsapp", jobIdFull);
+        await sendReply(jobRow.customer_phone, body, "whatsapp");
         return { ok: true, count: options.length, customerPhone: jobRow.customer_phone };
       };
 
@@ -2515,12 +2498,11 @@ Deno.serve(async (req) => {
           sections.push(`✓ By tech ID: update TECH-XXXX price for #${shortRef} to £45`);
         }
 
-        await sendReply(from, sections.join("\n"), channel, job.id);
+        await sendReply(from, sections.join("\n"), channel);
       };
 
       // Helper: share customer ↔ technician contact details after admin approval.
       const runShareContactsForJobId = async (jobIdFull: string) => {
-        await attachInboundToJob(supabase, inboundLog, jobIdFull);
         const shortRef = String(jobIdFull).slice(0, 6).toUpperCase();
         const res = await shareContactsForJobId(supabase, jobIdFull);
         await clearAdminState();
@@ -4089,7 +4071,6 @@ Deno.serve(async (req) => {
       })();
 
       let alloc: any = refInBody?.alloc ?? (allOpen.length === 1 ? allOpen[0] : null);
-      if (alloc?.job_id) await attachInboundToJob(supabase, inboundLog, alloc.job_id);
 
       const strippedBody = body.replace(GMAPS_URL_RE, "").replace(COORD_RE, "").replace(DMS_RE, "").replace(PLAIN_LATLNG_RE, "").trim();
       const looksLikeQuoteMsg = !!strippedBody && /£|\bpound|\bgbp\b|\bquid\b|\bmin(s|ute)?\b|\d/i.test(strippedBody);
@@ -4118,12 +4099,10 @@ Deno.serve(async (req) => {
           if (allOpen.length === 0 && allClosed.length > 0) {
             // 0 open, 1+ closed → name the most recent closed job.
             const closedRef = String(allClosed[0].job_id).slice(0, 6).toUpperCase();
-            await attachInboundToJob(supabase, inboundLog, allClosed[0].job_id);
             await sendReply(
               from,
               `The quote window for Job #${closedRef} has closed (3-minute limit reached). No further quotes can be accepted for this job.`,
               channel,
-              allClosed[0].job_id,
             );
           } else {
             // 0 open, 0 closed
@@ -4165,7 +4144,6 @@ Deno.serve(async (req) => {
           from,
           `This job has been closed. The 3-minute quote window for Job Ref #${alloc.job_id.slice(0, 6)} has ended and it is no longer accepting quotes.`,
           channel,
-          alloc.job_id,
         );
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
       }
@@ -4180,7 +4158,7 @@ Deno.serve(async (req) => {
           .from("job_allocations")
           .update({ status: "declined" })
           .eq("id", alloc.id);
-        await sendReply(from, "Got it — passing on this one. Thanks for the quick reply.", channel, alloc.job_id);
+        await sendReply(from, "Got it — passing on this one. Thanks for the quick reply.", channel);
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
       }
 
@@ -4226,7 +4204,7 @@ Deno.serve(async (req) => {
           technician_id: tech.id,
           raw_body: body,
         });
-        await sendReply(from, "Sorry — we hit a snag saving your quote. Please resend price, ETA and your live location.", channel, alloc.job_id);
+        await sendReply(from, "Sorry — we hit a snag saving your quote. Please resend price, ETA and your live location.", channel);
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
       }
 
@@ -4318,7 +4296,6 @@ Deno.serve(async (req) => {
           from,
           `Thanks! For job ${shortRef} I still need:\n• ${missing.join("\n• ")}\n\n${gotLine}Please send the missing detail(s) so we can put your quote to the customer.`,
           channel,
-          alloc.job_id,
         );
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
       }
@@ -4355,7 +4332,6 @@ Deno.serve(async (req) => {
           `We'll text you as soon as the customer makes a decision. Thank you!`,
         ].join("\n"),
         channel,
-        alloc.job_id,
       );
 
       // Notify admin/operations console with the full picture.
@@ -4430,7 +4406,6 @@ Deno.serve(async (req) => {
       // 3a. Review rating (1-5) on a closed_pending_review job
       const ratingMatch = body.match(/^\s*([1-5])\b/);
       if (ratingMatch && recentJob.status === "closed_pending_review") {
-        await attachInboundToJob(supabase, inboundLog, recentJob.id);
         const score = parseInt(ratingMatch[1], 10);
         const { data: q } = await supabase
           .from("quotes")
@@ -4445,7 +4420,7 @@ Deno.serve(async (req) => {
           comment: body,
         });
         await supabase.from("jobs").update({ status: "closed" }).eq("id", recentJob.id);
-        await sendReply(from, `Thanks for the ${score}★ rating!`, channel, recentJob.id);
+        await sendReply(from, `Thanks for the ${score}★ rating!`, channel);
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
       }
 
@@ -4453,7 +4428,6 @@ Deno.serve(async (req) => {
       // Guard: "YES CANCEL" must be routed to cancellation, not acceptance.
       const isYesCancel = /^\s*yes\s+cancel\s*$/i.test(body);
       if (isYesCancel) {
-        await attachInboundToJob(supabase, inboundLog, recentJob.id);
         await supabase.from("jobs").update({
           status: "cancelled",
           updated_at: new Date().toISOString(),
@@ -4462,14 +4436,12 @@ Deno.serve(async (req) => {
           from,
           `Your job ${jobRefOf(recentJob)} has been cancelled. If this was a mistake, just reply and we'll help.`,
           channel,
-          recentJob.id,
         );
         return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
       }
       const isAccept = /^\s*(yes|y|accept|ok|book it)\b/i.test(body);
       const acceptableStates = ["broadcasting", "awaiting_approval", "intake_complete", "pending"];
       if (isAccept && acceptableStates.includes(recentJob.status)) {
-        await attachInboundToJob(supabase, inboundLog, recentJob.id);
         const { data: pending } = await supabase
           .from("quotes")
           .select("*")
@@ -4509,8 +4481,8 @@ Deno.serve(async (req) => {
           const confirmMsg = payUrl
             ? `Booked! ${sym}${cheapest.price_gbp} total, ETA ${cheapest.eta_minutes} min. Pay the ${feeDisp} booking fee to confirm (deducted from final bill): ${payUrl}. Remaining ${sym}${Math.max(0, Number(cheapest.price_gbp) - feeAmt)} paid to technician on-site.`
             : `Booked! ${sym}${cheapest.price_gbp} total, ETA ${cheapest.eta_minutes} min. We'll text the ${feeDisp} booking fee link shortly (deducted from final bill).`;
-          await sendReply(from, confirmMsg, "whatsapp", recentJob.id);
-          await sendReply(from, confirmMsg, "sms", recentJob.id);
+          await sendReply(from, confirmMsg, "whatsapp");
+          await sendReply(from, confirmMsg, "sms");
           return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
         }
         // No pending quote to accept — fall through so the open-job
@@ -4627,8 +4599,7 @@ Deno.serve(async (req) => {
               });
             }
           } catch (e) { console.error("clarification state save failed", e); }
-          if (activeJob?.id) await attachInboundToJob(supabase, inboundLog, activeJob.id);
-          await sendReply(from, decision.reply, channel, activeJob?.id ?? null);
+          await sendReply(from, decision.reply, channel);
           return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
         }
 
@@ -4638,8 +4609,7 @@ Deno.serve(async (req) => {
           decision.action === "OUT_OF_SCOPE" ||
           decision.action === "OTHER"
         ) {
-          if (activeJob?.id) await attachInboundToJob(supabase, inboundLog, activeJob.id);
-          await sendReply(from, decision.reply, channel, activeJob?.id ?? null);
+          await sendReply(from, decision.reply, channel);
           return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
         }
 
@@ -4657,8 +4627,7 @@ Deno.serve(async (req) => {
 
         const faqAnswer = matchFaq(body);
         if (faqAnswer) {
-          if (activeJob?.id) await attachInboundToJob(supabase, inboundLog, activeJob.id);
-          await sendReply(from, faqAnswer, channel, activeJob?.id ?? null);
+          await sendReply(from, faqAnswer, channel);
           return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
         }
 
@@ -4704,8 +4673,7 @@ Deno.serve(async (req) => {
               reply = ai ?? `Happy to help — what would you like to know about our service?`;
             }
           }
-          if (activeJob?.id) await attachInboundToJob(supabase, inboundLog, activeJob.id);
-          await sendReply(from, reply, channel, activeJob?.id ?? null);
+          await sendReply(from, reply, channel);
           return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
         }
         // shouldStartIntake → fall through to intake.
@@ -4747,14 +4715,13 @@ Deno.serve(async (req) => {
               },
             });
         if (relation === "same_job") {
-          await attachInboundToJob(supabase, inboundLog, recentJob.id);
           const ref = jobRefOf(recentJob);
           const statusTxt = String(recentJob.status).replace(/_/g, " ");
           const reply =
             `Thanks! We've already got your job *#${ref}* (${statusTxt}) on file ` +
             `and our team is working on it — we'll be in touch shortly with a price and ETA.\n\n` +
             `If this is a *different* tyre problem, reply *NEW JOB* to start a new booking.`;
-          await sendReply(from, reply, channel, recentJob.id);
+          await sendReply(from, reply, channel);
           return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
         }
         // relation === "new_job" → fall through to intake (starts a fresh job).
@@ -4787,7 +4754,6 @@ Deno.serve(async (req) => {
       mediaUrls: customerMediaUrls,
       channel,
     });
-    await attachInboundToJob(supabase, inboundLog, outcome.job?.id ?? null);
 
     // Run vision analysis on any new photos (bounces back non-tyre photos).
     if (customerMediaUrls.length > 0 && outcome.job?.id) {
@@ -4825,7 +4791,6 @@ Deno.serve(async (req) => {
             from,
             aj.damage_summary || "That doesn't look like a tyre photo 🤔 Could you send a clear photo of the tyre/wheel?",
             channel,
-            outcome.job.id,
           );
           return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
         }
@@ -4866,7 +4831,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    await sendReply(from, outcome.reply, channel, outcome.job?.id ?? null);
+    await sendReply(from, outcome.reply, channel);
     return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
   } catch (e) {
     console.error("twilio-inbound error", e);

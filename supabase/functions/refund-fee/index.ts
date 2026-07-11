@@ -75,7 +75,6 @@ Deno.serve(async (req) => {
           to: job.customer_phone,
           body: `Tyre Fly: we've refunded your payment of ${amountStr} in full for job #${jobRef}. We're sorry for the inconvenience.`,
           channel: "sms",
-          job_id,
         }),
       });
     }

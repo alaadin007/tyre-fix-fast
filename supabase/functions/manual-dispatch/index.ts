@@ -22,7 +22,7 @@ const BodySchema = z.object({
   origin: z.string().url().optional(),
 });
 
-async function sendMsg(to: string, body: string, channel: "whatsapp" | "sms" = "whatsapp", jobId: string | null = null) {
+async function sendMsg(to: string, body: string, channel: "whatsapp" | "sms" = "whatsapp") {
   try {
     await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/twilio-send`, {
       method: "POST",
@@ -30,7 +30,7 @@ async function sendMsg(to: string, body: string, channel: "whatsapp" | "sms" = "
         "Content-Type": "application/json",
         Authorization: `Bearer ${Deno.env.get("SUPABASE_ANON_KEY")}`,
       },
-      body: JSON.stringify({ to, body, channel, job_id: jobId }),
+      body: JSON.stringify({ to, body, channel }),
     });
   } catch (e) {
     console.error("sendMsg failed:", e);
@@ -124,7 +124,7 @@ Deno.serve(async (req) => {
         `• ETA: ~${eta_minutes} mins from payment\n\n` +
         `Tap to pay securely (Apple Pay / Google Pay / card):\n${payUrl}\n\n` +
         `Once paid, ${tech.name} will call you to confirm and head over.`;
-      await sendMsg(job.customer_phone, msg, "whatsapp", job_id);
+      await sendMsg(job.customer_phone, msg, "whatsapp");
     }
 
     await supabase.from("ops_alerts").insert({

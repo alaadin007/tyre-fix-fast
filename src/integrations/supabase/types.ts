@@ -589,15 +589,7 @@ export type Database = {
           to_number?: string
           twilio_sid?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "sms_messages_job_id_fkey"
-            columns: ["job_id"]
-            isOneToOne: false
-            referencedRelation: "jobs"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       tech_onboarding_logs: {
         Row: {

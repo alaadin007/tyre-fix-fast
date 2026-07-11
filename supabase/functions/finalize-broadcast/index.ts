@@ -292,7 +292,7 @@ Deno.serve(async (req) => {
           "Content-Type": "application/json",
           Authorization: `Bearer ${SERVICE_KEY}`,
         },
-        body: JSON.stringify({ body, channel: "whatsapp", job_id }),
+        body: JSON.stringify({ body, channel: "whatsapp" }),
       });
       notifyRes = await r.json().catch(() => ({}));
       if (!r.ok) console.error("notify-admins failed", r.status, notifyRes);

@@ -15,7 +15,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-async function sendReply(to: string, body: string, channel = "whatsapp", jobId: string | null = null) {
+async function sendReply(to: string, body: string, channel = "whatsapp") {
   const url = `${Deno.env.get("SUPABASE_URL")}/functions/v1/twilio-send`;
   const r = await fetch(url, {
     method: "POST",
@@ -23,7 +23,7 @@ async function sendReply(to: string, body: string, channel = "whatsapp", jobId: 
       "Content-Type": "application/json",
       Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
     },
-    body: JSON.stringify({ to, body, channel, job_id: jobId }),
+    body: JSON.stringify({ to, body, channel }),
   });
   const data = await r.json().catch(() => ({}));
   if (!r.ok || data?.error) {
@@ -157,7 +157,7 @@ Deno.serve(async (req) => {
       `${outroLine}\n\n` +
       `Thank you.\n— Tyre Fly`;
 
-    await sendReply(jobRow.customer_phone, body, "whatsapp", job_id);
+    await sendReply(jobRow.customer_phone, body, "whatsapp");
 
     await supabase
       .from("quotes")

@@ -16,8 +16,8 @@ type Msg = {
 
 export function JobConversation({
   jobId,
-  customerPhone: _customerPhone,
-  jobCreatedAt: _jobCreatedAt,
+  customerPhone,
+  jobCreatedAt,
 }: {
   jobId: string;
   customerPhone: string;
@@ -30,10 +30,16 @@ export function JobConversation({
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
+      // Match by job_id OR by customer phone (intake messages may not yet have job_id)
+      const phone = (customerPhone || "").replace(/\s+/g, "");
+      const jobStartTime = new Date(new Date(jobCreatedAt).getTime() - 10 * 60 * 1000).toISOString();
+      const orFilter = phone
+        ? `job_id.eq.${jobId},and(from_number.eq.${phone},created_at.gte.${jobStartTime}),and(to_number.eq.${phone},created_at.gte.${jobStartTime})`
+        : `job_id.eq.${jobId}`;
       const { data, error } = await supabase
         .from("sms_messages")
         .select("id,direction,from_number,to_number,body,media_urls,created_at,channel,status")
-        .eq("job_id", jobId)
+        .or(orFilter)
         .order("created_at", { ascending: true })
         .limit(200);
       if (cancelled) return;
@@ -64,7 +70,7 @@ export function JobConversation({
       cancelled = true;
       supabase.removeChannel(ch);
     };
-  }, [jobId]);
+  }, [jobId, customerPhone]);
 
   return (
     <div className="rounded-lg border border-white/10 bg-white/[0.03]">

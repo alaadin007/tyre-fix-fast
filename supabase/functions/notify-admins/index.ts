@@ -31,7 +31,6 @@ const BodySchema = z.union([
     body: z.string().trim().min(1).max(1500),
     channel: z.enum(["sms", "whatsapp"]).default("whatsapp"),
     media_urls: z.array(z.string().url()).max(10).optional(),
-    job_id: z.string().uuid().nullable().optional(),
   }),
 ]);
 
@@ -262,7 +261,6 @@ Deno.serve(async (req) => {
             },
             body: JSON.stringify({
               to,
-              job_id: parsed.data.job_id,
               template: {
                 name: JOB_TEMPLATE_NAME,
                 language: JOB_TEMPLATE_LANG,
@@ -291,7 +289,7 @@ Deno.serve(async (req) => {
                 "Content-Type": "application/json",
                 Authorization: `Bearer ${SERVICE_KEY}`,
               },
-              body: JSON.stringify({ to, body: descMsg, channel: "whatsapp", job_id: parsed.data.job_id }),
+              body: JSON.stringify({ to, body: descMsg, channel: "whatsapp" }),
             })
           ),
         );
@@ -303,7 +301,7 @@ Deno.serve(async (req) => {
     }
 
     // Branch 2: legacy free-text body via twilio-send (with optional media).
-    const { body, channel, media_urls, job_id } = parsed.data;
+    const { body, channel, media_urls } = parsed.data;
     const results = await Promise.allSettled(
       numbers.map((to) =>
         fetch(`${SUPABASE_URL}/functions/v1/twilio-send`, {
@@ -312,7 +310,7 @@ Deno.serve(async (req) => {
             "Content-Type": "application/json",
             Authorization: `Bearer ${SERVICE_KEY}`,
           },
-          body: JSON.stringify({ to, body, channel, media_urls, job_id: job_id ?? null }),
+          body: JSON.stringify({ to, body, channel, media_urls }),
         }),
       ),
     );

@@ -29,7 +29,7 @@ type SendAttempt = {
   to_number?: string | null;
 };
 
-async function sendWhatsApp(to: string, body: string, jobId: string, media_urls?: string[]): Promise<SendAttempt> {
+async function sendWhatsApp(to: string, body: string, media_urls?: string[]): Promise<SendAttempt> {
   try {
     const r2 = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/twilio-send`, {
       method: "POST",
@@ -37,7 +37,7 @@ async function sendWhatsApp(to: string, body: string, jobId: string, media_urls?
         "Content-Type": "application/json",
         Authorization: `Bearer ${Deno.env.get("SUPABASE_ANON_KEY")}`,
       },
-      body: JSON.stringify({ to, body, channel: "whatsapp", media_urls, provider_preference: "auto", job_id: jobId }),
+      body: JSON.stringify({ to, body, channel: "whatsapp", media_urls, provider_preference: "auto" }),
     });
     const payload = await r2.json().catch(() => ({}));
     if (!r2.ok) console.error("twilio whatsapp send failed", payload);
@@ -58,7 +58,6 @@ async function sendWhatsApp(to: string, body: string, jobId: string, media_urls?
 
 async function sendWhatsAppTemplate(
   to: string,
-  jobId: string,
   template: {
     name: string;
     language: string;
@@ -73,7 +72,7 @@ async function sendWhatsAppTemplate(
         "Content-Type": "application/json",
         Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
       },
-      body: JSON.stringify({ to, template, job_id: jobId }),
+      body: JSON.stringify({ to, template }),
     });
     const payload = await r.json().catch(() => ({}));
     if (!r.ok) console.error("meta template send failed", payload);
@@ -92,7 +91,7 @@ async function sendWhatsAppTemplate(
   }
 }
 
-async function sendSMS(to: string, body: string, jobId: string): Promise<SendAttempt> {
+async function sendSMS(to: string, body: string): Promise<SendAttempt> {
   try {
     const r = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/twilio-send`, {
       method: "POST",
@@ -100,7 +99,7 @@ async function sendSMS(to: string, body: string, jobId: string): Promise<SendAtt
         "Content-Type": "application/json",
         Authorization: `Bearer ${Deno.env.get("SUPABASE_ANON_KEY")}`,
       },
-      body: JSON.stringify({ to, body: body.slice(0, 1500), channel: "sms", job_id: jobId }),
+      body: JSON.stringify({ to, body: body.slice(0, 1500), channel: "sms" }),
     });
     const payload = await r.json().catch(() => ({}));
     if (!r.ok) console.error("twilio sms send failed", payload);
@@ -256,14 +255,14 @@ Deno.serve(async (req) => {
         continue;
       }
       // Send via approved Meta WhatsApp template — works even outside the 24h window.
-      const wa = await sendWhatsAppTemplate(to, job_id, {
+      const wa = await sendWhatsAppTemplate(to, {
         name: "new_job_alert_to_technician",
         language: "en_GB",
         body_params,
         header_image_url: photo1Raw,
       });
       // If Meta template fails, fall back to plain Twilio session message (may not deliver outside 24h).
-      const finalRes = wa.ok ? wa : await sendWhatsApp(to, msg, job_id, photos.slice(0, 6));
+      const finalRes = wa.ok ? wa : await sendWhatsApp(to, msg, photos.slice(0, 6));
       const ok = finalRes.ok;
       if (ok) sent++;
       if (!ok) {

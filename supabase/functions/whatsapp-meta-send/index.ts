@@ -12,7 +12,6 @@ const BodySchema = z.object({
   to: z.string().trim().min(7).max(20),
   body: z.string().trim().max(4096).optional().default(""),
   media_urls: z.array(z.string().url()).max(10).optional(),
-  job_id: z.string().uuid().nullable().optional(),
   template: z.object({
     name: z.string().min(1),
     language: z.string().min(2).default("en_GB"),
@@ -41,7 +40,7 @@ Deno.serve(async (req) => {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    const { to, body, media_urls, job_id, template, location } = parsed.data;
+    const { to, body, media_urls, template, location } = parsed.data;
     const toClean = to.replace(/^whatsapp:/, "").replace(/[^\d+]/g, "");
     const toNum = toClean.replace(/^\+/, "");
 
@@ -160,7 +159,6 @@ Deno.serve(async (req) => {
       from_number: Deno.env.get("TWILIO_WHATSAPP_NUMBER") ?? "",
       to_number: toClean,
       body: body ?? "",
-      job_id: job_id ?? null,
       twilio_sid: primaryMessageId,
       num_media: images.length,
       media_urls: images,
