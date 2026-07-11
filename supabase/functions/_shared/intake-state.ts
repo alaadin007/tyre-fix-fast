@@ -1646,11 +1646,17 @@ export async function processCustomerIntake(
   }
 
 
-  // Name
+  // Name — check each comma/newline token individually
   if (!job.customer_name || job.customer_name === "Customer" || !isValidPersonName(job.customer_name)) {
-    const nm = await extractNameSmart(body);
-    if (nm) updates.customer_name = nm;
+    for (const token of tokens) {
+      const nm = await extractNameSmart(token);
+      if (nm) {
+        updates.customer_name = nm;
+        break;
+      }
+    }
   }
+
 
   // Issue description / type
   if (hasIssueDetails(body)) {
