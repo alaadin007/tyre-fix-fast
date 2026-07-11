@@ -340,6 +340,88 @@ export function guessIssueType(t: string): string | null {
   return null;
 }
 
+const ALLOWED_ISSUE_TYPES = ["puncture", "flat tyre", "blowout", "low pressure", "not sure"] as const;
+
+// AI-backed natural-language issue classifier. Regex first for obvious phrasing;
+// AI fallback for anything the regex misses ("blew out", "went bang", "died on
+// me", "pressure dropping fast", etc). Mirrors the extractNameSmart pattern so
+// we never need to keep patching new synonyms into a regex.
+export async function guessIssueTypeSmart(text: string): Promise<string | null> {
+  const body = (text || "").trim();
+  if (!body) return null;
+  const quick = guessIssueType(body);
+  if (quick) return quick;
+  if (!hasIssueDetails(body) && body.split(/\s+/).length < 4) return null;
+
+  const apiKey = Deno.env.get("LOVABLE_API_KEY");
+  if (!apiKey) return null;
+
+  try {
+    const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "google/gemini-3-flash-preview",
+        messages: [
+          {
+            role: "system",
+            content:
+              "You classify a customer's free-text tyre problem description into ONE of: " +
+              "'puncture' (nail, screw, slow leak, hole), " +
+              "'flat tyre' (completely flat, no air, deflated), " +
+              "'blowout' (sudden explosion, loud bang, blew out, shredded, burst at speed), " +
+              "'low pressure' (gradual loss, soft, needs air, pressure dropping slowly), " +
+              "'not sure' (unclear or customer unsure). " +
+              "Return null if the message does not describe a tyre problem at all. " +
+              "Examples: 'my tyre blew out'→blowout; 'heard a loud bang and lost control'→blowout; " +
+              "'tyre seems soft'→low pressure; 'pressure dropping fast'→low pressure; " +
+              "'ran over something sharp'→puncture; 'completely flat this morning'→flat tyre; " +
+              "'not sure whats wrong'→not sure; 'hello'→null.",
+          },
+          { role: "user", content: body.slice(0, 1000) },
+        ],
+        tools: [{
+          type: "function",
+          function: {
+            name: "return_issue_type",
+            description: "Return the classified issue type, or null if not a tyre problem.",
+            parameters: {
+              type: "object",
+              properties: {
+                issue_type: { type: ["string", "null"], enum: [...ALLOWED_ISSUE_TYPES, null] },
+              },
+              required: ["issue_type"],
+              additionalProperties: false,
+            },
+          },
+        }],
+        tool_choice: { type: "function", function: { name: "return_issue_type" } },
+      }),
+    });
+    if (!r.ok) return null;
+    const j = await r.json();
+    const args = j?.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments;
+    if (!args) return null;
+    const parsed = typeof args === "string" ? JSON.parse(args) : args;
+    const raw = (parsed?.issue_type ?? "").toString().trim().toLowerCase();
+    return (ALLOWED_ISSUE_TYPES as readonly string[]).includes(raw) ? raw : null;
+  } catch (e) {
+    console.error("guessIssueTypeSmart AI error", e);
+    return null;
+  }
+}
+
+// A message longer than 8 words that clearly describes a tyre problem is
+// valuable technician context — keep the FULL original text as
+// issue_description instead of stripping structured tokens out of it.
+export function shouldKeepFullDescription(body: string): boolean {
+  const t = (body || "").trim();
+  if (!t) return false;
+  const wordCount = t.split(/\s+/).filter(Boolean).length;
+  return wordCount > 8 && hasIssueDetails(t);
+}
+
+
 async function reverseGeocodePostcode(lat: number, lng: number): Promise<string | null> {
   try {
     const r = await fetch(`https://api.postcodes.io/postcodes?lon=${lng}&lat=${lat}&limit=1`);
@@ -1241,12 +1323,17 @@ export async function processCustomerIntake(
       : (isValidPersonName(parsedName ?? "") ? parsedName! : "Customer");
     const prefillWheels = extractWheels(body);
     const prefillTyreSize = extractTyreSize(body);
-    const prefillIssueType = guessIssueType(body);
+    const prefillIssueType = await guessIssueTypeSmart(body);
 
-    // issue_description: strip out tokens that were already captured as
-    // structured fields so only genuine free-text problem description remains.
+    // issue_description: if the customer wrote a rich natural-language
+    // description (>8 words with tyre-problem context), keep the FULL original
+    // text — technicians need that context to arrive prepared. Otherwise strip
+    // out tokens already captured as structured fields so issue_description
+    // only holds genuine free-text.
     let prefillIssueDescription: string | null = null;
-    if (hasIssueDetails(body)) {
+    if (shouldKeepFullDescription(body)) {
+      prefillIssueDescription = body.trim().slice(0, 2000);
+    } else if (hasIssueDetails(body)) {
       const extractedRegNorm = (prefillReg ?? "").toString().toUpperCase().replace(/\s+/g, "");
       const extractedNameNorm = (prefillName && prefillName !== "Customer" ? prefillName : "").toLowerCase().trim();
       const tokens = body.split(/[\n,;]+/).map((s) => s.trim()).filter(Boolean);
@@ -1264,6 +1351,7 @@ export async function processCustomerIntake(
       const cleaned = kept.join(", ").trim();
       if (cleaned && hasIssueDetails(cleaned)) prefillIssueDescription = cleaned.slice(0, 2000);
     }
+
 
     const initial: Record<string, any> = {
       customer_phone: from,
@@ -1542,33 +1630,38 @@ export async function processCustomerIntake(
 
   // Issue description / type
   if (hasIssueDetails(body)) {
-    // Strip tokens that were classified as structured fields (name, reg,
-    // wheels, postcode, bare issue keyword) so issue_description only holds
-    // genuine free-text problem descriptions.
-    const extractedReg = (updates.vehicle_reg ?? job.vehicle_reg ?? "").toString().toUpperCase().replace(/\s+/g, "");
-    const extractedName = (updates.customer_name ?? (job.customer_name && job.customer_name !== "Customer" ? job.customer_name : "") ?? "").toString().toLowerCase().trim();
-    const tokens = body.split(/[\n,;]+/).map((s) => s.trim()).filter(Boolean);
-    const kept = tokens.filter((p) => {
-      const pNorm = p.toUpperCase().replace(/\s+/g, "");
-      // Match against the reg we actually extracted (handles "GB1122" tokens
-      // that per-token extractReg wouldn't recognise on their own).
-      if (extractedReg && pNorm === extractedReg) return false;
-      if (extractedName && p.toLowerCase().trim() === extractedName) return false;
-      if (extractReg(p)) return false;
-      if (extractWheels(p).length > 0) return false;
-      if (extractPostcode(p)) return false;
-      if (extractName(p) && !INCIDENT_RE.test(p)) return false;
-      // Bare issue-type keyword (e.g. "flat", "puncture") with no other context
-      if (p.split(/\s+/).length <= 3 && guessIssueType(p) && !/\b(nail|screw|sidewall|leak|hiss|kerb|curb|pothole|hit|bulge|split|crack|valve|tpms)\b/i.test(p)) return false;
-      return true;
-    });
-    const cleaned = kept.join(", ").trim();
-    if (cleaned && hasIssueDetails(cleaned)) {
-      updates.issue_description = [job.issue_description, cleaned].filter(Boolean).join("\n").slice(0, 2000);
+    if (shouldKeepFullDescription(body)) {
+      // Rich natural-language description — keep the FULL original text so
+      // technicians get the customer's own context ("driving on the M25, heard
+      // a bang, tyre blew out and car pulled to one side").
+      const full = body.trim().slice(0, 2000);
+      updates.issue_description = [job.issue_description, full].filter(Boolean).join("\n").slice(0, 2000);
+    } else {
+      // Short / structured message — strip tokens already captured as
+      // structured fields so issue_description only holds genuine free-text.
+      const extractedReg = (updates.vehicle_reg ?? job.vehicle_reg ?? "").toString().toUpperCase().replace(/\s+/g, "");
+      const extractedName = (updates.customer_name ?? (job.customer_name && job.customer_name !== "Customer" ? job.customer_name : "") ?? "").toString().toLowerCase().trim();
+      const tokens = body.split(/[\n,;]+/).map((s) => s.trim()).filter(Boolean);
+      const kept = tokens.filter((p) => {
+        const pNorm = p.toUpperCase().replace(/\s+/g, "");
+        if (extractedReg && pNorm === extractedReg) return false;
+        if (extractedName && p.toLowerCase().trim() === extractedName) return false;
+        if (extractReg(p)) return false;
+        if (extractWheels(p).length > 0) return false;
+        if (extractPostcode(p)) return false;
+        if (extractName(p) && !INCIDENT_RE.test(p)) return false;
+        if (p.split(/\s+/).length <= 3 && guessIssueType(p) && !/\b(nail|screw|sidewall|leak|hiss|kerb|curb|pothole|hit|bulge|split|crack|valve|tpms)\b/i.test(p)) return false;
+        return true;
+      });
+      const cleaned = kept.join(", ").trim();
+      if (cleaned && hasIssueDetails(cleaned)) {
+        updates.issue_description = [job.issue_description, cleaned].filter(Boolean).join("\n").slice(0, 2000);
+      }
     }
-    const it = guessIssueType(body);
+    const it = await guessIssueTypeSmart(body);
     if (it) updates.issue_type = it;
   }
+
 
 
   // Wheels
