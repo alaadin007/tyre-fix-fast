@@ -1627,17 +1627,36 @@ export async function processCustomerIntake(
   }
 
 
-  // Plate
+  // Split into tokens first for order-independent field extraction
+  const tokens = body.split(/[\n,]+/).map((t) => t.trim()).filter(Boolean);
+
+  // Plate — check each comma/newline token individually, then fall back to the full body
   if (!job.vehicle_reg) {
-    const reg = extractReg(body);
-    if (reg) updates.vehicle_reg = reg;
+    for (const token of tokens) {
+      const reg = extractReg(token);
+      if (reg) {
+        updates.vehicle_reg = reg;
+        break;
+      }
+    }
+    if (!updates.vehicle_reg) {
+      const reg = extractReg(body);
+      if (reg) updates.vehicle_reg = reg;
+    }
   }
 
-  // Name
+
+  // Name — check each comma/newline token individually
   if (!job.customer_name || job.customer_name === "Customer" || !isValidPersonName(job.customer_name)) {
-    const nm = await extractNameSmart(body);
-    if (nm) updates.customer_name = nm;
+    for (const token of tokens) {
+      const nm = await extractNameSmart(token);
+      if (nm) {
+        updates.customer_name = nm;
+        break;
+      }
+    }
   }
+
 
   // Issue description / type
   if (hasIssueDetails(body)) {
@@ -1652,8 +1671,8 @@ export async function processCustomerIntake(
       // structured fields so issue_description only holds genuine free-text.
       const extractedReg = (updates.vehicle_reg ?? job.vehicle_reg ?? "").toString().toUpperCase().replace(/\s+/g, "");
       const extractedName = (updates.customer_name ?? (job.customer_name && job.customer_name !== "Customer" ? job.customer_name : "") ?? "").toString().toLowerCase().trim();
-      const tokens = body.split(/[\n,;]+/).map((s) => s.trim()).filter(Boolean);
-      const kept = tokens.filter((p) => {
+      const issueTokens = body.split(/[\n,;]+/).map((s) => s.trim()).filter(Boolean);
+      const kept = issueTokens.filter((p) => {
         const pNorm = p.toUpperCase().replace(/\s+/g, "");
         if (extractedReg && pNorm === extractedReg) return false;
         if (extractedName && p.toLowerCase().trim() === extractedName) return false;
@@ -1675,11 +1694,12 @@ export async function processCustomerIntake(
 
 
 
-  // Wheels
-  const wheels = extractWheels(body);
+  // Wheels — check each comma/newline token individually and merge with existing
+  const wheels = tokens.flatMap((t) => extractWheels(t)).filter(Boolean);
   if (wheels.length > 0) {
-    updates.affected_wheels = wheels;
+    updates.affected_wheels = [...new Set([...(job.affected_wheels ?? []), ...wheels])];
   }
+
 
   // Tyre size
   if (!job.tyre_size) {
