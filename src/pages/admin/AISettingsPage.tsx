@@ -7,7 +7,7 @@ import { Loader2, Save, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 
 const KEY = "whatsapp_system_prompt";
-const FALLBACK_VERSION = 17;
+const FALLBACK_VERSION = 18;
 
 
 const FALLBACK_PROMPT = `You are Fly, TyreFly's WhatsApp assistant for a UK 24/7 mobile tyre repair service.
@@ -153,7 +153,7 @@ When to confirm vs proceed:
 - Vague message → ask which job they mean
 
 LOOP PREVENTION
-Recent conversation history used for AI classification must be scoped to the current job only, using the message log's job_id. Do not mix old messages from the same phone number into a new or different job. Every inbound/outbound job-specific message should carry the correct job_id so AI classification and dashboard conversations only see that job's thread.
+Recent conversation history used for AI classification must be scoped to the current job only, using the message log's job_id. Do not mix old messages from the same phone number into a new or different job. Every inbound/outbound job-specific message must be logged with the correct job_id once a job context is known, and dashboard conversations for a specific job must read sms_messages by job_id only.
 
 If the same message has been sent more than once in the last 3 turns with no progress:
 - Do NOT send it a third time.

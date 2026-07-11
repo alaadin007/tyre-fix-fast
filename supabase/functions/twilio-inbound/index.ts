@@ -1599,6 +1599,7 @@ Deno.serve(async (req) => {
       from_number: from,
       to_number: to,
       body,
+      job_id: null,
       twilio_sid: sid,
       num_media: numMedia,
       media_urls: mediaUrls,
@@ -4626,7 +4627,8 @@ Deno.serve(async (req) => {
               });
             }
           } catch (e) { console.error("clarification state save failed", e); }
-          await sendReply(from, decision.reply, channel);
+          if (activeJob?.id) await attachInboundToJob(supabase, inboundLog, activeJob.id);
+          await sendReply(from, decision.reply, channel, activeJob?.id ?? null);
           return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
         }
 
@@ -4636,7 +4638,8 @@ Deno.serve(async (req) => {
           decision.action === "OUT_OF_SCOPE" ||
           decision.action === "OTHER"
         ) {
-          await sendReply(from, decision.reply, channel);
+          if (activeJob?.id) await attachInboundToJob(supabase, inboundLog, activeJob.id);
+          await sendReply(from, decision.reply, channel, activeJob?.id ?? null);
           return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
         }
 
@@ -4654,7 +4657,8 @@ Deno.serve(async (req) => {
 
         const faqAnswer = matchFaq(body);
         if (faqAnswer) {
-          await sendReply(from, faqAnswer, channel);
+          if (activeJob?.id) await attachInboundToJob(supabase, inboundLog, activeJob.id);
+          await sendReply(from, faqAnswer, channel, activeJob?.id ?? null);
           return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
         }
 
@@ -4700,7 +4704,8 @@ Deno.serve(async (req) => {
               reply = ai ?? `Happy to help — what would you like to know about our service?`;
             }
           }
-          await sendReply(from, reply, channel);
+          if (activeJob?.id) await attachInboundToJob(supabase, inboundLog, activeJob.id);
+          await sendReply(from, reply, channel, activeJob?.id ?? null);
           return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
         }
         // shouldStartIntake → fall through to intake.

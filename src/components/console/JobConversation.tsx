@@ -16,8 +16,8 @@ type Msg = {
 
 export function JobConversation({
   jobId,
-  customerPhone,
-  jobCreatedAt,
+  customerPhone: _customerPhone,
+  jobCreatedAt: _jobCreatedAt,
 }: {
   jobId: string;
   customerPhone: string;
@@ -64,7 +64,7 @@ export function JobConversation({
       cancelled = true;
       supabase.removeChannel(ch);
     };
-  }, [jobId, customerPhone, jobCreatedAt]);
+  }, [jobId]);
 
   return (
     <div className="rounded-lg border border-white/10 bg-white/[0.03]">

@@ -78,7 +78,7 @@ export function JobTimeline({
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "sms_messages" }, load)
       .subscribe();
     return () => { cancelled = true; supabase.removeChannel(ch); };
-  }, [job.id, job.customer_phone]);
+  }, [job.id]);
 
   const techById = useMemo(() => {
     const m = new Map<string, DashTech>();
