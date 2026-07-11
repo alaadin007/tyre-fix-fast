@@ -1323,12 +1323,17 @@ export async function processCustomerIntake(
       : (isValidPersonName(parsedName ?? "") ? parsedName! : "Customer");
     const prefillWheels = extractWheels(body);
     const prefillTyreSize = extractTyreSize(body);
-    const prefillIssueType = guessIssueType(body);
+    const prefillIssueType = await guessIssueTypeSmart(body);
 
-    // issue_description: strip out tokens that were already captured as
-    // structured fields so only genuine free-text problem description remains.
+    // issue_description: if the customer wrote a rich natural-language
+    // description (>8 words with tyre-problem context), keep the FULL original
+    // text — technicians need that context to arrive prepared. Otherwise strip
+    // out tokens already captured as structured fields so issue_description
+    // only holds genuine free-text.
     let prefillIssueDescription: string | null = null;
-    if (hasIssueDetails(body)) {
+    if (shouldKeepFullDescription(body)) {
+      prefillIssueDescription = body.trim().slice(0, 2000);
+    } else if (hasIssueDetails(body)) {
       const extractedRegNorm = (prefillReg ?? "").toString().toUpperCase().replace(/\s+/g, "");
       const extractedNameNorm = (prefillName && prefillName !== "Customer" ? prefillName : "").toLowerCase().trim();
       const tokens = body.split(/[\n,;]+/).map((s) => s.trim()).filter(Boolean);
@@ -1346,6 +1351,7 @@ export async function processCustomerIntake(
       const cleaned = kept.join(", ").trim();
       if (cleaned && hasIssueDetails(cleaned)) prefillIssueDescription = cleaned.slice(0, 2000);
     }
+
 
     const initial: Record<string, any> = {
       customer_phone: from,
