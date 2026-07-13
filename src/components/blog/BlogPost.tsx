@@ -16,12 +16,12 @@ export type Faq = { q: string; a: string };
 
 export interface BlogPostProps {
   slug: string;
-  title: string; // H1
+  title: string;
   metaTitle: string;
   metaDesc: string;
   category: string;
   readMinutes: number;
-  datePublished: string; // YYYY-MM-DD
+  datePublished: string;
   heroImage?: "flat" | "runflat" | "tpms";
   intro: string;
   blocks: Block[];
@@ -31,6 +31,40 @@ export interface BlogPostProps {
 }
 
 const heroMap = { flat: flatTyreHero, runflat: runFlatHero, tpms: tpmsHero };
+
+// Auto-link keywords in prose to the home page (skip if already linked or inside a tag).
+const LINK_KEYWORDS: { pattern: RegExp; label: string }[] = [
+  { pattern: /\bmobile tyre fitter(s)?\b/i, label: "mobile tyre fitter" },
+  { pattern: /\bmobile tyre fitting\b/i, label: "mobile tyre fitting" },
+  { pattern: /\bflat tyre\b/i, label: "flat tyre" },
+  { pattern: /\bpuncture repair\b/i, label: "puncture repair" },
+  { pattern: /\bemergency tyre\b/i, label: "emergency tyre" },
+  { pattern: /\bnew tyre\b/i, label: "new tyre" },
+];
+
+function autolink(html: string): string {
+  // Skip any paragraph that already has an anchor to avoid nested/duplicate links.
+  if (/<a\b/i.test(html)) return html;
+  let out = html;
+  let linked = 0;
+  for (const { pattern } of LINK_KEYWORDS) {
+    if (linked >= 2) break; // cap per paragraph so it stays readable
+    const m = out.match(pattern);
+    if (!m) continue;
+    const replacement = `<a href="/" class="text-accent underline decoration-accent/40 underline-offset-4 hover:decoration-accent">${m[0]}</a>`;
+    out = out.replace(pattern, replacement);
+    linked++;
+  }
+  return out;
+}
+
+// Rotating micro-CTAs inserted between sections so users always have a way home.
+const MICRO_CTAS = [
+  { text: "Flat tyre right now?", label: "Message a mobile fitter →" },
+  { text: "Need a quote in 30 seconds?", label: "Get an instant price →" },
+  { text: "Stuck on the roadside?", label: "Send us your postcode →" },
+  { text: "Nail in the tread?", label: "Book a mobile repair →" },
+];
 
 export default function BlogPost(p: BlogPostProps) {
   const url = `https://tyrefly.com/blog/${p.slug}`;
@@ -78,8 +112,11 @@ export default function BlogPost(p: BlogPostProps) {
 
   const jsonLd = faqLd ? [articleLd, breadcrumbLd, faqLd] : [articleLd, breadcrumbLd];
 
+  // Insert a micro-CTA every ~4 blocks (but not immediately after another CTA/heading pair)
+  const CTA_EVERY = 4;
+
   return (
-    <main className="min-h-screen bg-background">
+    <main className="min-h-screen bg-background text-foreground">
       <Seo
         title={p.metaTitle}
         description={p.metaDesc}
@@ -88,37 +125,39 @@ export default function BlogPost(p: BlogPostProps) {
         jsonLd={jsonLd}
       />
 
-      <article className="max-w-3xl mx-auto px-6 py-16">
+      <article className="max-w-2xl mx-auto px-6 py-16">
         <nav aria-label="Breadcrumb" className="text-sm text-muted-foreground mb-8">
-          <Link to="/" className="hover:text-foreground">Home</Link>
+          <Link to="/" className="hover:text-accent">Home</Link>
           <span className="mx-2">/</span>
-          <Link to="/blog" className="hover:text-foreground">Blog</Link>
+          <Link to="/blog" className="hover:text-accent">Blog</Link>
           <span className="mx-2">/</span>
-          <span>{p.title}</span>
+          <span className="text-foreground/70">{p.title}</span>
         </nav>
 
-        <p className="text-sm uppercase tracking-widest text-muted-foreground mb-3">
+        <p className="text-xs uppercase tracking-[0.2em] text-accent font-semibold mb-4">
           {p.category} · {p.readMinutes} min read
         </p>
-        <h1 className="text-4xl md:text-5xl font-semibold tracking-tight mb-6">{p.title}</h1>
-        <p className="text-lg text-muted-foreground mb-6">{p.intro}</p>
+        <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-6 leading-[1.1]">
+          {p.title}
+        </h1>
+        <p className="text-xl text-muted-foreground mb-8 leading-relaxed">{p.intro}</p>
 
-        <div className="mb-8 flex flex-wrap gap-3">
+        <div className="mb-10 flex flex-wrap gap-3">
           <Link
             to="/"
-            className="inline-flex items-center px-4 py-2 rounded-full bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition"
+            className="inline-flex items-center px-5 py-2.5 rounded-full bg-accent text-accent-foreground text-sm font-semibold hover:opacity-90 transition shadow-[var(--shadow-accent)]"
           >
             Book a mobile fitter →
           </Link>
           <Link
             to="/"
-            className="inline-flex items-center px-4 py-2 rounded-full border border-border text-sm font-medium hover:bg-muted transition"
+            className="inline-flex items-center px-5 py-2.5 rounded-full border border-border text-sm font-semibold hover:bg-muted transition"
           >
             Get an instant quote
           </Link>
         </div>
 
-        <figure className="mb-10 -mx-6 md:mx-0">
+        <figure className="mb-12 -mx-6 md:mx-0">
           <img
             src={hero}
             alt={p.title}
@@ -129,32 +168,36 @@ export default function BlogPost(p: BlogPostProps) {
           />
         </figure>
 
-        <div className="prose prose-neutral dark:prose-invert max-w-none space-y-6 leading-relaxed">
+        <div className="max-w-none space-y-7 text-[17px] leading-[1.85] text-foreground/90">
           {(() => {
-            const midIndex = Math.floor(p.blocks.length / 2);
             const rendered: JSX.Element[] = [];
+            let ctaCount = 0;
             p.blocks.forEach((b, i) => {
               if (b.type === "h2")
                 rendered.push(
-                  <h2 key={i} className="text-2xl font-semibold mt-12">{b.text}</h2>
+                  <h2 key={i} className="text-2xl md:text-3xl font-bold mt-14 mb-2 tracking-tight">
+                    {b.text}
+                  </h2>
                 );
               else if (b.type === "h3")
                 rendered.push(
-                  <h3 key={i} className="text-xl font-semibold mt-6">{b.text}</h3>
+                  <h3 key={i} className="text-xl font-semibold mt-8 mb-1">{b.text}</h3>
                 );
               else if (b.type === "p")
-                rendered.push(<p key={i} dangerouslySetInnerHTML={{ __html: b.html }} />);
+                rendered.push(
+                  <p key={i} dangerouslySetInnerHTML={{ __html: autolink(b.html) }} />
+                );
               else if (b.type === "quote")
                 rendered.push(
                   <blockquote
                     key={i}
-                    className="border-l-4 border-primary pl-4 italic text-muted-foreground"
+                    className="border-l-4 border-accent pl-5 italic text-muted-foreground my-6"
                     dangerouslySetInnerHTML={{ __html: b.html }}
                   />
                 );
               else if (b.type === "ul")
                 rendered.push(
-                  <ul key={i} className="list-disc pl-6 space-y-2">
+                  <ul key={i} className="list-disc pl-6 space-y-3 marker:text-accent">
                     {b.items.map((it, j) => (
                       <li key={j} dangerouslySetInnerHTML={{ __html: it }} />
                     ))}
@@ -162,28 +205,52 @@ export default function BlogPost(p: BlogPostProps) {
                 );
               else
                 rendered.push(
-                  <ol key={i} className="list-decimal pl-6 space-y-2">
+                  <ol key={i} className="list-decimal pl-6 space-y-3 marker:text-accent marker:font-semibold">
                     {b.items.map((it, j) => (
                       <li key={j} dangerouslySetInnerHTML={{ __html: it }} />
                     ))}
                   </ol>
                 );
 
-              if (i === midIndex) {
+              // Insert a slim inline CTA every N blocks, but only after a paragraph/list (not a heading)
+              const isBreakable = b.type !== "h2" && b.type !== "h3";
+              if (isBreakable && (i + 1) % CTA_EVERY === 0 && i < p.blocks.length - 2) {
+                const cta = MICRO_CTAS[ctaCount % MICRO_CTAS.length];
+                ctaCount++;
+                rendered.push(
+                  <Link
+                    key={`micro-${i}`}
+                    to="/"
+                    className="not-prose group my-4 flex items-center justify-between gap-4 px-5 py-4 rounded-xl border border-accent/30 bg-accent/5 hover:bg-accent/10 transition"
+                  >
+                    <span className="font-semibold text-foreground">{cta.text}</span>
+                    <span className="text-sm font-semibold text-accent group-hover:translate-x-0.5 transition">
+                      {cta.label}
+                    </span>
+                  </Link>
+                );
+              }
+
+              // Bigger mid-article CTA card at the halfway point
+              if (i === Math.floor(p.blocks.length / 2)) {
                 rendered.push(
                   <aside
                     key={`cta-mid-${i}`}
-                    className="my-10 p-5 rounded-2xl border border-primary/30 bg-primary/5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+                    className="not-prose my-12 p-6 md:p-7 rounded-2xl border border-accent/40 bg-gradient-to-br from-accent/10 to-accent/5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
                   >
                     <div>
-                      <p className="font-semibold">Stuck now? Skip the reading.</p>
+                      <p className="font-bold text-lg mb-1">Stuck now? Skip the reading.</p>
                       <p className="text-sm text-muted-foreground">
-                        Send your postcode on the <Link to="/" className="text-primary hover:underline">Tyrefly home page</Link> and we'll dispatch the nearest mobile fitter.
+                        Send your postcode on the{" "}
+                        <Link to="/" className="text-accent font-semibold underline underline-offset-4">
+                          Tyrefly home page
+                        </Link>{" "}
+                        and we'll dispatch the nearest mobile fitter.
                       </p>
                     </div>
                     <Link
                       to="/"
-                      className="inline-flex shrink-0 items-center px-4 py-2 rounded-full bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition"
+                      className="inline-flex shrink-0 items-center px-5 py-2.5 rounded-full bg-accent text-accent-foreground text-sm font-semibold hover:opacity-90 transition shadow-[var(--shadow-accent)]"
                     >
                       Get help now →
                     </Link>
@@ -194,48 +261,61 @@ export default function BlogPost(p: BlogPostProps) {
             return rendered;
           })()}
 
-
           {p.faqs.length > 0 && (
             <>
-              <h2 className="text-2xl font-semibold mt-12">Frequently asked questions</h2>
+              <h2 className="text-2xl md:text-3xl font-bold mt-16 mb-4 tracking-tight">
+                Frequently asked questions
+              </h2>
               <div className="space-y-6">
                 {p.faqs.map((f, i) => (
-                  <div key={i}>
-                    <h3 className="text-lg font-semibold">{f.q}</h3>
-                    <p className="mt-2">{f.a}</p>
+                  <div key={i} className="p-5 rounded-xl border border-border bg-card">
+                    <h3 className="text-lg font-semibold mb-2">{f.q}</h3>
+                    <p className="text-foreground/80 leading-relaxed">{f.a}</p>
                   </div>
                 ))}
               </div>
             </>
           )}
 
-          <div className="mt-12 p-6 rounded-2xl border border-border bg-muted/30">
-            <p className="font-semibold mb-2">{p.cta?.headline ?? "Need help right now?"}</p>
-            <p className="text-muted-foreground mb-4">
+          <div className="mt-14 p-7 md:p-8 rounded-2xl bg-primary text-primary-foreground shadow-[var(--shadow-elegant)]">
+            <p className="font-bold text-xl mb-2">{p.cta?.headline ?? "Need help right now?"}</p>
+            <p className="opacity-80 mb-5 leading-relaxed">
               {p.cta?.body ??
                 "Send your postcode and tyre size (e.g. 225/45 R17) and we'll dispatch the closest mobile fitter."}
             </p>
             <Link
               to="/"
-              className="inline-flex items-center px-5 py-3 rounded-full bg-primary text-primary-foreground font-medium hover:opacity-90 transition"
+              className="inline-flex items-center px-6 py-3 rounded-full bg-accent text-accent-foreground font-semibold hover:opacity-90 transition"
             >
               {p.cta?.label ?? "Get a mobile fitter →"}
             </Link>
           </div>
 
           {p.related && p.related.length > 0 && (
-            <p className="mt-12 text-sm text-muted-foreground">
-              Related reading:{" "}
-              {p.related.map((r, i) => (
-                <span key={r.to}>
-                  <Link to={r.to} className="text-primary hover:underline">
-                    {r.label}
-                  </Link>
-                  {i < p.related!.length - 1 ? ", " : ""}
-                </span>
-              ))}
-            </p>
+            <div className="mt-14 pt-8 border-t border-border">
+              <p className="text-sm uppercase tracking-widest text-muted-foreground mb-4 font-semibold">
+                Related reading
+              </p>
+              <ul className="grid sm:grid-cols-2 gap-3">
+                {p.related.map((r) => (
+                  <li key={r.to}>
+                    <Link
+                      to={r.to}
+                      className="block p-4 rounded-xl border border-border hover:border-accent hover:bg-accent/5 transition font-medium"
+                    >
+                      {r.label} →
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
           )}
+
+          <div className="mt-10 text-center">
+            <Link to="/" className="text-accent font-semibold hover:underline underline-offset-4">
+              ← Back to Tyrefly home
+            </Link>
+          </div>
         </div>
       </article>
     </main>
