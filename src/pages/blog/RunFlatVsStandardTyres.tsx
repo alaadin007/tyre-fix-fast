@@ -3,7 +3,7 @@ import BlogPost from "@/components/blog/BlogPost";
 export default function RunFlatVsStandardTyres() {
   return (
     <BlogPost
-      slug="run-flat-vs-standard-tyres",
+      slug="run-flat-vs-standard-tyres"
       metaTitle="Run-Flat vs Standard Tyres: Which is Best in 2026? (UK)"
       metaDesc="Run-flat vs standard tyres in the UK — cost, comfort, repairability, and whether you can switch. Honest 2026 comparison for BMW, Mini and Mercedes owners."
       title="Run-Flat vs Standard Tyres: What BMW & Mini Owners Actually Need to Know"
