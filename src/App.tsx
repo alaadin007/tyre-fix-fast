@@ -121,7 +121,6 @@ const App = () => (
         <Route path="/blog/budget-vs-premium-tyres-uk" element={<BudgetVsPremiumTyresUk />} />
         <Route path="/blog/all-season-vs-winter-tyres-uk" element={<AllSeasonVsWinterTyresUk />} />
         <Route path="/blog/pothole-damage-claim-uk" element={<PotholeDamageClaimUk />} />
-        <Route path="/blog/mobile-tyre-fitting-birmingham" element={<MobileTyreFittingBirmingham />} />
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
         <Route path="*" element={<NotFound />} />
       </Routes>
