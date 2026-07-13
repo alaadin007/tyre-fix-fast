@@ -32,30 +32,49 @@ export interface BlogPostProps {
 
 const heroMap = { flat: flatTyreHero, runflat: runFlatHero, tpms: tpmsHero };
 
-// Auto-link keywords in prose to the home page (skip if already linked or inside a tag).
-const LINK_KEYWORDS: { pattern: RegExp; label: string }[] = [
-  { pattern: /\bmobile tyre fitter(s)?\b/i, label: "mobile tyre fitter" },
-  { pattern: /\bmobile tyre fitting\b/i, label: "mobile tyre fitting" },
-  { pattern: /\bflat tyre\b/i, label: "flat tyre" },
-  { pattern: /\bpuncture repair\b/i, label: "puncture repair" },
-  { pattern: /\bemergency tyre\b/i, label: "emergency tyre" },
-  { pattern: /\bnew tyre\b/i, label: "new tyre" },
+// Auto-link keywords in prose to the home page. Broad patterns so most paragraphs
+// end up with at least one inline link back to the booking flow.
+const LINK_PATTERNS: RegExp[] = [
+  /\bmobile tyre fitter(s)?\b/i,
+  /\bmobile tyre fitting\b/i,
+  /\bmobile fitter(s)?\b/i,
+  /\bmobile fitting\b/i,
+  /\bflat tyre(s)?\b/i,
+  /\bpuncture repair(s)?\b/i,
+  /\bpuncture(s)?\b/i,
+  /\bemergency tyre(s)?\b/i,
+  /\bnew tyre(s)?\b/i,
+  /\btyre replacement\b/i,
+  /\btyre fitting\b/i,
+  /\btyre change\b/i,
+  /\bcallout\b/i,
+  /\bbook(ing)?\b/i,
 ];
 
 function autolink(html: string): string {
-  // Skip any paragraph that already has an anchor to avoid nested/duplicate links.
-  if (/<a\b/i.test(html)) return html;
-  let out = html;
+  // Split around existing anchors so we don't nest links, then linkify the rest.
+  const parts = html.split(/(<a\b[^>]*>.*?<\/a>)/i);
   let linked = 0;
-  for (const { pattern } of LINK_KEYWORDS) {
-    if (linked >= 2) break; // cap per paragraph so it stays readable
-    const m = out.match(pattern);
-    if (!m) continue;
-    const replacement = `<a href="/" class="text-accent underline decoration-accent/40 underline-offset-4 hover:decoration-accent">${m[0]}</a>`;
-    out = out.replace(pattern, replacement);
-    linked++;
+  const CAP = 2;
+  const cls = "text-accent underline decoration-accent/40 underline-offset-4 hover:decoration-accent font-medium";
+  for (let idx = 0; idx < parts.length; idx++) {
+    if (linked >= CAP) break;
+    const seg = parts[idx];
+    if (/^<a\b/i.test(seg)) continue;
+    let next = seg;
+    for (const pattern of LINK_PATTERNS) {
+      if (linked >= CAP) break;
+      const m = next.match(pattern);
+      if (!m || m.index === undefined) continue;
+      next =
+        next.slice(0, m.index) +
+        `<a href="/" class="${cls}">${m[0]}</a>` +
+        next.slice(m.index + m[0].length);
+      linked++;
+    }
+    parts[idx] = next;
   }
-  return out;
+  return parts.join("");
 }
 
 // Rotating micro-CTAs inserted between sections so users always have a way home.
