@@ -132,7 +132,7 @@ export default function BlogPost(p: BlogPostProps) {
   const jsonLd = faqLd ? [articleLd, breadcrumbLd, faqLd] : [articleLd, breadcrumbLd];
 
   // Insert a micro-CTA every ~4 blocks (but not immediately after another CTA/heading pair)
-  const CTA_EVERY = 4;
+  const CTA_EVERY = 3;
 
   return (
     <main className="min-h-screen bg-background text-foreground">
