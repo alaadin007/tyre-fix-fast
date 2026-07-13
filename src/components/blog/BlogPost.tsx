@@ -130,45 +130,70 @@ export default function BlogPost(p: BlogPostProps) {
         </figure>
 
         <div className="prose prose-neutral dark:prose-invert max-w-none space-y-6 leading-relaxed">
-          {p.blocks.map((b, i) => {
-            if (b.type === "h2")
-              return (
-                <h2 key={i} className="text-2xl font-semibold mt-12">
-                  {b.text}
-                </h2>
-              );
-            if (b.type === "h3")
-              return (
-                <h3 key={i} className="text-xl font-semibold mt-6">
-                  {b.text}
-                </h3>
-              );
-            if (b.type === "p")
-              return <p key={i} dangerouslySetInnerHTML={{ __html: b.html }} />;
-            if (b.type === "quote")
-              return (
-                <blockquote
-                  key={i}
-                  className="border-l-4 border-primary pl-4 italic text-muted-foreground"
-                  dangerouslySetInnerHTML={{ __html: b.html }}
-                />
-              );
-            if (b.type === "ul")
-              return (
-                <ul key={i} className="list-disc pl-6 space-y-2">
-                  {b.items.map((it, j) => (
-                    <li key={j} dangerouslySetInnerHTML={{ __html: it }} />
-                  ))}
-                </ul>
-              );
-            return (
-              <ol key={i} className="list-decimal pl-6 space-y-2">
-                {b.items.map((it, j) => (
-                  <li key={j} dangerouslySetInnerHTML={{ __html: it }} />
-                ))}
-              </ol>
-            );
-          })}
+          {(() => {
+            const midIndex = Math.floor(p.blocks.length / 2);
+            const rendered: JSX.Element[] = [];
+            p.blocks.forEach((b, i) => {
+              if (b.type === "h2")
+                rendered.push(
+                  <h2 key={i} className="text-2xl font-semibold mt-12">{b.text}</h2>
+                );
+              else if (b.type === "h3")
+                rendered.push(
+                  <h3 key={i} className="text-xl font-semibold mt-6">{b.text}</h3>
+                );
+              else if (b.type === "p")
+                rendered.push(<p key={i} dangerouslySetInnerHTML={{ __html: b.html }} />);
+              else if (b.type === "quote")
+                rendered.push(
+                  <blockquote
+                    key={i}
+                    className="border-l-4 border-primary pl-4 italic text-muted-foreground"
+                    dangerouslySetInnerHTML={{ __html: b.html }}
+                  />
+                );
+              else if (b.type === "ul")
+                rendered.push(
+                  <ul key={i} className="list-disc pl-6 space-y-2">
+                    {b.items.map((it, j) => (
+                      <li key={j} dangerouslySetInnerHTML={{ __html: it }} />
+                    ))}
+                  </ul>
+                );
+              else
+                rendered.push(
+                  <ol key={i} className="list-decimal pl-6 space-y-2">
+                    {b.items.map((it, j) => (
+                      <li key={j} dangerouslySetInnerHTML={{ __html: it }} />
+                    ))}
+                  </ol>
+                );
+
+              if (i === midIndex) {
+                rendered.push(
+                  <aside
+                    key={`cta-mid-${i}`}
+                    className="my-10 p-5 rounded-2xl border border-primary/30 bg-primary/5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+                  >
+                    <div>
+                      <p className="font-semibold">Stuck now? Skip the reading.</p>
+                      <p className="text-sm text-muted-foreground">
+                        Send your postcode on the <Link to="/" className="text-primary hover:underline">Tyrefly home page</Link> and we'll dispatch the nearest mobile fitter.
+                      </p>
+                    </div>
+                    <Link
+                      to="/"
+                      className="inline-flex shrink-0 items-center px-4 py-2 rounded-full bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition"
+                    >
+                      Get help now →
+                    </Link>
+                  </aside>
+                );
+              }
+            });
+            return rendered;
+          })()}
+
 
           {p.faqs.length > 0 && (
             <>
