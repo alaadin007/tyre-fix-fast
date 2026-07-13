@@ -101,7 +101,22 @@ export default function BlogPost(p: BlogPostProps) {
           {p.category} · {p.readMinutes} min read
         </p>
         <h1 className="text-4xl md:text-5xl font-semibold tracking-tight mb-6">{p.title}</h1>
-        <p className="text-lg text-muted-foreground mb-8">{p.intro}</p>
+        <p className="text-lg text-muted-foreground mb-6">{p.intro}</p>
+
+        <div className="mb-8 flex flex-wrap gap-3">
+          <Link
+            to="/"
+            className="inline-flex items-center px-4 py-2 rounded-full bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition"
+          >
+            Book a mobile fitter →
+          </Link>
+          <Link
+            to="/"
+            className="inline-flex items-center px-4 py-2 rounded-full border border-border text-sm font-medium hover:bg-muted transition"
+          >
+            Get an instant quote
+          </Link>
+        </div>
 
         <figure className="mb-10 -mx-6 md:mx-0">
           <img
