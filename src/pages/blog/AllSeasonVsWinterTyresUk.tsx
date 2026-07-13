@@ -10,7 +10,7 @@ export default function AllSeasonVsWinterTyresUk() {
       category="Seasonal"
       readMinutes={10}
       datePublished="2026-07-13"
-      heroImage="mobileFitter"
+      heroImage="runflat"
       intro="Continental drivers swap between summer and winter tyres twice a year without thinking. UK drivers mostly run summer or standard tyres year-round and hope the snow doesn't come. All-seasons sit in the middle. This is the honest 2026 breakdown of what actually works for a UK winter — mild, wet, occasionally frozen, rarely snowbound."
       blocks={[
         { type: "h2", text: "The 7°C rule (the whole reason this matters)" },

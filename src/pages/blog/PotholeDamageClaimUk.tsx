@@ -10,7 +10,7 @@ export default function PotholeDamageClaimUk() {
       category="Legal"
       readMinutes={10}
       datePublished="2026-07-13"
-      heroImage="pothole"
+      heroImage="flat"
       intro="UK councils reject about 65% of pothole damage claims — mostly because drivers don't submit the right evidence in the right order. It's not that claims never win. It's that most claims lose on paperwork. Here's how to make yours one of the ones that pays out."
       blocks={[
         { type: "h2", text: "Who's actually responsible for the road?" },

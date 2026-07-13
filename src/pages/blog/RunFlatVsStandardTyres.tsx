@@ -10,7 +10,7 @@ export default function RunFlatVsStandardTyres() {
       category="Comparison"
       readMinutes={10}
       datePublished="2026-07-13"
-      heroImage="mobileFitter"
+      heroImage="runflat"
       intro="If your car came fitted with run-flat tyres — most modern BMWs, Minis, some Mercedes and a few others — the question of whether to stick with them or switch to conventional tyres comes up at every replacement. This is the plain comparison: what run-flats actually give you, what they cost, and whether switching is a good idea."
       blocks={[
         { type: "h2", text: "What a run-flat tyre actually is" },
