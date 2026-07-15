@@ -3,6 +3,16 @@ import { Seo } from "@/components/Seo";
 import flatTyreHero from "@/assets/blog/flat-tyre-london-hero.jpg";
 import runFlatHero from "@/assets/blog/run-flat-tyres-hero.jpg";
 import tpmsHero from "@/assets/blog/tpms-warning-hero.jpg";
+import emergencyPunctureLondon from "@/assets/blog/emergency-puncture-london-hero.jpg";
+import mobilePunctureRepairLondon from "@/assets/blog/mobile-puncture-repair-london-hero.jpg";
+import twentyFourHrPunctureLondon from "@/assets/blog/24-hour-puncture-repair-london-hero.jpg";
+import punctureRepairCostUk from "@/assets/blog/puncture-repair-cost-uk-hero.jpg";
+import sameDayPunctureLondon from "@/assets/blog/same-day-puncture-repair-london-hero.jpg";
+import punctureRepairCentralLondon from "@/assets/blog/puncture-repair-central-london-hero.jpg";
+import roadsidePunctureLondon from "@/assets/blog/roadside-puncture-repair-london-hero.jpg";
+import canPunctureBeRepairedUk from "@/assets/blog/can-a-puncture-be-repaired-uk-hero.jpg";
+import punctureVsNewTyre from "@/assets/blog/puncture-repair-vs-new-tyre-hero.jpg";
+import runFlatPunctureLondon from "@/assets/blog/run-flat-puncture-repair-london-hero.jpg";
 
 export type Block =
   | { type: "h2"; text: string }
@@ -22,7 +32,20 @@ export interface BlogPostProps {
   category: string;
   readMinutes: number;
   datePublished: string;
-  heroImage?: "flat" | "runflat" | "tpms";
+  heroImage?:
+    | "flat"
+    | "runflat"
+    | "tpms"
+    | "emergencyPunctureLondon"
+    | "mobilePunctureRepairLondon"
+    | "twentyFourHrPunctureLondon"
+    | "punctureRepairCostUk"
+    | "sameDayPunctureLondon"
+    | "punctureRepairCentralLondon"
+    | "roadsidePunctureLondon"
+    | "canPunctureBeRepairedUk"
+    | "punctureVsNewTyre"
+    | "runFlatPunctureLondon";
   intro: string;
   blocks: Block[];
   faqs: Faq[];
@@ -30,7 +53,21 @@ export interface BlogPostProps {
   related?: { to: string; label: string }[];
 }
 
-const heroMap = { flat: flatTyreHero, runflat: runFlatHero, tpms: tpmsHero };
+const heroMap = {
+  flat: flatTyreHero,
+  runflat: runFlatHero,
+  tpms: tpmsHero,
+  emergencyPunctureLondon,
+  mobilePunctureRepairLondon,
+  twentyFourHrPunctureLondon,
+  punctureRepairCostUk,
+  sameDayPunctureLondon,
+  punctureRepairCentralLondon,
+  roadsidePunctureLondon,
+  canPunctureBeRepairedUk,
+  punctureVsNewTyre,
+  runFlatPunctureLondon,
+};
 
 // Auto-link keywords in prose to the home page. Broad patterns so most paragraphs
 // end up with at least one inline link back to the booking flow.
