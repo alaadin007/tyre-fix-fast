@@ -57,6 +57,16 @@ import RunFlatVsStandardTyres from "./pages/blog/RunFlatVsStandardTyres.tsx";
 import BudgetVsPremiumTyresUk from "./pages/blog/BudgetVsPremiumTyresUk.tsx";
 import AllSeasonVsWinterTyresUk from "./pages/blog/AllSeasonVsWinterTyresUk.tsx";
 import PotholeDamageClaimUk from "./pages/blog/PotholeDamageClaimUk.tsx";
+import EmergencyPunctureRepairLondon from "./pages/blog/EmergencyPunctureRepairLondon.tsx";
+import MobilePunctureRepairLondon from "./pages/blog/MobilePunctureRepairLondon.tsx";
+import TwentyFourHourPunctureRepairLondon from "./pages/blog/TwentyFourHourPunctureRepairLondon.tsx";
+import PunctureRepairCostUk from "./pages/blog/PunctureRepairCostUk.tsx";
+import SameDayPunctureRepairLondon from "./pages/blog/SameDayPunctureRepairLondon.tsx";
+import PunctureRepairCentralLondon from "./pages/blog/PunctureRepairCentralLondon.tsx";
+import RoadsidePunctureRepairLondon from "./pages/blog/RoadsidePunctureRepairLondon.tsx";
+import CanAPunctureBeRepairedUk from "./pages/blog/CanAPunctureBeRepairedUk.tsx";
+import PunctureRepairVsNewTyre from "./pages/blog/PunctureRepairVsNewTyre.tsx";
+import RunFlatPunctureRepairLondon from "./pages/blog/RunFlatPunctureRepairLondon.tsx";
 
 const queryClient = new QueryClient();
 
@@ -121,6 +131,17 @@ const App = () => (
         <Route path="/blog/budget-vs-premium-tyres-uk" element={<BudgetVsPremiumTyresUk />} />
         <Route path="/blog/all-season-vs-winter-tyres-uk" element={<AllSeasonVsWinterTyresUk />} />
         <Route path="/blog/pothole-damage-claim-uk" element={<PotholeDamageClaimUk />} />
+        <Route path="/blog/pothole-damage-claim-uk" element={<PotholeDamageClaimUk />} />
+        <Route path="/blog/emergency-puncture-repair-london" element={<EmergencyPunctureRepairLondon />} />
+        <Route path="/blog/mobile-puncture-repair-london" element={<MobilePunctureRepairLondon />} />
+        <Route path="/blog/24-hour-puncture-repair-london" element={<TwentyFourHourPunctureRepairLondon />} />
+        <Route path="/blog/puncture-repair-cost-uk" element={<PunctureRepairCostUk />} />
+        <Route path="/blog/same-day-puncture-repair-london" element={<SameDayPunctureRepairLondon />} />
+        <Route path="/blog/puncture-repair-central-london" element={<PunctureRepairCentralLondon />} />
+        <Route path="/blog/roadside-puncture-repair-london" element={<RoadsidePunctureRepairLondon />} />
+        <Route path="/blog/can-a-puncture-be-repaired-uk" element={<CanAPunctureBeRepairedUk />} />
+        <Route path="/blog/puncture-repair-vs-new-tyre" element={<PunctureRepairVsNewTyre />} />
+        <Route path="/blog/run-flat-puncture-repair-london" element={<RunFlatPunctureRepairLondon />} />
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
         <Route path="*" element={<NotFound />} />
       </Routes>
