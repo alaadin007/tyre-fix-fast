@@ -1,0 +1,72 @@
+# Tyrefly
+
+> 24/7 mobile tyre fitting, puncture repair, and tyre replacement across the UK. Text your postcode — a local mobile fitter comes to you.
+
+Tyrefly dispatches vetted mobile tyre fitters to homes, roadsides, and workplaces anywhere in the UK. Customers message their postcode and tyre size and receive quotes from nearby pros in under a minute. No app or account required.
+
+## Pages
+
+- [Home](/): Book a mobile tyre fitter by text. How Tyrefly works, coverage, and pricing.
+- [Areas we cover](/areas): Full list of UK regions Tyrefly serves.
+- [Blog](/blog): Guides on flat tyres, punctures, mobile fitting, and tyre law in the UK.
+- [Privacy](/privacy): Privacy policy.
+- [Terms](/terms): Terms of service.
+
+## Area pages
+
+- [London](/areas/london): Mobile tyre fitting across Greater London.
+- [Greater Manchester](/areas/greater-manchester): Coverage across Greater Manchester.
+- [West Midlands](/areas/west-midlands): Coverage including Birmingham.
+- [West Yorkshire](/areas/west-yorkshire): Leeds, Bradford, Wakefield.
+- [Merseyside](/areas/merseyside): Liverpool and surrounds.
+- [South Yorkshire](/areas/south-yorkshire): Sheffield, Doncaster, Rotherham.
+- [Tyne and Wear](/areas/tyne-and-wear): Newcastle, Sunderland, Gateshead.
+- [Bristol](/areas/bristol): Bristol and surrounding areas.
+- [Edinburgh](/areas/edinburgh): Edinburgh coverage.
+- [Glasgow](/areas/glasgow): Glasgow coverage.
+- [Cardiff](/areas/cardiff): Cardiff coverage.
+- [Belfast](/areas/belfast): Belfast coverage.
+
+## Emergency & puncture guides
+
+- [Flat tyre in London — what to do](/blog/flat-tyre-london): Roadside safety and mobile-fitter dispatch.
+- [Emergency puncture repair London](/blog/emergency-puncture-repair-london): Fast response options in London.
+- [Mobile puncture repair London](/blog/mobile-puncture-repair-london): Cost, standards, arrival times.
+- [24-hour puncture repair London](/blog/24-hour-puncture-repair-london): Overnight and out-of-hours repair.
+- [Same-day puncture repair London](/blog/same-day-puncture-repair-london): Booking windows and dispatch.
+- [Puncture repair Central London](/blog/puncture-repair-central-london): Congestion Zone logistics.
+- [Roadside puncture repair London](/blog/roadside-puncture-repair-london): Mobile fitter vs AA/RAC.
+- [Run-flat puncture repair London](/blog/run-flat-puncture-repair-london): Can run-flats be repaired?
+- [Tyre blowout on the motorway — what to do](/blog/tyre-blowout-on-motorway-what-to-do): Motorway safety steps.
+- [Can I drive on a flat tyre (UK)?](/blog/can-i-drive-on-a-flat-tyre-uk): Damage risk and the law.
+- [Slow puncture UK guide](/blog/slow-puncture-uk-guide): Diagnosis and repair options.
+- [Nail in tyre — what to do](/blog/nail-in-tyre-what-to-do): Plug vs patch-plug repairs.
+- [Locking wheel nut lost](/blog/locking-wheel-nut-lost-uk): Removal options in the UK.
+- [Cracked alloy from pothole](/blog/cracked-alloy-from-pothole): Repair or replace.
+- [Pothole damage claim UK](/blog/pothole-damage-claim-uk): Section 58 claims process.
+
+## Buying & maintenance guides
+
+- [UK legal tread depth](/blog/uk-tyre-legal-tread-depth): 1.6mm rule and fines.
+- [Tyre age — when to replace](/blog/tyre-age-when-to-replace): DOT codes and rubber ageing.
+- [Tyre pressure guide UK](/blog/tyre-pressure-guide-uk): PSI, cold checks, laden figures.
+- [Wheel alignment UK guide](/blog/wheel-alignment-uk-guide): Tracking vs 4-wheel alignment.
+- [Tyre sidewall damage](/blog/tyre-sidewall-damage-guide): BS AU 159 repair rules.
+- [Tyre bulge sidewall danger](/blog/tyre-bulge-sidewall-danger): Why bulges mean replace.
+- [Puncture repair cost UK](/blog/puncture-repair-cost-uk): National vs London pricing.
+- [Can a puncture be repaired?](/blog/can-a-puncture-be-repaired-uk): Standards and exclusions.
+- [Puncture repair vs new tyre](/blog/puncture-repair-vs-new-tyre): Decision framework.
+- [Mobile tyre fitter vs garage](/blog/mobile-tyre-fitter-vs-garage): Cost and convenience.
+- [Run-flat vs standard tyres](/blog/run-flat-vs-standard-tyres): Switching considerations.
+- [Budget vs premium tyres UK](/blog/budget-vs-premium-tyres-uk): Wet braking and value.
+- [All-season vs winter tyres UK](/blog/all-season-vs-winter-tyres-uk): The 7°C rule and 3PMSF.
+- [Run-flat tyres UK guide](/blog/run-flat-tyres-uk-guide): How run-flats work.
+- [TPMS warning light](/blog/tpms-warning-light): Diagnosis and reset.
+
+## Location pages
+
+- [Mobile tyre fitting London](/blog/mobile-tyre-fitting-london): Coverage across Greater London.
+- [Mobile tyre fitting Manchester](/blog/mobile-tyre-fitting-manchester): Coverage across Greater Manchester.
+- [Mobile tyre fitting Birmingham](/blog/mobile-tyre-fitting-birmingham): Coverage across the West Midlands.
+- [24-hour tyre change London](/blog/twenty-four-hour-tyre-change-london): Overnight callouts.
+- [Mobile tyre fitter M25](/blog/mobile-tyre-fitter-m25): Motorway and orbital cover.
