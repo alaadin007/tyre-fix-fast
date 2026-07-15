@@ -11,7 +11,7 @@ export default function TwentyFourHourPunctureRepairLondon() {
       readMinutes={9}
       datePublished="2026-07-15"
       heroImage="twentyFourHrPunctureLondon"
-      intro="A puncture at 2am is a specific kind of problem: the garage down the road is shut, the AA might be four hours out, and half the operators advertising \"24 hour puncture repair near me\" don't actually answer the phone after midnight. Here's who does, what it costs, and how to book without wasting an hour."
+      intro="A puncture at 2am is a specific kind of problem: the garage down the road is shut, the AA might be four hours out, and half the operators advertising “24 hour puncture repair near me” don't actually answer the phone after midnight. Here's who does, what it costs, and how to book without wasting an hour."
       blocks={[
         { type: "h2", text: "Who's really open 24 hours in London" },
         { type: "p", html: "Fewer operators than the search results suggest. In 2026 there are perhaps 12–15 genuinely 24-hour mobile puncture repair companies working across the M25, and only a handful cover the outer boroughs after midnight. Everyone else is running an aspirational website with a 9-to-6 phone line." },

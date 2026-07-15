@@ -6,12 +6,12 @@ export default function SameDayPunctureRepairLondon() {
       slug="same-day-puncture-repair-london"
       metaTitle="Same Day Puncture Repair London: How Fast Is Fast? (2026)"
       metaDesc="Same day puncture repair London — realistic arrival windows, morning vs afternoon booking, prices, and how to guarantee you don't lose the day."
-      title="Same Day Puncture Repair London: How Fast Is \"Fast\", Really?"
+      title="Same Day Puncture Repair London: How Fast Is “Fast”, Really?"
       category="London"
       readMinutes={8}
       datePublished="2026-07-15"
       heroImage="sameDayPunctureLondon"
-      intro="\"Same day\" means different things to different operators. For some it means anytime before 8pm; for others it means \"if you book by 10am\". Here's what same day puncture repair in London actually looks like in 2026 — the honest arrival windows, how to guarantee your slot, and what it costs vs emergency."
+      intro="“Same day” means different things to different operators. For some it means anytime before 8pm; for others it means “if you book by 10am”. Here's what same day puncture repair in London actually looks like in 2026 — the honest arrival windows, how to guarantee your slot, and what it costs vs emergency."
       blocks={[
         { type: "h2", text: "What \"same day\" really means" },
         { type: "p", html: "For mobile puncture repair operators in London, <strong>same day</strong> = a slot on today's route, added after your call. The van fits you in between existing bookings, usually within 2–4 hours." },
