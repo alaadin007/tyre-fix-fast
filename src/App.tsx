@@ -131,7 +131,6 @@ const App = () => (
         <Route path="/blog/budget-vs-premium-tyres-uk" element={<BudgetVsPremiumTyresUk />} />
         <Route path="/blog/all-season-vs-winter-tyres-uk" element={<AllSeasonVsWinterTyresUk />} />
         <Route path="/blog/pothole-damage-claim-uk" element={<PotholeDamageClaimUk />} />
-        <Route path="/blog/pothole-damage-claim-uk" element={<PotholeDamageClaimUk />} />
         <Route path="/blog/emergency-puncture-repair-london" element={<EmergencyPunctureRepairLondon />} />
         <Route path="/blog/mobile-puncture-repair-london" element={<MobilePunctureRepairLondon />} />
         <Route path="/blog/24-hour-puncture-repair-london" element={<TwentyFourHourPunctureRepairLondon />} />
