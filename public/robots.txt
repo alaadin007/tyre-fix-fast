@@ -1,4 +1,5 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://tyrefly.com/sitemap.xml
+Sitemap: https://www.tyrefly.com/sitemap.xml
+
