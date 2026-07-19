@@ -174,7 +174,7 @@ export function extractName(t: string): string | null {
   if (!t) return null;
   // Early guard — a bare issue keyword is never a name.
   if (ISSUE_WORDS_RE.test(t.trim())) return null;
-  const explicit = t.match(/(?:my name is|i am|i'm|im|this is|name[:\-])\s+([A-Za-z][A-Za-z .'-]{1,38})/i);
+  const explicit = t.match(/(?:my name is|my name's|name is|name's|i am|i'm|im|this is|call me|it's|its|name[:\-])\s+([A-Za-z][A-Za-z .'-]{1,38})/i);
   if (explicit) {
     const cand = explicit[1].trim().replace(/\s+/g, " ");
     return isValidPersonName(cand) ? cand : null;
