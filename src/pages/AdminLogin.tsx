@@ -93,13 +93,13 @@ export default function AdminLogin() {
           <div>
             <Label htmlFor="password" className="text-xs">Password</Label>
             <Input
-              id="password" type="password" autoComplete={mode === "login" ? "current-password" : "new-password"}
+              id="password" type="password" autoComplete="current-password"
               required minLength={6}
               value={password} onChange={(e) => setPassword(e.target.value)}
             />
           </div>
           <Button type="submit" disabled={busy} className="mt-2">
-            {busy ? "…" : mode === "login" ? "Sign in" : "Sign up"}
+            {busy ? "…" : "Sign in"}
           </Button>
         </form>
 
