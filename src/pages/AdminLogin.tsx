@@ -121,14 +121,6 @@ export default function AdminLogin() {
           Continue with Google
         </Button>
 
-        <button
-          type="button"
-          onClick={() => setMode(mode === "login" ? "signup" : "login")}
-          className="mt-4 w-full text-xs text-muted-foreground hover:text-foreground"
-        >
-          {mode === "login" ? "Need an account? Sign up" : "Have an account? Sign in"}
-        </button>
-
         <p className="mt-4 text-[10px] leading-relaxed text-muted-foreground">
           Admin role required after sign-in. If you don't have access, contact an existing admin.
         </p>
