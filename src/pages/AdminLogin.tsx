@@ -67,7 +67,7 @@ export default function AdminLogin() {
       <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-card/70 p-6 shadow-2xl backdrop-blur">
         <h1 className="text-xl font-bold">Operations Console</h1>
         <p className="mt-1 text-xs text-muted-foreground">
-          {mode === "login" ? "Sign in to continue" : "Create an admin account"}
+          Sign in to continue
         </p>
 
         {noAccess ? (
