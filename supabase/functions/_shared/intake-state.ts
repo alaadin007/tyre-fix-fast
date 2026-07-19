@@ -1121,26 +1121,34 @@ async function applyCoverageGate(
   const outward = (pc.split(" ")[0] || pc).toUpperCase();
   const covered = await checkTechnicianCoverage(supabase, pc);
   convContext.coverage_checked = true;
+  convContext.coverage_area_matched = covered;
   try {
     await supabase.from("conversations")
       .update({ context: convContext })
       .eq("id", conversation.id);
   } catch { /* ignore */ }
-  if (covered) return null;
-  try {
-    await supabase.from("jobs")
-      .update({ status: "out_of_coverage" })
-      .eq("id", job.id);
-    await supabase.from("conversations")
-      .update({ step: "complete" })
-      .eq("id", conversation.id);
-  } catch { /* ignore — still send reply */ }
-  return {
-    reply: outOfCoverageMessage(outward),
-    job: { ...job, status: "out_of_coverage" },
-    conversation: { ...conversation, step: "complete", context: convContext },
-    justCompleted: false,
-  };
+
+  // NEW BEHAVIOUR: never auto-reject the customer. If no technician's
+  // service_postcodes list matches, we still continue intake normally —
+  // an admin/technician manually confirms whether someone can actually
+  // reach the location (a nearby tech may be willing to travel).
+  // We just flag the job + raise an ops alert so admins know to review.
+  if (!covered) {
+    try {
+      await supabase.from("jobs")
+        .update({ coverage_uncertain: true })
+        .eq("id", job.id);
+    } catch { /* column may not exist yet — ignore */ }
+    try {
+      await supabase.from("ops_alerts").insert({
+        level: "warning",
+        kind: "coverage_uncertain",
+        job_id: job.id,
+        message: `Postcode ${outward} has no listed technician coverage — manual check required before broadcast.`,
+      });
+    } catch { /* ignore */ }
+  }
+  return null;
 }
 
 export async function processCustomerIntake(
@@ -1157,58 +1165,7 @@ export async function processCustomerIntake(
   let conversation = await loadActiveConversation(supabase, from);
   let job: any = null;
 
-  // ─── Post out-of-coverage follow-up gate ───────────────────────────────
-  // If the customer's most recent job was marked out_of_coverage (and there's
-  // no active intake), don't restart intake and don't fall through to the
-  // "we cover most of the UK" FAQ. Either re-check coverage on a new postcode,
-  // or gently repeat that we don't cover their area yet.
-  {
-    const { data: lastJob } = await supabase
-      .from("jobs")
-      .select("id, status, postcode, created_at")
-      .eq("customer_phone", from)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    const lastOOC = lastJob && (lastJob as any).status === "out_of_coverage";
-    const withinWindow = lastOOC
-      && (Date.now() - new Date((lastJob as any).created_at).getTime()) < 24 * 60 * 60 * 1000;
-    if (withinWindow) {
-      // If customer is describing a tyre problem, skip coverage gate —
-      // go straight to intake (they may now be at a different location).
-      if (hasTyreServiceIntent(body || "")) {
-        // fall through — do nothing here
-      } else {
-        const newPc = extractPostcode(body || "");
-        if (newPc) {
-          const covered = await checkTechnicianCoverage(supabase, newPc);
-          if (covered) {
-            // Coverage now available — close the OOC job so intake can restart
-            // fresh below without re-tripping this gate.
-            await supabase
-              .from("jobs")
-              .update({ status: "cancelled" })
-              .eq("id", (lastJob as any).id);
-          } else {
-            const outward = (newPc.split(" ")[0] || newPc).toUpperCase();
-            return {
-              reply: `Thanks — unfortunately ${outward} is also outside our current coverage. We're adding technicians regularly and hope to reach your area soon! 🙏`,
-              job: null,
-              conversation: null,
-              justCompleted: false,
-            };
-          }
-        } else {
-          return {
-            reply: "We currently cover parts of London and surrounding areas, with more regions being added. Drop your postcode and I'll check availability! 📍",
-            job: null,
-            conversation: null,
-            justCompleted: false,
-          };
-        }
-      }
-    }
-  }
+
 
 
   // ─── Intent gate ────────────────────────────────────────────────────────
