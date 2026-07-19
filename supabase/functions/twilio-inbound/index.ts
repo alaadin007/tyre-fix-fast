@@ -4536,8 +4536,46 @@ Deno.serve(async (req) => {
       }
     } catch (_) { /* best-effort */ }
 
+    // ── Mid-intake bail-out detector ────────────────────────────────────
+    // If the customer signals the problem is already resolved or they want
+    // to cancel while we're still collecting details, gracefully close the
+    // pending job instead of continuing to ask intake questions.
+    if (midIntake && body) {
+      const bt = body.toLowerCase().trim();
+      const BAILOUT_RE = /(problem|issue|tyre|tire|puncture|flat|it'?s?\s+all)?\s*(is\s+|has\s+been\s+|now\s+|all\s+)?(sorted|resolved|fixed|handled|taken\s+care\s+of|done)\b|\bno\s+longer\s+(need|require)\b|\bdon'?t\s+need\b|\bno\s+need\b|\ball\s+good\s+now\b|\bnever\s*mind\b|\bnevermind\b|\bnvm\b|\bforget\s+it\b|\bchanged?\s+my\s+mind\b|\bcancel(\s+(the\s+)?(job|request|booking))?\b|\bbail\s*out\b|\bfound\s+(someone|help|another)\b|\bgot\s+(help|sorted)\b|\bwent\s+with\s+(someone|another)\b/i;
+      if (BAILOUT_RE.test(bt) && bt.length < 200) {
+        try {
+          // Close any pending intake job for this phone.
+          const { data: cancelJobs } = await supabase
+            .from("jobs")
+            .select("id,status")
+            .eq("customer_phone", from)
+            .in("status", ["intake_pending", "intake_complete", "broadcasting", "awaiting_approval", "pending"])
+            .order("created_at", { ascending: false })
+            .limit(1);
+          const cj: any = cancelJobs?.[0];
+          if (cj) {
+            await supabase.from("jobs").update({
+              status: "cancelled",
+              updated_at: new Date().toISOString(),
+            }).eq("id", cj.id);
+          }
+          // Reset conversation so the next message starts fresh.
+          await supabase.from("conversations")
+            .update({ step: "complete", last_message_at: new Date().toISOString() })
+            .eq("customer_phone", from);
+        } catch (e) { console.error("bail-out cancel failed", e); }
+        await sendReply(
+          from,
+          "No worries — glad it's sorted! 👍 We've closed this request. If you ever need us again (24/7 roadside tyre help across London), just message *NEW JOB* and we'll jump straight in. — TyreFly",
+          channel,
+        );
+        return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+      }
+    }
 
     if (!midIntake && mediaUrls.length === 0 && body) {
+
       // ── Unified AI decision layer ──────────────────────────────────
       // One AI call decides FAQ / INTAKE_START / CLARIFY / OUT_OF_SCOPE
       // / OTHER using the editable Customer AI Instructions prompt as
