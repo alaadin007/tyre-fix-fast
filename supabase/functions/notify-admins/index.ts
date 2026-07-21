@@ -219,10 +219,37 @@ Deno.serve(async (req) => {
       const header_image_url = photos[0] ?? FALLBACK_HEADER;
       const body_params = await buildJobTemplateParams(job, photos);
 
-      // NOTE: We intentionally do NOT seed an admin_state here. Admins pick
-      // technicians manually from the dashboard — the WhatsApp template's
-      // trailing "Reply YES to see nearby technicians" prompt is a Meta
-      // template artefact that will be removed on the next template revision.
+      const normalizedNumbers = numbers.map(normPhone).filter(Boolean);
+      if (normalizedNumbers.length > 0) {
+        const { data: existingStates } = await supabase
+          .from("admin_states")
+          .select("phone, step, updated_at")
+          .in("phone", normalizedNumbers);
+        const existingByPhone = new Map((existingStates ?? []).map((row: any) => [row.phone, row]));
+        const nowMs = Date.now();
+        const nowIso = new Date().toISOString();
+        const seedableSteps = new Set(["await_ref_for_list", "await_broadcast_confirm", "await_ref_for_broadcast"]);
+        const stateRows = normalizedNumbers
+          .map((phone) => {
+            const current = existingByPhone.get(phone);
+            const isActive = !!(
+              current?.step &&
+              current.updated_at &&
+              (nowMs - new Date(current.updated_at).getTime()) < 6 * 60 * 60 * 1000
+            );
+            if (isActive && !seedableSteps.has(current.step)) return null;
+            return {
+              phone,
+              step: "await_ref_for_list",
+              job_id: job.id,
+              updated_at: nowIso,
+            };
+          })
+          .filter(Boolean);
+        if (stateRows.length > 0) {
+          await supabase.from("admin_states").upsert(stateRows);
+        }
+      }
 
       const results = await Promise.allSettled(
         numbers.map((to) =>
