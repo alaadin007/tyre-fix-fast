@@ -272,6 +272,7 @@ Deno.serve(async (req) => {
         provider: "twilio",
         error: twilioErr.error,
         code: twilioErr.code,
+        job_id,
       });
       return new Response(
         JSON.stringify({
