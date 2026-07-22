@@ -467,6 +467,44 @@ export function looksLikeAddress(t: string): boolean {
   return false;
 }
 
+async function classifyPlateOrAddress(body: string): Promise<"plate" | "address"> {
+  const apiKey = Deno.env.get("LOVABLE_API_KEY");
+  if (!apiKey) return "address";
+  try {
+    const ctrl = new AbortController();
+    const timeout = setTimeout(() => ctrl.abort(), 3000);
+    const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      signal: ctrl.signal,
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-3-flash-preview",
+        messages: [
+          {
+            role: "system",
+            content:
+              "Is the following WhatsApp message most likely (a) a UK vehicle registration plate, or (b) a street address / postcode? " +
+              "Reply with just 'plate' or 'address'.",
+          },
+          { role: "user", content: (body || "").slice(0, 300) },
+        ],
+      }),
+    });
+    clearTimeout(timeout);
+    if (!r.ok) return "address";
+    const j = await r.json();
+    const text = (j?.choices?.[0]?.message?.content || "").toLowerCase();
+    if (text.includes("plate")) return "plate";
+    return "address";
+  } catch (e) {
+    console.error("classifyPlateOrAddress AI error", e);
+    return "address";
+  }
+}
+
 async function geocodeAddress(q: string): Promise<{ lat: number; lng: number; postcode: string | null } | null> {
   const query = (q || "").trim();
   if (!query) return null;
@@ -1554,62 +1592,67 @@ export async function processCustomerIntake(
       justCompleted: false,
     };
   } else if (!locationAlreadyConfirmed && looksLikeAddress(body)) {
-    // Accept the typed address as the location — but only confirm if we have a postcode.
-    const cleaned = (body || "").trim().slice(0, 300);
-    const geo = await geocodeAddress(cleaned);
     const pcFromBody = extractPostcode(body);
-    const resolvedPostcode = pcFromBody ?? geo?.postcode ?? job.postcode ?? null;
+    const weakAddressOnly = !pcFromBody && !STREET_KEYWORDS_RE.test(body) && !isWhat3Words(body) && UK_OUTWARD_RE.test(body);
+    const skipAsAddress = weakAddressOnly && !job.vehicle_reg && (await classifyPlateOrAddress(body)) === "plate";
 
-    if (!resolvedPostcode) {
-      // Address typed without a postcode — ask for it before marking location complete.
+    if (!skipAsAddress) {
+      // Accept the typed address as the location — but only confirm if we have a postcode.
+      const cleaned = (body || "").trim().slice(0, 300);
+      const geo = await geocodeAddress(cleaned);
+      const resolvedPostcode = pcFromBody ?? geo?.postcode ?? job.postcode ?? null;
+
+      if (!resolvedPostcode) {
+        // Address typed without a postcode — ask for it before marking location complete.
+        await supabase.from("conversations").update({
+          last_message_at: new Date().toISOString(),
+        }).eq("id", conversation.id);
+        return {
+          reply: "Thanks — could you also include the postcode for that address? We need it to dispatch the technician accurately. 📮",
+          job,
+          conversation,
+          justCompleted: false,
+        };
+      }
+
+      convContext.address_text = cleaned;
+      convContext.location_pin_confirmed = true;
+      contextChanged = true;
+      if (geo) {
+        updates.lat = geo.lat;
+        updates.lng = geo.lng;
+      }
+      if (!job.postcode) updates.postcode = resolvedPostcode;
+
+      // Persist immediately and reply with the address-accepted confirmation.
+      if (Object.keys(updates).length > 1) {
+        const { data: updated } = await supabase.from("jobs").update(updates).eq("id", job.id).select().single();
+        if (updated) job = updated;
+      }
       await supabase.from("conversations").update({
+        context: convContext,
         last_message_at: new Date().toISOString(),
       }).eq("id", conversation.id);
+      conversation = { ...conversation, context: convContext };
+
+      // Silent coverage gate — customer just gave us a resolvable postcode.
+      const gated = await applyCoverageGate(supabase, job, conversation, convContext);
+      if (gated) return gated;
+
+      const missing = evaluateJob(job, conversation);
+      if (isComplete(missing)) {
+        return {
+          reply: `Got it — noted your address. ✅\n\n${summaryMessage(job)}`,
+          job, conversation, justCompleted: false,
+        };
+      }
       return {
-        reply: "Thanks — could you also include the postcode for that address? We need it to dispatch the technician accurately. 📮",
-        job,
-        conversation,
-        justCompleted: false,
-      };
-    }
-
-    convContext.address_text = cleaned;
-    convContext.location_pin_confirmed = true;
-    contextChanged = true;
-    if (geo) {
-      updates.lat = geo.lat;
-      updates.lng = geo.lng;
-    }
-    if (!job.postcode) updates.postcode = resolvedPostcode;
-
-    // Persist immediately and reply with the address-accepted confirmation.
-    if (Object.keys(updates).length > 1) {
-      const { data: updated } = await supabase.from("jobs").update(updates).eq("id", job.id).select().single();
-      if (updated) job = updated;
-    }
-    await supabase.from("conversations").update({
-      context: convContext,
-      last_message_at: new Date().toISOString(),
-    }).eq("id", conversation.id);
-    conversation = { ...conversation, context: convContext };
-
-    // Silent coverage gate — customer just gave us a resolvable postcode.
-    const gated = await applyCoverageGate(supabase, job, conversation, convContext);
-    if (gated) return gated;
-
-    const missing = evaluateJob(job, conversation);
-    if (isComplete(missing)) {
-      return {
-        reply: `Got it — noted your address. ✅\n\n${summaryMessage(job)}`,
+        reply: checklistMessage(job, missing, {
+          header: "Got it — noted your address. ✅\n\nHere's what we have so far:",
+        }),
         job, conversation, justCompleted: false,
       };
     }
-    return {
-      reply: checklistMessage(job, missing, {
-        header: "Got it — noted your address. ✅\n\nHere's what we have so far:",
-      }),
-      job, conversation, justCompleted: false,
-    };
   } else {
     const pc = extractPostcode(body);
     if (pc && !job.postcode) updates.postcode = pc;
