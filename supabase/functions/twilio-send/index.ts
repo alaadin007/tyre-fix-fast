@@ -207,6 +207,7 @@ Deno.serve(async (req) => {
           provider: "meta_and_twilio",
           error: `${metaErrText}; fallback: ${twilioErr.error}`,
           code: twilioErr.code ?? metaData?.code ?? metaData?.error?.code ?? null,
+          job_id,
         });
         return new Response(
           JSON.stringify({
