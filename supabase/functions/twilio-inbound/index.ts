@@ -4721,6 +4721,16 @@ Deno.serve(async (req) => {
             `Thanks! We've already got your job *#${ref}* (${statusTxt}) on file ` +
             `and our team is working on it — we'll be in touch shortly with a price and ETA.\n\n` +
             `If this is a *different* tyre problem, reply *NEW JOB* to start a new booking.`;
+          // Best-effort: tag this inbound message with the matched active job.
+          try {
+            if (inboundLog?.id) {
+              await supabase.from("sms_messages")
+                .update({ job_id: recentJob.id })
+                .eq("id", inboundLog.id);
+            }
+          } catch (e) {
+            console.error("failed to tag inbound with recentJob", e);
+          }
           await sendReply(from, reply, channel);
           return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
         }
@@ -4754,6 +4764,36 @@ Deno.serve(async (req) => {
       mediaUrls: customerMediaUrls,
       channel,
     });
+
+    // Best-effort: link this inbound message to the job the intake resolved to,
+    // and if this is a brand-new job, backfill any recent orphaned messages
+    // from this phone number so they attach to this new job instead of leaking
+    // into an older one. Wrapped in try/catch — never affects the reply.
+    try {
+      const outcomeJob: any = outcome?.job;
+      if (outcomeJob?.id) {
+        if (inboundLog?.id) {
+          await supabase.from("sms_messages")
+            .update({ job_id: outcomeJob.id })
+            .eq("id", inboundLog.id);
+        }
+        const isNewJob = !recentJob || recentJob.id !== outcomeJob.id;
+        if (isNewJob && outcomeJob.created_at) {
+          const windowStart = new Date(
+            new Date(outcomeJob.created_at).getTime() - 5 * 60_000,
+          ).toISOString();
+          await supabase.from("sms_messages")
+            .update({ job_id: outcomeJob.id })
+            .is("job_id", null)
+            .or(`from_number.eq.${from},to_number.eq.${from}`)
+            .gte("created_at", windowStart)
+            .lt("created_at", outcomeJob.created_at);
+        }
+      }
+    } catch (e) {
+      console.error("failed to backfill job_id on inbound/orphan messages", e);
+    }
+
 
     // Run vision analysis on any new photos (bounces back non-tyre photos).
     if (customerMediaUrls.length > 0 && outcome.job?.id) {
