@@ -135,6 +135,7 @@ async function logFailedOutbound(args: {
       num_media: args.mediaUrls?.length ?? 0,
       media_urls: args.mediaUrls ?? [],
       status: `failed: ${args.provider}${args.code ? ` ${args.code}` : ""} — ${args.error}`.slice(0, 240),
+      job_id: args.job_id ?? null,
     });
   } catch (e) {
     console.error("failed to log outbound failure", e);
