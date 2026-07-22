@@ -21,6 +21,7 @@ const BodySchema = z.object({
   channel: z.enum(["sms", "whatsapp"]).default("sms"),
   media_urls: z.array(z.string().url()).max(10).optional(),
   provider_preference: z.enum(["auto", "twilio", "meta"]).optional().default("auto"),
+  job_id: z.string().uuid().nullable().optional(),
 });
 
 function normalizePhone(raw: string): string {
@@ -117,6 +118,7 @@ async function logFailedOutbound(args: {
   provider: string;
   error: string;
   code?: number | string | null;
+  job_id?: string | null;
 }) {
   try {
     const supabase = createClient(
@@ -133,6 +135,7 @@ async function logFailedOutbound(args: {
       num_media: args.mediaUrls?.length ?? 0,
       media_urls: args.mediaUrls ?? [],
       status: `failed: ${args.provider}${args.code ? ` ${args.code}` : ""} — ${args.error}`.slice(0, 240),
+      job_id: args.job_id ?? null,
     });
   } catch (e) {
     console.error("failed to log outbound failure", e);
@@ -155,7 +158,7 @@ Deno.serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
-    const { to, body, channel, media_urls, provider_preference } = parsed.data;
+    const { to, body, channel, media_urls, provider_preference, job_id } = parsed.data;
 
     // For technician broadcast we can force direct Twilio WhatsApp delivery instead of
     // treating Meta's accepted-but-undelivered response as success.
@@ -204,6 +207,7 @@ Deno.serve(async (req) => {
           provider: "meta_and_twilio",
           error: `${metaErrText}; fallback: ${twilioErr.error}`,
           code: twilioErr.code ?? metaData?.code ?? metaData?.error?.code ?? null,
+          job_id,
         });
         return new Response(
           JSON.stringify({
@@ -233,6 +237,7 @@ Deno.serve(async (req) => {
         num_media: media_urls?.length ?? 0,
         media_urls: media_urls ?? [],
         status: twilioWa.data?.status ?? "queued",
+        job_id: job_id ?? null,
       });
 
       return new Response(JSON.stringify({ ok: true, sid: twilioWa.data?.sid, channel: "whatsapp", provider: "twilio" }), {
@@ -268,6 +273,7 @@ Deno.serve(async (req) => {
         provider: "twilio",
         error: twilioErr.error,
         code: twilioErr.code,
+        job_id,
       });
       return new Response(
         JSON.stringify({
@@ -298,6 +304,7 @@ Deno.serve(async (req) => {
       num_media: media_urls?.length ?? 0,
       media_urls: media_urls ?? [],
       status: twilioSms.data?.status ?? "queued",
+      job_id: job_id ?? null,
     });
 
     return new Response(JSON.stringify({ ok: true, sid: twilioSms.data?.sid, channel: "sms", provider: "twilio" }), {
