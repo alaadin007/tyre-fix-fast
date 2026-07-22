@@ -4573,8 +4573,66 @@ Deno.serve(async (req) => {
         recentJob,
       });
 
+      // Helper: run Block B's active-job guard. Returns true if a
+      // "same_job" reply was sent (caller must return immediately),
+      // false if the guard did not apply or resolved to "new_job".
+      const runActiveJobGuard = async (): Promise<boolean> => {
+        if (!recentJob || !ACTIVE_JOB_STATUSES.has(String(recentJob.status))) return false;
+        const recentAgeMs = Date.now() - new Date(recentJob.created_at).getTime();
+        if (recentAgeMs >= 2 * 60 * 60_000) return false;
+        const explicitNewJob = /^\s*(new[\s_-]?job|new\s+booking|start\s+(again|over|new)|another\s+job|different\s+(job|tyre|problem))\s*[!.?]*\s*$/i
+          .test(body || "");
+        const relation = explicitNewJob
+          ? "new_job"
+          : await aiClassifyJobContinuity({
+              body: body || "",
+              hasMedia: mediaUrls.length > 0,
+              job: {
+                id: recentJob.id,
+                status: String(recentJob.status),
+                issue_type: (recentJob as any).issue_type ?? null,
+                postcode: (recentJob as any).postcode ?? null,
+                created_at: recentJob.created_at,
+                issue_description: (recentJob as any).issue_description ?? null,
+              },
+            });
+        if (relation === "same_job") {
+          const ref = jobRefOf(recentJob);
+          const statusTxt = String(recentJob.status).replace(/_/g, " ");
+          const reply =
+            `Thanks! We've already got your job *#${ref}* (${statusTxt}) on file ` +
+            `and our team is working on it — we'll be in touch shortly with a price and ETA.\n\n` +
+            `If this is a *different* tyre problem, reply *NEW JOB* to start a new booking.`;
+          try {
+            if (inboundLog?.id) {
+              await supabase.from("sms_messages")
+                .update({ job_id: recentJob.id })
+                .eq("id", inboundLog.id);
+            }
+          } catch (e) {
+            console.error("failed to tag inbound with recentJob", e);
+          }
+          await sendReply(from, reply, channel);
+          return true;
+        }
+        return false;
+      };
+
       if (decision) {
         console.log("customer AI decision", { from, body: body.slice(0, 80), action: decision.action });
+
+        // FAQ → send AI reply and STOP. Do not run guard.
+        if (decision.action === "FAQ") {
+          await sendReply(from, decision.reply, channel);
+          return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+        }
+
+        // For any non-FAQ action, if there is an active recent job,
+        // let the guard decide whether to send the deterministic
+        // "already have your job" reply instead of decision.reply.
+        if (await runActiveJobGuard()) {
+          return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
+        }
 
         // CLARIFY → save awaiting_clarification so we know the next
         // reply is answering our question.
@@ -4603,9 +4661,8 @@ Deno.serve(async (req) => {
           return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
         }
 
-        // FAQ / OUT_OF_SCOPE / OTHER → send AI reply and STOP.
+        // OUT_OF_SCOPE / OTHER → send AI reply and STOP.
         if (
-          decision.action === "FAQ" ||
           decision.action === "OUT_OF_SCOPE" ||
           decision.action === "OTHER"
         ) {
