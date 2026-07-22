@@ -732,7 +732,7 @@ async function classifyWithAI(
 
 const FIELD_LABELS: Record<ChangeField, string> = {
   customer_name: "full name",
-  vehicle_reg: "vehicle registration number",
+  vehicle_reg: "vehicle no. plate",
   tyre_size: "tyre size",
   affected_wheels: "affected tyre(s)",
   issue_type: "nature of the issue",
@@ -861,9 +861,9 @@ function welcomeMessage(
   }
   yourDetails.push("📍 Live location (preferred) — tap the pin icon in WhatsApp. If the pin isn't working, type your full street address and postcode instead.");
   if (known.reg) {
-    yourDetails.push(`🚘 Vehicle reg number: ${known.reg} ✅`);
+    yourDetails.push(`🚘 Vehicle No. Plate: ${known.reg} ✅`);
   } else {
-    yourDetails.push("🚘 Vehicle reg number — e.g. YC67 PGX");
+    yourDetails.push("🚘 Vehicle No. Plate — e.g. YC67 PGX (or reply N/A if you don't have one)");
   }
 
   const lines = [
@@ -921,7 +921,7 @@ function summaryMessage(job: any): string {
     "",
     `✅ Full name: ${job.customer_name}`,
     `✅ Location: ${job.postcode ? `shared (${job.postcode})` : "shared"}`,
-    `✅ Vehicle reg: ${job.vehicle_reg}`,
+    `✅ Vehicle No. Plate: ${job.vehicle_reg}`,
     `✅ Affected tyre(s): ${wheels}`,
     `✅ Nature of issue: ${displayIssueType(job)}`,
     `✅ Tyre photo(s): ${photos} received`,
@@ -977,7 +977,7 @@ function checklistMessage(job: any, missing: Missing, opts: { header?: string; f
   const items: Array<[boolean, string, string]> = [
     [!missing.name,     "Full name",         !missing.name ? job.customer_name : "_missing_"],
     [!missing.pin,      "Location",          !missing.pin ? (job.postcode ? `shared (${job.postcode})` : "shared") : "_missing — share your live WhatsApp pin (preferred), or type your full street address with postcode if pin is not working_"],
-    [!missing.reg,      "Vehicle reg",       !missing.reg ? job.vehicle_reg : "_missing_"],
+    [!missing.reg,      "Vehicle No. Plate", !missing.reg ? job.vehicle_reg : "_missing_"],
     [!missing.wheels,   "Affected tyre(s)",  !missing.wheels ? wheels : "_missing — e.g. front-left / all four_"],
     [!missing.issue,    "Nature of issue",   !missing.issue ? displayIssueType(job) : "_missing — e.g. puncture / flat / blowout_"],
     [!missing.photos,   "Tyre photo(s)",     !missing.photos ? `${photoCount} received` : `_${photoCount > 0 ? `${photoCount} received — need at least 2 valid tyre photos (JPEG/PNG)` : "missing — send at least 2 clear tyre photos (JPEG/PNG)"}_`],
