@@ -467,6 +467,44 @@ export function looksLikeAddress(t: string): boolean {
   return false;
 }
 
+async function classifyPlateOrAddress(body: string): Promise<"plate" | "address"> {
+  const apiKey = Deno.env.get("LOVABLE_API_KEY");
+  if (!apiKey) return "address";
+  try {
+    const ctrl = new AbortController();
+    const timeout = setTimeout(() => ctrl.abort(), 3000);
+    const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      signal: ctrl.signal,
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-3-flash-preview",
+        messages: [
+          {
+            role: "system",
+            content:
+              "Is the following WhatsApp message most likely (a) a UK vehicle registration plate, or (b) a street address / postcode? " +
+              "Reply with just 'plate' or 'address'.",
+          },
+          { role: "user", content: (body || "").slice(0, 300) },
+        ],
+      }),
+    });
+    clearTimeout(timeout);
+    if (!r.ok) return "address";
+    const j = await r.json();
+    const text = (j?.choices?.[0]?.message?.content || "").toLowerCase();
+    if (text.includes("plate")) return "plate";
+    return "address";
+  } catch (e) {
+    console.error("classifyPlateOrAddress AI error", e);
+    return "address";
+  }
+}
+
 async function geocodeAddress(q: string): Promise<{ lat: number; lng: number; postcode: string | null } | null> {
   const query = (q || "").trim();
   if (!query) return null;
