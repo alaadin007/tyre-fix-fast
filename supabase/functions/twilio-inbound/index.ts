@@ -4739,61 +4739,9 @@ Deno.serve(async (req) => {
 
 
 
-    // 3d. Guard: if the customer already has a very recent active job (intake
-    //     just completed, broadcasting, quoting, awaiting payment, in-progress,
-    //     etc.), do NOT auto-start a brand-new intake on a stray follow-up
-    //     message. Acknowledge the existing job and require an explicit
-    //     "NEW JOB" reply to start another one. Mid-intake conversations are
-    //     unaffected (they hit the midIntake branch above).
-    if (
-      !midIntake &&
-      recentJob &&
-      ACTIVE_JOB_STATUSES.has(String(recentJob.status))
-    ) {
-      const recentAgeMs = Date.now() - new Date(recentJob.created_at).getTime();
-      if (recentAgeMs < 2 * 60 * 60_000) {
-        // Explicit "NEW JOB" keyword always starts a fresh intake.
-        const explicitNewJob = /^\s*(new[\s_-]?job|new\s+booking|start\s+(again|over|new)|another\s+job|different\s+(job|tyre|problem))\s*[!.?]*\s*$/i
-          .test(body || "");
-        // Otherwise let the AI decide whether this is the same job or a new one,
-        // passing the existing job state as context.
-        const relation = explicitNewJob
-          ? "new_job"
-          : await aiClassifyJobContinuity({
-              body: body || "",
-              hasMedia: mediaUrls.length > 0,
-              job: {
-                id: recentJob.id,
-                status: String(recentJob.status),
-                issue_type: (recentJob as any).issue_type ?? null,
-                postcode: (recentJob as any).postcode ?? null,
-                created_at: recentJob.created_at,
-                issue_description: (recentJob as any).issue_description ?? null,
-              },
-            });
-        if (relation === "same_job") {
-          const ref = jobRefOf(recentJob);
-          const statusTxt = String(recentJob.status).replace(/_/g, " ");
-          const reply =
-            `Thanks! We've already got your job *#${ref}* (${statusTxt}) on file ` +
-            `and our team is working on it — we'll be in touch shortly with a price and ETA.\n\n` +
-            `If this is a *different* tyre problem, reply *NEW JOB* to start a new booking.`;
-          // Best-effort: tag this inbound message with the matched active job.
-          try {
-            if (inboundLog?.id) {
-              await supabase.from("sms_messages")
-                .update({ job_id: recentJob.id })
-                .eq("id", inboundLog.id);
-            }
-          } catch (e) {
-            console.error("failed to tag inbound with recentJob", e);
-          }
-          await sendReply(from, reply, channel);
-          return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
-        }
-        // relation === "new_job" → fall through to intake (starts a fresh job).
-      }
-    }
+    // 3d. Guard moved: the active-job guard now runs inside the unified
+    //     AI decision layer above (see runActiveJobGuard) so it evaluates
+    //     exactly once per message, before any improvised AI reply.
 
     // 4. Otherwise → route through the customer intake state machine.
     //    This is the single source of truth for the 6-step information gathering.
