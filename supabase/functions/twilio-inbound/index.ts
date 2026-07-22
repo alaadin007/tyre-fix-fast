@@ -4721,6 +4721,16 @@ Deno.serve(async (req) => {
             `Thanks! We've already got your job *#${ref}* (${statusTxt}) on file ` +
             `and our team is working on it — we'll be in touch shortly with a price and ETA.\n\n` +
             `If this is a *different* tyre problem, reply *NEW JOB* to start a new booking.`;
+          // Best-effort: tag this inbound message with the matched active job.
+          try {
+            if (inboundLog?.id) {
+              await supabase.from("sms_messages")
+                .update({ job_id: recentJob.id })
+                .eq("id", inboundLog.id);
+            }
+          } catch (e) {
+            console.error("failed to tag inbound with recentJob", e);
+          }
           await sendReply(from, reply, channel);
           return new Response(TWIML_OK, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
         }
