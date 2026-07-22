@@ -21,6 +21,7 @@ const BodySchema = z.object({
   channel: z.enum(["sms", "whatsapp"]).default("sms"),
   media_urls: z.array(z.string().url()).max(10).optional(),
   provider_preference: z.enum(["auto", "twilio", "meta"]).optional().default("auto"),
+  job_id: z.string().uuid().nullable().optional(),
 });
 
 function normalizePhone(raw: string): string {
@@ -117,6 +118,7 @@ async function logFailedOutbound(args: {
   provider: string;
   error: string;
   code?: number | string | null;
+  job_id?: string | null;
 }) {
   try {
     const supabase = createClient(
