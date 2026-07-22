@@ -158,7 +158,7 @@ Deno.serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
-    const { to, body, channel, media_urls, provider_preference } = parsed.data;
+    const { to, body, channel, media_urls, provider_preference, job_id } = parsed.data;
 
     // For technician broadcast we can force direct Twilio WhatsApp delivery instead of
     // treating Meta's accepted-but-undelivered response as success.
