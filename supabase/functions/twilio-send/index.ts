@@ -304,6 +304,7 @@ Deno.serve(async (req) => {
       num_media: media_urls?.length ?? 0,
       media_urls: media_urls ?? [],
       status: twilioSms.data?.status ?? "queued",
+      job_id: job_id ?? null,
     });
 
     return new Response(JSON.stringify({ ok: true, sid: twilioSms.data?.sid, channel: "sms", provider: "twilio" }), {
