@@ -4,8 +4,8 @@ export default function EmergencyPunctureRepairLondon() {
   return (
     <BlogPost
       slug="emergency-puncture-repair-london"
-      metaTitle="Emergency Puncture Repair London: Who's Open Right Now (2026)"
-      metaDesc="Emergency puncture repair London: what it costs, how fast a mobile fitter arrives, and who's actually available 24/7 across every borough. Book in 60 seconds."
+      metaTitle="Emergency Puncture Repair London | 24/7 Mobile Fitter"
+      metaDesc="Emergency puncture repair in London, 24/7. Mobile fitters reach most boroughs in 30–60 minutes. Text your postcode and get a fixed price in 60 seconds."
       title="Emergency Puncture Repair in London: Who's Actually Open Right Now"
       category="London"
       readMinutes={9}

@@ -4,8 +4,8 @@ export default function RoadsidePunctureRepairLondon() {
   return (
     <BlogPost
       slug="roadside-puncture-repair-london"
-      metaTitle="Roadside Puncture Repair London: Mobile Fitter vs AA (2026)"
-      metaDesc="Roadside puncture repair in London: when to call a mobile fitter, when to call the AA/RAC, response times, prices, and where mobile can't legally attend."
+      metaTitle="Roadside Puncture Repair London | Mobile Fitter vs AA"
+      metaDesc="Roadside puncture repair in London: when to call a mobile fitter instead of the AA or RAC, response times, prices, and where mobile fitting isn't allowed."
       title="Roadside Puncture Repair London: When to Call Us Instead of the AA"
       category="London"
       readMinutes={9}
