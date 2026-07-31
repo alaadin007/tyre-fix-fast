@@ -3,8 +3,8 @@ import { Seo } from "@/components/Seo";
 import heroImg from "@/assets/blog/tpms-warning-hero.jpg";
 
 export default function TpmsWarningLight() {
-  const url = "https://tyrefly.com/blog/tpms-warning-light";
-  const imageUrl = `https://tyrefly.com${heroImg}`;
+  const url = "https://www.tyrefly.com/blog/tpms-warning-light";
+  const imageUrl = `https://www.tyrefly.com${heroImg}`;
   const datePublished = "2026-06-11";
 
   const articleLd = {
@@ -16,11 +16,11 @@ export default function TpmsWarningLight() {
     image: [imageUrl],
     datePublished,
     dateModified: datePublished,
-    author: { "@type": "Organization", name: "Tyrefly", url: "https://tyrefly.com" },
+    author: { "@type": "Organization", name: "Tyrefly", url: "https://www.tyrefly.com" },
     publisher: {
       "@type": "Organization",
       name: "Tyrefly",
-      logo: { "@type": "ImageObject", url: "https://tyrefly.com/og.jpg" },
+      logo: { "@type": "ImageObject", url: "https://www.tyrefly.com/og.jpg" },
     },
     mainEntityOfPage: { "@type": "WebPage", "@id": url },
   };
@@ -29,8 +29,8 @@ export default function TpmsWarningLight() {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     itemListElement: [
-      { "@type": "ListItem", position: 1, name: "Home", item: "https://tyrefly.com/" },
-      { "@type": "ListItem", position: 2, name: "Blog", item: "https://tyrefly.com/blog" },
+      { "@type": "ListItem", position: 1, name: "Home", item: "https://www.tyrefly.com/" },
+      { "@type": "ListItem", position: 2, name: "Blog", item: "https://www.tyrefly.com/blog" },
       { "@type": "ListItem", position: 3, name: "TPMS Warning Light", item: url },
     ],
   };
