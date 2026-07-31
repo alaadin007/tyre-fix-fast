@@ -90,7 +90,30 @@ export default function Blog() {
             </li>
           ))}
         </ul>
+
+        <section className="mt-16 pt-10 border-t border-border">
+          <h2 className="text-2xl md:text-3xl font-semibold tracking-tight mb-2">
+            London tyre guides
+          </h2>
+          <p className="text-muted-foreground mb-6">
+            Puncture repair and mobile tyre fitting across every London borough — costs, arrival
+            times and the local rules that catch drivers out.
+          </p>
+          <ul className="grid sm:grid-cols-2 gap-2">
+            {londonGuides.map((g) => (
+              <li key={g.to}>
+                <Link
+                  to={g.to}
+                  className="block px-4 py-2.5 rounded-lg text-sm hover:bg-primary/5 hover:text-primary transition"
+                >
+                  {g.label} →
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
       </section>
+
     </main>
   );
 }
