@@ -9,7 +9,7 @@ interface SeoProps {
   ogImage?: string;
 }
 
-const SITE = "https://tyrefly.com";
+const SITE = "https://www.tyrefly.com";
 
 export function Seo({ title, description, canonical, jsonLd, noindex, ogImage }: SeoProps) {
   const canonHref = canonical ? (canonical.startsWith("http") ? canonical : `${SITE}${canonical}`) : undefined;
