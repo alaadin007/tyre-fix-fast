@@ -420,6 +420,31 @@ export default function BlogPost(p: BlogPostProps) {
             </div>
           )}
 
+          {isLondon && (
+            <div className="mt-14 pt-8 border-t border-border">
+              <h2 className="text-2xl font-bold tracking-tight mb-2">
+                More London tyre guides
+              </h2>
+              <p className="text-sm text-muted-foreground mb-5">
+                Everything we've written about mobile tyre fitting and puncture repair across
+                Greater London.
+              </p>
+              <ul className="grid sm:grid-cols-2 gap-2">
+                {LONDON_CLUSTER.filter((l) => !l.to.endsWith(`/${p.slug}`)).map((l) => (
+                  <li key={l.to}>
+                    <Link
+                      to={l.to}
+                      className="block px-4 py-2.5 rounded-lg text-sm hover:bg-accent/5 hover:text-accent transition"
+                    >
+                      {l.label} →
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+
           <div className="mt-10 text-center">
             <Link to="/" className="text-accent font-semibold hover:underline underline-offset-4">
               ← Back to Tyrefly home
