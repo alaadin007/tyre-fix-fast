@@ -105,7 +105,7 @@ export default function MobileTyreFitterM25() {
       related={[
         { to: "/blog/tyre-blowout-on-motorway-what-to-do", label: "Motorway Blowout Guide" },
         { to: "/blog/mobile-tyre-fitting-london", label: "Mobile Tyre Fitting London" },
-        { to: "/blog/24-hour-tyre-change-london", label: "24 Hour Tyre Change London" },
+        { to: "/blog/twenty-four-hour-tyre-change-london", label: "24 Hour Tyre Change London" },
       ]}
     />
   );

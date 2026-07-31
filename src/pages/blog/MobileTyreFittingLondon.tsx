@@ -93,7 +93,7 @@ export default function MobileTyreFittingLondon() {
       ]}
       related={[
         { to: "/blog/flat-tyre-london", label: "Flat Tyre London Guide" },
-        { to: "/blog/24-hour-tyre-change-london", label: "24 Hour Tyre Change London" },
+        { to: "/blog/twenty-four-hour-tyre-change-london", label: "24 Hour Tyre Change London" },
         { to: "/blog/mobile-tyre-fitter-m25", label: "M25 Mobile Fitter" },
       ]}
     />
