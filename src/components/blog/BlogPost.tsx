@@ -32,6 +32,7 @@ export interface BlogPostProps {
   category: string;
   readMinutes: number;
   datePublished: string;
+  dateModified?: string;
   heroImage?:
     | "flat"
     | "runflat"
@@ -122,10 +123,29 @@ const MICRO_CTAS = [
   { text: "Nail in the tread?", label: "Book a mobile repair →" },
 ];
 
+const SITE = "https://www.tyrefly.com";
+
+// London content cluster — every London post links to the others (topical authority).
+const LONDON_CLUSTER: { to: string; label: string }[] = [
+  { to: "/blog/mobile-tyre-fitting-london", label: "Mobile tyre fitting London" },
+  { to: "/blog/emergency-puncture-repair-london", label: "Emergency puncture repair London" },
+  { to: "/blog/mobile-puncture-repair-london", label: "Mobile puncture repair London" },
+  { to: "/blog/24-hour-puncture-repair-london", label: "24 hour puncture repair London" },
+  { to: "/blog/same-day-puncture-repair-london", label: "Same day puncture repair London" },
+  { to: "/blog/puncture-repair-central-london", label: "Puncture repair Central London" },
+  { to: "/blog/roadside-puncture-repair-london", label: "Roadside puncture repair London" },
+  { to: "/blog/run-flat-puncture-repair-london", label: "Run flat puncture repair London" },
+  { to: "/blog/twenty-four-hour-tyre-change-london", label: "24 hour tyre change London" },
+  { to: "/blog/flat-tyre-london", label: "Flat tyre in London" },
+  { to: "/blog/mobile-tyre-fitter-m25", label: "Mobile tyre fitter on the M25" },
+  { to: "/areas/london", label: "Areas we cover in London" },
+];
+
 export default function BlogPost(p: BlogPostProps) {
-  const url = `https://tyrefly.com/blog/${p.slug}`;
+  const url = `${SITE}/blog/${p.slug}`;
   const hero = heroMap[p.heroImage ?? "flat"];
-  const imageUrl = `https://tyrefly.com${hero}`;
+  const imageUrl = `${SITE}${hero}`;
+  const isLondon = /london|m25/i.test(`${p.category} ${p.slug}`);
 
   const articleLd = {
     "@context": "https://schema.org",
@@ -134,12 +154,13 @@ export default function BlogPost(p: BlogPostProps) {
     description: p.metaDesc,
     image: [imageUrl],
     datePublished: p.datePublished,
-    dateModified: p.datePublished,
-    author: { "@type": "Organization", name: "Tyrefly", url: "https://tyrefly.com" },
+    dateModified: p.dateModified ?? p.datePublished,
+    inLanguage: "en-GB",
+    author: { "@type": "Organization", name: "Tyrefly", url: `${SITE}/` },
     publisher: {
       "@type": "Organization",
       name: "Tyrefly",
-      logo: { "@type": "ImageObject", url: "https://tyrefly.com/og.jpg" },
+      logo: { "@type": "ImageObject", url: `${SITE}/og.jpg` },
     },
     mainEntityOfPage: { "@type": "WebPage", "@id": url },
   };
@@ -148,11 +169,39 @@ export default function BlogPost(p: BlogPostProps) {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     itemListElement: [
-      { "@type": "ListItem", position: 1, name: "Home", item: "https://tyrefly.com/" },
-      { "@type": "ListItem", position: 2, name: "Blog", item: "https://tyrefly.com/blog" },
+      { "@type": "ListItem", position: 1, name: "Home", item: `${SITE}/` },
+      { "@type": "ListItem", position: 2, name: "Blog", item: `${SITE}/blog` },
       { "@type": "ListItem", position: 3, name: p.title, item: url },
     ],
   };
+
+  // Local service schema so London posts can surface for "near me" style intent.
+  const serviceLd = isLondon
+    ? {
+        "@context": "https://schema.org",
+        "@type": "Service",
+        name: "Mobile tyre fitting and puncture repair in London",
+        serviceType: "Mobile tyre fitting, puncture repair and tyre replacement",
+        provider: {
+          "@type": "Organization",
+          name: "Tyrefly",
+          url: `${SITE}/`,
+          areaServed: { "@type": "City", name: "London" },
+        },
+        areaServed: { "@type": "City", name: "London" },
+        availableChannel: {
+          "@type": "ServiceChannel",
+          serviceUrl: `${SITE}/`,
+          availableLanguage: "en-GB",
+        },
+        hoursAvailable: {
+          "@type": "OpeningHoursSpecification",
+          dayOfWeek: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+          opens: "00:00",
+          closes: "23:59",
+        },
+      }
+    : null;
 
   const faqLd = p.faqs.length
     ? {
@@ -166,7 +215,11 @@ export default function BlogPost(p: BlogPostProps) {
       }
     : null;
 
-  const jsonLd = faqLd ? [articleLd, breadcrumbLd, faqLd] : [articleLd, breadcrumbLd];
+  const jsonLd = [articleLd, breadcrumbLd, serviceLd, faqLd].filter(Boolean) as Record<
+    string,
+    unknown
+  >[];
+
 
   // Insert a micro-CTA every ~4 blocks (but not immediately after another CTA/heading pair)
   const CTA_EVERY = 3;
@@ -366,6 +419,31 @@ export default function BlogPost(p: BlogPostProps) {
               </ul>
             </div>
           )}
+
+          {isLondon && (
+            <div className="mt-14 pt-8 border-t border-border">
+              <h2 className="text-2xl font-bold tracking-tight mb-2">
+                More London tyre guides
+              </h2>
+              <p className="text-sm text-muted-foreground mb-5">
+                Everything we've written about mobile tyre fitting and puncture repair across
+                Greater London.
+              </p>
+              <ul className="grid sm:grid-cols-2 gap-2">
+                {LONDON_CLUSTER.filter((l) => !l.to.endsWith(`/${p.slug}`)).map((l) => (
+                  <li key={l.to}>
+                    <Link
+                      to={l.to}
+                      className="block px-4 py-2.5 rounded-lg text-sm hover:bg-accent/5 hover:text-accent transition"
+                    >
+                      {l.label} →
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
 
           <div className="mt-10 text-center">
             <Link to="/" className="text-accent font-semibold hover:underline underline-offset-4">

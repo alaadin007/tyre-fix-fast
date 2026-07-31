@@ -4,8 +4,8 @@ export default function SameDayPunctureRepairLondon() {
   return (
     <BlogPost
       slug="same-day-puncture-repair-london"
-      metaTitle="Same Day Puncture Repair London: How Fast Is Fast? (2026)"
-      metaDesc="Same day puncture repair London — realistic arrival windows, morning vs afternoon booking, prices, and how to guarantee you don't lose the day."
+      metaTitle="Same Day Puncture Repair London | Fitter Out Today"
+      metaDesc="Same day puncture repair in London: realistic arrival windows, morning vs afternoon booking, prices, and how to make sure you don't lose the whole day."
       title="Same Day Puncture Repair London: How Fast Is “Fast”, Really?"
       category="London"
       readMinutes={8}

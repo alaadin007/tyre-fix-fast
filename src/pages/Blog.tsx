@@ -34,6 +34,20 @@ const posts = [
   },
 ];
 
+const londonGuides = [
+  { to: "/blog/mobile-tyre-fitting-london", label: "Mobile tyre fitting London — prices & callout times" },
+  { to: "/blog/emergency-puncture-repair-london", label: "Emergency puncture repair London — who's open now" },
+  { to: "/blog/mobile-puncture-repair-london", label: "Mobile puncture repair London — what £45 buys" },
+  { to: "/blog/24-hour-puncture-repair-london", label: "24 hour puncture repair London" },
+  { to: "/blog/twenty-four-hour-tyre-change-london", label: "24 hour tyre change London" },
+  { to: "/blog/same-day-puncture-repair-london", label: "Same day puncture repair London" },
+  { to: "/blog/puncture-repair-central-london", label: "Puncture repair Central London — ULEZ & parking" },
+  { to: "/blog/roadside-puncture-repair-london", label: "Roadside puncture repair London — mobile fitter vs AA" },
+  { to: "/blog/run-flat-puncture-repair-london", label: "Run flat puncture repair London" },
+  { to: "/blog/mobile-tyre-fitter-m25", label: "Mobile tyre fitter on the M25" },
+  { to: "/areas/london", label: "Areas we cover across London" },
+];
+
 export default function Blog() {
   return (
     <main className="min-h-screen bg-background">
@@ -42,6 +56,7 @@ export default function Blog() {
         description="Practical guides for UK drivers: flat tyre emergencies, mobile tyre fitting, run-flats, TPMS warnings and roadside safety advice from Tyrefly."
         canonical="/blog"
       />
+
       <section className="max-w-3xl mx-auto px-6 py-16">
         <p className="text-sm uppercase tracking-widest text-muted-foreground mb-3">Tyrefly Journal</p>
         <h1 className="text-4xl md:text-5xl font-semibold tracking-tight mb-4">
@@ -75,7 +90,30 @@ export default function Blog() {
             </li>
           ))}
         </ul>
+
+        <section className="mt-16 pt-10 border-t border-border">
+          <h2 className="text-2xl md:text-3xl font-semibold tracking-tight mb-2">
+            London tyre guides
+          </h2>
+          <p className="text-muted-foreground mb-6">
+            Puncture repair and mobile tyre fitting across every London borough — costs, arrival
+            times and the local rules that catch drivers out.
+          </p>
+          <ul className="grid sm:grid-cols-2 gap-2">
+            {londonGuides.map((g) => (
+              <li key={g.to}>
+                <Link
+                  to={g.to}
+                  className="block px-4 py-2.5 rounded-lg text-sm hover:bg-primary/5 hover:text-primary transition"
+                >
+                  {g.label} →
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
       </section>
+
     </main>
   );
 }

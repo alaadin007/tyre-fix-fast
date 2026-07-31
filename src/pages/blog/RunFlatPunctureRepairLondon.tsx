@@ -4,8 +4,8 @@ export default function RunFlatPunctureRepairLondon() {
   return (
     <BlogPost
       slug="run-flat-puncture-repair-london"
-      metaTitle="Run Flat Puncture Repair London: Why Most Shops Say No (2026)"
-      metaDesc="Run flat puncture repair London: why manufacturers say don't, when a repair is actually safe, replacement costs on BMW/Mini/Mercedes, and how to spot flat-driving damage."
+      metaTitle="Run Flat Puncture Repair London | Can It Be Repaired?"
+      metaDesc="Run flat puncture repair in London: when a repair is safe, why most shops refuse, BMW/Mini/Mercedes replacement costs, and same-day mobile fitting."
       title="Run Flat Puncture Repair London: Why Most Shops Say No (and What to Do)"
       category="London"
       readMinutes={9}

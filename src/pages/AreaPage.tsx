@@ -23,8 +23,8 @@ export default function AreaPage() {
     "@type": "AutoRepair",
     name: `Tyre Fly — ${area.name}`,
     description,
-    url: `https://tyrefly.com/areas/${area.slug}`,
-    image: "https://tyrefly.com/og.jpg",
+    url: `https://www.tyrefly.com/areas/${area.slug}`,
+    image: "https://www.tyrefly.com/og.jpg",
     telephone: "+44-800-000-0000",
     areaServed: { "@type": "AdministrativeArea", name: area.region },
     priceRange: "££",
@@ -68,9 +68,9 @@ export default function AreaPage() {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     itemListElement: [
-      { "@type": "ListItem", position: 1, name: "Home", item: "https://tyrefly.com/" },
-      { "@type": "ListItem", position: 2, name: "Service Areas", item: "https://tyrefly.com/areas" },
-      { "@type": "ListItem", position: 3, name: area.name, item: `https://tyrefly.com/areas/${area.slug}` },
+      { "@type": "ListItem", position: 1, name: "Home", item: "https://www.tyrefly.com/" },
+      { "@type": "ListItem", position: 2, name: "Service Areas", item: "https://www.tyrefly.com/areas" },
+      { "@type": "ListItem", position: 3, name: area.name, item: `https://www.tyrefly.com/areas/${area.slug}` },
     ],
   };
 

@@ -4,8 +4,8 @@ export default function MobilePunctureRepairLondon() {
   return (
     <BlogPost
       slug="mobile-puncture-repair-london"
-      metaTitle="Mobile Puncture Repair London: What £45 Buys You (2026)"
-      metaDesc="Mobile puncture repair London — what a proper £45 fix includes, how long it takes, when it's not possible, and how to spot the £20 jobs that will fail."
+      metaTitle="Mobile Puncture Repair London | Price & Arrival Times"
+      metaDesc="Mobile puncture repair in London from £45: what a proper repair includes, how long it takes, when it isn't possible, and how fast a fitter reaches you."
       title="Mobile Puncture Repair London: What £45 Actually Buys You"
       category="London"
       readMinutes={9}

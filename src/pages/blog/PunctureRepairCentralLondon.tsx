@@ -4,8 +4,8 @@ export default function PunctureRepairCentralLondon() {
   return (
     <BlogPost
       slug="puncture-repair-central-london"
-      metaTitle="Puncture Repair Central London: Congestion, ULEZ & Parking (2026)"
-      metaDesc="Puncture repair central London — the honest guide to Congestion Zone, ULEZ, red routes, and where a mobile fitter can actually park to fix your tyre."
+      metaTitle="Puncture Repair Central London | ULEZ, Parking & Cost"
+      metaDesc="Puncture repair in Central London: Congestion Charge, ULEZ, red routes, where a mobile fitter can legally park, and what a repair costs inside Zone 1."
       title="Puncture Repair in Central London: Congestion Zone, ULEZ & Where We Can Actually Park"
       category="London"
       readMinutes={9}

@@ -18,14 +18,14 @@ const HOME_LD = [
     "@context": "https://schema.org",
     "@type": "Organization",
     name: "Tyre Fly",
-    url: "https://tyrefly.com/",
-    logo: "https://tyrefly.com/favicon.png",
+    url: "https://www.tyrefly.com/",
+    logo: "https://www.tyrefly.com/favicon.png",
   },
   {
     "@context": "https://schema.org",
     "@type": "WebSite",
     name: "Tyre Fly",
-    url: "https://tyrefly.com/",
+    url: "https://www.tyrefly.com/",
   },
   {
     "@context": "https://schema.org",

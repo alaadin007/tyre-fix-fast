@@ -4,8 +4,8 @@ export default function TwentyFourHourPunctureRepairLondon() {
   return (
     <BlogPost
       slug="24-hour-puncture-repair-london"
-      metaTitle="24 Hour Puncture Repair Near Me: London Guide (2026)"
-      metaDesc="24 hour puncture repair London — who's genuinely open at 3am, what it costs after midnight, and how fast a mobile fitter arrives. Book in 60 seconds."
+      metaTitle="24 Hour Puncture Repair London | Open Right Now"
+      metaDesc="24 hour puncture repair in London: who's genuinely open at 3am, what the night surcharge costs, and how quickly a mobile fitter gets to you. Book by text."
       title="24 Hour Puncture Repair Near Me (London Edition)"
       category="London"
       readMinutes={9}

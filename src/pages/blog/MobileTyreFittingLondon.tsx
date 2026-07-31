@@ -4,8 +4,8 @@ export default function MobileTyreFittingLondon() {
   return (
     <BlogPost
       slug="mobile-tyre-fitting-london"
-      metaTitle="Mobile Tyre Fitting London: Honest Field Notes (2026)"
-      metaDesc="Mobile tyre fitting in London — what it actually costs, how fast anyone really gets to you, and what the brochures leave out. From a fitter's diary."
+      metaTitle="Mobile Tyre Fitting London | Prices & Same-Day Callout"
+      metaDesc="Mobile tyre fitting in London: real prices, how fast a van actually reaches you across the boroughs, and what the big brands leave out. Book by text."
       title="Mobile Tyre Fitting in London: Field Notes From the Van"
       category="London"
       readMinutes={11}
@@ -93,7 +93,7 @@ export default function MobileTyreFittingLondon() {
       ]}
       related={[
         { to: "/blog/flat-tyre-london", label: "Flat Tyre London Guide" },
-        { to: "/blog/24-hour-tyre-change-london", label: "24 Hour Tyre Change London" },
+        { to: "/blog/twenty-four-hour-tyre-change-london", label: "24 Hour Tyre Change London" },
         { to: "/blog/mobile-tyre-fitter-m25", label: "M25 Mobile Fitter" },
       ]}
     />

@@ -4,8 +4,8 @@ import heroImg from "@/assets/blog/flat-tyre-london-hero.jpg";
 import fitterImg from "@/assets/blog/flat-tyre-london-fitter.jpg";
 
 export default function FlatTyreLondon() {
-  const url = "https://tyrefly.com/blog/flat-tyre-london";
-  const imageUrl = `https://tyrefly.com${heroImg}`;
+  const url = "https://www.tyrefly.com/blog/flat-tyre-london";
+  const imageUrl = `https://www.tyrefly.com${heroImg}`;
   const datePublished = "2026-06-11";
 
   const articleLd = {
@@ -17,11 +17,11 @@ export default function FlatTyreLondon() {
     image: [imageUrl],
     datePublished,
     dateModified: datePublished,
-    author: { "@type": "Organization", name: "Tyrefly", url: "https://tyrefly.com" },
+    author: { "@type": "Organization", name: "Tyrefly", url: "https://www.tyrefly.com" },
     publisher: {
       "@type": "Organization",
       name: "Tyrefly",
-      logo: { "@type": "ImageObject", url: "https://tyrefly.com/og.jpg" },
+      logo: { "@type": "ImageObject", url: "https://www.tyrefly.com/og.jpg" },
     },
     mainEntityOfPage: { "@type": "WebPage", "@id": url },
   };
@@ -30,8 +30,8 @@ export default function FlatTyreLondon() {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     itemListElement: [
-      { "@type": "ListItem", position: 1, name: "Home", item: "https://tyrefly.com/" },
-      { "@type": "ListItem", position: 2, name: "Blog", item: "https://tyrefly.com/blog" },
+      { "@type": "ListItem", position: 1, name: "Home", item: "https://www.tyrefly.com/" },
+      { "@type": "ListItem", position: 2, name: "Blog", item: "https://www.tyrefly.com/blog" },
       { "@type": "ListItem", position: 3, name: "Flat Tyre London", item: url },
     ],
   };
@@ -78,8 +78,8 @@ export default function FlatTyreLondon() {
   return (
     <main className="min-h-screen bg-background">
       <Seo
-        title="Flat Tyre London: Causes & Emergency Steps (2026 Guide)"
-        description="What to do if you get a flat tyre in London — causes, first 60 seconds, legal duties, mobile fitter costs and how to avoid roadside scams."
+        title="Flat Tyre London | What To Do & Mobile Fitter Costs"
+        description="Flat tyre in London? What to do in the first 60 seconds, the legal rules, what a mobile tyre fitter costs, and how fast one reaches your postcode."
         canonical="/blog/flat-tyre-london"
         ogImage={imageUrl}
         jsonLd={[articleLd, breadcrumbLd, faqLd]}

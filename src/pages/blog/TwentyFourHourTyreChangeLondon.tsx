@@ -3,9 +3,9 @@ import BlogPost from "@/components/blog/BlogPost";
 export default function TwentyFourHourTyreChangeLondon() {
   return (
     <BlogPost
-      slug="24-hour-tyre-change-london"
-      metaTitle="24 Hour Tyre Change London: The Night Van Diary (2026)"
-      metaDesc="24 hour mobile tyre change in London — what it costs at 2am, how fast anyone actually comes, and who's still awake to fix your car."
+      slug="twenty-four-hour-tyre-change-london"
+      metaTitle="24 Hour Tyre Change London | Mobile Fitter, Any Hour"
+      metaDesc="24 hour mobile tyre change in London: night prices, 30–60 min arrival times, and who's genuinely awake at 3am. Text your postcode and book in 60 seconds."
       title="24 Hour Tyre Change in London: Notes From the Night Van"
       category="London"
       readMinutes={10}
