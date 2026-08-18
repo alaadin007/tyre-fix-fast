@@ -130,7 +130,7 @@ async function handleCheckoutCompleted(session: any) {
       `We will be sharing the technician details with you shortly.`,
       ``,
       `Thank you.`,
-      `— Tyre Fly`,
+      `— Tyrefly`,
     ].join("\n");
     await sendMsg(job.customer_phone, customerMsg, "whatsapp");
   }

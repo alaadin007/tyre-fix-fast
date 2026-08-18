@@ -13,6 +13,26 @@ import roadsidePunctureLondon from "@/assets/blog/roadside-puncture-repair-londo
 import canPunctureBeRepairedUk from "@/assets/blog/can-a-puncture-be-repaired-uk-hero.jpg";
 import punctureVsNewTyre from "@/assets/blog/puncture-repair-vs-new-tyre-hero.jpg";
 import runFlatPunctureLondon from "@/assets/blog/run-flat-puncture-repair-london-hero.jpg";
+import allSeasonVsWinter from "@/assets/blog/all-season-vs-winter-hero.jpg";
+import budgetVsPremium from "@/assets/blog/budget-vs-premium-hero.jpg";
+import driveOnFlatTyre from "@/assets/blog/drive-on-flat-tyre-hero.jpg";
+import crackedAlloy from "@/assets/blog/cracked-alloy-hero.jpg";
+import lockingWheelNut from "@/assets/blog/locking-wheel-nut-hero.jpg";
+import m25TyreFitter from "@/assets/blog/m25-tyre-fitter-hero.jpg";
+import fitterVsGarage from "@/assets/blog/fitter-vs-garage-hero.jpg";
+import birminghamFitting from "@/assets/blog/birmingham-fitting-hero.jpg";
+import londonFitting from "@/assets/blog/london-fitting-hero.jpg";
+import manchesterFitting from "@/assets/blog/manchester-fitting-hero.jpg";
+import nailInTyre from "@/assets/blog/nail-in-tyre-hero.jpg";
+import potholeClaim from "@/assets/blog/pothole-claim-hero.jpg";
+import slowPuncture from "@/assets/blog/slow-puncture-hero.jpg";
+import twentyFourHourChangeLondon from "@/assets/blog/24h-tyre-change-london-hero.jpg";
+import tyreAge from "@/assets/blog/tyre-age-hero.jpg";
+import tyreBlowout from "@/assets/blog/tyre-blowout-hero.jpg";
+import tyrePressure from "@/assets/blog/tyre-pressure-hero.jpg";
+import sidewallDamage from "@/assets/blog/sidewall-damage-hero.jpg";
+import treadDepth from "@/assets/blog/tread-depth-hero.jpg";
+import wheelAlignment from "@/assets/blog/wheel-alignment-hero.jpg";
 
 export type Block =
   | { type: "h2"; text: string }
@@ -20,7 +40,9 @@ export type Block =
   | { type: "p"; html: string }
   | { type: "ul"; items: string[] }
   | { type: "ol"; items: string[] }
-  | { type: "quote"; html: string };
+  | { type: "quote"; html: string }
+  | { type: "table"; caption?: string; head: string[]; rows: string[][] };
+
 
 export type Faq = { q: string; a: string };
 
@@ -33,20 +55,9 @@ export interface BlogPostProps {
   readMinutes: number;
   datePublished: string;
   dateModified?: string;
-  heroImage?:
-    | "flat"
-    | "runflat"
-    | "tpms"
-    | "emergencyPunctureLondon"
-    | "mobilePunctureRepairLondon"
-    | "twentyFourHrPunctureLondon"
-    | "punctureRepairCostUk"
-    | "sameDayPunctureLondon"
-    | "punctureRepairCentralLondon"
-    | "roadsidePunctureLondon"
-    | "canPunctureBeRepairedUk"
-    | "punctureVsNewTyre"
-    | "runFlatPunctureLondon";
+  heroImage?: HeroKey;
+  /** Describe what the photo actually shows (not the headline). */
+  heroAlt?: string;
   intro: string;
   blocks: Block[];
   faqs: Faq[];
@@ -68,52 +79,84 @@ const heroMap = {
   canPunctureBeRepairedUk,
   punctureVsNewTyre,
   runFlatPunctureLondon,
+  allSeasonVsWinter,
+  budgetVsPremium,
+  driveOnFlatTyre,
+  crackedAlloy,
+  lockingWheelNut,
+  m25TyreFitter,
+  fitterVsGarage,
+  birminghamFitting,
+  londonFitting,
+  manchesterFitting,
+  nailInTyre,
+  potholeClaim,
+  slowPuncture,
+  twentyFourHourChangeLondon,
+  tyreAge,
+  tyreBlowout,
+  tyrePressure,
+  sidewallDamage,
+  treadDepth,
+  wheelAlignment,
 };
 
-// Auto-link keywords in prose to the home page. Broad patterns so most paragraphs
-// end up with at least one inline link back to the booking flow.
-const LINK_PATTERNS: RegExp[] = [
-  /\bmobile tyre fitter(s)?\b/i,
-  /\bmobile tyre fitting\b/i,
-  /\bmobile fitter(s)?\b/i,
-  /\bmobile fitting\b/i,
-  /\bflat tyre(s)?\b/i,
-  /\bpuncture repair(s)?\b/i,
-  /\bpuncture(s)?\b/i,
-  /\bemergency tyre(s)?\b/i,
-  /\bnew tyre(s)?\b/i,
-  /\btyre replacement\b/i,
-  /\btyre fitting\b/i,
-  /\btyre change\b/i,
-  /\bcallout\b/i,
-  /\bbook(ing)?\b/i,
+export type HeroKey = keyof typeof heroMap;
+
+// Contextual autolinking: a small number of descriptive, high-value links per
+// article pointing at the most relevant destination (not everything to "/").
+type LinkTarget = { pattern: RegExp; href: string };
+
+const LINK_TARGETS: LinkTarget[] = [
+  { pattern: /\bmobile tyre fitting in london\b/i, href: "/areas/london" },
+  { pattern: /\bmobile tyre fitting london\b/i, href: "/areas/london" },
+  { pattern: /\bmobile tyre fitter in london\b/i, href: "/areas/london" },
+  { pattern: /\bmobile tyre fitting in manchester\b/i, href: "/areas/greater-manchester" },
+  { pattern: /\bmobile tyre fitting manchester\b/i, href: "/areas/greater-manchester" },
+  { pattern: /\bmobile tyre fitting in birmingham\b/i, href: "/areas/west-midlands" },
+  { pattern: /\bmobile tyre fitting birmingham\b/i, href: "/areas/west-midlands" },
+  { pattern: /\bpuncture repair cost(s)?\b/i, href: "/blog/puncture-repair-cost-uk" },
+  { pattern: /\bcost of (a )?puncture repair\b/i, href: "/blog/puncture-repair-cost-uk" },
+  { pattern: /\brun-?flat tyres?\b/i, href: "/blog/run-flat-tyres-uk-guide" },
+  { pattern: /\bsidewall damage\b/i, href: "/blog/tyre-sidewall-damage-guide" },
+  { pattern: /\blegal tread depth\b/i, href: "/blog/uk-tyre-legal-tread-depth" },
+  { pattern: /\blocking wheel[- ]nut key\b/i, href: "/blog/locking-wheel-nut-lost-uk" },
+  { pattern: /\bmobile tyre fitter(s)?\b/i, href: "/" },
 ];
 
-function autolink(html: string): string {
+const LINK_CLS =
+  "text-accent underline decoration-accent/40 underline-offset-4 hover:decoration-accent font-medium";
+
+// Max contextual autolinks per ARTICLE (not per paragraph).
+const AUTOLINK_CAP = 3;
+
+function autolink(html: string, state: { used: number; hrefs: Set<string>; slug: string }): string {
+  if (state.used >= AUTOLINK_CAP) return html;
   // Split around existing anchors so we don't nest links, then linkify the rest.
   const parts = html.split(/(<a\b[^>]*>.*?<\/a>)/i);
-  let linked = 0;
-  const CAP = 2;
-  const cls = "text-accent underline decoration-accent/40 underline-offset-4 hover:decoration-accent font-medium";
   for (let idx = 0; idx < parts.length; idx++) {
-    if (linked >= CAP) break;
+    if (state.used >= AUTOLINK_CAP) break;
     const seg = parts[idx];
     if (/^<a\b/i.test(seg)) continue;
     let next = seg;
-    for (const pattern of LINK_PATTERNS) {
-      if (linked >= CAP) break;
+    for (const { pattern, href } of LINK_TARGETS) {
+      if (state.used >= AUTOLINK_CAP) break;
+      if (state.hrefs.has(href)) continue; // one link per destination per article
+      if (href === `/blog/${state.slug}`) continue; // never self-link
       const m = next.match(pattern);
       if (!m || m.index === undefined) continue;
       next =
         next.slice(0, m.index) +
-        `<a href="/" class="${cls}">${m[0]}</a>` +
+        `<a href="${href}" class="${LINK_CLS}">${m[0]}</a>` +
         next.slice(m.index + m[0].length);
-      linked++;
+      state.used++;
+      state.hrefs.add(href);
     }
     parts[idx] = next;
   }
   return parts.join("");
 }
+
 
 // Rotating micro-CTAs inserted between sections so users always have a way home.
 const MICRO_CTAS = [
@@ -266,7 +309,7 @@ export default function BlogPost(p: BlogPostProps) {
         <figure className="mb-12 -mx-6 md:mx-0">
           <img
             src={hero}
-            alt={p.title}
+            alt={p.heroAlt ?? p.title}
             width={1600}
             height={896}
             className="w-full h-auto md:rounded-2xl"
@@ -278,6 +321,7 @@ export default function BlogPost(p: BlogPostProps) {
           {(() => {
             const rendered: JSX.Element[] = [];
             let ctaCount = 0;
+            const linkState = { used: 0, hrefs: new Set<string>(), slug: p.slug };
             p.blocks.forEach((b, i) => {
               if (b.type === "h2")
                 rendered.push(
@@ -291,8 +335,9 @@ export default function BlogPost(p: BlogPostProps) {
                 );
               else if (b.type === "p")
                 rendered.push(
-                  <p key={i} dangerouslySetInnerHTML={{ __html: autolink(b.html) }} />
+                  <p key={i} dangerouslySetInnerHTML={{ __html: autolink(b.html, linkState) }} />
                 );
+
               else if (b.type === "quote")
                 rendered.push(
                   <blockquote
@@ -309,6 +354,40 @@ export default function BlogPost(p: BlogPostProps) {
                     ))}
                   </ul>
                 );
+              else if (b.type === "table")
+                rendered.push(
+                  <figure key={i} className="not-prose my-8 -mx-6 md:mx-0 overflow-x-auto">
+                    <table className="w-full min-w-[520px] text-[15px] border border-border rounded-xl overflow-hidden">
+                      <thead className="bg-muted/60">
+                        <tr>
+                          {b.head.map((h, j) => (
+                            <th key={j} className="text-left font-semibold px-4 py-3 border-b border-border">
+                              {h}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {b.rows.map((row, j) => (
+                          <tr key={j} className="odd:bg-muted/20">
+                            {row.map((cell, k) => (
+                              <td
+                                key={k}
+                                className="px-4 py-3 align-top border-b border-border/60"
+                                dangerouslySetInnerHTML={{ __html: cell }}
+                              />
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    {b.caption && (
+                      <figcaption className="mt-2 px-6 md:px-0 text-sm text-muted-foreground">
+                        {b.caption}
+                      </figcaption>
+                    )}
+                  </figure>
+                );
               else
                 rendered.push(
                   <ol key={i} className="list-decimal pl-6 space-y-3 marker:text-accent marker:font-semibold">
@@ -317,6 +396,7 @@ export default function BlogPost(p: BlogPostProps) {
                     ))}
                   </ol>
                 );
+
 
               // Insert a slim inline CTA every N blocks, but only after a paragraph/list (not a heading)
               const isBreakable = b.type !== "h2" && b.type !== "h3";

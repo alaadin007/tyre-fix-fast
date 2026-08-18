@@ -10,7 +10,8 @@ export default function MobileTyreFitterM25() {
       category="Motorway"
       readMinutes={9}
       datePublished="2026-07-13"
-      heroImage="flat"
+      heroImage="m25TyreFitter"
+      heroAlt="Motorway traffic at dusk with a car on the inside lane, hazard lights on, orange motorway lighting overhead"
       intro="A flat tyre on the M25 is one of the most common breakdowns in the UK — and one of the most misunderstood. This guide covers exactly what happens if you call a mobile tyre fitter from the hard shoulder or an ERA, why they can't come to you directly, and how to get moving in the shortest time possible."
       blocks={[
         { type: "h2", text: "The blunt truth: mobile fitters don't work on the M25" },

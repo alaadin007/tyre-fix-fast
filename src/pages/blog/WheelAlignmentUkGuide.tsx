@@ -10,7 +10,8 @@ export default function WheelAlignmentUkGuide() {
       category="Maintenance"
       readMinutes={10}
       datePublished="2026-07-13"
-      heroImage="tpms"
+      heroImage="wheelAlignment"
+      heroAlt="A car on a wheel alignment rig in a workshop with laser targets clamped to the wheels"
       intro="Wheel alignment is the invisible tax on ignored punctures, potholes and kerbs. A £45 alignment can save a £280 pair of front tyres — but only if you catch it early. This is the plain-English UK guide: the signs, the terminology, the difference between 2-wheel and 4-wheel alignment, and what it should cost in 2026."
       blocks={[
         { type: "h2", text: "What alignment actually is" },

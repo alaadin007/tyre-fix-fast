@@ -10,7 +10,8 @@ export default function LockingWheelNutLostUk() {
       category="Repair Guide"
       readMinutes={9}
       datePublished="2026-07-13"
-      heroImage="flat"
+      heroImage="lockingWheelNut"
+      heroAlt="A locking wheel nut key socket held beside an alloy wheel hub with the patterned locking nut visible"
       intro="You've got a flat tyre, the fitter is 15 minutes away, and you can't find the little black adapter that unlocks one nut on each wheel. Panic, but the productive kind — this is a solvable problem. Here's every option, ranked by cost and time."
       blocks={[
         { type: "h2", text: "What a locking wheel nut actually is" },

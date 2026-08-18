@@ -10,7 +10,8 @@ export default function MobileTyreFittingManchester() {
       category="Manchester"
       readMinutes={10}
       datePublished="2026-07-13"
-      heroImage="flat"
+      heroImage="manchesterFitting"
+      heroAlt="A mobile tyre technician kneeling at a car wheel on a Manchester street with red-brick warehouses and tram lines behind"
       intro="Manchester is one of the busiest mobile tyre markets in the UK — a wet climate, aggressive kerbing, and a ring road that never sleeps. Here's what mobile fitting actually costs, how quickly a van reaches you across Greater Manchester, and where the trouble spots are."
       blocks={[
         { type: "p", html: "For live coverage, prices and arrival times, see our <a href=\"/areas/greater-manchester\" class=\"text-primary hover:underline\">mobile tyre fitting Manchester</a> page." },

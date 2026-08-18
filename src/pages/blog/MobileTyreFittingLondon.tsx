@@ -10,7 +10,8 @@ export default function MobileTyreFittingLondon() {
       category="London"
       readMinutes={11}
       datePublished="2026-07-13"
-      heroImage="flat"
+      heroImage="londonFitting"
+      heroAlt="A mobile tyre fitter working on a car at the kerbside on a London street beside a red double-decker bus"
       intro="I've been fitting tyres in London for a long time. Long enough to know that everything you read online about mobile tyre fitting is written by people who've never had to double-park a van in Peckham at 2am. This is what it actually looks like."
       blocks={[
         { type: "p", html: "Looking for prices, arrival times by zone and how to book? Our <a href=\"/areas/london\" class=\"text-primary hover:underline\">mobile tyre fitting London</a> page has the numbers. This piece is what the job actually looks like from inside the van." },

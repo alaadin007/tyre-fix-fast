@@ -9,7 +9,7 @@ import { AREAS } from "@/data/areas";
 import { SUPPORT_WHATSAPP, SUPPORT_WA_DISPLAY, waLink } from "@/lib/whatsapp";
 
 const SMS_NUMBER = SUPPORT_WHATSAPP;
-const MSG_BODY = "Hi Tyre Fly — I need tyre help";
+const MSG_BODY = "Hi Tyrefly — I need tyre help";
 const WA_HREF = waLink(SUPPORT_WHATSAPP, MSG_BODY);
 const SMS_HREF = `sms:${SMS_NUMBER}?&body=${encodeURIComponent(MSG_BODY)}`;
 
@@ -17,24 +17,75 @@ const HOME_LD = [
   {
     "@context": "https://schema.org",
     "@type": "Organization",
-    name: "Tyre Fly",
+    name: "Tyrefly",
     url: "https://www.tyrefly.com/",
     logo: "https://www.tyrefly.com/favicon.png",
   },
   {
     "@context": "https://schema.org",
     "@type": "WebSite",
-    name: "Tyre Fly",
+    name: "Tyrefly",
     url: "https://www.tyrefly.com/",
   },
+  {
+    "@context": "https://schema.org",
+    "@type": "AutoRepair",
+    "@id": "https://www.tyrefly.com/#business",
+    name: "Tyrefly",
+    description:
+      "24/7 mobile tyre fitting and emergency puncture repair across the UK, booked by WhatsApp. Vetted local technicians come to your car at home, work or roadside.",
+    url: "https://www.tyrefly.com/",
+    logo: "https://www.tyrefly.com/favicon.png",
+    image: "https://www.tyrefly.com/og.jpg",
+    telephone: SUPPORT_WA_DISPLAY,
+    priceRange: "££",
+    areaServed: [
+      "London", "Greater Manchester", "West Midlands", "West Yorkshire", "Merseyside",
+      "South Yorkshire", "Tyne and Wear", "Bristol", "Edinburgh", "Glasgow", "Cardiff", "Belfast",
+    ].map((n) => ({ "@type": "AdministrativeArea", name: n })),
+    address: { "@type": "PostalAddress", addressCountry: "GB" },
+    openingHoursSpecification: [
+      {
+        "@type": "OpeningHoursSpecification",
+        dayOfWeek: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+        opens: "00:00",
+        closes: "23:59",
+      },
+    ],
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "Service",
+    serviceType: "Mobile tyre fitting and emergency puncture repair",
+    provider: { "@id": "https://www.tyrefly.com/#business" },
+    areaServed: { "@type": "Country", name: "United Kingdom" },
+    availableChannel: {
+      "@type": "ServiceChannel",
+      serviceUrl: "https://www.tyrefly.com/",
+      availableLanguage: "en-GB",
+    },
+    hasOfferCatalog: {
+      "@type": "OfferCatalog",
+      name: "Mobile tyre services",
+      itemListElement: [
+        "Emergency puncture repair",
+        "Mobile tyre replacement",
+        "Run-flat tyre fitting",
+        "Locking wheel nut removal",
+        "Wheel balancing",
+        "TPMS and valve replacement",
+      ].map((n) => ({ "@type": "Offer", itemOffered: { "@type": "Service", name: n } })),
+    },
+  },
+
   {
     "@context": "https://schema.org",
     "@type": "FAQPage",
     mainEntity: [
       { "@type": "Question", name: "How fast can a mobile tyre fitter get to me?", acceptedAnswer: { "@type": "Answer", text: "Most UK jobs get a quote in under 60 seconds and a vetted technician on-site within 35–90 minutes, 24/7." } },
-      { "@type": "Question", name: "How much does Tyre Fly cost?", acceptedAnswer: { "@type": "Answer", text: "A £20 booking fee secures your slot and is deducted from your final bill. The technician collects the remainder on-site by card, link, transfer or cash." } },
-      { "@type": "Question", name: "Where in the UK do you operate?", acceptedAnswer: { "@type": "Answer", text: "Tyre Fly covers all major UK cities and motorways including London, Manchester, Birmingham, Leeds, Liverpool, Sheffield, Newcastle, Bristol, Edinburgh, Glasgow, Cardiff and Belfast — 24/7." } },
-      { "@type": "Question", name: "Do you fit tyres at night?", acceptedAnswer: { "@type": "Answer", text: "Yes — Tyre Fly operates 24 hours a day, 7 days a week including weekends and bank holidays." } },
+      { "@type": "Question", name: "How much does Tyrefly cost?", acceptedAnswer: { "@type": "Answer", text: "A £20 booking fee secures your slot and is deducted from your final bill. The technician collects the remainder on-site by card, link, transfer or cash." } },
+      { "@type": "Question", name: "Where in the UK do you operate?", acceptedAnswer: { "@type": "Answer", text: "Tyrefly covers all major UK cities and motorways including London, Manchester, Birmingham, Leeds, Liverpool, Sheffield, Newcastle, Bristol, Edinburgh, Glasgow, Cardiff and Belfast — 24/7." } },
+      { "@type": "Question", name: "Do you fit tyres at night?", acceptedAnswer: { "@type": "Answer", text: "Yes — Tyrefly operates 24 hours a day, 7 days a week including weekends and bank holidays." } },
     ],
   },
 ];
@@ -46,18 +97,18 @@ const Index = () => {
       style={{ backgroundColor: "#0D0D0D", fontFamily: "Inter, system-ui, -apple-system, sans-serif" }}
     >
       <Seo
-        title="Mobile Tyre Fitter UK — 24/7 Call-Out via WhatsApp | Tyre Fly"
-        description="Flat tyre? WhatsApp Tyre Fly and a vetted local mobile tyre fitter quotes in 60 seconds and is at your kerb fast. 24/7 across the UK — London, Manchester, Birmingham & nationwide."
+        title="Mobile Tyre Fitter UK — 24/7 Call-Out via WhatsApp | Tyrefly"
+        description="Flat tyre? WhatsApp Tyrefly and a vetted local mobile tyre fitter quotes in 60 seconds and is at your kerb fast. 24/7 across the UK — London, Manchester, Birmingham & nationwide."
         canonical="/"
         jsonLd={HOME_LD}
       />
       {/* ===== Top nav ===== */}
       <header className="w-full border-b border-white/5">
         <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-5 py-4">
-          <a href="/" className="flex items-center gap-2.5" aria-label="Tyre Fly home">
-            <img src={logo} alt="Tyre Fly logo" width={36} height={36} className="h-9 w-9 object-contain" />
+          <a href="/" className="flex items-center gap-2.5" aria-label="Tyrefly home">
+            <img src={logo} alt="Tyrefly logo" width={36} height={36} className="h-9 w-9 object-contain" />
             <span className="text-[20px] font-bold tracking-tight">
-              Tyre <span style={{ color: "#FF6B1A" }}>Fly</span>
+              Tyre<span style={{ color: "#FF6B1A" }}>fly</span>
             </span>
           </a>
           <nav className="hidden md:flex items-center gap-6 text-sm text-white/70">
@@ -137,7 +188,7 @@ const Index = () => {
             <div className="absolute -inset-6 rounded-[2rem] blur-2xl opacity-40" style={{ backgroundColor: "#FF6B1A" }} />
             <img
               src={heroTruck}
-              alt="Tyre Fly mobile fitting van with a technician changing a tyre at the kerbside"
+              alt="Tyrefly mobile fitting van with a technician changing a tyre at the kerbside"
               width={1536}
               height={1024}
               className="relative w-full rounded-2xl border border-white/10 object-cover shadow-2xl"
@@ -149,7 +200,7 @@ const Index = () => {
       {/* ===== How it works ===== */}
       <section id="how" className="border-y border-white/5 bg-white/[0.02]">
         <div className="mx-auto w-full max-w-6xl px-5 py-16">
-          <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-center">How Tyre Fly works</h2>
+          <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-center">How Tyrefly works</h2>
           <p className="mt-3 text-center text-white/60 max-w-xl mx-auto">
             No app. No call centre. Just WhatsApp and a real technician.
           </p>
@@ -261,6 +312,87 @@ const Index = () => {
         </div>
       </section>
 
+      {/* ===== Pricing & what we fix ===== */}
+      <section id="pricing" className="border-t border-white/5">
+        <div className="mx-auto w-full max-w-6xl px-5 py-16">
+          <p className="text-[11px] uppercase tracking-[0.2em] text-[#FF6B1A] font-semibold">Prices</p>
+          <h2 className="mt-2 text-3xl sm:text-4xl font-bold tracking-tight">
+            What mobile tyre fitting costs in the UK
+          </h2>
+          <p className="mt-3 text-white/60 max-w-2xl text-sm leading-relaxed">
+            Every job is quoted before anyone sets off, so there is no meter running and no surprise
+            call-out charge on the invoice. These are the typical all-in ranges our vetted technicians
+            quote across the UK in 2026 — London and remote rural jobs sit at the top of each band.
+          </p>
+
+          <div className="mt-8 overflow-x-auto rounded-2xl border border-white/10">
+            <table className="w-full min-w-[560px] text-left text-sm">
+              <thead className="bg-white/[0.04] text-white/70">
+                <tr>
+                  <th scope="col" className="px-4 py-3 font-semibold">Job</th>
+                  <th scope="col" className="px-4 py-3 font-semibold">Typical all-in price</th>
+                  <th scope="col" className="px-4 py-3 font-semibold">Usual arrival</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5 text-white/75">
+                {[
+                  ["Mobile puncture repair", "£45 – £70", "35 – 90 mins"],
+                  ["Emergency call-out, nights & weekends", "£75 – £110", "40 – 90 mins"],
+                  ["Tyre supplied and fitted (common sizes)", "£95 – £180", "1 – 3 hours"],
+                  ["Run-flat supplied and fitted", "£150 – £320", "1 – 4 hours"],
+                  ["Locking wheel nut removal", "+£20 – £40", "with the job"],
+                  ["Wheel balancing (per wheel)", "£12 – £20", "with the job"],
+                ].map((r) => (
+                  <tr key={r[0]}>
+                    <th scope="row" className="px-4 py-3 font-medium text-white/90">{r[0]}</th>
+                    <td className="px-4 py-3">{r[1]}</td>
+                    <td className="px-4 py-3">{r[2]}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="mt-3 text-xs text-white/40">
+            A £20 booking fee secures the slot and comes off the final bill. The balance is paid to the
+            technician on-site.
+          </p>
+        </div>
+      </section>
+
+      {/* ===== Guides ===== */}
+      <section id="guides" className="border-t border-white/5 bg-white/[0.02]">
+        <div className="mx-auto w-full max-w-6xl px-5 py-16">
+          <div className="flex items-end justify-between flex-wrap gap-4">
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.2em] text-[#FF6B1A] font-semibold">Guides</p>
+              <h2 className="mt-2 text-3xl sm:text-4xl font-bold tracking-tight">Tyre advice worth reading first</h2>
+              <p className="mt-2 text-white/60 max-w-xl text-sm">
+                Written by fitters who do this at 2am on the hard shoulder.
+              </p>
+            </div>
+            <Link to="/blog" className="text-sm text-[#FF6B1A] hover:underline">All guides →</Link>
+          </div>
+          <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {[
+              { to: "/blog/emergency-puncture-repair-london", label: "Emergency puncture repair in London" },
+              { to: "/blog/puncture-repair-cost-uk", label: "What a puncture repair should cost" },
+              { to: "/blog/can-a-puncture-be-repaired-uk", label: "Can your puncture actually be repaired?" },
+              { to: "/blog/can-i-drive-on-a-flat-tyre-uk", label: "Can you drive on a flat tyre?" },
+              { to: "/blog/tyre-blowout-on-motorway-what-to-do", label: "Blowout on the motorway: what to do" },
+              { to: "/blog/uk-tyre-legal-tread-depth", label: "UK legal tread depth explained" },
+            ].map((g) => (
+              <Link
+                key={g.to}
+                to={g.to}
+                className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3.5 text-sm hover:border-[#FF6B1A]/40 hover:text-[#FF6B1A] transition"
+              >
+                {g.label} →
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ===== Reviews ===== */}
       <section id="reviews" className="border-t border-white/5 bg-white/[0.02]">
         <div className="mx-auto w-full max-w-6xl px-5 py-16">
@@ -344,7 +476,7 @@ const Index = () => {
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">
               <img src={logo} alt="" width={20} height={20} className="h-5 w-5 object-contain opacity-70" />
-              <span>© Tyre Fly · UK-wide mobile tyre fitting</span>
+              <span>© Tyrefly · UK-wide mobile tyre fitting</span>
             </div>
             <div className="flex items-center gap-4">
               <a href={WA_HREF} target="_blank" rel="noopener noreferrer" className="hover:text-white/70">WhatsApp {SUPPORT_WA_DISPLAY}</a>
@@ -353,7 +485,7 @@ const Index = () => {
             </div>
           </div>
           <p className="text-[10px] text-white/30 leading-relaxed">
-            *Tyre Fly is a marketplace connecting customers with independent vetted technicians across the UK. The work contract is between you and the attending technician. See <a href="/terms" className="underline hover:text-white/60">Terms</a>.
+            *Tyrefly is a marketplace connecting customers with independent vetted technicians across the UK. The work contract is between you and the attending technician. See <a href="/terms" className="underline hover:text-white/60">Terms</a>.
           </p>
         </div>
       </footer>

@@ -977,7 +977,7 @@ function DispatchModal({ job, allTechs, onClose, onDispatch }: DispatchModalProp
             Customer will receive on WhatsApp
           </div>
           <pre className="whitespace-pre-wrap font-sans text-foreground/90">
-{`Hi ${job.customer_name ?? ""} 👋 Tyre Fly here.
+{`Hi ${job.customer_name ?? ""} 👋 Tyrefly here.
 We've got ${selectedTech?.name ?? "a technician"} ready for you in ${job.postcode}.
 • Quote: £${Number(price || 0).toFixed(2)}
 • ETA: ~${eta} mins from payment

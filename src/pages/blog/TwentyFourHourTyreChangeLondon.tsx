@@ -10,7 +10,8 @@ export default function TwentyFourHourTyreChangeLondon() {
       category="London"
       readMinutes={10}
       datePublished="2026-07-13"
-      heroImage="flat"
+      heroImage="twentyFourHourChangeLondon"
+      heroAlt="A technician changing a tyre at night under van floodlights on an empty city street"
       intro="Nobody's flat tyre ever happens at a convenient hour. Mine, when it comes, will be at half three in the morning outside a kebab shop in Wandsworth. Yours might already be there. This is what a 24 hour mobile tyre change in London actually looks like from the driver's seat of the van."
       blocks={[
         { type: "h2", text: "The city at three in the morning" },

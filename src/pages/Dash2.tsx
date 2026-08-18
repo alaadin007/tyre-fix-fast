@@ -45,7 +45,7 @@ export default function Dash2() {
   return (
     <div className="dark min-h-screen bg-background text-foreground">
       <header className="sticky top-0 z-30 flex h-12 items-center gap-2 border-b border-border/60 bg-background/80 px-4 backdrop-blur">
-        <div className="text-sm font-semibold">Tyre Fly · Dash2</div>
+        <div className="text-sm font-semibold">Tyrefly · Dash2</div>
         <div className="ml-auto">
           <Button size="sm" variant="ghost" onClick={async () => { await supabase.auth.signOut(); navigate("/admin/login"); }}>
             <LogOut className="mr-1 h-4 w-4" /> Sign out

@@ -5,7 +5,7 @@ import { getArea, AREAS } from "@/data/areas";
 import { SUPPORT_WHATSAPP, SUPPORT_WA_DISPLAY, waLink } from "@/lib/whatsapp";
 import logo from "@/assets/tyrefly-logo.png";
 
-const MSG_BODY = "Hi Tyre Fly — I need a mobile tyre fitter";
+const MSG_BODY = "Hi Tyrefly — I need a mobile tyre fitter";
 
 export default function AreaPage() {
   const { slug = "" } = useParams();
@@ -15,21 +15,21 @@ export default function AreaPage() {
   const WA_HREF = waLink(SUPPORT_WHATSAPP, `${MSG_BODY} in ${area.name}`);
   const SMS_HREF = `sms:${SUPPORT_WHATSAPP}?&body=${encodeURIComponent(`${MSG_BODY} in ${area.name}`)}`;
 
-  const title = area.metaTitle ?? `Mobile Tyre Fitter ${area.name} — 24/7 Call-Out | Tyre Fly`;
-  const description = area.metaDesc ?? `Flat tyre in ${area.name}? WhatsApp Tyre Fly and a vetted mobile tyre fitter is at your kerb fast. 24/7 across ${area.region}. Quote in 60 seconds.`;
+  const title = area.metaTitle ?? `Mobile Tyre Fitter ${area.name} — 24/7 Call-Out | Tyrefly`;
+  const description = area.metaDesc ?? `Flat tyre in ${area.name}? WhatsApp Tyrefly and a vetted mobile tyre fitter is at your kerb fast. 24/7 across ${area.region}. Quote in 60 seconds.`;
 
   const baseFaqs = [
     { q: `Do you cover all of ${area.region}?`, a: area.faqAnswer },
     { q: `How fast can a mobile tyre fitter reach me in ${area.name}?`, a: `Most jobs in ${area.name} get a quote within 60 seconds and a fitter on-site within 35–90 minutes, 24/7.` },
     { q: "How much does it cost?", a: "A £20 booking fee secures your slot and is deducted from your final bill. The technician collects the remainder on-site by card, link, transfer or cash." },
-    { q: "Do you fit tyres at night?", a: `Yes — Tyre Fly operates 24/7 across ${area.region}, including weekends and bank holidays.` },
+    { q: "Do you fit tyres at night?", a: `Yes — Tyrefly operates 24/7 across ${area.region}, including weekends and bank holidays.` },
   ];
   const allFaqs = [...baseFaqs, ...(area.extraFaqs ?? [])];
 
   const localBusinessLd = {
     "@context": "https://schema.org",
     "@type": "AutoRepair",
-    name: `Tyre Fly — ${area.name}`,
+    name: `Tyrefly — ${area.name}`,
     description,
     url: `https://www.tyrefly.com/areas/${area.slug}`,
     image: "https://www.tyrefly.com/og.jpg",
@@ -81,7 +81,7 @@ export default function AreaPage() {
       <header className="w-full border-b border-white/5">
         <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-5 py-4">
           <Link to="/" className="flex items-center gap-2.5">
-            <img src={logo} alt="Tyre Fly" width={36} height={36} className="h-9 w-9 object-contain" />
+            <img src={logo} alt="Tyrefly" width={36} height={36} className="h-9 w-9 object-contain" />
             <span className="text-[20px] font-bold tracking-tight">
               Tyre <span style={{ color: "#FF6B1A" }}>Fly</span>
             </span>
@@ -257,7 +257,7 @@ export default function AreaPage() {
             <span className="text-sm text-white/70">4.9 · trusted by drivers across {area.region}</span>
           </div>
           <p className="text-white/80 max-w-2xl">
-            "Texted Tyre Fly from a layby in {area.name}. Quote in 40 seconds, fitter at my kerb in under an hour. Brilliant."
+            "Texted Tyrefly from a layby in {area.name}. Quote in 40 seconds, fitter at my kerb in under an hour. Brilliant."
             <span className="block mt-2 text-xs text-white/50">— verified customer · {area.name}</span>
           </p>
         </div>
@@ -300,7 +300,7 @@ export default function AreaPage() {
       <footer className="border-t border-white/5">
         <div className="mx-auto w-full max-w-6xl px-5 py-8 text-xs text-white/40">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <span>© Tyre Fly · UK-wide mobile tyre fitting</span>
+            <span>© Tyrefly · UK-wide mobile tyre fitting</span>
             <div className="flex items-center gap-4">
               <Link to="/areas" className="hover:text-white/70">All areas</Link>
               <Link to="/privacy" className="hover:text-white/70">Privacy</Link>
@@ -308,7 +308,7 @@ export default function AreaPage() {
             </div>
           </div>
           <p className="mt-4 text-[10px] text-white/30 leading-relaxed">
-            *Tyre Fly is a marketplace connecting customers with independent vetted technicians across the UK. The work contract is between you and the attending technician. See <Link to="/terms" className="underline hover:text-white/60">Terms</Link>.
+            *Tyrefly is a marketplace connecting customers with independent vetted technicians across the UK. The work contract is between you and the attending technician. See <Link to="/terms" className="underline hover:text-white/60">Terms</Link>.
           </p>
         </div>
       </footer>

@@ -112,7 +112,7 @@ Deno.serve(async (req) => {
         },
         payment_intent_data: {
           metadata: { job_id, technician_id: quoteRow.technician_id, kind: "job_full_payment" },
-          description: `Tyre Fly — job ${shortRef} — ${jobRow.postcode ?? ""}`.trim(),
+          description: `Tyrefly — job ${shortRef} — ${jobRow.postcode ?? ""}`.trim(),
         },
       });
       if (!session?.url) throw new Error(`Stripe session ${session?.id ?? "?"} returned no checkout url`);
@@ -178,8 +178,8 @@ Deno.serve(async (req) => {
       (payUrl
         ? `To proceed with the service, please complete the payment using the secure Stripe link below:\n\n💳 Payment Link: ${payUrl}\n\n` +
           `Once the payment is confirmed, the technician will proceed with the repair service at your location.\n\n`
-        : `We could not generate your payment link yet. Tyre Fly will resend your quote shortly with the secure payment link.\n\n`) +
-      `Thank you.\n— Tyre Fly`;
+        : `We could not generate your payment link yet. Tyrefly will resend your quote shortly with the secure payment link.\n\n`) +
+      `Thank you.\n— Tyrefly`;
 
 
     await sendReply(jobRow.customer_phone, customerBody, "whatsapp");

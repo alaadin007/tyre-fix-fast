@@ -483,7 +483,7 @@ function JobCard({
         body: { job_id: job.id, reason: reason || "cancelled by ops" },
       });
     }
-    const msg = `Tyre Fly: your booking has been cancelled${reason ? ` — ${reason}` : ""}. ${job.platform_fee_status === "paid" ? "Your £20 deposit is being refunded." : ""} Reply if you'd like us to find another technician.`;
+    const msg = `Tyrefly: your booking has been cancelled${reason ? ` — ${reason}` : ""}. ${job.platform_fee_status === "paid" ? "Your £20 deposit is being refunded." : ""} Reply if you'd like us to find another technician.`;
     await supabase.functions.invoke("twilio-send", { body: { to: job.customer_phone, body: msg, channel: "whatsapp" } });
     await supabase.functions.invoke("twilio-send", { body: { to: job.customer_phone, body: msg, channel: "sms" } });
     toast.success("Job cancelled & customer notified");
@@ -498,7 +498,7 @@ function JobCard({
     }).eq("id", job.id);
     // Mark previous quotes as lost so dispatcher gets fresh bids
     await supabase.from("quotes" as any).update({ status: "lost" }).eq("job_id", job.id).in("status", ["accepted", "pending"]);
-    const msg = `Tyre Fly: we're reassigning your job to a new technician. We'll text you the new quote shortly.`;
+    const msg = `Tyrefly: we're reassigning your job to a new technician. We'll text you the new quote shortly.`;
     await supabase.functions.invoke("twilio-send", { body: { to: job.customer_phone, body: msg, channel: "whatsapp" } });
     await supabase.functions.invoke("twilio-send", { body: { to: job.customer_phone, body: msg, channel: "sms" } });
     toast.success("Reassigning — dispatch agent re-running");
@@ -506,7 +506,7 @@ function JobCard({
 
   const resendLink = async () => {
     if (!job.stripe_checkout_url) { toast.error("No payment link yet"); return; }
-    const body = `Tyre Fly reminder: pay the £20 platform fee to confirm your tech: ${job.stripe_checkout_url}`;
+    const body = `Tyrefly reminder: pay the £20 platform fee to confirm your tech: ${job.stripe_checkout_url}`;
     await supabase.functions.invoke("twilio-send", { body: { to: job.customer_phone, body, channel: "whatsapp" } });
     await supabase.functions.invoke("twilio-send", { body: { to: job.customer_phone, body, channel: "sms" } });
     toast.success("Payment link re-sent on WhatsApp + SMS");

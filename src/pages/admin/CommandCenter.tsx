@@ -262,7 +262,7 @@ export default function CommandCenter() {
 
   return (
     <>
-      <Seo title="Command Center · Tyre Fly" description="Real-time map of jobs and technicians." />
+      <Seo title="Command Center · Tyrefly" description="Real-time map of jobs and technicians." />
       <div className="grid h-[calc(100vh-6rem)] grid-cols-1 gap-4 lg:grid-cols-[1fr_360px]">
         {/* MAP */}
         <section className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02]">

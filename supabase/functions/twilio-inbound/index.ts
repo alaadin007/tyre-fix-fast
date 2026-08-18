@@ -408,7 +408,7 @@ async function aiExtractTechProfile(args: {
     };
   }
   const sys =
-    "You are Tyre Fly's onboarding agent. You're chatting with a mobile-tyre technician applying to join. " +
+    "You are Tyrefly's onboarding agent. You're chatting with a mobile-tyre technician applying to join. " +
     "Be warm, brief, one short message at a time. " +
     "MANDATORY items (must collect before submitting for review): full name, email address, service area, vehicle (make/model/year), travel radius (accept km — convert to miles, 1 km = 0.621 miles, round to nearest int). " +
     "OPTIONAL items (collect as many as possible, but do NOT block review on them): weekly availability, live location pin (📍), equipment/vehicle photo, insurance doc photo, driving licence / ID doc photo, public liability doc photo. " +
@@ -1121,7 +1121,7 @@ function formatOpenJobsPrompt(openJobs: any[]): string {
     lines,
     "",
     "Reply *YES* to open a new job, or just ask any question about an existing one and we'll help.",
-    "— Tyre Fly",
+    "— Tyrefly",
   ].join("\n");
 }
 
@@ -1131,7 +1131,7 @@ async function answerCustomerJobQuestion(openJobs: any[], question: string): Pro
     const ref = String(j.id).slice(0, 6).toUpperCase();
     return `- Job #${ref}: status=${j.status}, issue=${j.issue_type ?? "n/a"}, postcode=${j.postcode ?? "n/a"}, reg=${j.vehicle_reg ?? "n/a"}${j.damage_summary ? `, damage: ${j.damage_summary}` : ""}`;
   }).join("\n");
-  const fallback = `Here are your current open jobs:\n${summary}\n\nOur team will follow up shortly. Reply YES if you'd like to open a new job.\n— Tyre Fly`;
+  const fallback = `Here are your current open jobs:\n${summary}\n\nOur team will follow up shortly. Reply YES if you'd like to open a new job.\n— Tyrefly`;
   if (!apiKey) return fallback;
   try {
     const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -1143,7 +1143,7 @@ async function answerCustomerJobQuestion(openJobs: any[], question: string): Pro
           {
             role: "system",
             content:
-              "You are Tyre Fly's WhatsApp customer support assistant. The customer already has one or more open jobs (provided in context). Answer their question concisely (max 4 short lines) using ONLY the job context. If the answer isn't in the context or the question is unrelated, politely say a team member will follow up and remind them to reply YES to open a new job. Always end with '— Tyre Fly'.",
+              "You are Tyrefly's WhatsApp customer support assistant. The customer already has one or more open jobs (provided in context). Answer their question concisely (max 4 short lines) using ONLY the job context. If the answer isn't in the context or the question is unrelated, politely say a team member will follow up and remind them to reply YES to open a new job. Always end with '— Tyrefly'.",
           },
           { role: "user", content: `Customer's open jobs:\n${summary}\n\nCustomer message:\n${question}` },
         ],
@@ -1242,7 +1242,7 @@ async function sendQuoteToCustomer(
         },
         payment_intent_data: {
           metadata: { job_id: jobId, technician_id: quoteRow.technician_id, kind: "job_full_payment" },
-          description: `Tyre Fly — job ${shortRef} — ${jobRow.postcode ?? ""}`.trim(),
+          description: `Tyrefly — job ${shortRef} — ${jobRow.postcode ?? ""}`.trim(),
         },
       });
       console.log("stripe checkout (customer quote) session created", {
@@ -1307,7 +1307,7 @@ async function sendQuoteToCustomer(
       `💰 Repair Cost: £${mergedPrice}${tyreNote}\n\n` +
       `⏱️ Estimated Arrival Time (ETA): ${mergedEta} minutes\n\n` +
       paymentSection +
-      `Thank you.\n— Tyre Fly`;
+      `Thank you.\n— Tyrefly`;
 
     await sendReply(jobRow.customer_phone, customerBody, "whatsapp");
     return {
@@ -1424,7 +1424,7 @@ async function shareContactsForJobId(
         ``,
         `They will contact you shortly to confirm ETA.`,
         ``,
-        `— Tyre Fly`,
+        `— Tyrefly`,
       ].join("\n");
       await sendReply(job.customer_phone, customerMsg, "whatsapp");
     }
@@ -1628,7 +1628,7 @@ Deno.serve(async (req) => {
             if (job.customer_phone) {
               await sendReply(
                 job.customer_phone,
-                `✅ Your tyre service is complete — Job #${shortRef}.\n\nThanks for choosing Tyre Fly! 🛞`,
+                `✅ Your tyre service is complete — Job #${shortRef}.\n\nThanks for choosing Tyrefly! 🛞`,
                 "whatsapp",
               );
             }
@@ -2077,7 +2077,7 @@ Deno.serve(async (req) => {
               },
               payment_intent_data: {
                 metadata: { job_id: jobIdFull, technician_id: q.technician_id, kind: "job_full_payment" },
-                description: `Tyre Fly — job ${shortRef} — ${jobRow.postcode ?? ""}`.trim(),
+                description: `Tyrefly — job ${shortRef} — ${jobRow.postcode ?? ""}`.trim(),
               },
             });
             if (session?.url) {
@@ -2110,7 +2110,7 @@ Deno.serve(async (req) => {
           `We have received quotes from our technicians for your vehicle ${vehicleReg}. Please review and choose your preferred option:\n\n` +
           `${optionLines}\n\n` +
           `Please tap your preferred payment link to confirm your booking. Once payment is confirmed, your technician will proceed to your location.\n\n` +
-          `Thank you.\n— Tyre Fly`;
+          `Thank you.\n— Tyrefly`;
 
         await sendReply(jobRow.customer_phone, body, "whatsapp");
         return { ok: true, count: options.length, customerPhone: jobRow.customer_phone };
@@ -2974,7 +2974,7 @@ Deno.serve(async (req) => {
               await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/twilio-send`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json", Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}` },
-                body: JSON.stringify({ to: t.phone, body: `🎉 You're approved on Tyre Fly. We'll text you jobs near you.`, channel: "whatsapp" }),
+                body: JSON.stringify({ to: t.phone, body: `🎉 You're approved on Tyrefly. We'll text you jobs near you.`, channel: "whatsapp" }),
               });
             } catch (_) {}
           } else {
@@ -2991,7 +2991,7 @@ Deno.serve(async (req) => {
                 headers: { "Content-Type": "application/json", Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}` },
                 body: JSON.stringify({
                   to: t.phone,
-                  body: `Hi${t.name ? ` ${String(t.name).split(" ")[0]}` : ""} — thanks for applying to Tyre Fly. We're unable to approve your profile right now${reason ? `: ${reason}` : "."}`,
+                  body: `Hi${t.name ? ` ${String(t.name).split(" ")[0]}` : ""} — thanks for applying to Tyrefly. We're unable to approve your profile right now${reason ? `: ${reason}` : "."}`,
                   channel: "whatsapp",
                 }),
               });
@@ -3206,7 +3206,7 @@ Deno.serve(async (req) => {
         if (job.customer_phone) {
           await sendReply(
             job.customer_phone,
-            `We're sorry — your tyre service request (Job #${shortRef}) has been cancelled by our team. If this is unexpected, please reply and we'll help right away.\n— Tyre Fly`,
+            `We're sorry — your tyre service request (Job #${shortRef}) has been cancelled by our team. If this is unexpected, please reply and we'll help right away.\n— Tyrefly`,
             "whatsapp",
           );
         }
@@ -3753,7 +3753,7 @@ Deno.serve(async (req) => {
         let route = "";
         let nextStatus: string | null = status;
         if (status === "approved") {
-          reply = "You're already approved as a Tyre Fly technician ✅ Send 📍your live location to start receiving jobs.";
+          reply = "You're already approved as a Tyrefly technician ✅ Send 📍your live location to start receiving jobs.";
           route = "join_phrase_already_approved";
         } else if (status === "pending") {
           reply = "Your application is in review — we'll message you here as soon as it's approved. Need to update something? Just tell me what to change.";
@@ -3828,7 +3828,7 @@ Deno.serve(async (req) => {
           // Welcome message on first contact
           await sendReply(
             from,
-            "👋 Welcome to Tyre Fly! I'll get you set up here on WhatsApp — no website needed.\n\n" +
+            "👋 Welcome to Tyrefly! I'll get you set up here on WhatsApp — no website needed.\n\n" +
               "To submit your application I just need 5 quick things: your full name, email address, the areas you cover (postcodes/ZIPs/cities), your vehicle, and your max travel radius.\n\n" +
               "After that, you can also send (anytime — even after submitting): a 📍live location pin, equipment photo, and photos of your insurance, ID & public liability docs. Admin will follow up if anything else is needed.\n\n" +
               "Let's start — what's your full name?",
@@ -3866,7 +3866,7 @@ Deno.serve(async (req) => {
           // stop, so the AI extractor doesn't reply with a one-line greeting.
           await sendReply(
             from,
-            "👋 Welcome to Tyre Fly! I'll get you set up here on WhatsApp — no website needed.\n\n" +
+            "👋 Welcome to Tyrefly! I'll get you set up here on WhatsApp — no website needed.\n\n" +
               "To submit your application I just need 5 quick things: your full name, email address, the areas you cover (postcodes/ZIPs/cities), your vehicle, and your max travel radius.\n\n" +
               "After that, you can also send (anytime — even after submitting): a 📍live location pin, equipment photo, and photos of your insurance, ID & public liability docs. Admin will follow up if anything else is needed.\n\n" +
               "Let's start — what's your full name?",

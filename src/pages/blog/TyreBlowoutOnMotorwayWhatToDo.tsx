@@ -10,7 +10,8 @@ export default function TyreBlowoutOnMotorwayWhatToDo() {
       category="Emergency Guide"
       readMinutes={11}
       datePublished="2026-07-13"
-      heroImage="flat"
+      heroImage="tyreBlowout"
+      heroAlt="A shredded blown-out tyre and scattered rubber debris on a motorway hard shoulder behind a warning triangle"
       intro="A motorway blowout is loud, sudden and disorientating — and the wrong reflex will put you in a hedge. Here's what to actually do in the first thirty seconds, based on National Highways guidance and what our mobile fitters see every week on the M25, M6 and M1."
       blocks={[
         { type: "h2", text: "What a blowout feels like" },

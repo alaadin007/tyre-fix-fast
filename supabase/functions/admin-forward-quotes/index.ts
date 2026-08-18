@@ -114,7 +114,7 @@ Deno.serve(async (req) => {
           },
           payment_intent_data: {
             metadata: { job_id: jobRow.id, technician_id: q.technician_id, kind: "job_full_payment" },
-            description: `Tyre Fly — job ${shortRef} — ${jobRow.postcode ?? ""}`.trim(),
+            description: `Tyrefly — job ${shortRef} — ${jobRow.postcode ?? ""}`.trim(),
           },
         });
         if (session?.url) {
@@ -155,7 +155,7 @@ Deno.serve(async (req) => {
       `${introLine}\n\n` +
       `${optionLines}\n\n` +
       `${outroLine}\n\n` +
-      `Thank you.\n— Tyre Fly`;
+      `Thank you.\n— Tyrefly`;
 
     await sendReply(jobRow.customer_phone, body, "whatsapp");
 

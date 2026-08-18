@@ -10,7 +10,8 @@ export default function CanIDriveOnAFlatTyreUk() {
       category="Emergency Guide"
       readMinutes={10}
       datePublished="2026-07-13"
-      heroImage="flat"
+      heroImage="driveOnFlatTyre"
+      heroAlt="A completely deflated tyre off the rim on a residential street with a car's hazard lights glowing behind"
       intro="You've felt the wobble, you've heard the flap, and now you're deciding whether to keep going to the next petrol station or stop right here. This is the honest answer — legal, mechanical and financial — for UK drivers in 2026."
       blocks={[
         { type: "h2", text: "The short answer" },

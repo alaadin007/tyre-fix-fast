@@ -44,7 +44,7 @@ Deno.serve(async (req) => {
       metadata: { kind: "test_customer_quote_preview" },
       payment_intent_data: {
         metadata: { kind: "test_customer_quote_preview" },
-        description: `Tyre Fly — TEST preview — ${postcode}`,
+        description: `Tyrefly — TEST preview — ${postcode}`,
       },
     });
 
@@ -60,7 +60,7 @@ Deno.serve(async (req) => {
       `To proceed with the service, please complete the payment using the secure Stripe link below:\n\n` +
       `💳 Payment Link: ${await shortenUrl(session.url!, { kind: "test_customer_quote_preview" })}\n\n` +
       `Once the payment is confirmed, the technician will proceed with the repair service at your location.\n\n` +
-      `Thank you.\n— Tyre Fly`;
+      `Thank you.\n— Tyrefly`;
 
     const { data: setting } = await supabase
       .from("app_settings").select("value").eq("key", "master_numbers").maybeSingle();

@@ -135,7 +135,7 @@ export function JobConversation({
                   </div>
                 )}
                 <div className="mt-1 text-[10px] uppercase tracking-wider opacity-60">
-                  {inbound ? "Customer" : "Tyre Fly"} ·{" "}
+                  {inbound ? "Customer" : "Tyrefly"} ·{" "}
                   {new Date(m.created_at).toLocaleString([], {
                     month: "short",
                     day: "numeric",

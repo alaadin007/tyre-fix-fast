@@ -5,13 +5,15 @@ export default function TyrePressureGuideUk() {
     <BlogPost
       slug="tyre-pressure-guide-uk"
       metaTitle="UK Tyre Pressure Guide: Correct PSI & Cold Check (2026)"
-      metaDesc="How to set the right tyre pressure for your car in the UK — where to find the correct PSI, the laden vs unladen figures, and the cold check rule."
+      metaDesc="How to set the right tyre pressure for your car in the UK — where to find the correct PSI, typical PSI by popular car model, laden vs unladen figures, and the cold check rule."
       title="UK Tyre Pressure Guide: Correct PSI, Cold Checks and the Laden Rule"
       category="Maintenance"
-      readMinutes={9}
+      readMinutes={11}
       datePublished="2026-07-13"
-      heroImage="tpms"
-      intro="Correct tyre pressure is the single cheapest thing you can do to make your car safer, more efficient and longer-lived — and about 60% of UK drivers get it wrong. This guide covers where to find the right number, how to check it properly, and the difference between the everyday and the loaded pressure."
+      dateModified="2026-08-18"
+      heroImage="tyrePressure"
+      heroAlt="A digital tyre pressure gauge reading the pressure at a car tyre valve"
+      intro="Correct tyre pressure is the single cheapest thing you can do to make your car safer, more efficient and longer-lived — and about 60% of UK drivers get it wrong. This guide covers where to find the right number, typical PSI for popular UK cars, how to check it properly, and the difference between the everyday and the loaded pressure."
       blocks={[
         { type: "h2", text: "Where to find your correct tyre pressure" },
         { type: "p", html: "Two places, and only two. Ignore what's printed on the sidewall of the tyre — that's the <em>maximum</em> the tyre can safely hold, not the pressure your car should run at." },
@@ -23,6 +25,28 @@ export default function TyrePressureGuideUk() {
           ],
         },
         { type: "p", html: "If the car has been fitted with different-size tyres from stock (e.g. winter wheels or aftermarket alloys), use the tyre manufacturer's load-inflation table for the new size — a good fitter will supply the correct figure on request." },
+
+        { type: "h2", text: "Typical PSI by popular UK car" },
+        { type: "p", html: "The table below gives typical cold-inflation figures for common UK cars, based on the sort of values you'll usually find on the door placard. <strong>Treat this as a general reference only</strong> — trim level, engine, wheel size and model year all shift the exact number. Always check your own door sticker or handbook before setting pressures; it is the only authoritative source for your specific car." },
+        {
+          type: "table",
+          caption: "Typical cold tyre pressures, popular UK vehicles (PSI). Always confirm against your door placard.",
+          head: ["Vehicle", "Front (normal)", "Rear (normal)", "Front/Rear (laden)"],
+          rows: [
+            ["Ford Fiesta", "30–32", "29–31", "33 / 33"],
+            ["Ford Focus", "30–33", "28–31", "35 / 35"],
+            ["Volkswagen Golf", "29–32", "28–31", "35 / 38"],
+            ["Vauxhall Corsa", "29–32", "26–29", "32 / 35"],
+            ["Nissan Qashqai", "32–33", "32–33", "35 / 38"],
+            ["BMW 3 Series", "31–33", "31–34", "34 / 37"],
+            ["Mercedes A-Class", "32–35", "32–35", "35 / 38"],
+            ["Audi A3", "29–32", "29–32", "35 / 38"],
+            ["Toyota Yaris", "32–33", "32–33", "33 / 33"],
+            ["Range Rover Evoque", "32–35", "32–35", "38 / 41"],
+            ["Ford Transit Custom (van)", "42–50", "50–65", "up to 80 rear when fully laden"],
+          ],
+        },
+        { type: "p", html: "Vans like the Transit Custom show the widest swing between empty and laden pressures — commercial vehicles are designed around carrying variable loads, so it's worth checking the payload-specific plate inside the door or the handbook chart rather than guessing." },
 
         { type: "h2", text: "The units: PSI, bar, kPa" },
         { type: "p", html: "The UK uses <strong>PSI</strong> (pounds per square inch) as the everyday unit, but many European cars list pressures in <strong>bar</strong> or <strong>kPa</strong>. Quick conversion:" },
@@ -51,6 +75,40 @@ export default function TyrePressureGuideUk() {
           ],
         },
         { type: "p", html: "Running normal-load pressures with a fully laden car overheats the sidewalls, wears the outer edges of the tread, and — at motorway speeds in summer — is a leading cause of holiday blowouts. Before every long trip, reset to the higher figure. It takes two minutes." },
+
+        { type: "h2", text: "Load and how it changes the numbers" },
+        { type: "p", html: "Every extra passenger and every kilogram in the boot adds weight the tyres must carry, and the door sticker's \"laden\" figure exists specifically to compensate. A few practical points that catch drivers out:" },
+        {
+          type: "ul",
+          items: [
+            "<strong>Rear pressures usually rise more than front</strong> when laden, because passengers and luggage load the rear axle disproportionately in most family cars.",
+            "<strong>Estate cars and SUVs with a full boot</strong> should generally run the laden figure even for a normal school run if regularly loaded near capacity.",
+            "<strong>Roof boxes and bike racks</strong> add both weight and aerodynamic drag — treat the car as laden even if the cabin is empty.",
+            "<strong>Caravan and trailer towing</strong> needs the tow vehicle's full-load rear pressure as a minimum; some caravan manufacturers recommend a couple of PSI above that on the tow car.",
+          ],
+        },
+
+        { type: "h2", text: "Temperature and seasonal pressure loss" },
+        { type: "p", html: "Tyre pressure tracks ambient temperature closely — roughly <strong>1 PSI for every 5–6°C change</strong>. This matters most at the two seasonal turning points UK drivers hit every year:" },
+        {
+          type: "ul",
+          items: [
+            "<strong>Autumn into winter:</strong> a car that was correctly set at 32 PSI in September can be down to 27–28 PSI by a cold December morning without any leak at all — just thermal contraction.",
+            "<strong>Winter into spring:</strong> the reverse happens; pressures creep back up as temperatures rise, so it's worth rechecking rather than assuming winter settings still apply.",
+            "<strong>A cold snap overnight</strong> (a sudden drop of 10°C or more) can lose 2 PSI in a single night — check pressures the morning after any sharp weather change.",
+          ],
+        },
+
+        { type: "h2", text: "EVs and the weight factor" },
+        { type: "p", html: "Electric vehicles run heavier than their petrol/diesel equivalents because of battery mass — often 300–500kg more. That extra weight means EV-specific or higher-load-rated tyres, and correspondingly higher recommended pressures, often <strong>38–42 PSI</strong> rather than the 30–33 PSI typical of an equivalent combustion car." },
+        {
+          type: "ul",
+          items: [
+            "Always use the EV's own door placard — don't assume the pressure from a previous petrol car of similar size.",
+            "Under-inflation costs EVs more in range than it does combustion cars: roughly 3–5% range loss per 10% under-inflation, compounding with cold-weather range loss.",
+            "EV-rated tyres (often marked with an additional manufacturer code) are built for the extra torque and weight — fitting standard tyres at EV pressures doesn't fully substitute for the correct tyre.",
+          ],
+        },
 
         { type: "h2", text: "The under-inflation problem" },
         { type: "p", html: "Under-inflation is more common than over-inflation and does more damage:" },
@@ -110,6 +168,10 @@ export default function TyrePressureGuideUk() {
         { q: "Should I check tyre pressure hot or cold?", a: "Cold — parked at least three hours, or driven under a mile. A warm tyre reads 3–5 PSI higher than cold." },
         { q: "How often should I check my tyre pressure?", a: "Monthly minimum, plus before every long trip and after any big temperature change. Pressure drops around 1 PSI per 5°C drop in ambient temperature." },
         { q: "Is nitrogen better than air for car tyres?", a: "For a road car, the difference over 6 months is about 1 PSI. Not worth the £5–£10 per tyre for most drivers." },
+        { q: "Are the PSI figures in your car model table exact for my car?", a: "No — treat them as typical starting points only. Trim, engine, wheel size and load all change the correct figure. Your door placard or handbook is always the authoritative source for your specific vehicle." },
+        { q: "Why do vans like the Transit Custom need such high rear pressure?", a: "Commercial vans are designed to carry variable, often heavy loads in the rear. The laden rear pressure can be nearly double the unladen figure, which is why vans carry a separate load-specific pressure plate." },
+        { q: "Does cold weather really deflate my tyres without a puncture?", a: "Yes. Roughly 1 PSI is lost for every 5–6°C drop in temperature, purely from air contracting. A sharp autumn cold snap can leave correctly set tyres several PSI low within days." },
+        { q: "Do electric cars need different tyre pressure to petrol cars?", a: "Usually yes, and higher — often 38–42 PSI versus 30–33 PSI for an equivalent combustion car — because of the extra weight from the battery pack. Always use the EV's own door placard." },
       ]}
       related={[
         { to: "/blog/tpms-warning-light", label: "TPMS Warning Light Guide" },

@@ -8,8 +8,8 @@ const Privacy = () => {
       style={{ backgroundColor: "#0D0D0D", fontFamily: "Inter, system-ui, -apple-system, sans-serif" }}
     >
       <div className="max-w-2xl mx-auto">
-        <Link to="/" className="flex items-center gap-2.5 mb-8" aria-label="Tyre Fly home">
-          <img src={logo} alt="Tyre Fly logo" width={36} height={36} className="h-9 w-9 object-contain" />
+        <Link to="/" className="flex items-center gap-2.5 mb-8" aria-label="Tyrefly home">
+          <img src={logo} alt="Tyrefly logo" width={36} height={36} className="h-9 w-9 object-contain" />
           <span className="text-[20px] font-bold tracking-tight leading-none">
             Tyre <span style={{ color: "#FF6B1A" }}>Fly</span>
           </span>
@@ -22,7 +22,7 @@ const Privacy = () => {
           <section>
             <h2 className="text-xl font-semibold text-white mb-2">1. Who we are</h2>
             <p>
-              Tyre Fly ("we", "us", "our") provides a 24/7 mobile tyre repair and replacement service across the
+              Tyrefly ("we", "us", "our") provides a 24/7 mobile tyre repair and replacement service across the
               United Kingdom. We are the data controller for the personal information described in this policy.
               You can contact us at <a href="mailto:hello@tyrefly.com" className="text-[#FF6B1A] underline">hello@tyrefly.com</a>.
             </p>

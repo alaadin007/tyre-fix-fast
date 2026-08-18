@@ -66,7 +66,7 @@ function AppSidebar() {
       <SidebarHeader className="flex flex-row items-center justify-between px-4 py-3 border-b border-white/10">
         <div className="flex items-center gap-2">
           <img src={tyreflyLogo} alt="TyreFly" className="h-6 w-6 object-contain" />
-          <span className="font-bold text-white text-sm">Tyre Fly</span>
+          <span className="font-bold text-white text-sm">Tyrefly</span>
         </div>
         <button
           type="button"
