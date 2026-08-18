@@ -29,7 +29,7 @@ export default function AreasIndex() {
         <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-5 py-4">
           <Link to="/" className="flex items-center gap-2.5">
             <img src={logo} alt="Tyrefly" width={36} height={36} className="h-9 w-9 object-contain" />
-            <span className="text-[20px] font-bold tracking-tight">Tyre <span style={{ color: "#FF6B1A" }}>Fly</span></span>
+            <span className="text-[20px] font-bold tracking-tight">Tyre<span style={{ color: "#FF6B1A" }}>fly</span></span>
           </Link>
         </div>
       </header>

@@ -30,7 +30,7 @@ export const AREAS: Area[] = [
     postcodes: "EC, WC, N, NW, E, SE, SW, W, BR, CR, DA, EN, HA, IG, KT, RM, SM, TW, UB, WD",
     hubs: ["Westminster", "Camden", "Islington", "Hackney", "Tower Hamlets", "Lambeth", "Southwark", "Wandsworth", "Kensington & Chelsea", "Hammersmith & Fulham", "Croydon", "Bromley", "Ealing", "Hounslow", "Brent", "Barnet", "Enfield", "Haringey", "Waltham Forest", "Newham", "Redbridge", "Havering", "Bexley", "Greenwich", "Lewisham", "Merton", "Sutton", "Kingston upon Thames", "Richmond upon Thames", "Harrow", "Hillingdon", "Barking & Dagenham", "City of London"],
     faqAnswer: "Yes — we cover every London borough and the M25 corridor 24/7. Most jobs inside the North & South Circular get a fitter within 35–60 minutes.",
-    metaTitle: "Mobile Tyre Fitting London | 24/7 Call-Out from £95 | Tyrefly",
+    metaTitle: "Mobile Tyre Fitting London | 24/7 from £95 | Tyrefly",
     metaDesc: "Mobile tyre fitting in London, 24/7 across all 33 boroughs. Real prices, 35–90 minute arrival, puncture repair from £45. Quote by WhatsApp in 60 seconds.",
     intro: "Mobile tyre fitting in London means a fully-equipped van — tyre machine, wheel balancer, compressor, stock — coming to your car instead of you limping to a garage. Tyrefly matches you to a vetted local fitter across all 33 boroughs and the M25 corridor, 24 hours a day, with a firm all-in price before anyone sets off.",
     sections: [

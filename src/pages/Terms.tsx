@@ -11,7 +11,7 @@ const Terms = () => {
         <Link to="/" className="flex items-center gap-2.5 mb-8" aria-label="Tyrefly home">
           <img src={logo} alt="Tyrefly logo" width={36} height={36} className="h-9 w-9 object-contain" />
           <span className="text-[20px] font-bold tracking-tight leading-none">
-            Tyre <span style={{ color: "#FF6B1A" }}>Fly</span>
+            Tyre<span style={{ color: "#FF6B1A" }}>fly</span>
           </span>
         </Link>
 
