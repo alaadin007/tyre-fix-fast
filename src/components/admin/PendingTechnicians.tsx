@@ -137,7 +137,7 @@ export function PendingTechnicians() {
     void supabase.functions.invoke("whatsapp-meta-send", {
       body: {
         to: t.phone,
-        body: `✅ You're approved as a Tyre Fly technician${t.name ? `, ${t.name.split(" ")[0]}` : ""}! Jobs in your area will arrive on this number.`,
+        body: `✅ You're approved as a Tyrefly technician${t.name ? `, ${t.name.split(" ")[0]}` : ""}! Jobs in your area will arrive on this number.`,
       },
     });
   };
@@ -161,7 +161,7 @@ export function PendingTechnicians() {
     void supabase.functions.invoke("whatsapp-meta-send", {
       body: {
         to: t.phone,
-        body: `Hi${t.name ? ` ${t.name.split(" ")[0]}` : ""} — thanks for applying to Tyre Fly. We're unable to approve your profile right now: ${reason}`,
+        body: `Hi${t.name ? ` ${t.name.split(" ")[0]}` : ""} — thanks for applying to Tyrefly. We're unable to approve your profile right now: ${reason}`,
       },
     });
   };
@@ -170,7 +170,7 @@ export function PendingTechnicians() {
     const miss = missingFields(t);
     const items = miss.map((m) => `• ${m.ask}`).join("\n");
     const draft = miss.length
-      ? `Hi${t.name && t.name !== "Pending applicant" ? ` ${t.name.split(" ")[0]}` : ""} — to finish your Tyre Fly sign-up, please send:\n\n${items}\n\nReply on this WhatsApp chat. Thanks!`
+      ? `Hi${t.name && t.name !== "Pending applicant" ? ` ${t.name.split(" ")[0]}` : ""} — to finish your Tyrefly sign-up, please send:\n\n${items}\n\nReply on this WhatsApp chat. Thanks!`
       : `Hi — could you send a quick update on your application?`;
     setRequestFor(t.id);
     setRequestMsg(draft);

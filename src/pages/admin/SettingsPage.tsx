@@ -155,7 +155,7 @@ export default function SettingsPage() {
           <Card>
             <CardHeader>
               <CardTitle>Service Zip / Postcodes</CardTitle>
-              <CardDescription>Areas where Tyre Fly currently accepts jobs. Jobs outside these areas are flagged.</CardDescription>
+              <CardDescription>Areas where Tyrefly currently accepts jobs. Jobs outside these areas are flagged.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex gap-2">

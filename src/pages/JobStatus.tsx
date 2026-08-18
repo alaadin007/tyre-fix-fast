@@ -185,7 +185,7 @@ const JobStatus = () => {
 
         <div className="mt-6">
           <WhatsAppChatCta
-            message={`Hi Tyre Fly — I have a question about my job ${job.id.slice(0, 8)}`}
+            message={`Hi Tyrefly — I have a question about my job ${job.id.slice(0, 8)}`}
             label="Need a hand while you wait?"
             subLabel="Chat with our support team on WhatsApp"
           />

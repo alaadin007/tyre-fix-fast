@@ -120,7 +120,7 @@ const STATUS_BADGE: Record<string, { label: string; className: string }> = {
 
 export default function TechnicianLogin() {
   const introMsg =
-    "Hi Tyre Fly — I'd like to sign up as a technician. Please guide me through the registration.";
+    "Hi Tyrefly — I'd like to sign up as a technician. Please guide me through the registration.";
   const introWaHref = `https://wa.me/${toWaNumber(SUPPORT_WA)}?text=${encodeURIComponent(introMsg)}`;
 
   const [phone, setPhone] = useState("");
@@ -175,7 +175,7 @@ export default function TechnicianLogin() {
       <div className="mx-auto w-full max-w-xl space-y-6">
         {/* Sign up card */}
         <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-6">
-          <h1 className="text-2xl font-semibold">Become a Tyre Fly technician</h1>
+          <h1 className="text-2xl font-semibold">Become a Tyrefly technician</h1>
           <p className="mt-2 text-sm text-white/60">
             Sign up takes 2 minutes — all on WhatsApp. Our AI asks for your
             name, service area, vehicle, schedule and docs, then admin approves

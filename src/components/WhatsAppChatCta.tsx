@@ -1,7 +1,7 @@
 import { MessageSquare } from "lucide-react";
 import { SUPPORT_WHATSAPP, waLink } from "@/lib/whatsapp";
 
-const DEFAULT_MSG = "Hi Tyre Fly — I need a hand";
+const DEFAULT_MSG = "Hi Tyrefly — I need a hand";
 
 type Props = {
   message?: string;

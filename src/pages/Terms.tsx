@@ -8,8 +8,8 @@ const Terms = () => {
       style={{ backgroundColor: "#0D0D0D", fontFamily: "Inter, system-ui, -apple-system, sans-serif" }}
     >
       <div className="max-w-2xl mx-auto">
-        <Link to="/" className="flex items-center gap-2.5 mb-8" aria-label="Tyre Fly home">
-          <img src={logo} alt="Tyre Fly logo" width={36} height={36} className="h-9 w-9 object-contain" />
+        <Link to="/" className="flex items-center gap-2.5 mb-8" aria-label="Tyrefly home">
+          <img src={logo} alt="Tyrefly logo" width={36} height={36} className="h-9 w-9 object-contain" />
           <span className="text-[20px] font-bold tracking-tight leading-none">
             Tyre <span style={{ color: "#FF6B1A" }}>Fly</span>
           </span>
@@ -22,7 +22,7 @@ const Terms = () => {
           <section>
             <h2 className="text-xl font-semibold text-white mb-2">1. About these terms</h2>
             <p>
-              These terms govern your use of Tyre Fly's website and mobile tyre service. By texting us or
+              These terms govern your use of Tyrefly's website and mobile tyre service. By texting us or
               booking a job you agree to them. If you do not agree, please do not use the service.
             </p>
           </section>
@@ -30,18 +30,18 @@ const Terms = () => {
           <section>
             <h2 className="text-xl font-semibold text-white mb-2">2. The service<span className="text-white/40">*</span></h2>
             <p>
-              Tyre Fly operates an online marketplace that introduces customers to a nationwide network of
+              Tyrefly operates an online marketplace that introduces customers to a nationwide network of
               independent, vetted mobile tyre technicians. We facilitate the booking, payment of the booking
               fee, and communication between you and the technician.
             </p>
             <p className="mt-2 text-white/70">
               <span className="text-white/40">*</span> The contract for the actual repair, replacement or
               fitting work is formed directly between you (the customer) and the independent technician who
-              attends. Tyre Fly is not a party to that contract and does not itself supply tyres or carry out
+              attends. Tyrefly is not a party to that contract and does not itself supply tyres or carry out
               physical work. Any liabilities, warranties, claims or disputes arising from the work performed,
               parts supplied, vehicle damage, delays or technician conduct are matters between you and the
               technician. Each technician carries their own public liability insurance, which we verify on
-              onboarding. Tyre Fly's role and responsibilities as the introducer are limited as set out in
+              onboarding. Tyrefly's role and responsibilities as the introducer are limited as set out in
               section 8.
             </p>
           </section>
@@ -95,7 +95,7 @@ const Terms = () => {
           <section>
             <h2 className="text-xl font-semibold text-white mb-2">8. Liability</h2>
             <p>
-              As a marketplace introducer, Tyre Fly's liability is limited to the booking fee paid to us for
+              As a marketplace introducer, Tyrefly's liability is limited to the booking fee paid to us for
               the introduction. All technicians on the platform carry their own public liability insurance,
               which we verify on onboarding. To the extent permitted by law, our total liability arising from
               any single introduction is limited to the booking fee paid, except for death, personal injury
@@ -144,7 +144,7 @@ const Terms = () => {
           <section>
             <h2 className="text-xl font-semibold text-white mb-2">13. Contact</h2>
             <p>
-              Tyre Fly — <a href="mailto:hello@tyrefly.com" className="text-[#FF6B1A] underline">hello@tyrefly.com</a>
+              Tyrefly — <a href="mailto:hello@tyrefly.com" className="text-[#FF6B1A] underline">hello@tyrefly.com</a>
             </p>
           </section>
         </div>
