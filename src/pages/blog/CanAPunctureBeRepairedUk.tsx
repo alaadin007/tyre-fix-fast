@@ -4,12 +4,13 @@ export default function CanAPunctureBeRepairedUk() {
   return (
     <BlogPost
       slug="can-a-puncture-be-repaired-uk"
-      metaTitle="Can a Puncture Always Be Repaired? BS AU 159 Explained (2026)"
+      metaTitle="Can a Puncture Be Repaired? BS AU 159 Standard Explained (2026)"
       metaDesc="Can any puncture be repaired? UK BS AU 159 standard explained: repairable vs replace-only zones, tread limits, run-flats, and how to tell before the tyre comes off."
       title="Can a Puncture Always Be Repaired? The BS AU 159 Rules Explained"
       category="How-To"
       readMinutes={9}
       datePublished="2026-07-15"
+      dateModified="2026-08-18"
       heroImage="canPunctureBeRepairedUk"
       intro="No — about 1 in 5 punctures we see on mobile callouts turn out to be non-repairable once the tyre comes off the rim. Understanding why comes down to a single British Standard called BS AU 159, which every legitimate UK tyre technician follows. Here's what it says, in plain English, and how to tell in advance whether your puncture is a £45 fix or a new tyre."
       blocks={[
@@ -99,11 +100,9 @@ export default function CanAPunctureBeRepairedUk() {
           ],
         },
 
-        { type: "h2", text: "The best-case scenario" },
-        { type: "p", html: "Nail in the middle of the tread, tyre still has 4mm+ tread and is under 5 years old, caught within an hour, hasn't been driven flat: <strong>£45–£65 repair, 30 minutes on your driveway, 12-month warranty</strong>. That's what the standard is designed to make possible." },
-
-        { type: "h2", text: "The worst-case scenario" },
-        { type: "p", html: "Kerb strike causing a sidewall bulge on a 6-year-old run-flat with 2.5mm of tread: <strong>replacement only, no negotiation</strong>. And if the wheel bearing was damaged by driving on it, that's another £150–£300." },
+        { type: "h2", text: "Repairable under the standard — but should you?" },
+        { type: "p", html: "BS AU 159 answers one question only: <em>is this repair permitted</em>. It says nothing about whether it's the smart economic call. A tyre can be perfectly repairable and still be the wrong thing to repair — 2.5mm of tread left, six years old, and you'll be buying a replacement within months anyway." },
+        { type: "p", html: "That's a separate decision, and we've worked it through properly — tread thresholds, tyre age, matched pairs, and cost per remaining mile — in <a href=\"/blog/puncture-repair-vs-new-tyre\" class=\"text-primary hover:underline\">puncture repair vs new tyre</a>. Use this page to establish whether a repair is <strong>allowed</strong>, and that one to decide whether it's <strong>worth it</strong>." },
       ]}
       faqs={[
         { q: "Can every puncture be repaired?", a: "No. Only tread-centre punctures under 6mm on tyres with 1.6mm+ tread and no sidewall/run-flat damage are repairable to BS AU 159." },
