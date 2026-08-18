@@ -8,7 +8,7 @@ export default function PunctureRepairVsNewTyre() {
       metaDesc="Puncture repair vs new tyre — the honest UK decision framework. Tread depth thresholds, tyre age, matching pairs, run-flat rules, and the real cost per mile."
       title="Puncture Repair vs New Tyre: When Each One Actually Makes Sense"
       category="Decision Guide"
-      readMinutes={8}
+      readMinutes={10}
       datePublished="2026-07-15"
       dateModified="2026-08-18"
       heroImage="punctureVsNewTyre"
@@ -83,6 +83,22 @@ export default function PunctureRepairVsNewTyre() {
         { type: "p", html: "Example 2: Repair £45 on a tyre with 3,000 miles of life left = <strong>1.5p/mile</strong>. Then buy a new tyre for £120 lasting 30,000 miles = <strong>0.4p/mile</strong> total for the sequence. Just replace." },
         { type: "p", html: "Example 3: Replace £120 immediately on a tyre with 3,000 miles left = <strong>0.4p/mile</strong>. Cheaper than the repair-then-replace path above by £45." },
 
+        { type: "h2", text: "Decision table: cost per remaining mm of tread" },
+        { type: "p", html: "This is the table to screenshot before you agree to anything at the roadside. It compares repairing now versus replacing now, across typical remaining tread depths, assuming a £50 repair and a £120 mid-range tyre." },
+        {
+          type: "table",
+          caption: "Repair vs replace — approximate cost per mile of remaining life, mid-range 16\" tyre.",
+          head: ["Remaining tread", "Repair now (cost/mile)", "Replace now (cost/mile)", "Better choice"],
+          rows: [
+            ["6–7mm", "~0.1p/mile", "~0.4p/mile", "<strong>Repair</strong> — plenty of life left to spread the cost over"],
+            ["4mm", "~0.2p/mile", "~0.4p/mile", "<strong>Repair</strong> — still clearly cheaper"],
+            ["3mm", "~0.35–0.5p/mile", "~0.4p/mile", "Roughly even — check axle match and tyre age"],
+            ["2mm", "~0.8–1.2p/mile", "~0.4p/mile", "<strong>Replace</strong> — repair cost concentrated over very few miles"],
+            ["Under 1.6mm (illegal)", "n/a", "~0.4p/mile", "<strong>Replace</strong> — no legal option to repair and drive"],
+          ],
+        },
+        { type: "p", html: "These figures are illustrative averages, not a quote — actual remaining mileage depends on your driving style, alignment, and the specific tyre model. The point of the table is the <em>shape</em> of the curve: repair cost per mile rises steeply as tread runs out, while replacement cost per mile stays roughly flat." },
+
         { type: "h2", text: "When \"replace both on the axle\" is real vs upsell" },
         { type: "p", html: "Fast-fit chains often insist on replacing tyres in pairs. Sometimes it's genuine, sometimes it's an upsell. The honest test:" },
         {
@@ -106,7 +122,7 @@ export default function PunctureRepairVsNewTyre() {
             "Insurance may not cover a subsequent blowout on a repaired run-flat",
           ],
         },
-        { type: "p", html: "If you have a BMW, Mini, or Mercedes with staggered run-flats and the punctured tyre has been driven flat for more than a mile: <strong>replace, and consider matching the pair</strong>." },
+        { type: "p", html: "If you have a BMW, Mini, or Mercedes with staggered run-flats and the punctured tyre has been driven flat for more than a mile: <strong>replace, and consider matching the pair</strong>. For the specific repairability rules that apply to run-flats and reinforced tyres, see the <a href=\"/blog/can-a-puncture-be-repaired-uk\" class=\"text-primary hover:underline\">BS AU 159 guide</a>." },
 
         { type: "h2", text: "The five-question decision test" },
         {
@@ -121,6 +137,18 @@ export default function PunctureRepairVsNewTyre() {
         },
         { type: "p", html: "Five \"good\" answers = repair. Any one \"bad\" answer = strongly consider replacement." },
 
+        { type: "h2", text: "What a good fitter should tell you before you decide" },
+        { type: "p", html: "A trustworthy mobile fitter or garage should give you three pieces of information before recommending repair or replacement, unprompted:" },
+        {
+          type: "ul",
+          items: [
+            "The measured tread depth in mm, ideally shown to you with a gauge or a coin test, not just \"it's fine\" or \"it's worn\"",
+            "The exact location of the puncture relative to the tread pattern — central, shoulder, or sidewall",
+            "The tyre's age from the DOT code, especially if it's a car you didn't buy new",
+          ],
+        },
+        { type: "p", html: "If a fitter recommends replacement without offering any of this, ask directly. A £45 repair and a £120+ replacement are different enough that you're entitled to the reasoning, not just the invoice." },
+
         { type: "h2", text: "The bottom line" },
         { type: "p", html: "Most punctures in the UK — probably 65–70% — are repairable and it's the right call. About 20% are technically repairable but on tyres so worn or old that replacement is genuinely cheaper per mile. The remaining 10–15% are non-repairable by BS AU 159 rules. A good mobile fitter will show you the tyre, the tread depth, and the puncture location before deciding — and take your input, not just tell you what you're buying." },
       ]}
@@ -129,6 +157,9 @@ export default function PunctureRepairVsNewTyre() {
         { q: "Do I need to replace both tyres on the axle if one is punctured?", a: "Not usually. Only if the wear difference between the two would be more than 2–3mm, or on AWD/4WD cars where the manual specifies matched sets." },
         { q: "Is it cheaper to repair or replace?", a: "Repair is £45–£65; replacement is £95–£320+. Repair per remaining mile is almost always cheaper unless the tyre is nearly worn out already." },
         { q: "Can you repair a nearly-new tyre?", a: "Absolutely — new tyres benefit most from repair because you preserve 100% of the useful life for £45." },
+        { q: "What's the cost-per-mile crossover point where replacing beats repairing?", a: "Roughly 2–3mm of remaining tread on a mid-range tyre. Above that, repair is almost always cheaper per mile; below it, the repair cost gets concentrated over so few remaining miles that replacing outright often wins." },
+        { q: "Does this page cover whether my puncture is legally repairable?", a: "No — that's covered in full, with the BS AU 159 location and size rules, in our separate guide: Can Any Puncture Be Repaired? This page focuses purely on the cost and value decision once you know a repair is technically possible." },
+        { q: "Is a repaired tyre as safe as a replaced one?", a: "A correctly repaired tyre (internal combined plug-patch, within the size and location limits) is considered fully roadworthy. The safety question isn't repair vs new — it's whether the specific puncture qualifies for repair at all." },
       ]}
       cta={{ headline: "Not sure — repair or replace?", body: "Send us the tyre size, the tread depth (or photo of a coin in the groove), and where the puncture is. We'll give you an honest recommendation before the van leaves.", label: "Get an honest quote →" }}
       related={[

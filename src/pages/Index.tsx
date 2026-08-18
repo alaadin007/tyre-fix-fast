@@ -29,6 +29,57 @@ const HOME_LD = [
   },
   {
     "@context": "https://schema.org",
+    "@type": "AutoRepair",
+    "@id": "https://www.tyrefly.com/#business",
+    name: "Tyrefly",
+    description:
+      "24/7 mobile tyre fitting and emergency puncture repair across the UK, booked by WhatsApp. Vetted local technicians come to your car at home, work or roadside.",
+    url: "https://www.tyrefly.com/",
+    logo: "https://www.tyrefly.com/favicon.png",
+    image: "https://www.tyrefly.com/og.jpg",
+    telephone: SUPPORT_WA_DISPLAY,
+    priceRange: "££",
+    areaServed: [
+      "London", "Greater Manchester", "West Midlands", "West Yorkshire", "Merseyside",
+      "South Yorkshire", "Tyne and Wear", "Bristol", "Edinburgh", "Glasgow", "Cardiff", "Belfast",
+    ].map((n) => ({ "@type": "AdministrativeArea", name: n })),
+    address: { "@type": "PostalAddress", addressCountry: "GB" },
+    openingHoursSpecification: [
+      {
+        "@type": "OpeningHoursSpecification",
+        dayOfWeek: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+        opens: "00:00",
+        closes: "23:59",
+      },
+    ],
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "Service",
+    serviceType: "Mobile tyre fitting and emergency puncture repair",
+    provider: { "@id": "https://www.tyrefly.com/#business" },
+    areaServed: { "@type": "Country", name: "United Kingdom" },
+    availableChannel: {
+      "@type": "ServiceChannel",
+      serviceUrl: "https://www.tyrefly.com/",
+      availableLanguage: "en-GB",
+    },
+    hasOfferCatalog: {
+      "@type": "OfferCatalog",
+      name: "Mobile tyre services",
+      itemListElement: [
+        "Emergency puncture repair",
+        "Mobile tyre replacement",
+        "Run-flat tyre fitting",
+        "Locking wheel nut removal",
+        "Wheel balancing",
+        "TPMS and valve replacement",
+      ].map((n) => ({ "@type": "Offer", itemOffered: { "@type": "Service", name: n } })),
+    },
+  },
+
+  {
+    "@context": "https://schema.org",
     "@type": "FAQPage",
     mainEntity: [
       { "@type": "Question", name: "How fast can a mobile tyre fitter get to me?", acceptedAnswer: { "@type": "Answer", text: "Most UK jobs get a quote in under 60 seconds and a vetted technician on-site within 35–90 minutes, 24/7." } },
