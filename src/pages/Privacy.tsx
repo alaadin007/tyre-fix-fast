@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { Seo } from "@/components/Seo";
 import logo from "@/assets/tyrefly-logo.png";
 
 const Privacy = () => {
@@ -7,6 +8,7 @@ const Privacy = () => {
       className="min-h-[100dvh] w-full text-white px-6 py-8"
       style={{ backgroundColor: "#0D0D0D", fontFamily: "Inter, system-ui, -apple-system, sans-serif" }}
     >
+      <Seo title="Privacy Policy | Tyrefly Mobile Tyre Fitting" description="How Tyrefly collects, uses and protects your personal data when you book 24/7 mobile tyre fitting or puncture repair over WhatsApp." canonical="/privacy" />
       <div className="max-w-2xl mx-auto">
         <Link to="/" className="flex items-center gap-2.5 mb-8" aria-label="Tyrefly home">
           <img src={logo} alt="Tyrefly logo" width={36} height={36} className="h-9 w-9 object-contain" />
