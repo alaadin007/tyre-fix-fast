@@ -64,18 +64,8 @@ export default function RunFlatPunctureRepairLondon() {
         { type: "h2", text: "The pairs-and-axles question" },
         { type: "p", html: "On performance cars with staggered wheels (different sizes front vs rear), you generally don't need to replace both, but on the same axle with a wear difference over 2mm, replacement in pairs is recommended. On BMW xDrive and Mercedes 4Matic, check the owner's manual — some models specify tyres within 30% wear across all four." },
 
-        { type: "h2", text: "The switch-to-standard question" },
-        { type: "p", html: "You can swap run-flats for standard tyres, but:" },
-        {
-          type: "ul",
-          items: [
-            "You then have no spare (most run-flat cars don't have one) — need a mobile tyre repair kit or roadside cover",
-            "Ride quality improves noticeably (run-flats are stiffer)",
-            "Some cars trigger a TPMS warning until reset for the new tyre profile",
-            "Insurance/warranty may specify run-flats — check first",
-          ],
-        },
-        { type: "p", html: "Most drivers who make the switch don't regret it — the ride difference on London roads is significant." },
+        { type: "p", html: "Thinking of moving to standard tyres to avoid the replacement bills? The full cost, comfort and spare-wheel comparison is in the <a href=\"/blog/run-flat-tyres-uk-guide\" class=\"text-primary hover:underline\">run-flat tyres UK guide</a>." },
+
 
         { type: "h2", text: "London-specific realities" },
         { type: "p", html: "Central London kerbs are aggressive — parallel parking on Georgian streets, wide alloys, low-profile run-flats. Sidewall damage from kerb strikes is by far the most common reason we replace run-flats in London, and it's <strong>never repairable</strong>. If you've clipped a kerb hard and there's now a bulge on the sidewall, that tyre is done, no matter how new." },
