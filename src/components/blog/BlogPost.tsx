@@ -72,50 +72,60 @@ const heroMap = {
   runFlatPunctureLondon,
 };
 
-// Auto-link keywords in prose to the home page. Broad patterns so most paragraphs
-// end up with at least one inline link back to the booking flow.
-const LINK_PATTERNS: RegExp[] = [
-  /\bmobile tyre fitter(s)?\b/i,
-  /\bmobile tyre fitting\b/i,
-  /\bmobile fitter(s)?\b/i,
-  /\bmobile fitting\b/i,
-  /\bflat tyre(s)?\b/i,
-  /\bpuncture repair(s)?\b/i,
-  /\bpuncture(s)?\b/i,
-  /\bemergency tyre(s)?\b/i,
-  /\bnew tyre(s)?\b/i,
-  /\btyre replacement\b/i,
-  /\btyre fitting\b/i,
-  /\btyre change\b/i,
-  /\bcallout\b/i,
-  /\bbook(ing)?\b/i,
+// Contextual autolinking: a small number of descriptive, high-value links per
+// article pointing at the most relevant destination (not everything to "/").
+type LinkTarget = { pattern: RegExp; href: string };
+
+const LINK_TARGETS: LinkTarget[] = [
+  { pattern: /\bmobile tyre fitting in london\b/i, href: "/areas/london" },
+  { pattern: /\bmobile tyre fitting london\b/i, href: "/areas/london" },
+  { pattern: /\bmobile tyre fitter in london\b/i, href: "/areas/london" },
+  { pattern: /\bmobile tyre fitting in manchester\b/i, href: "/areas/greater-manchester" },
+  { pattern: /\bmobile tyre fitting manchester\b/i, href: "/areas/greater-manchester" },
+  { pattern: /\bmobile tyre fitting in birmingham\b/i, href: "/areas/west-midlands" },
+  { pattern: /\bmobile tyre fitting birmingham\b/i, href: "/areas/west-midlands" },
+  { pattern: /\bpuncture repair cost(s)?\b/i, href: "/blog/puncture-repair-cost-uk" },
+  { pattern: /\bcost of (a )?puncture repair\b/i, href: "/blog/puncture-repair-cost-uk" },
+  { pattern: /\brun-?flat tyres?\b/i, href: "/blog/run-flat-tyres-uk-guide" },
+  { pattern: /\bsidewall damage\b/i, href: "/blog/tyre-sidewall-damage-guide" },
+  { pattern: /\blegal tread depth\b/i, href: "/blog/uk-tyre-legal-tread-depth" },
+  { pattern: /\blocking wheel[- ]nut key\b/i, href: "/blog/locking-wheel-nut-lost-uk" },
+  { pattern: /\bmobile tyre fitter(s)?\b/i, href: "/" },
 ];
 
-function autolink(html: string): string {
+const LINK_CLS =
+  "text-accent underline decoration-accent/40 underline-offset-4 hover:decoration-accent font-medium";
+
+// Max contextual autolinks per ARTICLE (not per paragraph).
+const AUTOLINK_CAP = 3;
+
+function autolink(html: string, state: { used: number; hrefs: Set<string>; slug: string }): string {
+  if (state.used >= AUTOLINK_CAP) return html;
   // Split around existing anchors so we don't nest links, then linkify the rest.
   const parts = html.split(/(<a\b[^>]*>.*?<\/a>)/i);
-  let linked = 0;
-  const CAP = 2;
-  const cls = "text-accent underline decoration-accent/40 underline-offset-4 hover:decoration-accent font-medium";
   for (let idx = 0; idx < parts.length; idx++) {
-    if (linked >= CAP) break;
+    if (state.used >= AUTOLINK_CAP) break;
     const seg = parts[idx];
     if (/^<a\b/i.test(seg)) continue;
     let next = seg;
-    for (const pattern of LINK_PATTERNS) {
-      if (linked >= CAP) break;
+    for (const { pattern, href } of LINK_TARGETS) {
+      if (state.used >= AUTOLINK_CAP) break;
+      if (state.hrefs.has(href)) continue; // one link per destination per article
+      if (href === `/blog/${state.slug}`) continue; // never self-link
       const m = next.match(pattern);
       if (!m || m.index === undefined) continue;
       next =
         next.slice(0, m.index) +
-        `<a href="/" class="${cls}">${m[0]}</a>` +
+        `<a href="${href}" class="${LINK_CLS}">${m[0]}</a>` +
         next.slice(m.index + m[0].length);
-      linked++;
+      state.used++;
+      state.hrefs.add(href);
     }
     parts[idx] = next;
   }
   return parts.join("");
 }
+
 
 // Rotating micro-CTAs inserted between sections so users always have a way home.
 const MICRO_CTAS = [
