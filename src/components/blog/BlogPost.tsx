@@ -35,20 +35,9 @@ export interface BlogPostProps {
   readMinutes: number;
   datePublished: string;
   dateModified?: string;
-  heroImage?:
-    | "flat"
-    | "runflat"
-    | "tpms"
-    | "emergencyPunctureLondon"
-    | "mobilePunctureRepairLondon"
-    | "twentyFourHrPunctureLondon"
-    | "punctureRepairCostUk"
-    | "sameDayPunctureLondon"
-    | "punctureRepairCentralLondon"
-    | "roadsidePunctureLondon"
-    | "canPunctureBeRepairedUk"
-    | "punctureVsNewTyre"
-    | "runFlatPunctureLondon";
+  heroImage?: HeroKey;
+  /** Describe what the photo actually shows (not the headline). */
+  heroAlt?: string;
   intro: string;
   blocks: Block[];
   faqs: Faq[];
@@ -71,6 +60,8 @@ const heroMap = {
   punctureVsNewTyre,
   runFlatPunctureLondon,
 };
+
+export type HeroKey = keyof typeof heroMap;
 
 // Contextual autolinking: a small number of descriptive, high-value links per
 // article pointing at the most relevant destination (not everything to "/").
@@ -278,7 +269,7 @@ export default function BlogPost(p: BlogPostProps) {
         <figure className="mb-12 -mx-6 md:mx-0">
           <img
             src={hero}
-            alt={p.title}
+            alt={p.heroAlt ?? p.title}
             width={1600}
             height={896}
             className="w-full h-auto md:rounded-2xl"
