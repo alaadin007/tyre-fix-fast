@@ -131,7 +131,7 @@ export default function PotholeDamageClaimUk() {
       ]}
       related={[
         { to: "/blog/cracked-alloy-from-pothole", label: "Cracked Alloy From Pothole" },
-        { to: "/blog/tyre-bulge-sidewall-danger", label: "Tyre Bulge Sidewall Danger" },
+        { to: "/blog/tyre-sidewall-damage-guide", label: "Sidewall Damage & Bulges" },
         { to: "/blog/wheel-alignment-uk-guide", label: "Wheel Alignment Guide" },
       ]}
     />

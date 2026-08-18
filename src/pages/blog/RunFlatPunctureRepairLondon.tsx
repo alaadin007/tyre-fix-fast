@@ -91,7 +91,7 @@ export default function RunFlatPunctureRepairLondon() {
       cta={{ headline: "Run-flat puncture in London?", body: "Send your reg and a photo of the tyre — we'll tell you upfront whether a repair is possible or whether we need to bring a replacement.", label: "Get a run-flat quote →" }}
       related={[
         { to: "/blog/run-flat-tyres-uk-guide", label: "Run Flat Tyres: UK Guide" },
-        { to: "/blog/run-flat-vs-standard-tyres", label: "Run Flat vs Standard Tyres" },
+        { to: "/blog/tyre-sidewall-damage-guide", label: "Sidewall Damage Guide" },
         { to: "/blog/mobile-tyre-fitting-london", label: "Mobile Tyre Fitting London" },
       ]}
     />
