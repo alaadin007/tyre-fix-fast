@@ -9,7 +9,7 @@ import { AREAS } from "@/data/areas";
 import { SUPPORT_WHATSAPP, SUPPORT_WA_DISPLAY, waLink } from "@/lib/whatsapp";
 
 const SMS_NUMBER = SUPPORT_WHATSAPP;
-const MSG_BODY = "Hi Tyre Fly — I need tyre help";
+const MSG_BODY = "Hi Tyrefly — I need tyre help";
 const WA_HREF = waLink(SUPPORT_WHATSAPP, MSG_BODY);
 const SMS_HREF = `sms:${SMS_NUMBER}?&body=${encodeURIComponent(MSG_BODY)}`;
 
@@ -17,14 +17,14 @@ const HOME_LD = [
   {
     "@context": "https://schema.org",
     "@type": "Organization",
-    name: "Tyre Fly",
+    name: "Tyrefly",
     url: "https://www.tyrefly.com/",
     logo: "https://www.tyrefly.com/favicon.png",
   },
   {
     "@context": "https://schema.org",
     "@type": "WebSite",
-    name: "Tyre Fly",
+    name: "Tyrefly",
     url: "https://www.tyrefly.com/",
   },
   {
@@ -32,9 +32,9 @@ const HOME_LD = [
     "@type": "FAQPage",
     mainEntity: [
       { "@type": "Question", name: "How fast can a mobile tyre fitter get to me?", acceptedAnswer: { "@type": "Answer", text: "Most UK jobs get a quote in under 60 seconds and a vetted technician on-site within 35–90 minutes, 24/7." } },
-      { "@type": "Question", name: "How much does Tyre Fly cost?", acceptedAnswer: { "@type": "Answer", text: "A £20 booking fee secures your slot and is deducted from your final bill. The technician collects the remainder on-site by card, link, transfer or cash." } },
-      { "@type": "Question", name: "Where in the UK do you operate?", acceptedAnswer: { "@type": "Answer", text: "Tyre Fly covers all major UK cities and motorways including London, Manchester, Birmingham, Leeds, Liverpool, Sheffield, Newcastle, Bristol, Edinburgh, Glasgow, Cardiff and Belfast — 24/7." } },
-      { "@type": "Question", name: "Do you fit tyres at night?", acceptedAnswer: { "@type": "Answer", text: "Yes — Tyre Fly operates 24 hours a day, 7 days a week including weekends and bank holidays." } },
+      { "@type": "Question", name: "How much does Tyrefly cost?", acceptedAnswer: { "@type": "Answer", text: "A £20 booking fee secures your slot and is deducted from your final bill. The technician collects the remainder on-site by card, link, transfer or cash." } },
+      { "@type": "Question", name: "Where in the UK do you operate?", acceptedAnswer: { "@type": "Answer", text: "Tyrefly covers all major UK cities and motorways including London, Manchester, Birmingham, Leeds, Liverpool, Sheffield, Newcastle, Bristol, Edinburgh, Glasgow, Cardiff and Belfast — 24/7." } },
+      { "@type": "Question", name: "Do you fit tyres at night?", acceptedAnswer: { "@type": "Answer", text: "Yes — Tyrefly operates 24 hours a day, 7 days a week including weekends and bank holidays." } },
     ],
   },
 ];
@@ -46,18 +46,18 @@ const Index = () => {
       style={{ backgroundColor: "#0D0D0D", fontFamily: "Inter, system-ui, -apple-system, sans-serif" }}
     >
       <Seo
-        title="Mobile Tyre Fitter UK — 24/7 Call-Out via WhatsApp | Tyre Fly"
-        description="Flat tyre? WhatsApp Tyre Fly and a vetted local mobile tyre fitter quotes in 60 seconds and is at your kerb fast. 24/7 across the UK — London, Manchester, Birmingham & nationwide."
+        title="Mobile Tyre Fitter UK — 24/7 Call-Out via WhatsApp | Tyrefly"
+        description="Flat tyre? WhatsApp Tyrefly and a vetted local mobile tyre fitter quotes in 60 seconds and is at your kerb fast. 24/7 across the UK — London, Manchester, Birmingham & nationwide."
         canonical="/"
         jsonLd={HOME_LD}
       />
       {/* ===== Top nav ===== */}
       <header className="w-full border-b border-white/5">
         <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-5 py-4">
-          <a href="/" className="flex items-center gap-2.5" aria-label="Tyre Fly home">
-            <img src={logo} alt="Tyre Fly logo" width={36} height={36} className="h-9 w-9 object-contain" />
+          <a href="/" className="flex items-center gap-2.5" aria-label="Tyrefly home">
+            <img src={logo} alt="Tyrefly logo" width={36} height={36} className="h-9 w-9 object-contain" />
             <span className="text-[20px] font-bold tracking-tight">
-              Tyre <span style={{ color: "#FF6B1A" }}>Fly</span>
+              Tyre<span style={{ color: "#FF6B1A" }}>fly</span>
             </span>
           </a>
           <nav className="hidden md:flex items-center gap-6 text-sm text-white/70">
@@ -137,7 +137,7 @@ const Index = () => {
             <div className="absolute -inset-6 rounded-[2rem] blur-2xl opacity-40" style={{ backgroundColor: "#FF6B1A" }} />
             <img
               src={heroTruck}
-              alt="Tyre Fly mobile fitting van with a technician changing a tyre at the kerbside"
+              alt="Tyrefly mobile fitting van with a technician changing a tyre at the kerbside"
               width={1536}
               height={1024}
               className="relative w-full rounded-2xl border border-white/10 object-cover shadow-2xl"
@@ -149,7 +149,7 @@ const Index = () => {
       {/* ===== How it works ===== */}
       <section id="how" className="border-y border-white/5 bg-white/[0.02]">
         <div className="mx-auto w-full max-w-6xl px-5 py-16">
-          <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-center">How Tyre Fly works</h2>
+          <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-center">How Tyrefly works</h2>
           <p className="mt-3 text-center text-white/60 max-w-xl mx-auto">
             No app. No call centre. Just WhatsApp and a real technician.
           </p>
@@ -344,7 +344,7 @@ const Index = () => {
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">
               <img src={logo} alt="" width={20} height={20} className="h-5 w-5 object-contain opacity-70" />
-              <span>© Tyre Fly · UK-wide mobile tyre fitting</span>
+              <span>© Tyrefly · UK-wide mobile tyre fitting</span>
             </div>
             <div className="flex items-center gap-4">
               <a href={WA_HREF} target="_blank" rel="noopener noreferrer" className="hover:text-white/70">WhatsApp {SUPPORT_WA_DISPLAY}</a>
@@ -353,7 +353,7 @@ const Index = () => {
             </div>
           </div>
           <p className="text-[10px] text-white/30 leading-relaxed">
-            *Tyre Fly is a marketplace connecting customers with independent vetted technicians across the UK. The work contract is between you and the attending technician. See <a href="/terms" className="underline hover:text-white/60">Terms</a>.
+            *Tyrefly is a marketplace connecting customers with independent vetted technicians across the UK. The work contract is between you and the attending technician. See <a href="/terms" className="underline hover:text-white/60">Terms</a>.
           </p>
         </div>
       </footer>

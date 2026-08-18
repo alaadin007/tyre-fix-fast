@@ -5,14 +5,14 @@ export default function MobilePunctureRepairLondon() {
     <BlogPost
       slug="mobile-puncture-repair-london"
       metaTitle="Mobile Puncture Repair London | Prices, Same Day & Central"
-      metaDesc="Mobile puncture repair London from £45: what a proper repair includes, same-day arrival windows, central London parking and ULEZ, and when a repair isn't possible."
+      metaDesc="Mobile puncture repair London from £45: borough-by-borough pricing and arrival times, what a proper repair includes, same-day slots, and ULEZ/Congestion Zone parking."
       title="Mobile Puncture Repair London: Prices, Same-Day Slots and Where We Can Park"
       category="London"
-      readMinutes={15}
+      readMinutes={16}
       datePublished="2026-07-15"
       dateModified="2026-08-18"
       heroImage="mobilePunctureRepairLondon"
-      intro="Mobile puncture repair in London ranges from £25 to £85 for what looks like the same job. It isn't. This is the complete guide: what a legitimate repair includes, how same-day booking windows really work, what changes inside the Congestion Zone, and how to book the right thing the first time."
+      intro="Mobile puncture repair in London ranges from £25 to £85 for what looks like the same job. It isn't. This is the complete guide: what a legitimate repair includes, what it costs by borough and zone, how same-day booking windows really work, what changes inside the Congestion Zone, and how to book the right thing the first time."
       blocks={[
         { type: "h2", text: "What \"mobile puncture repair\" actually means" },
         { type: "p", html: "Mobile puncture repair is a van-based fitter coming to your car — driveway, office car park, roadside — with everything a tyre bay has: a tyre machine to break the bead, a wheel balancer, an on-board compressor, and stock of BS AU 159-compliant plug patches. The wheel comes off, the tyre comes off the rim, the puncture is repaired from inside, and the wheel goes back on. It takes 30–45 minutes." },
@@ -29,6 +29,24 @@ export default function MobilePunctureRepairLondon() {
           ],
         },
         { type: "p", html: "The <strong>£45–£65 band is the actual market</strong> for a legal, warrantied mobile puncture repair in London. Anyone significantly cheaper is cutting the internal patch or skipping the rebalance." },
+
+        { type: "h2", text: "Borough and zone pricing and arrival times" },
+        {
+          type: "table",
+          caption: "Standard daytime repair prices and typical arrival windows by area, 2026.",
+          head: ["Area", "Zone", "Repair price", "Typical arrival"],
+          rows: [
+            ["Westminster, Camden, City of London", "1", "£55–£70", "30–60 min"],
+            ["Kensington & Chelsea, Islington, Southwark, Lambeth", "1–2", "£50–£65", "30–60 min"],
+            ["Hackney, Tower Hamlets, Wandsworth, Hammersmith & Fulham", "2", "£50–£65", "35–65 min"],
+            ["Haringey, Newham, Lewisham, Greenwich", "2–3", "£48–£62", "35–70 min"],
+            ["Brent, Ealing, Merton, Croydon", "3", "£45–£60", "40–75 min"],
+            ["Barnet, Enfield, Redbridge, Bromley", "4", "£45–£58", "40–80 min"],
+            ["Harrow, Hillingdon, Bexley, Sutton, Kingston", "5–6", "£45–£58", "45–90 min"],
+            ["Heathrow, Gatwick North Terminal long-stay", "6 / M25 fringe", "£55–£75", "40–80 min"],
+          ],
+        },
+        { type: "p", html: "Prices assume a straightforward tread-centre puncture during standard daytime hours. Evening (6pm–10pm) typically adds £10–£20; overnight (10pm–6am) adds £15–£35." },
 
         { type: "h2", text: "What's included in a proper £45 repair" },
         {
@@ -98,6 +116,20 @@ export default function MobilePunctureRepairLondon() {
           ],
         },
         { type: "p", html: "The pattern to notice: <strong>booking before noon nearly always gets a normal-rate same-day slot</strong>. After 3pm you're paying evening rates or waiting until tomorrow." },
+
+        { type: "h3", text: "Same-day slots by time of day" },
+        {
+          type: "table",
+          caption: "How booking time affects your same-day slot in London.",
+          head: ["You book at", "Realistic slot today", "Rate"],
+          rows: [
+            ["Before 9am", "Any window before 6pm", "Standard"],
+            ["9am–noon", "1pm–7pm window", "Standard"],
+            ["Noon–3pm", "Late afternoon / early evening", "Standard, evening uplift if after 6pm"],
+            ["3pm–7pm", "Next available van, 30–90 min", "Emergency, +£15–£30"],
+            ["After 7pm", "Overnight slot if urgent, else tomorrow", "Evening/overnight rate, +£15–£35"],
+          ],
+        },
 
         { type: "h3", text: "Same-day cost vs emergency" },
         {
@@ -223,6 +255,7 @@ export default function MobilePunctureRepairLondon() {
         { q: "Where can a mobile fitter park in central London?", a: "Off-street car parks, private driveways, hotel forecourts, office loading bays, and residents' bays where you hold the permit. Avoid red routes and active bus lanes." },
         { q: "Can any puncture be repaired?", a: "Only tread-centre punctures under 6mm on tyres with 1.6mm+ tread. Sidewall, shoulder, and multiple-hole damage all mean a new tyre." },
         { q: "Do mobile puncture repairs come with a warranty?", a: "Yes — any reputable London operator offers 12 months on the repair itself." },
+        { q: "Does price vary much by borough?", a: "Yes, modestly — Zone 1 and inner boroughs run £50–£70, while outer boroughs like Bexley, Sutton and Harrow are usually £45–£58, reflecting van travel time rather than the job itself." },
       ]}
       cta={{ headline: "Book a mobile puncture repair now", body: "Send your postcode, reg, and tyre size and we'll dispatch the closest London fitter with a firm all-in quote.", label: "Get a mobile fitter →" }}
       related={[
