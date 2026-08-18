@@ -13,6 +13,8 @@ export default function MobileTyreFittingLondon() {
       heroImage="flat"
       intro="I've been fitting tyres in London for a long time. Long enough to know that everything you read online about mobile tyre fitting is written by people who've never had to double-park a van in Peckham at 2am. This is what it actually looks like."
       blocks={[
+        { type: "p", html: "Looking for prices, arrival times by zone and how to book? Our <a href=\"/areas/london\" class=\"text-primary hover:underline\">mobile tyre fitting London</a> page has the numbers. This piece is what the job actually looks like from inside the van." },
+
         { type: "h2", text: "The pitch, and the reality" },
         { type: "p", html: "The pitch is beautiful. You break down, you tap something into your phone, a nice person appears with a jack and a new tyre and life resumes. In London specifically, this is largely true. It's also the most oversold sentence in the trade, so let me walk you through the gap between the brochure and the pavement." },
         { type: "p", html: "London is the best market in the country for mobile tyre fitting because it's the worst market in the country to own a car. Between the potholes on the North Circular, the roofing screws that fall off vans in Wembley every Tuesday, and the drivers who park by ear against a Victorian granite kerb, we — the mobile guys — have a full calendar. Yours might be tonight." },
@@ -92,7 +94,7 @@ export default function MobileTyreFittingLondon() {
         { q: "Do I have to be with the car for a mobile fitting?", a: "Not always. If the car is on a driveway or private car park and you can leave the key or the locking wheel-nut key accessible, most fitters will do the job unattended and take payment by card link afterwards." },
       ]}
       related={[
-        { to: "/blog/flat-tyre-london", label: "Flat Tyre London Guide" },
+        { to: "/areas/london", label: "Mobile Tyre Fitting London" },
         { to: "/blog/twenty-four-hour-tyre-change-london", label: "24 Hour Tyre Change London" },
         { to: "/blog/mobile-tyre-fitter-m25", label: "M25 Mobile Fitter" },
       ]}
