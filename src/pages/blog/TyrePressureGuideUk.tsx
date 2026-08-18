@@ -5,7 +5,7 @@ export default function TyrePressureGuideUk() {
     <BlogPost
       slug="tyre-pressure-guide-uk"
       metaTitle="UK Tyre Pressure Guide: Correct PSI & Cold Check (2026)"
-      metaDesc="How to set the right tyre pressure for your car in the UK — where to find the correct PSI, typical PSI by popular car model, laden vs unladen figures, and the cold check rule."
+      metaDesc="Set the right tyre pressure in the UK: where to find your correct PSI, typical figures by car model, laden vs unladen, and the cold check rule."
       title="UK Tyre Pressure Guide: Correct PSI, Cold Checks and the Laden Rule"
       category="Maintenance"
       readMinutes={11}

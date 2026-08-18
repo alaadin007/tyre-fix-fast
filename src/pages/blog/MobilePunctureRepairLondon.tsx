@@ -5,7 +5,7 @@ export default function MobilePunctureRepairLondon() {
     <BlogPost
       slug="mobile-puncture-repair-london"
       metaTitle="Mobile Puncture Repair London | Prices, Same Day & Central"
-      metaDesc="Mobile puncture repair London from £45: borough-by-borough pricing and arrival times, what a proper repair includes, same-day slots, and ULEZ/Congestion Zone parking."
+      metaDesc="Mobile puncture repair London from £45: borough pricing, arrival times, what a proper repair includes and ULEZ/Congestion Zone parking notes."
       title="Mobile Puncture Repair London: Prices, Same-Day Slots and Where We Can Park"
       category="London"
       readMinutes={16}

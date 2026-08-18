@@ -5,7 +5,7 @@ export default function MobileTyreFittingBirmingham() {
     <BlogPost
       slug="mobile-tyre-fitting-birmingham"
       metaTitle="Mobile Tyre Fitting Birmingham: Prices & Response (2026)"
-      metaDesc="Mobile tyre fitting across Birmingham and the West Midlands — 2026 pricing by tyre band, district-by-district arrival times, Clean Air Zone, Spaghetti Junction and pothole hotspots."
+      metaDesc="Mobile tyre fitting across Birmingham and the West Midlands — 2026 prices, district arrival times, Clean Air Zone rules and pothole hotspots."
       title="Mobile Tyre Fitting in Birmingham: What to Expect in 2026"
       category="Birmingham"
       readMinutes={13}

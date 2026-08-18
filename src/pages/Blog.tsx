@@ -101,7 +101,7 @@ export default function Blog() {
   return (
     <main className="min-h-screen bg-background">
       <Seo
-        title="Tyre Guides & Puncture Repair Advice for UK Drivers | Tyrefly"
+        title="Tyre Guides & Puncture Repair Advice | Tyrefly"
         description="Mobile tyre fitting prices, emergency puncture repair, blowouts, tread depth and tyre buying advice — practical UK guides written by working tyre fitters."
         canonical="/blog"
         jsonLd={BLOG_LD}

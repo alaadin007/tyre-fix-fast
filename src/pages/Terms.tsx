@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { Seo } from "@/components/Seo";
 import logo from "@/assets/tyrefly-logo.png";
 
 const Terms = () => {
@@ -7,11 +8,12 @@ const Terms = () => {
       className="min-h-[100dvh] w-full text-white px-6 py-8"
       style={{ backgroundColor: "#0D0D0D", fontFamily: "Inter, system-ui, -apple-system, sans-serif" }}
     >
+      <Seo title="Terms & Conditions | Tyrefly Mobile Tyre Fitting" description="The terms that apply when you book Tyrefly mobile tyre fitting or puncture repair: quotes, payment, cancellations, liability and complaints." canonical="/terms" />
       <div className="max-w-2xl mx-auto">
         <Link to="/" className="flex items-center gap-2.5 mb-8" aria-label="Tyrefly home">
           <img src={logo} alt="Tyrefly logo" width={36} height={36} className="h-9 w-9 object-contain" />
           <span className="text-[20px] font-bold tracking-tight leading-none">
-            Tyre <span style={{ color: "#FF6B1A" }}>Fly</span>
+            Tyre<span style={{ color: "#FF6B1A" }}>fly</span>
           </span>
         </Link>
 

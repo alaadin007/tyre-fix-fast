@@ -5,7 +5,7 @@ export default function MobileTyreFitterVsGarage() {
     <BlogPost
       slug="mobile-tyre-fitter-vs-garage"
       metaTitle="Mobile Tyre Fitter vs Garage: Cost, Speed & Quality (2026)"
-      metaDesc="Mobile tyre fitting or the local garage — which is better in 2026? UK comparison table of price, speed, availability, stock, warranty and quality, plus when each wins."
+      metaDesc="Mobile tyre fitting or the local garage in 2026? UK comparison of price, speed, availability, stock and warranty — plus when each option wins."
       title="Mobile Tyre Fitter vs Local Garage: The Honest 2026 Comparison"
       category="Comparison"
       readMinutes={11}

@@ -83,7 +83,7 @@ export default function AreaPage() {
           <Link to="/" className="flex items-center gap-2.5">
             <img src={logo} alt="Tyrefly" width={36} height={36} className="h-9 w-9 object-contain" />
             <span className="text-[20px] font-bold tracking-tight">
-              Tyre <span style={{ color: "#FF6B1A" }}>Fly</span>
+              Tyre<span style={{ color: "#FF6B1A" }}>fly</span>
             </span>
           </Link>
           <a href={WA_HREF} target="_blank" rel="noopener noreferrer"
