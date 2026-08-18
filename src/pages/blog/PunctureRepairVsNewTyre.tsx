@@ -4,12 +4,13 @@ export default function PunctureRepairVsNewTyre() {
   return (
     <BlogPost
       slug="puncture-repair-vs-new-tyre"
-      metaTitle="Puncture Repair vs New Tyre: When Each Makes Sense (2026)"
+      metaTitle="Puncture Repair vs New Tyre: Cost Comparison UK (2026)"
       metaDesc="Puncture repair vs new tyre — the honest UK decision framework. Tread depth thresholds, tyre age, matching pairs, run-flat rules, and the real cost per mile."
       title="Puncture Repair vs New Tyre: When Each One Actually Makes Sense"
       category="Decision Guide"
       readMinutes={8}
       datePublished="2026-07-15"
+      dateModified="2026-08-18"
       heroImage="punctureVsNewTyre"
       intro="Repair a £45 puncture on a tyre worth £120 with 4mm of tread — obvious. But what about 3mm of tread and a five-year-old tyre? What about a run-flat, or a matched premium pair? Here's the decision framework mobile fitters actually use in the UK in 2026."
       blocks={[
@@ -25,6 +26,8 @@ export default function PunctureRepairVsNewTyre() {
             "<strong>Run-flat driven on flat:</strong> replace",
           ],
         },
+
+        { type: "p", html: "One thing this page does <em>not</em> do is set out the technical repair rules — where on the tyre a puncture can be repaired, the 6mm limit, the 400mm multiple-puncture rule and the correct plug-patch method. Those live in our <a href=\"/blog/can-a-puncture-be-repaired-uk\" class=\"text-primary hover:underline\">BS AU 159 repairability guide</a>. Start there if you need to know whether a repair is permitted at all; stay here to work out whether it's the cheaper choice." },
 
         { type: "h2", text: "The five factors that decide" },
         { type: "h3", text: "1. Remaining tread depth" },

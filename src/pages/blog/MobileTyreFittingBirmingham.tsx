@@ -13,6 +13,8 @@ export default function MobileTyreFittingBirmingham() {
       heroImage="flat"
       intro="Birmingham has the largest urban road network outside London and one of the busiest orbital corridors in the country — the M6, M42 and A38(M) all funnel through it. Here's an honest look at mobile tyre fitting in Britain's second city: prices, timing, coverage and the specifics of the Clean Air Zone."
       blocks={[
+        { type: "p", html: "For live coverage, prices and arrival times, see our <a href=\"/areas/west-midlands\" class=\"text-primary hover:underline\">mobile tyre fitting Birmingham</a> page." },
+
         { type: "h2", text: "Why Birmingham drivers rely on mobile fitting" },
         { type: "p", html: "The West Midlands has three things stacked against tyres: a dense motorway junction network where debris strikes are common, a Victorian-era road grid in central Birmingham with tight residential kerbing, and one of the UK's largest urban Clean Air Zone (CAZ) footprints — which pushes many older vehicles onto side streets where pothole density is higher. Add the region's status as a major logistics hub and you get a puncture rate to match." },
 
@@ -96,8 +98,8 @@ export default function MobileTyreFittingBirmingham() {
         { q: "Can a mobile fitter attend Birmingham Airport or the NEC?", a: "Yes, all multi-storey and long-stay car parks are covered. Event-week callouts (Sunday evenings especially) can extend response time — book early." },
       ]}
       related={[
+        { to: "/areas/west-midlands", label: "Mobile Tyre Fitting Birmingham" },
         { to: "/blog/mobile-tyre-fitting-manchester", label: "Mobile Tyre Fitting Manchester" },
-        { to: "/blog/mobile-tyre-fitting-london", label: "Mobile Tyre Fitting London" },
         { to: "/blog/cracked-alloy-from-pothole", label: "Cracked Alloy From Pothole" },
       ]}
     />

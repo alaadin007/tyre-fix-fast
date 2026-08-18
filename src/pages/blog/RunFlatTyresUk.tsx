@@ -150,10 +150,73 @@ export default function RunFlatTyresUk() {
             Almost never. Bridgestone, Michelin, Pirelli, Continental and Goodyear all advise replacement once a run-flat has been driven on flat. The reinforced sidewall hides internal abrasion — a plug repair could fail at 70 mph weeks later. A few independents will repair tread-area punctures under strict conditions (tyre never run deflated, less than 6 mm cut, in the central tread band). If in doubt, replace.
           </p>
 
-          <h2 className="text-2xl font-semibold">Run-flat vs. standard tyre — which is right for you?</h2>
+          <h2 className="text-2xl font-semibold">Run-flat vs. standard tyres — the full comparison</h2>
           <p>
-            Run-flats trade ride comfort and rolling resistance for safety after a puncture. If your car was designed around them (BMW, Mini), the suspension is tuned for the stiffer sidewall — going to standard tyres will feel softer but can affect handling balance and you'll have no spare. If your car came with a spare or a sealant kit, standard tyres are perfectly legal and usually £20–£60 cheaper per corner.
+            Run-flats trade ride comfort and rolling resistance for safety after a puncture. If your car was designed around them (BMW, Mini, some Mercedes), the suspension is tuned for the stiffer sidewall — going to standard tyres will feel softer but can affect handling balance and you'll have no spare. If your car came with a spare or a sealant kit, standard tyres are perfectly legal and usually £20–£60 cheaper per corner.
           </p>
+
+          <h3 className="text-xl font-semibold">Why manufacturers fit them in the first place</h3>
+          <ul className="list-disc pl-6 space-y-1">
+            <li><strong>To delete the spare wheel</strong> — removing the spare and its well saves 15–25 kg and frees boot space, which helps emissions and economy targets.</li>
+            <li><strong>To improve emergency handling</strong> — sudden deflation on a standard tyre pulls the steering hard; run-flat construction is more stable in the first seconds after failure.</li>
+            <li><strong>To reduce roadside callouts</strong> — you can usually drive to a fitter instead of waiting for one.</li>
+          </ul>
+
+          <h3 className="text-xl font-semibold">The real trade-offs</h3>
+          <ul className="list-disc pl-6 space-y-1">
+            <li><strong>Ride comfort.</strong> The stiffer sidewall transmits more road noise and small-bump harshness. On a BMW with 19s, potholes feel sharper.</li>
+            <li><strong>Cost.</strong> Typically 15–30% more than the equivalent standard tyre.</li>
+            <li><strong>Limited choice.</strong> Maybe 5–10 models per size instead of 30–50.</li>
+            <li><strong>Repair restrictions.</strong> Some brands forbid repair outright; others allow it only if the tyre was never driven flat.</li>
+            <li><strong>Weight.</strong> Extra unsprung mass, which subtly affects handling and efficiency.</li>
+          </ul>
+
+          <h3 className="text-xl font-semibold">Can you switch to standard tyres?</h3>
+          <p>
+            Usually yes. If the car came with run-flats it almost certainly has no spare or jack, so you'll need a repair kit (sealant plus mini-compressor, £30–£60), an aftermarket space-saver and jack (£150–£300) if space allows, or an acceptance that punctures mean a mobile fitter every time.
+          </p>
+          <p>
+            The switch is legal and doesn't affect the MOT. Notify your insurer — most treat it as an equivalent replacement with no premium change. Some newer BMW warranties explicitly note that non-run-flat tyres affect certain cover, so check first. TPMS keeps working either way; you just can't keep driving on a flat.
+          </p>
+
+          <h3 className="text-xl font-semibold">What owners report after switching</h3>
+          <ul className="list-disc pl-6 space-y-1">
+            <li><strong>Ride comfort improvement:</strong> almost universally reported, especially BMW 3-series and Mini Cooper on larger wheels.</li>
+            <li><strong>Noise reduction:</strong> moderate, most noticeable on motorways.</li>
+            <li><strong>Puncture anxiety:</strong> real for the first few weeks, then fades.</li>
+            <li><strong>Cost saving:</strong> £15–£40 per tyre, so £60–£160 per set.</li>
+            <li><strong>Regret:</strong> uncommon, but cited when a puncture happens at 6am on a Sunday.</li>
+          </ul>
+
+          <h3 className="text-xl font-semibold">Going the other way — standard to run-flat</h3>
+          <p>
+            Technically possible if the wheel is rated for it (most modern alloys are), but on a car that already carries a spare you're paying the comfort penalty without the practical benefit. Not recommended unless there's a specific reason.
+          </p>
+
+          <h3 className="text-xl font-semibold">Manufacturer repair policies</h3>
+          <ul className="list-disc pl-6 space-y-1">
+            <li><strong>Bridgestone RFT:</strong> repair permitted if inspected and never driven flat.</li>
+            <li><strong>Michelin ZP:</strong> repair permitted under specific criteria (tread only, not driven flat).</li>
+            <li><strong>Continental SSR:</strong> replacement recommended.</li>
+            <li><strong>Pirelli Run-Flat:</strong> replacement.</li>
+            <li><strong>Dunlop DSST:</strong> replacement recommended.</li>
+          </ul>
+          <p>
+            In practice most UK fitters default to replacement, because a repair that doesn't hold becomes a liability. A £220 replacement instead of a £35 repair is the everyday reality of run-flat ownership — and the reason plenty of drivers switch.
+          </p>
+
+          <h3 className="text-xl font-semibold">Verdict: stay or switch?</h3>
+          <p><strong>Stay with run-flats if</strong> you do long solo motorway journeys, have no boot space for a spare or kit, prioritise consistency over comfort, or you're on a lease that requires the original tyre type.</p>
+          <p><strong>Switch to standard if</strong> ride quality bothers you, you mostly drive urban distances where a mobile fitter is easy to get, you're happy carrying a repair kit, and you want more choice at replacement time.</p>
+
+          <h3 className="text-xl font-semibold">Cost comparison (225/45 R18, typical BMW size)</h3>
+          <ul className="list-disc pl-6 space-y-1">
+            <li>Standard mid-range, supplied and mobile-fitted: <strong>£140–£190</strong></li>
+            <li>Run-flat mid-range, supplied and mobile-fitted: <strong>£175–£240</strong></li>
+            <li>Per-tyre saving from switching: <strong>£35–£50</strong> (£140–£200 across four)</li>
+            <li>One-off repair kit: <strong>£40–£60</strong></li>
+          </ul>
+
 
           <h2 className="text-2xl font-semibold">Run-flat tyre prices in the UK (2026)</h2>
           <ul className="list-disc pl-6 space-y-1">
