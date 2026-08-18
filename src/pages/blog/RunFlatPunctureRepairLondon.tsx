@@ -29,33 +29,10 @@ export default function RunFlatPunctureRepairLondon() {
         },
         { type: "p", html: "If any of those appear, you have run-flats. If your car doesn't have a spare wheel under the boot floor (many BMWs, Minis, and Mercedes don't), that's another strong indicator." },
 
-        { type: "h2", text: "Why manufacturers officially say don't repair" },
-        { type: "p", html: "Every major tyre manufacturer's official position is: <strong>do not repair a run-flat tyre</strong>. The reasons are:" },
-        {
-          type: "ol",
-          items: [
-            "<strong>Invisible internal damage</strong> — the reinforced sidewall of a run-flat can distort internally when driven flat, and you can't see the damage from outside",
-            "<strong>Impossible to certify flat-driving history</strong> — the fitter can't know for sure whether you drove 200 metres or 20 miles on the flat",
-            "<strong>Warranty void</strong> — the tyre manufacturer's warranty ends the moment it's repaired",
-            "<strong>Speed rating unreliable</strong> — a repaired run-flat may not sustain its rated speed safely",
-            "<strong>Insurance implications</strong> — some policies won't cover a subsequent failure on a repaired run-flat",
-          ],
-        },
+        { type: "h2", text: "The repairability rules, in one paragraph" },
+        { type: "p", html: "Every major manufacturer's official position is <strong>do not repair a run-flat</strong>, and in practice a repair is only defensible when the puncture was caught immediately, the tyre was never driven flat, the wound is central and under 6mm, tread is 4mm+, and there's no sidewall damage. We've set out the brand-by-brand policies, the reasoning, and the switch-to-standard question in full in our <a href=\"/blog/run-flat-tyres-uk-guide\" class=\"text-primary hover:underline\">run-flat tyres UK guide</a> — this page sticks to what that means for a London callout." },
+        { type: "p", html: "Where a repair is permissible, a London mobile fitter will demount the tyre, inspect the internal sidewall reinforcement for delamination or cord failure, and only proceed if it's clean. Typical London cost: <strong>£60–£85</strong>." },
 
-        { type: "h2", text: "Why some UK mobile fitters will still repair (and when it's safe)" },
-        { type: "p", html: "In practice, a repair on a run-flat is <strong>reasonably safe under specific conditions</strong>:" },
-        {
-          type: "ul",
-          items: [
-            "The puncture was caught immediately (TPMS alerted, you stopped within a mile)",
-            "You did <strong>not</strong> drive on it flat any real distance",
-            "The puncture is in the central tread and under 6mm",
-            "The tyre has 4mm+ tread and is under 5 years old",
-            "There's no visible sidewall damage or bulge",
-          ],
-        },
-        { type: "p", html: "Under those conditions, a good mobile fitter will demount the tyre, inspect the internal sidewall reinforcement for delamination or cord failure, and only proceed if the tyre is clean. Cost typically £60–£85 in London." },
-        { type: "p", html: "If any of those five conditions fails, replacement is the right call and any fitter suggesting otherwise is cutting corners." },
 
         { type: "h2", text: "How to tell if you drove on it flat" },
         {
