@@ -290,6 +290,7 @@ export default function BlogPost(p: BlogPostProps) {
           {(() => {
             const rendered: JSX.Element[] = [];
             let ctaCount = 0;
+            const linkState = { used: 0, hrefs: new Set<string>(), slug: p.slug };
             p.blocks.forEach((b, i) => {
               if (b.type === "h2")
                 rendered.push(
@@ -303,8 +304,9 @@ export default function BlogPost(p: BlogPostProps) {
                 );
               else if (b.type === "p")
                 rendered.push(
-                  <p key={i} dangerouslySetInnerHTML={{ __html: autolink(b.html) }} />
+                  <p key={i} dangerouslySetInnerHTML={{ __html: autolink(b.html, linkState) }} />
                 );
+
               else if (b.type === "quote")
                 rendered.push(
                   <blockquote
