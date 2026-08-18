@@ -20,6 +20,7 @@ function removeStaticFallbackHeadTags() {
     'meta[name="keywords"]',
     'meta[property^="og:"]',
     'meta[name^="twitter:"]',
+    'meta[name="robots"]',
   ];
   document
     .querySelectorAll(selectors.join(","))
