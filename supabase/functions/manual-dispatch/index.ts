@@ -92,7 +92,7 @@ Deno.serve(async (req) => {
       },
       payment_intent_data: {
         metadata: { job_id, technician_id, kind: "job_full_payment" },
-        description: `Tyre Fly — job ${job_id.slice(0, 8)} — ${job.postcode}`,
+        description: `Tyrefly — job ${job_id.slice(0, 8)} — ${job.postcode}`,
       },
     });
 
@@ -118,7 +118,7 @@ Deno.serve(async (req) => {
     if (job.customer_phone) {
       const payUrl = await shortenUrl(session.url!, { kind: "job_full_payment", job_id });
       const msg =
-        `Hi ${job.customer_name ?? ""} 👋 Tyre Fly here.\n\n` +
+        `Hi ${job.customer_name ?? ""} 👋 Tyrefly here.\n\n` +
         `We've got ${tech.name} ready for you in ${job.postcode}.\n` +
         `• Quote: £${price_gbp.toFixed(2)}\n` +
         `• ETA: ~${eta_minutes} mins from payment\n\n` +

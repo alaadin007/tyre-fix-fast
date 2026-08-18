@@ -86,7 +86,7 @@ Deno.serve(async (req) => {
     if (!fee) {
       return new Response(JSON.stringify({
         error: "unsupported_region",
-        message: "Tyre Fly is currently available in the UK, US/Canada, and Europe. Coming soon to your region!",
+        message: "Tyrefly is currently available in the UK, US/Canada, and Europe. Coming soon to your region!",
       }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
@@ -114,7 +114,7 @@ Deno.serve(async (req) => {
       },
       payment_intent_data: {
         metadata: { job_id, kind: "platform_connection_fee", fee_currency: fee.currency },
-        description: `Tyre Fly booking fee — job ${job_id.slice(0, 8)}`,
+        description: `Tyrefly booking fee — job ${job_id.slice(0, 8)}`,
       },
     });
 

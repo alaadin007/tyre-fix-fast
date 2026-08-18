@@ -123,7 +123,7 @@ Deno.serve(async (req) => {
         ``,
         `They will contact you shortly to confirm ETA.`,
         ``,
-        `— Tyre Fly`,
+        `— Tyrefly`,
       ].join("\n");
       await sendReply(job.customer_phone, customerMsg, "whatsapp");
     }

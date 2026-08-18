@@ -70,7 +70,7 @@ Deno.serve(async (req) => {
       body: JSON.stringify({
         to: phone,
         channel: "whatsapp",
-        body: `Your Tyre Fly sign-in code is ${code}. It expires in 10 minutes.`,
+        body: `Your Tyrefly sign-in code is ${code}. It expires in 10 minutes.`,
       }),
     });
     const sendData = await sendRes.json().catch(() => ({}));
@@ -86,7 +86,7 @@ Deno.serve(async (req) => {
         body: JSON.stringify({
           to: phone,
           channel: "sms",
-          body: `Your Tyre Fly sign-in code is ${code}. It expires in 10 minutes.`,
+          body: `Your Tyrefly sign-in code is ${code}. It expires in 10 minutes.`,
         }),
       });
       const smsData = await smsRes.json().catch(() => ({}));

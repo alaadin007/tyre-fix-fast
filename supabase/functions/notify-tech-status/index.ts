@@ -41,8 +41,8 @@ Deno.serve(async (req) => {
 
     const firstName = tech.name ? String(tech.name).split(" ")[0] : "";
     const body = status === "approved"
-      ? `🎉 Hi${firstName ? ` ${firstName}` : ""} — you're approved on Tyre Fly! We'll text you jobs near you.`
-      : `Hi${firstName ? ` ${firstName}` : ""} — thanks for applying to Tyre Fly. We're unable to approve your profile right now${reason ? `: ${reason}` : "."}`;
+      ? `🎉 Hi${firstName ? ` ${firstName}` : ""} — you're approved on Tyrefly! We'll text you jobs near you.`
+      : `Hi${firstName ? ` ${firstName}` : ""} — thanks for applying to Tyrefly. We're unable to approve your profile right now${reason ? `: ${reason}` : "."}`;
 
     const to = tech.whatsapp || tech.phone;
     const sendRes = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/twilio-send`, {
