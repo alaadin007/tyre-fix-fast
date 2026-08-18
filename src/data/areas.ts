@@ -994,3 +994,7 @@ export const AREAS: Area[] = [
     ],
   },
 ];
+
+export function getArea(slug: string): Area | undefined {
+  return AREAS.find((a) => a.slug === slug);
+}
