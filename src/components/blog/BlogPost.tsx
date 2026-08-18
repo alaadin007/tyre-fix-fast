@@ -128,12 +128,9 @@ const SITE = "https://www.tyrefly.com";
 // London content cluster — every London post links to the others (topical authority).
 const LONDON_CLUSTER: { to: string; label: string }[] = [
   { to: "/blog/mobile-tyre-fitting-london", label: "Mobile tyre fitting London" },
-  { to: "/blog/emergency-puncture-repair-london", label: "Emergency puncture repair London" },
+  { to: "/blog/emergency-puncture-repair-london", label: "Emergency & 24 hour puncture repair London" },
   { to: "/blog/mobile-puncture-repair-london", label: "Mobile puncture repair London" },
-  { to: "/blog/24-hour-puncture-repair-london", label: "24 hour puncture repair London" },
-  { to: "/blog/same-day-puncture-repair-london", label: "Same day puncture repair London" },
-  { to: "/blog/puncture-repair-central-london", label: "Puncture repair Central London" },
-  { to: "/blog/roadside-puncture-repair-london", label: "Roadside puncture repair London" },
+  { to: "/blog/roadside-puncture-repair-london", label: "Mobile fitter vs AA & RAC (London roadside)" },
   { to: "/blog/run-flat-puncture-repair-london", label: "Run flat puncture repair London" },
   { to: "/blog/twenty-four-hour-tyre-change-london", label: "24 hour tyre change London" },
   { to: "/blog/flat-tyre-london", label: "Flat tyre in London" },

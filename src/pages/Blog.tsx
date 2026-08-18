@@ -36,12 +36,9 @@ const posts = [
 
 const londonGuides = [
   { to: "/blog/mobile-tyre-fitting-london", label: "Mobile tyre fitting London — prices & callout times" },
-  { to: "/blog/emergency-puncture-repair-london", label: "Emergency puncture repair London — who's open now" },
+  { to: "/blog/emergency-puncture-repair-london", label: "Emergency & 24 hour puncture repair London" },
   { to: "/blog/mobile-puncture-repair-london", label: "Mobile puncture repair London — what £45 buys" },
-  { to: "/blog/24-hour-puncture-repair-london", label: "24 hour puncture repair London" },
   { to: "/blog/twenty-four-hour-tyre-change-london", label: "24 hour tyre change London" },
-  { to: "/blog/same-day-puncture-repair-london", label: "Same day puncture repair London" },
-  { to: "/blog/puncture-repair-central-london", label: "Puncture repair Central London — ULEZ & parking" },
   { to: "/blog/roadside-puncture-repair-london", label: "Roadside puncture repair London — mobile fitter vs AA" },
   { to: "/blog/run-flat-puncture-repair-london", label: "Run flat puncture repair London" },
   { to: "/blog/mobile-tyre-fitter-m25", label: "Mobile tyre fitter on the M25" },

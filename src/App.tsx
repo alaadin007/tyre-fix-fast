@@ -61,18 +61,13 @@ import TyrePressureGuideUk from "./pages/blog/TyrePressureGuideUk.tsx";
 import WheelAlignmentUkGuide from "./pages/blog/WheelAlignmentUkGuide.tsx";
 import TyreSidewallDamageGuide from "./pages/blog/TyreSidewallDamageGuide.tsx";
 import NailInTyreWhatToDo from "./pages/blog/NailInTyreWhatToDo.tsx";
-import TyreBulgeSidewallDanger from "./pages/blog/TyreBulgeSidewallDanger.tsx";
 import MobileTyreFitterVsGarage from "./pages/blog/MobileTyreFitterVsGarage.tsx";
-import RunFlatVsStandardTyres from "./pages/blog/RunFlatVsStandardTyres.tsx";
 import BudgetVsPremiumTyresUk from "./pages/blog/BudgetVsPremiumTyresUk.tsx";
 import AllSeasonVsWinterTyresUk from "./pages/blog/AllSeasonVsWinterTyresUk.tsx";
 import PotholeDamageClaimUk from "./pages/blog/PotholeDamageClaimUk.tsx";
 import EmergencyPunctureRepairLondon from "./pages/blog/EmergencyPunctureRepairLondon.tsx";
 import MobilePunctureRepairLondon from "./pages/blog/MobilePunctureRepairLondon.tsx";
-import TwentyFourHourPunctureRepairLondon from "./pages/blog/TwentyFourHourPunctureRepairLondon.tsx";
 import PunctureRepairCostUk from "./pages/blog/PunctureRepairCostUk.tsx";
-import SameDayPunctureRepairLondon from "./pages/blog/SameDayPunctureRepairLondon.tsx";
-import PunctureRepairCentralLondon from "./pages/blog/PunctureRepairCentralLondon.tsx";
 import RoadsidePunctureRepairLondon from "./pages/blog/RoadsidePunctureRepairLondon.tsx";
 import CanAPunctureBeRepairedUk from "./pages/blog/CanAPunctureBeRepairedUk.tsx";
 import PunctureRepairVsNewTyre from "./pages/blog/PunctureRepairVsNewTyre.tsx";
@@ -136,18 +131,18 @@ const App = () => (
         <Route path="/blog/wheel-alignment-uk-guide" element={<WheelAlignmentUkGuide />} />
         <Route path="/blog/tyre-sidewall-damage-guide" element={<TyreSidewallDamageGuide />} />
         <Route path="/blog/nail-in-tyre-what-to-do" element={<NailInTyreWhatToDo />} />
-        <Route path="/blog/tyre-bulge-sidewall-danger" element={<TyreBulgeSidewallDanger />} />
+        <Route path="/blog/tyre-bulge-sidewall-danger" element={<Navigate to="/blog/tyre-sidewall-damage-guide" replace />} />
         <Route path="/blog/mobile-tyre-fitter-vs-garage" element={<MobileTyreFitterVsGarage />} />
-        <Route path="/blog/run-flat-vs-standard-tyres" element={<RunFlatVsStandardTyres />} />
+        <Route path="/blog/run-flat-vs-standard-tyres" element={<Navigate to="/blog/run-flat-tyres-uk-guide" replace />} />
         <Route path="/blog/budget-vs-premium-tyres-uk" element={<BudgetVsPremiumTyresUk />} />
         <Route path="/blog/all-season-vs-winter-tyres-uk" element={<AllSeasonVsWinterTyresUk />} />
         <Route path="/blog/pothole-damage-claim-uk" element={<PotholeDamageClaimUk />} />
         <Route path="/blog/emergency-puncture-repair-london" element={<EmergencyPunctureRepairLondon />} />
         <Route path="/blog/mobile-puncture-repair-london" element={<MobilePunctureRepairLondon />} />
-        <Route path="/blog/24-hour-puncture-repair-london" element={<TwentyFourHourPunctureRepairLondon />} />
+        <Route path="/blog/24-hour-puncture-repair-london" element={<Navigate to="/blog/emergency-puncture-repair-london" replace />} />
         <Route path="/blog/puncture-repair-cost-uk" element={<PunctureRepairCostUk />} />
-        <Route path="/blog/same-day-puncture-repair-london" element={<SameDayPunctureRepairLondon />} />
-        <Route path="/blog/puncture-repair-central-london" element={<PunctureRepairCentralLondon />} />
+        <Route path="/blog/same-day-puncture-repair-london" element={<Navigate to="/blog/mobile-puncture-repair-london" replace />} />
+        <Route path="/blog/puncture-repair-central-london" element={<Navigate to="/blog/mobile-puncture-repair-london" replace />} />
         <Route path="/blog/roadside-puncture-repair-london" element={<RoadsidePunctureRepairLondon />} />
         <Route path="/blog/can-a-puncture-be-repaired-uk" element={<CanAPunctureBeRepairedUk />} />
         <Route path="/blog/puncture-repair-vs-new-tyre" element={<PunctureRepairVsNewTyre />} />
