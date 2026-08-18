@@ -96,18 +96,34 @@ export default function TyreSidewallDamageGuide() {
 
         { type: "h2", text: "Insurance and warranty" },
         { type: "p", html: "Comprehensive car insurance sometimes covers pothole and vandalism damage to tyres, but most policies exclude tyres by default. Check for a \"tyre and alloy\" add-on if you commute on poor roads. Manufacturer tyre warranties cover manufacturing defects only, not impact or road-hazard damage. Some premium tyres (Michelin, Continental) sell a road-hazard warranty at time of purchase for around 3–5% of the tyre price — worth considering for expensive fitments." },
+        { type: "h2", text: "TL;DR" },
+        {
+          type: "ul",
+          items: [
+            "Bulge = broken internal cords, air held back by rubber only. Never repairable, never drive on it.",
+            "Cut or gouge exposing cord = replace. Superficial scuff = usually fine.",
+            "Kerb rash = cosmetic unless there's a raised lip or visible cord.",
+            "Cracking deeper than 2mm = replace, and check the other three.",
+            "Impact rupture or anything sharp embedded in the sidewall = recovery or mobile fit, don't drive.",
+          ],
+        },
       ]}
       faqs={[
         { q: "Can a sidewall puncture be repaired?", a: "No. British Standard BS AU 159 restricts repairs to the middle 75% of the tread. Sidewall damage of any kind means the tyre is scrap." },
         { q: "Is a bulge on the sidewall dangerous?", a: "Yes — a bulge means the internal cords have broken and only the outer rubber is holding pressure. Bulges rupture without warning, often at motorway speed. Recover the car; don't drive on it." },
+        { q: "Can a tyre bulge be repaired?", a: "No. BS AU 159 forbids any sidewall repair, so a bulged tyre must be replaced." },
+        { q: "How long can I drive on a tyre with a bulge?", a: "You shouldn't drive on it at all. There's no safe distance or speed — the failure mode is a sudden rupture with no warning." },
+        { q: "Do I need to replace both tyres if one has a bulge?", a: "Always replace the bulged tyre. Replace the pair if the other tyre has significantly less tread, if you have an AWD car with matched-tyre requirements, or if both are over 5 years old." },
+        { q: "What causes a tyre bulge?", a: "Pothole strikes, kerb hits, speed cushions taken at speed, running under-inflated at motorway speed, overloading, and — rarely — a manufacturing defect." },
         { q: "Is kerb rash on the sidewall dangerous?", a: "Superficial scuffing that only affects the outer rubber is cosmetic. Damage deep enough to expose the cord layer or leave a raised lip is a replace." },
         { q: "Are cracks on my sidewall dangerous?", a: "Fine surface crazing is age-related and worth monitoring; cracks deeper than 2mm or that expose cord mean replace. Widespread crazing usually indicates the whole set is due." },
       ]}
       related={[
-        { to: "/blog/tyre-bulge-sidewall-danger", label: "Tyre Bulge Sidewall Danger" },
+        { to: "/blog/cracked-alloy-from-pothole", label: "Cracked Alloy From Pothole" },
         { to: "/blog/tyre-age-when-to-replace", label: "Tyre Age Guide" },
         { to: "/blog/slow-puncture-uk-guide", label: "Slow Puncture Guide" },
       ]}
+
     />
   );
 }
