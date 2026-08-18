@@ -312,6 +312,87 @@ const Index = () => {
         </div>
       </section>
 
+      {/* ===== Pricing & what we fix ===== */}
+      <section id="pricing" className="border-t border-white/5">
+        <div className="mx-auto w-full max-w-6xl px-5 py-16">
+          <p className="text-[11px] uppercase tracking-[0.2em] text-[#FF6B1A] font-semibold">Prices</p>
+          <h2 className="mt-2 text-3xl sm:text-4xl font-bold tracking-tight">
+            What mobile tyre fitting costs in the UK
+          </h2>
+          <p className="mt-3 text-white/60 max-w-2xl text-sm leading-relaxed">
+            Every job is quoted before anyone sets off, so there is no meter running and no surprise
+            call-out charge on the invoice. These are the typical all-in ranges our vetted technicians
+            quote across the UK in 2026 — London and remote rural jobs sit at the top of each band.
+          </p>
+
+          <div className="mt-8 overflow-x-auto rounded-2xl border border-white/10">
+            <table className="w-full min-w-[560px] text-left text-sm">
+              <thead className="bg-white/[0.04] text-white/70">
+                <tr>
+                  <th scope="col" className="px-4 py-3 font-semibold">Job</th>
+                  <th scope="col" className="px-4 py-3 font-semibold">Typical all-in price</th>
+                  <th scope="col" className="px-4 py-3 font-semibold">Usual arrival</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5 text-white/75">
+                {[
+                  ["Mobile puncture repair", "£45 – £70", "35 – 90 mins"],
+                  ["Emergency call-out, nights & weekends", "£75 – £110", "40 – 90 mins"],
+                  ["Tyre supplied and fitted (common sizes)", "£95 – £180", "1 – 3 hours"],
+                  ["Run-flat supplied and fitted", "£150 – £320", "1 – 4 hours"],
+                  ["Locking wheel nut removal", "+£20 – £40", "with the job"],
+                  ["Wheel balancing (per wheel)", "£12 – £20", "with the job"],
+                ].map((r) => (
+                  <tr key={r[0]}>
+                    <th scope="row" className="px-4 py-3 font-medium text-white/90">{r[0]}</th>
+                    <td className="px-4 py-3">{r[1]}</td>
+                    <td className="px-4 py-3">{r[2]}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="mt-3 text-xs text-white/40">
+            A £20 booking fee secures the slot and comes off the final bill. The balance is paid to the
+            technician on-site.
+          </p>
+        </div>
+      </section>
+
+      {/* ===== Guides ===== */}
+      <section id="guides" className="border-t border-white/5 bg-white/[0.02]">
+        <div className="mx-auto w-full max-w-6xl px-5 py-16">
+          <div className="flex items-end justify-between flex-wrap gap-4">
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.2em] text-[#FF6B1A] font-semibold">Guides</p>
+              <h2 className="mt-2 text-3xl sm:text-4xl font-bold tracking-tight">Tyre advice worth reading first</h2>
+              <p className="mt-2 text-white/60 max-w-xl text-sm">
+                Written by fitters who do this at 2am on the hard shoulder.
+              </p>
+            </div>
+            <Link to="/blog" className="text-sm text-[#FF6B1A] hover:underline">All guides →</Link>
+          </div>
+          <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {[
+              { to: "/blog/emergency-puncture-repair-london", label: "Emergency puncture repair in London" },
+              { to: "/blog/puncture-repair-cost-uk", label: "What a puncture repair should cost" },
+              { to: "/blog/can-a-puncture-be-repaired-uk", label: "Can your puncture actually be repaired?" },
+              { to: "/blog/can-i-drive-on-a-flat-tyre-uk", label: "Can you drive on a flat tyre?" },
+              { to: "/blog/tyre-blowout-on-motorway-what-to-do", label: "Blowout on the motorway: what to do" },
+              { to: "/blog/uk-tyre-legal-tread-depth", label: "UK legal tread depth explained" },
+            ].map((g) => (
+              <Link
+                key={g.to}
+                to={g.to}
+                className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3.5 text-sm hover:border-[#FF6B1A]/40 hover:text-[#FF6B1A] transition"
+              >
+                {g.label} →
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ===== Reviews ===== */}
       <section id="reviews" className="border-t border-white/5 bg-white/[0.02]">
         <div className="mx-auto w-full max-w-6xl px-5 py-16">
