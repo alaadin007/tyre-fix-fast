@@ -15,8 +15,16 @@ export default function AreaPage() {
   const WA_HREF = waLink(SUPPORT_WHATSAPP, `${MSG_BODY} in ${area.name}`);
   const SMS_HREF = `sms:${SUPPORT_WHATSAPP}?&body=${encodeURIComponent(`${MSG_BODY} in ${area.name}`)}`;
 
-  const title = `Mobile Tyre Fitter ${area.name} — 24/7 Call-Out | Tyre Fly`;
-  const description = `Flat tyre in ${area.name}? WhatsApp Tyre Fly and a vetted mobile tyre fitter is at your kerb fast. 24/7 across ${area.region}. Quote in 60 seconds.`;
+  const title = area.metaTitle ?? `Mobile Tyre Fitter ${area.name} — 24/7 Call-Out | Tyre Fly`;
+  const description = area.metaDesc ?? `Flat tyre in ${area.name}? WhatsApp Tyre Fly and a vetted mobile tyre fitter is at your kerb fast. 24/7 across ${area.region}. Quote in 60 seconds.`;
+
+  const baseFaqs = [
+    { q: `Do you cover all of ${area.region}?`, a: area.faqAnswer },
+    { q: `How fast can a mobile tyre fitter reach me in ${area.name}?`, a: `Most jobs in ${area.name} get a quote within 60 seconds and a fitter on-site within 35–90 minutes, 24/7.` },
+    { q: "How much does it cost?", a: "A £20 booking fee secures your slot and is deducted from your final bill. The technician collects the remainder on-site by card, link, transfer or cash." },
+    { q: "Do you fit tyres at night?", a: `Yes — Tyre Fly operates 24/7 across ${area.region}, including weekends and bank holidays.` },
+  ];
+  const allFaqs = [...baseFaqs, ...(area.extraFaqs ?? [])];
 
   const localBusinessLd = {
     "@context": "https://schema.org",
@@ -40,28 +48,11 @@ export default function AreaPage() {
   const faqLd = {
     "@context": "https://schema.org",
     "@type": "FAQPage",
-    mainEntity: [
-      {
-        "@type": "Question",
-        name: `Do you cover all of ${area.region}?`,
-        acceptedAnswer: { "@type": "Answer", text: area.faqAnswer },
-      },
-      {
-        "@type": "Question",
-        name: `How fast can a mobile tyre fitter reach me in ${area.name}?`,
-        acceptedAnswer: { "@type": "Answer", text: `Most jobs in ${area.name} get a quote within 60 seconds and a fitter on-site within 35–90 minutes, 24/7.` },
-      },
-      {
-        "@type": "Question",
-        name: "How much does it cost?",
-        acceptedAnswer: { "@type": "Answer", text: "A £20 booking fee secures your slot and is deducted from your final bill. The technician collects the remainder on-site by card, link, transfer or cash." },
-      },
-      {
-        "@type": "Question",
-        name: "Do you fit tyres at night?",
-        acceptedAnswer: { "@type": "Answer", text: `Yes — Tyre Fly operates 24/7 across ${area.region}, including weekends and bank holidays.` },
-      },
-    ],
+    mainEntity: allFaqs.map((f) => ({
+      "@type": "Question",
+      name: f.q,
+      acceptedAnswer: { "@type": "Answer", text: f.a },
+    })),
   };
 
   const breadcrumbsLd = {
@@ -198,16 +189,53 @@ export default function AreaPage() {
         </div>
       </section>
 
+      {/* Long-form guide */}
+      {(area.intro || area.sections?.length) && (
+        <section className="mx-auto w-full max-w-3xl px-5 py-14">
+          {area.intro && (
+            <p className="text-base text-white/75 leading-relaxed">{area.intro}</p>
+          )}
+          {area.sections?.map((sec) => (
+            <div key={sec.h2} className="mt-10">
+              <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">{sec.h2}</h2>
+              {sec.paragraphs?.map((para) => (
+                <p key={para} className="mt-3 text-sm sm:text-base text-white/70 leading-relaxed">{para}</p>
+              ))}
+              {sec.bullets && (
+                <ul className="mt-4 space-y-2">
+                  {sec.bullets.map((b) => (
+                    <li
+                      key={b}
+                      className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-white/75 leading-relaxed [&_strong]:text-white"
+                      dangerouslySetInnerHTML={{ __html: b }}
+                    />
+                  ))}
+                </ul>
+              )}
+            </div>
+          ))}
+          {area.guides?.length ? (
+            <div className="mt-12 rounded-2xl border border-white/10 bg-white/[0.03] p-6">
+              <h2 className="text-sm uppercase tracking-[0.2em] text-white/50 font-semibold">Read next</h2>
+              <ul className="mt-4 space-y-2">
+                {area.guides.map((g) => (
+                  <li key={g.to}>
+                    <Link to={g.to} className="text-sm underline decoration-white/30 underline-offset-4 hover:text-[#FF6B1A]">
+                      {g.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+        </section>
+      )}
+
       {/* FAQ */}
       <section className="mx-auto w-full max-w-3xl px-5 py-14">
         <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">FAQ — {area.name}</h2>
         <div className="mt-6 space-y-4">
-          {[
-            { q: `Do you cover all of ${area.region}?`, a: area.faqAnswer },
-            { q: `How fast can a mobile tyre fitter reach me in ${area.name}?`, a: `Most jobs in ${area.name} get a quote within 60 seconds and a fitter on-site within 35–90 minutes, 24/7.` },
-            { q: "How much does it cost?", a: "A £20 booking fee secures your slot and is deducted from your final bill. The technician collects the remainder on-site by card, link, transfer or cash." },
-            { q: "Do you fit tyres at night?", a: `Yes — Tyre Fly operates 24/7 across ${area.region}, including weekends and bank holidays.` },
-          ].map((f) => (
+          {allFaqs.map((f) => (
             <details key={f.q} className="group rounded-xl border border-white/10 bg-white/[0.03] p-5">
               <summary className="cursor-pointer list-none font-semibold flex items-center justify-between">
                 {f.q}
