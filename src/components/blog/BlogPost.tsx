@@ -20,7 +20,9 @@ export type Block =
   | { type: "p"; html: string }
   | { type: "ul"; items: string[] }
   | { type: "ol"; items: string[] }
-  | { type: "quote"; html: string };
+  | { type: "quote"; html: string }
+  | { type: "table"; caption?: string; head: string[]; rows: string[][] };
+
 
 export type Faq = { q: string; a: string };
 
