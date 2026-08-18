@@ -11,7 +11,8 @@ export default function MobileTyreFittingBirmingham() {
       readMinutes={13}
       datePublished="2026-07-13"
       dateModified="2026-08-18"
-      heroImage="flat"
+      heroImage="birminghamFitting"
+      heroAlt="A mobile tyre fitting van and technician working on a car in Birmingham with city-centre buildings behind"
       intro="Birmingham has the largest urban road network outside London and one of the busiest orbital corridors in the country — the M6, M42 and A38(M) all funnel through it. Here's an honest look at mobile tyre fitting in Britain's second city: prices by tyre band, arrival times by district, coverage and the specifics of the Clean Air Zone."
       blocks={[
         { type: "p", html: "For live coverage, prices and arrival times, see our <a href=\"/areas/west-midlands\" class=\"text-primary hover:underline\">mobile tyre fitting Birmingham</a> page." },

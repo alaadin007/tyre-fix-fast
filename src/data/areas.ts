@@ -30,9 +30,9 @@ export const AREAS: Area[] = [
     postcodes: "EC, WC, N, NW, E, SE, SW, W, BR, CR, DA, EN, HA, IG, KT, RM, SM, TW, UB, WD",
     hubs: ["Westminster", "Camden", "Islington", "Hackney", "Tower Hamlets", "Lambeth", "Southwark", "Wandsworth", "Kensington & Chelsea", "Hammersmith & Fulham", "Croydon", "Bromley", "Ealing", "Hounslow", "Brent", "Barnet", "Enfield", "Haringey", "Waltham Forest", "Newham", "Redbridge", "Havering", "Bexley", "Greenwich", "Lewisham", "Merton", "Sutton", "Kingston upon Thames", "Richmond upon Thames", "Harrow", "Hillingdon", "Barking & Dagenham", "City of London"],
     faqAnswer: "Yes — we cover every London borough and the M25 corridor 24/7. Most jobs inside the North & South Circular get a fitter within 35–60 minutes.",
-    metaTitle: "Mobile Tyre Fitting London | 24/7 Call-Out from £95 | Tyre Fly",
+    metaTitle: "Mobile Tyre Fitting London | 24/7 Call-Out from £95 | Tyrefly",
     metaDesc: "Mobile tyre fitting in London, 24/7 across all 33 boroughs. Real prices, 35–90 minute arrival, puncture repair from £45. Quote by WhatsApp in 60 seconds.",
-    intro: "Mobile tyre fitting in London means a fully-equipped van — tyre machine, wheel balancer, compressor, stock — coming to your car instead of you limping to a garage. Tyre Fly matches you to a vetted local fitter across all 33 boroughs and the M25 corridor, 24 hours a day, with a firm all-in price before anyone sets off.",
+    intro: "Mobile tyre fitting in London means a fully-equipped van — tyre machine, wheel balancer, compressor, stock — coming to your car instead of you limping to a garage. Tyrefly matches you to a vetted local fitter across all 33 boroughs and the M25 corridor, 24 hours a day, with a firm all-in price before anyone sets off.",
     sections: [
       {
         h2: "What mobile tyre fitting costs in London",
@@ -116,9 +116,9 @@ export const AREAS: Area[] = [
     postcodes: "M, BL, OL, SK, WA, WN",
     hubs: ["Manchester city centre", "Salford", "Trafford", "Stockport", "Bolton", "Bury", "Oldham", "Rochdale", "Tameside", "Wigan"],
     faqAnswer: "We cover all 10 Greater Manchester boroughs plus the M60 ring. Average arrival on the M60 is under 50 minutes.",
-    metaTitle: "Mobile Tyre Fitting Manchester | 24/7 Call-Out | Tyre Fly",
+    metaTitle: "Mobile Tyre Fitting Manchester | 24/7 Call-Out | Tyrefly",
     metaDesc: "Mobile tyre fitting Manchester — 24/7 across all 10 Greater Manchester boroughs. Prices, arrival times by area, puncture repair from £40. Quote in 60 seconds.",
-    intro: "Mobile tyre fitting in Manchester puts a fully-stocked van at your kerb instead of costing you half a day at a garage. Tyre Fly matches you to a vetted fitter across all ten Greater Manchester boroughs and the M60 ring, 24 hours a day, with a firm price agreed before dispatch.",
+    intro: "Mobile tyre fitting in Manchester puts a fully-stocked van at your kerb instead of costing you half a day at a garage. Tyrefly matches you to a vetted fitter across all ten Greater Manchester boroughs and the M60 ring, 24 hours a day, with a firm price agreed before dispatch.",
     sections: [
       {
         h2: "Manchester mobile tyre fitting prices",
@@ -188,9 +188,9 @@ export const AREAS: Area[] = [
     postcodes: "B, CV, DY, WS, WV",
     hubs: ["Birmingham", "Coventry", "Wolverhampton", "Dudley", "Sandwell", "Solihull", "Walsall"],
     faqAnswer: "Our network covers all seven metropolitan boroughs and the M6 corridor through Spaghetti Junction. We're 24/7.",
-    metaTitle: "Mobile Tyre Fitting Birmingham | 24/7 Call-Out | Tyre Fly",
+    metaTitle: "Mobile Tyre Fitting Birmingham | 24/7 Call-Out | Tyrefly",
     metaDesc: "Mobile tyre fitting Birmingham and the West Midlands, 24/7. Prices, arrival times across all seven boroughs, puncture repair from £40. Quote in 60 seconds.",
-    intro: "Mobile tyre fitting in Birmingham brings a fully-equipped van to your driveway, office car park or roadside anywhere across the West Midlands. Tyre Fly matches you to a vetted local fitter covering all seven metropolitan boroughs and the M6, M5 and M42 corridors, 24 hours a day.",
+    intro: "Mobile tyre fitting in Birmingham brings a fully-equipped van to your driveway, office car park or roadside anywhere across the West Midlands. Tyrefly matches you to a vetted local fitter covering all seven metropolitan boroughs and the M6, M5 and M42 corridors, 24 hours a day.",
     sections: [
       {
         h2: "Birmingham mobile tyre fitting prices",
@@ -259,9 +259,9 @@ export const AREAS: Area[] = [
     postcodes: "NE, SR, DH",
     hubs: ["Newcastle upon Tyne", "Sunderland", "Gateshead", "South Tyneside", "North Tyneside"],
     faqAnswer: "We cover all five Tyne & Wear boroughs and the A1 / A19 corridors 24/7.",
-    metaTitle: "Mobile Tyre Fitting Newcastle | 24/7 Call-Out | Tyre Fly",
+    metaTitle: "Mobile Tyre Fitting Newcastle | 24/7 Call-Out | Tyrefly",
     metaDesc: "Mobile tyre fitting Newcastle, Sunderland & Gateshead, 24/7. CAZ-compliant vans, A1/A19 coverage, puncture repair from £40. Quote by WhatsApp.",
-    intro: "Mobile tyre fitting in Newcastle means a fully-kitted van crossing the Tyne to you, rather than you queueing at a garage in the Clean Air Zone. Tyre Fly matches you to a vetted fitter covering Newcastle, Gateshead, Sunderland and both Tynesides around the clock, with a fixed price agreed before the van leaves the yard.",
+    intro: "Mobile tyre fitting in Newcastle means a fully-kitted van crossing the Tyne to you, rather than you queueing at a garage in the Clean Air Zone. Tyrefly matches you to a vetted fitter covering Newcastle, Gateshead, Sunderland and both Tynesides around the clock, with a fixed price agreed before the van leaves the yard.",
     sections: [
       {
         h2: "Newcastle mobile tyre fitting prices",
@@ -343,9 +343,9 @@ export const AREAS: Area[] = [
     postcodes: "BS, BA",
     hubs: ["Bristol city centre", "Clifton", "Bedminster", "Filton", "Bath", "Keynsham", "Portishead"],
     faqAnswer: "Cover spans Bristol, North Somerset, South Gloucestershire and BANES. M4 / M5 junctions are our specialty.",
-    metaTitle: "Mobile Tyre Fitting Bristol | 24/7 Call-Out | Tyre Fly",
+    metaTitle: "Mobile Tyre Fitting Bristol | 24/7 Call-Out | Tyrefly",
     metaDesc: "Mobile tyre fitting Bristol & Bath, 24/7. CAZ-aware vans, M4/M5 coverage, puncture repair from £40. Fixed price by WhatsApp in 60 seconds.",
-    intro: "Mobile tyre fitting in Bristol brings a fully-equipped van to you, whether that's a steep Clifton terrace, a Bedminster side street or a lay-by on the M32. Tyre Fly matches you to a vetted local fitter covering Bristol, Bath, North Somerset and South Gloucestershire 24 hours a day, with a firm price agreed before anyone sets off.",
+    intro: "Mobile tyre fitting in Bristol brings a fully-equipped van to you, whether that's a steep Clifton terrace, a Bedminster side street or a lay-by on the M32. Tyrefly matches you to a vetted local fitter covering Bristol, Bath, North Somerset and South Gloucestershire 24 hours a day, with a firm price agreed before anyone sets off.",
     sections: [
       {
         h2: "What mobile tyre fitting costs in Bristol",
@@ -428,9 +428,9 @@ export const AREAS: Area[] = [
     postcodes: "LS, BD, HD, HX, WF",
     hubs: ["Leeds", "Bradford", "Wakefield", "Huddersfield", "Halifax", "Dewsbury", "Pontefract"],
     faqAnswer: "We cover all five West Yorkshire districts and the M62 corridor. Typical ETA inside Leeds ring road is 40 minutes.",
-    metaTitle: "Mobile Tyre Fitting Leeds | 24/7 Call-Out | Tyre Fly",
+    metaTitle: "Mobile Tyre Fitting Leeds | 24/7 Call-Out | Tyrefly",
     metaDesc: "Mobile tyre fitting Leeds, Bradford & Wakefield, 24/7. M62 and M1 coverage, puncture repair from £40. Fixed price by WhatsApp in 60 seconds.",
-    intro: "Mobile tyre fitting in Leeds means a fully-stocked van reaching you in the city centre, along the outer ring road, or out towards Bradford and Wakefield, instead of you queueing for a garage slot. Tyre Fly matches you to a vetted local fitter across all five West Yorkshire districts, 24 hours a day, with a firm all-in price agreed before dispatch.",
+    intro: "Mobile tyre fitting in Leeds means a fully-stocked van reaching you in the city centre, along the outer ring road, or out towards Bradford and Wakefield, instead of you queueing for a garage slot. Tyrefly matches you to a vetted local fitter across all five West Yorkshire districts, 24 hours a day, with a firm all-in price agreed before dispatch.",
     sections: [
       {
         h2: "Leeds mobile tyre fitting prices",
@@ -507,9 +507,9 @@ export const AREAS: Area[] = [
     postcodes: "L, CH, WA",
     hubs: ["Liverpool", "Wirral", "Sefton", "Knowsley", "St Helens", "Birkenhead", "Bootle"],
     faqAnswer: "We cover all five Merseyside boroughs including the Wirral peninsula. M57 / M62 arrivals are usually under an hour.",
-    metaTitle: "Mobile Tyre Fitting Liverpool | 24/7 Call-Out | Tyre Fly",
+    metaTitle: "Mobile Tyre Fitting Liverpool | 24/7 Call-Out | Tyrefly",
     metaDesc: "Mobile tyre fitting Liverpool & the Wirral, 24/7. Tunnel-crossing coverage, puncture repair from £40. Fixed price by WhatsApp in 60 seconds.",
-    intro: "Mobile tyre fitting in Liverpool means a fully-equipped van coming to you, whether you're in the city centre, out on the Wirral, or stuck near the Mersey tunnels. Tyre Fly matches you to a vetted local fitter across all five Merseyside boroughs, 24 hours a day, with a firm price agreed before anyone leaves the yard.",
+    intro: "Mobile tyre fitting in Liverpool means a fully-equipped van coming to you, whether you're in the city centre, out on the Wirral, or stuck near the Mersey tunnels. Tyrefly matches you to a vetted local fitter across all five Merseyside boroughs, 24 hours a day, with a firm price agreed before anyone leaves the yard.",
     sections: [
       {
         h2: "Liverpool mobile tyre fitting prices",
@@ -588,9 +588,9 @@ export const AREAS: Area[] = [
     postcodes: "S, DN",
     hubs: ["Sheffield", "Rotherham", "Doncaster", "Barnsley"],
     faqAnswer: "Coverage spans all four South Yorkshire boroughs plus the M1 / M18 / A1(M).",
-    metaTitle: "Mobile Tyre Fitting Sheffield | 24/7 Call-Out | Tyre Fly",
+    metaTitle: "Mobile Tyre Fitting Sheffield | 24/7 Call-Out | Tyrefly",
     metaDesc: "Mobile tyre fitting Sheffield, Rotherham & Doncaster, 24/7. M1/M18 coverage, puncture repair from £40. Fixed price by WhatsApp in 60 seconds.",
-    intro: "Mobile tyre fitting in Sheffield means a fully-stocked van reaching you on the hills of the city, or out along the M1 and M18 towards Rotherham and Doncaster, instead of a wasted trip to a garage. Tyre Fly matches you to a vetted local fitter across all four South Yorkshire boroughs, 24 hours a day, with a firm all-in price agreed before dispatch.",
+    intro: "Mobile tyre fitting in Sheffield means a fully-stocked van reaching you on the hills of the city, or out along the M1 and M18 towards Rotherham and Doncaster, instead of a wasted trip to a garage. Tyrefly matches you to a vetted local fitter across all four South Yorkshire boroughs, 24 hours a day, with a firm all-in price agreed before dispatch.",
     sections: [
       {
         h2: "Sheffield mobile tyre fitting prices",
@@ -670,9 +670,9 @@ export const AREAS: Area[] = [
     postcodes: "EH",
     hubs: ["Edinburgh city centre", "Leith", "Portobello", "Musselburgh", "Livingston", "Dalkeith"],
     faqAnswer: "We cover the City of Edinburgh, Midlothian, East Lothian and West Lothian, plus the A720 city bypass.",
-    metaTitle: "Mobile Tyre Fitting Edinburgh | 24/7 Call-Out | Tyre Fly",
+    metaTitle: "Mobile Tyre Fitting Edinburgh | 24/7 Call-Out | Tyrefly",
     metaDesc: "Mobile tyre fitting Edinburgh & the Lothians, 24/7. LEZ-compliant vans, A720 bypass coverage, puncture repair from £40. Quote by WhatsApp.",
-    intro: "Mobile tyre fitting in Edinburgh means a fully-equipped van reaching you on a cobbled Old Town close, a Leith side street, or out along the A720 bypass, instead of a wasted trip to a garage. Tyre Fly matches you to a vetted local fitter across the City of Edinburgh and the three Lothians, 24 hours a day, with a firm all-in price agreed before dispatch.",
+    intro: "Mobile tyre fitting in Edinburgh means a fully-equipped van reaching you on a cobbled Old Town close, a Leith side street, or out along the A720 bypass, instead of a wasted trip to a garage. Tyrefly matches you to a vetted local fitter across the City of Edinburgh and the three Lothians, 24 hours a day, with a firm all-in price agreed before dispatch.",
     sections: [
       {
         h2: "Edinburgh mobile tyre fitting prices",
@@ -755,9 +755,9 @@ export const AREAS: Area[] = [
     postcodes: "G, PA, ML",
     hubs: ["Glasgow city centre", "Paisley", "East Kilbride", "Hamilton", "Motherwell", "Clydebank", "Renfrew"],
     faqAnswer: "Coverage includes the M8 / M74 / M77 ring and Renfrewshire, North & South Lanarkshire.",
-    metaTitle: "Mobile Tyre Fitting Glasgow | 24/7 Call-Out | Tyre Fly",
+    metaTitle: "Mobile Tyre Fitting Glasgow | 24/7 Call-Out | Tyrefly",
     metaDesc: "Mobile tyre fitting Glasgow & Lanarkshire, 24/7. LEZ-compliant vans, M8/M74 coverage, puncture repair from £40. Quote by WhatsApp in 60 seconds.",
-    intro: "Mobile tyre fitting in Glasgow means a fully-stocked van reaching you in the city centre's Low Emission Zone, out along the M8 or M74, or across to Paisley and East Kilbride, instead of a wasted trip to a garage. Tyre Fly matches you to a vetted local fitter across Greater Glasgow, Renfrewshire and Lanarkshire, 24 hours a day, with a firm all-in price agreed before dispatch.",
+    intro: "Mobile tyre fitting in Glasgow means a fully-stocked van reaching you in the city centre's Low Emission Zone, out along the M8 or M74, or across to Paisley and East Kilbride, instead of a wasted trip to a garage. Tyrefly matches you to a vetted local fitter across Greater Glasgow, Renfrewshire and Lanarkshire, 24 hours a day, with a firm all-in price agreed before dispatch.",
     sections: [
       {
         h2: "Glasgow mobile tyre fitting prices",
@@ -837,9 +837,9 @@ export const AREAS: Area[] = [
     postcodes: "CF, NP, SA",
     hubs: ["Cardiff", "Newport", "Swansea", "Bridgend", "Caerphilly", "Pontypridd"],
     faqAnswer: "We cover the M4 from the Severn Bridge to Swansea, including the Valleys.",
-    metaTitle: "Mobile Tyre Fitting Cardiff | 24/7 Call-Out | Tyre Fly",
+    metaTitle: "Mobile Tyre Fitting Cardiff | 24/7 Call-Out | Tyrefly",
     metaDesc: "Mobile tyre fitting Cardiff, Newport & Swansea, 24/7. M4 corridor and Valleys coverage, puncture repair from £40. Quote by WhatsApp.",
-    intro: "Mobile tyre fitting in Cardiff means a fully-equipped van reaching you in the city centre, along the M4 towards Newport or Swansea, or up into the Valleys, instead of a wasted trip to a garage. Tyre Fly matches you to a vetted local fitter across South Wales, 24 hours a day, with a firm all-in price agreed before dispatch.",
+    intro: "Mobile tyre fitting in Cardiff means a fully-equipped van reaching you in the city centre, along the M4 towards Newport or Swansea, or up into the Valleys, instead of a wasted trip to a garage. Tyrefly matches you to a vetted local fitter across South Wales, 24 hours a day, with a firm all-in price agreed before dispatch.",
     sections: [
       {
         h2: "Cardiff mobile tyre fitting prices",
@@ -919,9 +919,9 @@ export const AREAS: Area[] = [
     postcodes: "BT",
     hubs: ["Belfast", "Lisburn", "Bangor", "Newtownabbey", "Carrickfergus"],
     faqAnswer: "Greater Belfast coverage including the M1 / M2 / A2 corridors.",
-    metaTitle: "Mobile Tyre Fitting Belfast | 24/7 Call-Out | Tyre Fly",
+    metaTitle: "Mobile Tyre Fitting Belfast | 24/7 Call-Out | Tyrefly",
     metaDesc: "Mobile tyre fitting Belfast, Lisburn & Bangor, 24/7. M1/M2 corridor coverage, puncture repair from £40. Fixed price by WhatsApp.",
-    intro: "Mobile tyre fitting in Belfast means a fully-equipped van reaching you in the city centre, along the M1 or M2, or out towards Lisburn and Bangor, instead of a wasted trip to a garage. Tyre Fly matches you to a vetted local fitter across Greater Belfast, 24 hours a day, with a firm all-in price agreed before dispatch.",
+    intro: "Mobile tyre fitting in Belfast means a fully-equipped van reaching you in the city centre, along the M1 or M2, or out towards Lisburn and Bangor, instead of a wasted trip to a garage. Tyrefly matches you to a vetted local fitter across Greater Belfast, 24 hours a day, with a firm all-in price agreed before dispatch.",
     sections: [
       {
         h2: "Belfast mobile tyre fitting prices",

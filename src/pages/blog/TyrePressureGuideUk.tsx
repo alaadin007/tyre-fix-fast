@@ -11,7 +11,8 @@ export default function TyrePressureGuideUk() {
       readMinutes={11}
       datePublished="2026-07-13"
       dateModified="2026-08-18"
-      heroImage="tpms"
+      heroImage="tyrePressure"
+      heroAlt="A digital tyre pressure gauge reading the pressure at a car tyre valve"
       intro="Correct tyre pressure is the single cheapest thing you can do to make your car safer, more efficient and longer-lived — and about 60% of UK drivers get it wrong. This guide covers where to find the right number, typical PSI for popular UK cars, how to check it properly, and the difference between the everyday and the loaded pressure."
       blocks={[
         { type: "h2", text: "Where to find your correct tyre pressure" },

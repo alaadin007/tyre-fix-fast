@@ -11,7 +11,8 @@ export default function MobileTyreFitterVsGarage() {
       readMinutes={11}
       datePublished="2026-07-13"
       dateModified="2026-08-18"
-      heroImage="runflat"
+      heroImage="fitterVsGarage"
+      heroAlt="A mobile tyre fitting van at a kerbside beside a traditional tyre garage workshop"
       intro="A decade ago, mobile tyre fitting was a novelty premium service. In 2026 it's the default for millions of UK drivers — but the local tyre bay still wins on some jobs. This is the honest side-by-side: cost, speed, quality, and the specific situations where each one is the better call."
       blocks={[
         { type: "h2", text: "Head-to-head comparison" },
