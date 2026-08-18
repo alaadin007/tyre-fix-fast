@@ -6,20 +6,17 @@ import { supabase } from "@/integrations/supabase/client";
 const SUPPORT_WA = "447447199903";
 
 type TechRow = {
-  id: string;
   name: string | null;
-  phone: string;
   approval_status: string;
   service_postcodes: string[] | null;
   vehicle: string | null;
   travel_radius_miles: number | null;
   weekly_schedule: Record<string, unknown> | null;
-  last_lat: number | null;
-  last_lng: number | null;
-  equipment_photo_urls: string[] | null;
-  insurance_doc_url: string | null;
-  id_doc_url: string | null;
-  public_liability_doc_url: string | null;
+  has_location_pin: boolean;
+  has_equipment_photo: boolean;
+  has_insurance_doc: boolean;
+  has_id_doc: boolean;
+  has_public_liability_doc: boolean;
 };
 
 type Step = {
@@ -36,11 +33,11 @@ function buildSteps(t: TechRow): Step[] {
   const hasVehicle = !!t.vehicle;
   const hasRadius = !!t.travel_radius_miles && t.travel_radius_miles > 0;
   const hasSchedule = !!t.weekly_schedule && Object.keys(t.weekly_schedule).length > 0;
-  const hasPin = t.last_lat !== null && t.last_lng !== null;
-  const hasEquipment = (t.equipment_photo_urls?.length ?? 0) > 0;
-  const hasInsurance = !!t.insurance_doc_url;
-  const hasId = !!t.id_doc_url;
-  const hasPL = !!t.public_liability_doc_url;
+  const hasPin = t.has_location_pin;
+  const hasEquipment = t.has_equipment_photo;
+  const hasInsurance = t.has_insurance_doc;
+  const hasId = t.has_id_doc;
+  const hasPL = t.has_public_liability_doc;
 
   return [
     {
@@ -138,25 +135,15 @@ export default function TechnicianLogin() {
       return;
     }
     setLoading(true);
-    // Try a few common formats the inbound webhook may store
-    const candidates = Array.from(
-      new Set([`+${wa}`, wa, `whatsapp:+${wa}`])
-    );
-    const { data, error: qErr } = await supabase
-      .from("technicians")
-      .select(
-        "id,name,phone,approval_status,service_postcodes,vehicle,travel_radius_miles,weekly_schedule,last_lat,last_lng,equipment_photo_urls,insurance_doc_url,id_doc_url,public_liability_doc_url"
-      )
-      .in("phone", candidates)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+    const { data, error: qErr } = await supabase.functions.invoke("tech-progress", {
+      body: { phone: wa },
+    });
     setLoading(false);
     if (qErr) {
       setError("Couldn't load progress. Try again in a moment.");
       return;
     }
-    setTech((data as TechRow | null) ?? null);
+    setTech(((data as { technician: TechRow | null } | null)?.technician) ?? null);
   };
 
   const steps = tech ? buildSteps(tech) : [];
