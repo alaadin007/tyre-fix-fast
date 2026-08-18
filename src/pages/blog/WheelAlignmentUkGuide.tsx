@@ -102,7 +102,7 @@ export default function WheelAlignmentUkGuide() {
             "Small misalignments show up as much bigger wear because of the torque profile.",
           ],
         },
-        { type: "p", html: "See our <a href=\"/blog/ev-tyres-vs-standard-uk\" class=\"text-primary hover:underline\">EV tyres guide</a> for more on this." },
+        { type: "p", html: "See our <a href=\"/blog/budget-vs-premium-tyres-uk\" class=\"text-primary hover:underline\">budget vs premium tyres guide</a> for more on load ratings and heavier vehicles." },
       ]}
       faqs={[
         { q: "How much does wheel alignment cost in the UK in 2026?", a: "£25–£45 for front-toe tracking, £45–£95 for 4-wheel laser alignment. Premium and performance cars £70–£140." },
@@ -113,7 +113,7 @@ export default function WheelAlignmentUkGuide() {
       related={[
         { to: "/blog/cracked-alloy-from-pothole", label: "Cracked Alloy From Pothole" },
         { to: "/blog/tyre-pressure-guide-uk", label: "UK Tyre Pressure Guide" },
-        { to: "/blog/ev-tyres-vs-standard-uk", label: "EV Tyres Guide" },
+        { to: "/blog/budget-vs-premium-tyres-uk", label: "Budget vs Premium Tyres" },
       ]}
     />
   );

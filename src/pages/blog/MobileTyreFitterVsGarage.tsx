@@ -73,7 +73,7 @@ export default function MobileTyreFitterVsGarage() {
         { type: "p", html: "Both mobile and garage can do these, but the fitter competence bar is higher. Ask directly: \"Do you fit run-flats regularly?\" Any hesitation, book elsewhere. Run-flats need a specific rim clamp technique and higher-torque machines. A good mobile fitter has this; so does a good tyre bay. A bad one of either will bend a rim." },
 
         { type: "h2", text: "The specific case: EVs" },
-        { type: "p", html: "EVs need higher-load-rating tyres and heavier torque specs. Both formats can handle it, but ask whether the fitter is EV-experienced. Some mobile fleets have specific EV-trained operators; some tyre bays specialise in Tesla and equivalent. Don't accept \"a tyre's a tyre\" as an answer — the wrong load index on an EV wears out in 8,000 miles. See our <a href=\"/blog/ev-tyres-vs-standard-uk\" class=\"text-primary hover:underline\">EV tyres guide</a>." },
+        { type: "p", html: "EVs need higher-load-rating tyres and heavier torque specs. Both formats can handle it, but ask whether the fitter is EV-experienced. Some mobile fleets have specific EV-trained operators; some tyre bays specialise in Tesla and equivalent. Don't accept \"a tyre's a tyre\" as an answer — the wrong load index on an EV wears out in 8,000 miles. See our <a href=\"/blog/budget-vs-premium-tyres-uk\" class=\"text-primary hover:underline\">budget vs premium tyres guide</a> for how load ratings work." },
 
         { type: "h2", text: "The hybrid workflow (best of both)" },
         { type: "p", html: "The most efficient approach for most UK drivers in 2026:" },

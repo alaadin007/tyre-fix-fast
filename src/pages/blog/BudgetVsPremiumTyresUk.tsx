@@ -75,7 +75,7 @@ export default function BudgetVsPremiumTyresUk() {
 
         { type: "h2", text: "The specific case: high-performance and EVs" },
         { type: "p", html: "On a Golf R, Model 3 Performance, or M340i, budget tyres are a genuinely bad idea. High torque and high cornering loads shred cheap compounds fast, and the wet-grip gap becomes safety-critical at higher speeds. Stick to mid-range or premium on any performance car, and read the specific model tests — some \"premium\" tyres are still not right for a specific application (e.g. some mainstream Michelins are too soft for a hot hatch)." },
-        { type: "p", html: "For EVs, load ratings matter more than tier. See our <a href=\"/blog/ev-tyres-vs-standard-uk\" class=\"text-primary hover:underline\">EV tyres guide</a>." },
+        { type: "p", html: "For EVs, load ratings matter more than tier. See our <a href=\"/blog/tyre-age-when-to-replace\" class=\"text-primary hover:underline\">guide to tyre age and wear</a>." },
 
         { type: "h2", text: "The verdict" },
         {
