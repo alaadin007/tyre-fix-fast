@@ -77,7 +77,7 @@ export default function RunFlatTyresUk() {
   return (
     <main className="min-h-screen bg-background">
       <Seo
-        title="Run-Flat Tyres UK: How They Work, Costs & When to Replace (2026)"
+        title="Run-Flat Tyres UK: How They Work & Costs (2026)"
         description="UK guide to run-flat tyres — markings (RFT, ROF, ZP, SSR, EMT), how far you can drive flat, repair rules, prices and mobile replacement."
         canonical="/blog/run-flat-tyres-uk-guide"
         ogImage={imageUrl}

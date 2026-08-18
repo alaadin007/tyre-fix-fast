@@ -5,7 +5,7 @@ export default function RoadsidePunctureRepairLondon() {
     <BlogPost
       slug="roadside-puncture-repair-london"
       metaTitle="Mobile Tyre Fitter vs AA & RAC London | Roadside Puncture"
-      metaDesc="Mobile fitter vs AA, RAC, Green Flag and Start Rescue for a London roadside puncture: response times, real costs, what they carry, Red Routes, ULEZ and motorway rules."
+      metaDesc="Mobile fitter vs AA, RAC and Green Flag for a London roadside puncture: response times, real costs, what they carry, Red Routes and ULEZ."
       title="Mobile Tyre Fitter vs AA, RAC and Green Flag: Who to Call for a London Roadside Puncture"
       category="London"
       readMinutes={11}

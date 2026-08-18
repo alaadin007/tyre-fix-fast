@@ -20,7 +20,7 @@ export default function AreasIndex() {
     <main className="min-h-screen w-full text-white" style={{ backgroundColor: "#0D0D0D", fontFamily: "Inter, system-ui, -apple-system, sans-serif" }}>
       <Seo
         title="Mobile Tyre Fitter Service Areas Across the UK | Tyrefly"
-        description="Tyrefly covers London, Manchester, Birmingham, Leeds, Liverpool, Sheffield, Newcastle, Bristol, Edinburgh, Glasgow, Cardiff & Belfast. 24/7 mobile tyre fitting via WhatsApp."
+        description="Tyrefly covers London, Manchester, Birmingham, Leeds, Liverpool, Glasgow and more. 24/7 mobile tyre fitting and puncture repair via WhatsApp."
         canonical="/areas"
         jsonLd={ld}
       />

@@ -4,8 +4,8 @@ export default function CanAPunctureBeRepairedUk() {
   return (
     <BlogPost
       slug="can-a-puncture-be-repaired-uk"
-      metaTitle="Can a Puncture Be Repaired? BS AU 159 Standard Explained (2026)"
-      metaDesc="Can any puncture be repaired? UK BS AU 159 standard explained: repairable vs replace-only zones, tread limits, run-flats, and how to tell before the tyre comes off."
+      metaTitle="Can a Puncture Be Repaired? BS AU 159 Rules (2026)"
+      metaDesc="Can any puncture be repaired? BS AU 159 explained: repairable vs replace-only zones, tread limits, run-flats and how to tell before removal."
       title="Can a Puncture Always Be Repaired? The BS AU 159 Rules Explained"
       category="How-To"
       readMinutes={9}
