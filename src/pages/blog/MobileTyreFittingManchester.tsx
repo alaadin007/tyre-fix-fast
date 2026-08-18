@@ -13,6 +13,8 @@ export default function MobileTyreFittingManchester() {
       heroImage="flat"
       intro="Manchester is one of the busiest mobile tyre markets in the UK — a wet climate, aggressive kerbing, and a ring road that never sleeps. Here's what mobile fitting actually costs, how quickly a van reaches you across Greater Manchester, and where the trouble spots are."
       blocks={[
+        { type: "p", html: "For live coverage, prices and arrival times, see our <a href=\"/areas/greater-manchester\" class=\"text-primary hover:underline\">mobile tyre fitting Manchester</a> page." },
+
         { type: "h2", text: "Why Manchester tyres take a beating" },
         { type: "p", html: "Three factors combine: Manchester's rainfall is well above the UK average, which accelerates pothole formation through freeze-thaw cycling; the city has one of the highest densities of delivery and rideshare vehicles per capita outside London, which multiplies road-debris incidents; and the tram network's shared road surfaces (Metrolink) create rail-adjacent grooves that catch tyres in the wet. The result is a mobile fitting market that runs 24/7 across all ten Greater Manchester boroughs." },
 
@@ -98,7 +100,7 @@ export default function MobileTyreFittingManchester() {
         { q: "Can I claim pothole damage from Manchester City Council?", a: "Yes — file dated photos, GPS location and itemised receipts through the council's damage claim form within 14 days. Claims are more likely to succeed if the pothole was already reported." },
       ]}
       related={[
-        { to: "/blog/cracked-alloy-from-pothole", label: "Cracked Alloy From Pothole" },
+        { to: "/areas/greater-manchester", label: "Mobile Tyre Fitting Manchester" },
         { to: "/blog/mobile-tyre-fitting-birmingham", label: "Mobile Tyre Fitting Birmingham" },
         { to: "/blog/slow-puncture-uk-guide", label: "Slow Puncture Guide" },
       ]}
