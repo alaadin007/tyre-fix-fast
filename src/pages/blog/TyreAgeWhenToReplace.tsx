@@ -10,7 +10,8 @@ export default function TyreAgeWhenToReplace() {
       category="Legal"
       readMinutes={9}
       datePublished="2026-07-13"
-      heroImage="tpms"
+      heroImage="tyreAge"
+      heroAlt="The DOT date code stamped on an ageing tyre sidewall showing fine perished cracks in the rubber"
       intro="A tyre with 6mm of tread on a caravan or a low-mileage classic can still be dangerously old. Rubber degrades whether the wheel is turning or not, and every year adds risk regardless of the tread. Here's how to read tyre age, what the industry actually recommends, and when to replace even a perfect-looking tyre."
       blocks={[
         { type: "h2", text: "The DOT date code — where and how to read it" },

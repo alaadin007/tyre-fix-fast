@@ -10,7 +10,8 @@ export default function BudgetVsPremiumTyresUk() {
       category="Comparison"
       readMinutes={10}
       datePublished="2026-07-13"
-      heroImage="runflat"
+      heroImage="budgetVsPremium"
+      heroAlt="A budget car tyre and a premium car tyre side by side on a workshop floor, tread patterns compared"
       intro={`"Are premium tyres worth it?" is one of the most asked questions in the UK tyre trade — and the honest answer is neither an unqualified yes nor a blanket no. What you get for the extra money varies by tyre size, driving style, mileage and weather. This is the plain-English breakdown so you can make the call for your own car.`}
       blocks={[
         { type: "h2", text: "What defines each tier in 2026" },

@@ -13,6 +13,26 @@ import roadsidePunctureLondon from "@/assets/blog/roadside-puncture-repair-londo
 import canPunctureBeRepairedUk from "@/assets/blog/can-a-puncture-be-repaired-uk-hero.jpg";
 import punctureVsNewTyre from "@/assets/blog/puncture-repair-vs-new-tyre-hero.jpg";
 import runFlatPunctureLondon from "@/assets/blog/run-flat-puncture-repair-london-hero.jpg";
+import allSeasonVsWinter from "@/assets/blog/all-season-vs-winter-hero.jpg";
+import budgetVsPremium from "@/assets/blog/budget-vs-premium-hero.jpg";
+import driveOnFlatTyre from "@/assets/blog/drive-on-flat-tyre-hero.jpg";
+import crackedAlloy from "@/assets/blog/cracked-alloy-hero.jpg";
+import lockingWheelNut from "@/assets/blog/locking-wheel-nut-hero.jpg";
+import m25TyreFitter from "@/assets/blog/m25-tyre-fitter-hero.jpg";
+import fitterVsGarage from "@/assets/blog/fitter-vs-garage-hero.jpg";
+import birminghamFitting from "@/assets/blog/birmingham-fitting-hero.jpg";
+import londonFitting from "@/assets/blog/london-fitting-hero.jpg";
+import manchesterFitting from "@/assets/blog/manchester-fitting-hero.jpg";
+import nailInTyre from "@/assets/blog/nail-in-tyre-hero.jpg";
+import potholeClaim from "@/assets/blog/pothole-claim-hero.jpg";
+import slowPuncture from "@/assets/blog/slow-puncture-hero.jpg";
+import twentyFourHourChangeLondon from "@/assets/blog/24h-tyre-change-london-hero.jpg";
+import tyreAge from "@/assets/blog/tyre-age-hero.jpg";
+import tyreBlowout from "@/assets/blog/tyre-blowout-hero.jpg";
+import tyrePressure from "@/assets/blog/tyre-pressure-hero.jpg";
+import sidewallDamage from "@/assets/blog/sidewall-damage-hero.jpg";
+import treadDepth from "@/assets/blog/tread-depth-hero.jpg";
+import wheelAlignment from "@/assets/blog/wheel-alignment-hero.jpg";
 
 export type Block =
   | { type: "h2"; text: string }
@@ -59,6 +79,26 @@ const heroMap = {
   canPunctureBeRepairedUk,
   punctureVsNewTyre,
   runFlatPunctureLondon,
+  allSeasonVsWinter,
+  budgetVsPremium,
+  driveOnFlatTyre,
+  crackedAlloy,
+  lockingWheelNut,
+  m25TyreFitter,
+  fitterVsGarage,
+  birminghamFitting,
+  londonFitting,
+  manchesterFitting,
+  nailInTyre,
+  potholeClaim,
+  slowPuncture,
+  twentyFourHourChangeLondon,
+  tyreAge,
+  tyreBlowout,
+  tyrePressure,
+  sidewallDamage,
+  treadDepth,
+  wheelAlignment,
 };
 
 export type HeroKey = keyof typeof heroMap;

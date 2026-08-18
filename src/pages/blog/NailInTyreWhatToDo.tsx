@@ -10,7 +10,8 @@ export default function NailInTyreWhatToDo() {
       category="Safety"
       readMinutes={8}
       datePublished="2026-07-13"
-      heroImage="tpms"
+      heroImage="nailInTyre"
+      heroAlt="A rusty nail embedded in the tread grooves of a car tyre, close-up"
       intro="A nail or screw in your tyre isn't automatically a new-tyre situation. Most punctures in the tread area can be properly repaired for £25–£40 if handled correctly. The wrong first move — pulling the nail out yourself — can turn a £30 fix into a £180 replacement. Here's what to do in the right order."
       blocks={[
         { type: "h2", text: "Step 1: Don't pull it out" },

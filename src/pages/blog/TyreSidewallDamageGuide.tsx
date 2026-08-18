@@ -10,7 +10,8 @@ export default function TyreSidewallDamageGuide() {
       category="Safety"
       readMinutes={9}
       datePublished="2026-07-13"
-      heroImage="tpms"
+      heroImage="sidewallDamage"
+      heroAlt="A bulge and deep gouge in the sidewall of a car tyre, close-up of the damaged rubber"
       intro="Sidewall damage is the one category of tyre problem where there's very little grey area. The tread you can repair. The sidewall you almost always can't. Here's the plain-English rule set — what to look for, what BS AU 159 (the UK repair standard) says, and when you're driving on a bomb."
       blocks={[
         { type: "h2", text: "Why the sidewall is different from the tread" },

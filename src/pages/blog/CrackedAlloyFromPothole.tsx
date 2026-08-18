@@ -10,7 +10,8 @@ export default function CrackedAlloyFromPothole() {
       category="Repair Guide"
       readMinutes={10}
       datePublished="2026-07-13"
-      heroImage="flat"
+      heroImage="crackedAlloy"
+      heroAlt="A cracked alloy wheel rim next to a water-filled pothole in a broken tarmac road"
       intro="You hit a pothole, the tyre went flat instantly, and now the alloy is buckled — maybe cracked. This guide explains how to tell repairable from scrap, what a UK refurb realistically costs in 2026, and the paperwork you need to claim the bill from the council or TfL."
       blocks={[
         { type: "h2", text: "First: is the alloy actually cracked?" },

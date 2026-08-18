@@ -10,7 +10,8 @@ export default function SlowPunctureUkGuide() {
       category="Repair Guide"
       readMinutes={10}
       datePublished="2026-07-13"
-      heroImage="flat"
+      heroImage="slowPuncture"
+      heroAlt="A pressure gauge held against a car tyre with soapy bubbles forming over a small puncture"
       intro="A slow puncture is the tyre problem you can ignore for three weeks — right up until the morning you can't. This guide covers how to identify one properly, whether British Standard rules allow it to be repaired, and what a mobile fix actually costs in 2026."
       blocks={[
         { type: "h2", text: "How to tell if you have a slow puncture" },
