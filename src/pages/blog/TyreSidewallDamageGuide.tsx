@@ -23,7 +23,47 @@ export default function TyreSidewallDamageGuide() {
 
         { type: "h2", text: "Category 1: Sidewall bulges (replace now, don't drive)" },
         { type: "p", html: "A bulge or blister on the sidewall means the internal cords have broken — usually from a pothole strike or kerb hit. Air pressure is now being held back by nothing but the outer rubber. Bulges rupture with no warning, often at motorway speed, and the failure is violent." },
-        { type: "p", html: "If you see a bulge, don't drive to the fitter. Get the car recovered, or call a mobile fitter to the driveway. See our <a href=\"/blog/tyre-bulge-sidewall-danger\" class=\"text-primary hover:underline\">bulge-specific guide</a> for more." },
+        { type: "p", html: "If you see a bulge, don't drive to the fitter. Not to work, not around the corner. Get the car recovered, or call a mobile fitter to your location." },
+        { type: "h3", text: "Why bulges rupture without warning" },
+        { type: "p", html: "A slow puncture gives you hours or days of notice. Worn tread gives you months. A sidewall bulge gives you nothing. The outer rubber is elastic and can hold pressure for an hour, a day, sometimes a couple of weeks — but the failure, when it comes, is a sudden violent tear. No whistle, no smell, no gradual softening." },
+        { type: "p", html: "A front-tyre sidewall rupture at 70 mph on a heavy car can pull the steering hard in the failed tyre's direction; overcorrect and you're across two lanes in under a second." },
+        { type: "h3", text: "What causes a bulge" },
+        {
+          type: "ul",
+          items: [
+            "<strong>Pothole strikes.</strong> The single most common cause. Deep-edged potholes above 20 mph can snap sidewall cords, especially at low pressures.",
+            "<strong>Kerb hits.</strong> A hard mount over a kerb pinches the sidewall between the alloy rim and the kerb edge.",
+            "<strong>Speed cushions taken at speed.</strong> The corners can catch and pinch the sidewall.",
+            "<strong>Under-inflation.</strong> A tyre 20% low at motorway speed builds enough sidewall heat to fail the cords with no impact at all. See our <a href=\"/blog/tyre-pressure-guide-uk\" class=\"text-primary hover:underline\">pressure guide</a>.",
+            "<strong>Manufacturing defect.</strong> Rare, and usually shows up in the first few hundred miles.",
+            "<strong>Overloading.</strong> Van and 4×4 tyres run over their load rating can bulge without any impact.",
+          ],
+        },
+        { type: "h3", text: "Can a bulged tyre be repaired?" },
+        { type: "p", html: "No, under any circumstances. BS AU 159 forbids any sidewall repair. Any \"fitter\" who offers to patch, plug, seal or grind it flat is lying. The tyre is scrap." },
+        { type: "h3", text: "One tyre or two?" },
+        {
+          type: "ul",
+          items: [
+            "<strong>Tread depth of the surviving tyre on that axle.</strong> More than about 2mm difference from the new one and replacing in pairs is strongly recommended.",
+            "<strong>4WD/AWD cars.</strong> Some systems (Subaru, some Audi Quattro variants) require all four within 3mm or the differential wears. Check the handbook.",
+            "<strong>Age.</strong> If both were fitted together and are over 5 years old, replace both.",
+          ],
+        },
+        { type: "h3", text: "How to prevent bulges" },
+        {
+          type: "ul",
+          items: [
+            "Keep pressures correct — under-inflation is the leading contributor to sidewall failure.",
+            "Slow down over potholes. Braking through one is worse than rolling through it — weight transfers forward and loads the front tyre harder.",
+            "Take kerbs slowly and at 90° when parking; angling into them at speed is what pinches the sidewall.",
+            "Watch load ratings if you tow or run a heavy van.",
+            "Get 4-wheel alignment checked after significant impacts. See our <a href=\"/blog/wheel-alignment-uk-guide\" class=\"text-primary hover:underline\">alignment guide</a>.",
+          ],
+        },
+        { type: "h3", text: "Claiming for pothole damage" },
+        { type: "p", html: "If the bulge came from a specific pothole, you can claim from the local council or National Highways — see our <a href=\"/blog/pothole-damage-claim-uk\" class=\"text-primary hover:underline\">pothole claim guide</a>. Photograph the pothole, note the location, and keep the replacement invoice. Check the alloy too: pothole hits often bend the rim — see our <a href=\"/blog/cracked-alloy-from-pothole\" class=\"text-primary hover:underline\">cracked alloy guide</a>." },
+
 
         { type: "h2", text: "Category 2: Sidewall cuts and gouges (usually replace)" },
         { type: "p", html: "Anything sharp on the road — kerb edges, broken glass, metal debris — can gouge the sidewall. The rule of thumb: if the cut goes deep enough to expose the cord layer (usually a lighter beige or white material under the black rubber), the tyre is scrap. If it's a superficial rubber scuff with no cord visible, the tyre is usually fine to keep." },
