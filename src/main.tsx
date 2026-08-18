@@ -2,7 +2,10 @@ import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
 import App from "./App.tsx";
+import { initGA } from "@/lib/analytics";
 import "./index.css";
+
+initGA();
 
 const rootElement = document.getElementById("root");
 
