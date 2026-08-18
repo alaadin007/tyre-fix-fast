@@ -10,22 +10,17 @@ export default function ShortLinkRedirect() {
     let cancelled = false;
     (async () => {
       if (!code) return;
-      const { data, error } = await supabase
-        .from("short_links")
-        .select("target_url, expires_at")
-        .eq("code", code)
-        .maybeSingle();
+      const { data, error } = await supabase.functions.invoke("resolve-short-link", {
+        body: { code },
+      });
       if (cancelled) return;
       if (error || !data?.target_url) {
         setError("Link not found or expired.");
         return;
       }
-      if (data.expires_at && new Date(data.expires_at) < new Date()) {
-        setError("This link has expired.");
-        return;
-      }
       // Immediate redirect — no intermediate copy shown.
-      window.location.replace(data.target_url);
+      window.location.replace(data.target_url as string);
+
     })();
     return () => { cancelled = true; };
   }, [code]);
