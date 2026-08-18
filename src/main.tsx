@@ -7,6 +7,30 @@ import "./index.css";
 
 initGA();
 
+/**
+ * The static <head> in index.html carries fallback description/og/twitter tags
+ * for non-JS crawlers. Once React (and react-helmet-async) boots, those static
+ * tags would sit alongside the page-specific ones and duplicate them — so we
+ * strip the fallbacks before the first render. Result: exactly one description,
+ * og:* and twitter:* tag per page.
+ */
+function removeStaticFallbackHeadTags() {
+  const selectors = [
+    'meta[name="description"]',
+    'meta[name="keywords"]',
+    'meta[property^="og:"]',
+    'meta[name^="twitter:"]',
+  ];
+  document
+    .querySelectorAll(selectors.join(","))
+    .forEach((el) => {
+      // Helmet-managed tags carry data-rh; only remove the static ones.
+      if (!el.hasAttribute("data-rh")) el.remove();
+    });
+}
+
+removeStaticFallbackHeadTags();
+
 const rootElement = document.getElementById("root");
 
 function renderApp() {
