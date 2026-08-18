@@ -83,6 +83,7 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
+      <RouteChangeTracker />
       <Toaster />
       <Sonner />
       <Routes>
