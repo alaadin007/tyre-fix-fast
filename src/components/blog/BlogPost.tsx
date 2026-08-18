@@ -311,6 +311,40 @@ export default function BlogPost(p: BlogPostProps) {
                     ))}
                   </ul>
                 );
+              else if (b.type === "table")
+                rendered.push(
+                  <figure key={i} className="not-prose my-8 -mx-6 md:mx-0 overflow-x-auto">
+                    <table className="w-full min-w-[520px] text-[15px] border border-border rounded-xl overflow-hidden">
+                      <thead className="bg-muted/60">
+                        <tr>
+                          {b.head.map((h, j) => (
+                            <th key={j} className="text-left font-semibold px-4 py-3 border-b border-border">
+                              {h}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {b.rows.map((row, j) => (
+                          <tr key={j} className="odd:bg-muted/20">
+                            {row.map((cell, k) => (
+                              <td
+                                key={k}
+                                className="px-4 py-3 align-top border-b border-border/60"
+                                dangerouslySetInnerHTML={{ __html: cell }}
+                              />
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    {b.caption && (
+                      <figcaption className="mt-2 px-6 md:px-0 text-sm text-muted-foreground">
+                        {b.caption}
+                      </figcaption>
+                    )}
+                  </figure>
+                );
               else
                 rendered.push(
                   <ol key={i} className="list-decimal pl-6 space-y-3 marker:text-accent marker:font-semibold">
@@ -319,6 +353,7 @@ export default function BlogPost(p: BlogPostProps) {
                     ))}
                   </ol>
                 );
+
 
               // Insert a slim inline CTA every N blocks, but only after a paragraph/list (not a heading)
               const isBreakable = b.type !== "h2" && b.type !== "h3";
