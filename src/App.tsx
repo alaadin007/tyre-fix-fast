@@ -26,6 +26,9 @@ import Terms from "./pages/Terms.tsx";
 
 import AreasIndex from "./pages/AreasIndex.tsx";
 import AreaPage from "./pages/AreaPage.tsx";
+import ServicesIndex from "./pages/ServicesIndex.tsx";
+import ServicePage from "./pages/ServicePage.tsx";
+import ServiceAreaPage from "./pages/ServiceAreaPage.tsx";
 import ShortLinkRedirect from "./pages/ShortLinkRedirect.tsx";
 import DashboardLayout from "./pages/admin/DashboardLayout.tsx";
 import Overview from "./pages/admin/Overview.tsx";
