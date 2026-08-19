@@ -41,23 +41,13 @@ const JobStatus = () => {
     };
     load();
 
-    const channel = supabase
-      .channel(`job-${id}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "jobs",
-          filter: `id=eq.${id}`,
-        },
-        (payload) => setJob(payload.new as Job)
-      )
-      .subscribe();
+    // Job rows are no longer readable by anonymous clients, so poll the secure
+    // status endpoint instead of subscribing to realtime changes.
+    const timer = setInterval(load, 15000);
 
     return () => {
       cancelled = true;
-      supabase.removeChannel(channel);
+      clearInterval(timer);
     };
   }, [id]);
 
