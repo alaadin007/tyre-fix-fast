@@ -16,7 +16,7 @@ export default function TyreBlowoutOnMotorwayWhatToDo() {
       blocks={[
         { type: "h2", text: "What a blowout feels like" },
         { type: "p", html: "A blowout is not a slow puncture. It's an instant, violent loss of pressure — usually a bang, a pull to one side (sometimes hard), a flapping noise and, on a rear tyre, a fishtailing feel in the back of the car. On a front tyre the steering goes heavy and the car lurches toward the failed side. On a rear the car snakes and the steering feels weirdly normal, which is what catches most drivers out." },
-        { type: "p", html: "Blowouts at motorway speed are rare — most punctures are slow leaks discovered in a car park. But when they do happen, they're almost always caused by one of three things: an under-inflated tyre that's overheated over 60+ miles, a large piece of road debris (bolt, exhaust bracket, spring), or a sidewall that was cut or bulged by a kerb strike days or weeks earlier." },
+        { type: "p", html: "Blowouts at motorway speed are rare — most punctures are slow leaks discovered in a car park. But when they do happen, they're almost always caused by one of three things: an under-inflated tyre that's overheated over 60+ miles, a large piece of road debris (bolt, exhaust bracket, spring), or a sidewall that was cut or bulged by a kerb strike days or weeks earlier — the warning signs are in our <a href=\"/blog/tyre-sidewall-damage-guide\" class=\"text-primary hover:underline\">sidewall damage guide</a>." },
 
         { type: "h2", text: "The 30-second survival sequence" },
         {
@@ -67,7 +67,7 @@ export default function TyreBlowoutOnMotorwayWhatToDo() {
         },
 
         { type: "h2", text: "Why mobile fitters won't come to a live motorway" },
-        { type: "p", html: "This surprises drivers, but it's non-negotiable. Working next to live motorway traffic is one of the highest-risk jobs on UK roads, and independent mobile fitters aren't licensed or insured to operate there. National Highways contractors with lane-closure authority are the only people who work motorway carriageways safely, and even they close lanes to do it. Your fitter will meet you at the next services, in a layby off the sliproad, or at your home once you've been recovered off the motorway." },
+        { type: "p", html: "This surprises drivers, but it's non-negotiable. Working next to live motorway traffic is one of the highest-risk jobs on UK roads, and independent mobile fitters aren't licensed or insured to operate there. National Highways contractors with lane-closure authority are the only people who work motorway carriageways safely, and even they close lanes to do it. Your fitter will meet you at the next services, in a layby off the sliproad, or at your home once you've been recovered off the motorway — the same rule applies on the <a href=\"/blog/mobile-tyre-fitter-m25\" class=\"text-primary hover:underline\">M25</a>." },
 
         { type: "h2", text: "What causes a motorway blowout" },
         {
