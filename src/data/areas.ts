@@ -117,7 +117,7 @@ export const AREAS: Area[] = [
     hubs: ["Manchester city centre", "Salford", "Trafford", "Stockport", "Bolton", "Bury", "Oldham", "Rochdale", "Tameside", "Wigan"],
     faqAnswer: "We cover all 10 Greater Manchester boroughs plus the M60 ring. Average arrival on the M60 is under 50 minutes.",
     metaTitle: "Mobile Tyre Fitting Manchester | 24/7 Call-Out | Tyrefly",
-    metaDesc: "Mobile tyre fitting Manchester — 24/7 across all 10 Greater Manchester boroughs. Prices, arrival times by area, puncture repair from £40. Quote in 60 seconds.",
+    metaDesc: "Mobile tyre fitting Manchester — 24/7 across all 10 Greater Manchester boroughs. Prices, arrival times, puncture repair from £40. Quote in 60 seconds.",
     intro: "Mobile tyre fitting in Manchester puts a fully-stocked van at your kerb instead of costing you half a day at a garage. Tyrefly matches you to a vetted fitter across all ten Greater Manchester boroughs and the M60 ring, 24 hours a day, with a firm price agreed before dispatch.",
     sections: [
       {
