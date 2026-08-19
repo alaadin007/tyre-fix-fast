@@ -88,6 +88,9 @@ const App = () => (
         <Route path="/" element={<Index />} />
         <Route path="/areas" element={<AreasIndex />} />
         <Route path="/areas/:slug" element={<AreaPage />} />
+        <Route path="/services" element={<ServicesIndex />} />
+        <Route path="/services/:service" element={<ServicePage />} />
+        <Route path="/services/:service/:city" element={<ServiceAreaPage />} />
         <Route path="/job/:id" element={<JobStatus />} />
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/admin" element={<Navigate to="/admin/dashboard/jobs" replace />} />
