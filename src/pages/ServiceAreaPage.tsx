@@ -1,15 +1,15 @@
-import { Link, Navigate, useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { Seo } from "@/components/Seo";
 import { getService, SERVICES } from "@/data/services";
 import { getArea, AREAS } from "@/data/areas";
 import { ServiceShell, CtaPair, FaqBlock } from "@/components/service/ServiceLayout";
+import NotFound from "@/pages/NotFound";
 
 export default function ServiceAreaPage() {
   const { service = "", city = "" } = useParams();
   const svc = getService(service);
   const area = getArea(city);
-  if (!svc) return <Navigate to="/services" replace />;
-  if (!area) return <Navigate to={`/services/${svc.slug}`} replace />;
+  if (!svc || !area) return <NotFound />;
 
   const MSG = `Hi Tyrefly — I need ${svc.keyword} in ${area.name}`;
   const path = `/services/${svc.slug}/${area.slug}`;

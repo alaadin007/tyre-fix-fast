@@ -1,16 +1,17 @@
-import { Link, useParams, Navigate } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { MessageSquare, Phone, Clock, ShieldCheck, MapPin, Sparkles, Star, PoundSterling } from "lucide-react";
 import { Seo } from "@/components/Seo";
 import { getArea, AREAS } from "@/data/areas";
 import { SUPPORT_WHATSAPP, SUPPORT_WA_DISPLAY, waLink } from "@/lib/whatsapp";
 import logo from "@/assets/tyrefly-logo.png";
+import NotFound from "@/pages/NotFound";
 
 const MSG_BODY = "Hi Tyrefly — I need a mobile tyre fitter";
 
 export default function AreaPage() {
   const { slug = "" } = useParams();
   const area = getArea(slug);
-  if (!area) return <Navigate to="/" replace />;
+  if (!area) return <NotFound />;
 
   const WA_HREF = waLink(SUPPORT_WHATSAPP, `${MSG_BODY} in ${area.name}`);
   const SMS_HREF = `sms:${SUPPORT_WHATSAPP}?&body=${encodeURIComponent(`${MSG_BODY} in ${area.name}`)}`;
