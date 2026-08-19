@@ -21,13 +21,12 @@ export default function Confirmed() {
 
     const tick = async () => {
       attempts += 1;
-      const { data: j } = await supabase
-        .from("jobs")
-        .select("id, platform_fee_status")
-        .eq("id", jobId)
-        .maybeSingle();
+      const { data } = await supabase.functions.invoke("job-public-status", {
+        body: { job_id: jobId },
+      });
+      const j = data?.job as JobRow | undefined;
       if (cancelled || !j) return;
-      setJob(j as JobRow);
+      setJob(j);
 
       if (j.platform_fee_status === "paid" || attempts > 30) {
         setPolling(false);

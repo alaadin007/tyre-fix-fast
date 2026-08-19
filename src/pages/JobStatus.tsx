@@ -31,37 +31,23 @@ const JobStatus = () => {
 
     let cancelled = false;
     const load = async () => {
-      const { data, error } = await supabase
-        .from("jobs")
-        .select(
-          "id, customer_name, postcode, issue_type, issue_description, photo_urls, damage_type, damage_summary, damage_confidence, status"
-        )
-        .eq("id", id)
-        .maybeSingle();
+      const { data, error } = await supabase.functions.invoke("job-public-status", {
+        body: { job_id: id },
+      });
       if (!cancelled) {
-        if (!error && data) setJob(data as Job);
+        if (!error && data?.job) setJob(data.job as Job);
         setLoading(false);
       }
     };
     load();
 
-    const channel = supabase
-      .channel(`job-${id}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "jobs",
-          filter: `id=eq.${id}`,
-        },
-        (payload) => setJob(payload.new as Job)
-      )
-      .subscribe();
+    // Job rows are no longer readable by anonymous clients, so poll the secure
+    // status endpoint instead of subscribing to realtime changes.
+    const timer = setInterval(load, 15000);
 
     return () => {
       cancelled = true;
-      supabase.removeChannel(channel);
+      clearInterval(timer);
     };
   }, [id]);
 
