@@ -112,7 +112,7 @@ export const SERVICES: ServiceDef[] = [
     ],
     guides: [
       { to: "/blog/nail-in-tyre-what-to-do", label: "Nail in your tyre: what to do next" },
-      { to: "/blog/puncture-repair-vs-replacement", label: "Repair or replace? How to decide" },
+      { to: "/blog/puncture-repair-vs-new-tyre", label: "Puncture repair vs new tyre" },
       { to: "/blog/tyre-pressure-guide-uk", label: "UK tyre pressure guide" },
     ],
   },
@@ -203,7 +203,7 @@ export const SERVICES: ServiceDef[] = [
     guides: [
       { to: "/blog/tyre-age-when-to-replace", label: "How old is too old for a tyre?" },
       { to: "/blog/uk-tyre-legal-tread-depth", label: "UK legal tread depth explained" },
-      { to: "/blog/cheap-vs-premium-tyres", label: "Cheap vs premium tyres" },
+      { to: "/blog/budget-vs-premium-tyres-uk", label: "Budget vs premium tyres" },
     ],
   },
 
@@ -279,7 +279,7 @@ export const SERVICES: ServiceDef[] = [
     guides: [
       { to: "/blog/tyre-blowout-on-motorway-what-to-do", label: "Blowout on the motorway: what to do" },
       { to: "/blog/can-i-drive-on-a-flat-tyre-uk", label: "Can you drive on a flat tyre?" },
-      { to: "/blog/emergency-tyre-replacement-uk", label: "Emergency tyre replacement explained" },
+      { to: "/blog/can-a-puncture-be-repaired-uk", label: "Can a puncture be repaired?" },
     ],
   },
 
@@ -361,7 +361,7 @@ export const SERVICES: ServiceDef[] = [
     guides: [
       { to: "/blog/run-flat-tyres-uk-guide", label: "Run-flat tyres explained" },
       { to: "/blog/tpms-warning-light", label: "What the TPMS light really means" },
-      { to: "/blog/puncture-repair-vs-replacement", label: "Repair or replace? How to decide" },
+      { to: "/blog/puncture-repair-vs-new-tyre", label: "Puncture repair vs new tyre" },
     ],
   },
 ];
