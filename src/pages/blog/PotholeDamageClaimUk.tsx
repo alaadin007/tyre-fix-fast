@@ -23,7 +23,7 @@ export default function PotholeDamageClaimUk() {
             "<strong>Private land:</strong> the landowner (business park, private estate). Not a highways claim — a public liability claim against the owner's insurance.",
           ],
         },
-        { type: "p", html: "Getting the responsible authority right is the first step. A claim submitted to the wrong body wastes 6–8 weeks." },
+        { type: "p", html: "Getting the responsible authority right is the first step. A claim submitted to the wrong body wastes 6–8 weeks. If the impact <a href=\"/blog/cracked-alloy-from-pothole\" class=\"text-primary hover:underline\">cracked an alloy</a> as well as the tyre, claim for both in one submission." },
 
         { type: "h2", text: "Step 1: Do this at the scene (before you move the car)" },
         {
@@ -49,7 +49,7 @@ export default function PotholeDamageClaimUk() {
             "<a href=\"https://www.fillthathole.org.uk\" rel=\"noopener\" target=\"_blank\" class=\"text-primary hover:underline\">FillThatHole.org.uk</a> — Cycling UK's independent reporting service that also creates a public record you can reference.",
           ],
         },
-        { type: "p", html: "Keep the reference number and screenshot of the confirmation." },
+        { type: "p", html: "Keep the reference number and screenshot of the confirmation. In the meantime, a <a href=\"/blog/mobile-tyre-fitter-vs-garage\" class=\"text-primary hover:underline\">mobile tyre fitter</a> can get you road-legal again while the claim runs." },
 
         { type: "h2", text: "Step 3: Get the damage documented and priced" },
         {
