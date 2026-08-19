@@ -857,6 +857,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_own_technician_folder: { Args: { _path: string }; Returns: boolean }
     }
     Enums: {
       app_role:
