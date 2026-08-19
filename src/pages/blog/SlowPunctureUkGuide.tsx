@@ -5,7 +5,7 @@ export default function SlowPunctureUkGuide() {
     <BlogPost
       slug="slow-puncture-uk-guide"
       metaTitle="Slow Puncture UK Guide: Causes, Repair & Cost (2026)"
-      metaDesc="How to spot a slow puncture, whether it's repairable under UK rules, and what a mobile repair really costs in 2026."
+      metaDesc="How to spot a slow puncture, whether it's repairable under UK rules, what a mobile puncture repair costs in 2026, and when to replace the tyre instead."
       title="Slow Puncture UK: How to Spot It, Fix It, and What It Really Costs"
       category="Repair Guide"
       readMinutes={10}

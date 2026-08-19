@@ -5,7 +5,7 @@ export default function PunctureRepairVsNewTyre() {
     <BlogPost
       slug="puncture-repair-vs-new-tyre"
       metaTitle="Puncture Repair vs New Tyre: Cost Comparison UK (2026)"
-      metaDesc="Puncture repair vs new tyre — the honest UK decision framework. Tread depth thresholds, tyre age, matching pairs, run-flat rules, and the real cost per mile."
+      metaDesc="Puncture repair vs new tyre: the honest UK decision framework — tread depth limits, tyre age, matching pairs, run-flat rules and real cost per mile."
       title="Puncture Repair vs New Tyre: When Each One Actually Makes Sense"
       category="Decision Guide"
       readMinutes={10}
