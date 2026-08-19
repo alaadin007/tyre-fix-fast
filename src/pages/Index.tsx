@@ -98,7 +98,7 @@ const Index = () => {
     >
       <Seo
         title="Mobile Tyre Fitter UK — 24/7 Call-Out via WhatsApp | Tyrefly"
-        description="Flat tyre? WhatsApp Tyrefly and a vetted mobile tyre fitter quotes in 60 seconds. 24/7 call-out across London, Manchester, Birmingham and the UK."
+        description="Flat tyre? WhatsApp Tyrefly and a vetted mobile tyre fitter UK quotes in 60 seconds. 24/7 call-out across London, Manchester, Birmingham and the UK."
         canonical="/"
         jsonLd={HOME_LD}
       />
