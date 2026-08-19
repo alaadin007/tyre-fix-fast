@@ -11,7 +11,8 @@ export default function ServicePage() {
 
   const MSG = `Hi Tyrefly — I need ${svc.keyword}`;
   const url = `https://www.tyrefly.com/services/${svc.slug}`;
-  const title = `${svc.name} UK — 24/7 Mobile Call-Out | Tyrefly`.slice(0, 62);
+  const cap0 = svc.keyword.charAt(0).toUpperCase() + svc.keyword.slice(1);
+  const title = `Mobile ${svc.keyword} UK — 24/7 Call-Out | Tyrefly`.slice(0, 62);
   const description = `${svc.tagline} ${svc.priceLine}. Text your postcode for a fixed price in 60 seconds, 24/7 UK-wide.`.slice(0, 158);
 
   const ld = [
