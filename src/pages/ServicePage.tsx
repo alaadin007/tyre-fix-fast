@@ -1,13 +1,14 @@
-import { Link, Navigate, useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { Seo } from "@/components/Seo";
 import { getService } from "@/data/services";
 import { AREAS } from "@/data/areas";
 import { ServiceShell, CtaPair, FaqBlock } from "@/components/service/ServiceLayout";
+import NotFound from "@/pages/NotFound";
 
 export default function ServicePage() {
   const { service = "" } = useParams();
   const svc = getService(service);
-  if (!svc) return <Navigate to="/services" replace />;
+  if (!svc) return <NotFound />;
 
   const MSG = `Hi Tyrefly — I need ${svc.keyword}`;
   const url = `https://www.tyrefly.com/services/${svc.slug}`;
