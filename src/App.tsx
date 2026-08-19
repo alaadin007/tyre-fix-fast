@@ -26,6 +26,9 @@ import Terms from "./pages/Terms.tsx";
 
 import AreasIndex from "./pages/AreasIndex.tsx";
 import AreaPage from "./pages/AreaPage.tsx";
+import ServicesIndex from "./pages/ServicesIndex.tsx";
+import ServicePage from "./pages/ServicePage.tsx";
+import ServiceAreaPage from "./pages/ServiceAreaPage.tsx";
 import ShortLinkRedirect from "./pages/ShortLinkRedirect.tsx";
 import DashboardLayout from "./pages/admin/DashboardLayout.tsx";
 import Overview from "./pages/admin/Overview.tsx";
@@ -85,6 +88,9 @@ const App = () => (
         <Route path="/" element={<Index />} />
         <Route path="/areas" element={<AreasIndex />} />
         <Route path="/areas/:slug" element={<AreaPage />} />
+        <Route path="/services" element={<ServicesIndex />} />
+        <Route path="/services/:service" element={<ServicePage />} />
+        <Route path="/services/:service/:city" element={<ServiceAreaPage />} />
         <Route path="/job/:id" element={<JobStatus />} />
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/admin" element={<Navigate to="/admin/dashboard/jobs" replace />} />

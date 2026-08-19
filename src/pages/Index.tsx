@@ -113,7 +113,7 @@ const Index = () => {
           </a>
           <nav className="hidden md:flex items-center gap-6 text-sm text-white/70">
             <a href="#how" className="hover:text-white">How it works</a>
-            <a href="#services" className="hover:text-white">Services</a>
+            <Link to="/services" className="hover:text-white">Services</Link>
             <Link to="/areas" className="hover:text-white">Areas</Link>
             <Link to="/blog" className="hover:text-white">Blog</Link>
             <a href="#reviews" className="hover:text-white">Reviews</a>
@@ -421,6 +421,34 @@ const Index = () => {
               </div>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* ===== FAQs (visible — mirrors FAQPage schema) ===== */}
+      <section id="faqs" className="border-t border-white/5">
+        <div className="mx-auto w-full max-w-3xl px-5 py-16">
+          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Mobile tyre fitting FAQs</h2>
+          <div className="mt-6 divide-y divide-white/10 rounded-2xl border border-white/10 bg-white/[0.03]">
+            {[
+              { q: "How fast can a mobile tyre fitter get to me?", a: "Most UK jobs get a quote in under 60 seconds and a vetted technician on-site within 35–90 minutes, 24/7." },
+              { q: "How much does Tyrefly cost?", a: "A £20 booking fee secures your slot and is deducted from your final bill. The technician collects the remainder on-site by card, link, transfer or cash." },
+              { q: "Where in the UK do you operate?", a: "Tyrefly covers all major UK cities and motorways including London, Manchester, Birmingham, Leeds, Liverpool, Sheffield, Newcastle, Bristol, Edinburgh, Glasgow, Cardiff and Belfast — 24/7." },
+              { q: "Do you fit tyres at night?", a: "Yes — Tyrefly operates 24 hours a day, 7 days a week including weekends and bank holidays." },
+            ].map((f) => (
+              <details key={f.q} className="group p-5">
+                <summary className="cursor-pointer list-none font-semibold text-white/90 marker:hidden">
+                  <span className="mr-2" style={{ color: "#FF6B1A" }}>+</span>
+                  {f.q}
+                </summary>
+                <p className="mt-3 text-sm text-white/65 leading-relaxed">{f.a}</p>
+              </details>
+            ))}
+          </div>
+          <p className="mt-5 text-sm text-white/55">
+            More detail on each job type in our{" "}
+            <Link to="/services" className="underline hover:text-white">mobile tyre services</Link> section, or check{" "}
+            <Link to="/areas" className="underline hover:text-white">coverage in your area</Link>.
+          </p>
         </div>
       </section>
 
