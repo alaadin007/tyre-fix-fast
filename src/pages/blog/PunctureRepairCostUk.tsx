@@ -4,7 +4,7 @@ export default function PunctureRepairCostUk() {
   return (
     <BlogPost
       slug="puncture-repair-cost-uk"
-      metaTitle="Puncture Repair Cost UK 2026: London vs the Rest"
+      metaTitle="Puncture Repair Cost UK 2026: Mobile & Garage Prices"
       metaDesc="Puncture repair cost UK: real 2026 mobile and garage prices, London vs regional differences, run-flat surcharges and the £20 fix to avoid."
       title="Puncture Repair Cost UK 2026: London vs the Rest of the Country"
       category="Pricing"

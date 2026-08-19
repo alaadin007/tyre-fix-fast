@@ -15,7 +15,7 @@ export default function CrackedAlloyFromPothole() {
       intro="You hit a pothole, the tyre went flat instantly, and now the alloy is buckled — maybe cracked. This guide explains how to tell repairable from scrap, what a UK refurb realistically costs in 2026, and the paperwork you need to claim the bill from the council or TfL."
       blocks={[
         { type: "h2", text: "First: is the alloy actually cracked?" },
-        { type: "p", html: "A pothole hit produces three levels of alloy damage. Getting the diagnosis right is the difference between a £70 refurb and a £400 replacement." },
+        { type: "p", html: "A pothole hit produces three levels of alloy damage. Getting the diagnosis right is the difference between a £70 refurb and a £400 replacement — and if the tyre took the hit too, check our <a href=\"/blog/tyre-sidewall-damage-guide\" class=\"text-primary hover:underline\">tyre sidewall damage guide</a>." },
         {
           type: "ul",
           items: [
@@ -41,7 +41,7 @@ export default function CrackedAlloyFromPothole() {
             "The centre bore is oval or the bolt-hole seats are elongated (rare but happens on very hard impacts).",
           ],
         },
-        { type: "p", html: "Replacement cost varies wildly. OEM alloys for common cars (Golf, Focus, Corsa, 3-Series) run <strong>£180–£350 used</strong>, <strong>£280–£550 new</strong>. Performance and EV OEM wheels (M3, RS6, Model 3 Performance) can hit <strong>£800–£1,600 each</strong>. Aftermarket replicas are cheaper but check UK TÜV / JWL / VIA certification — anything without it is unsafe and, in some insurance events, uninsured." },
+        { type: "p", html: "Replacement cost varies wildly. OEM alloys for common cars (Golf, Focus, Corsa, 3-Series) run <strong>£180–£350 used</strong>, <strong>£280–£550 new</strong>. Performance and EV OEM wheels (M3, RS6, Model 3 Performance) can hit <strong>£800–£1,600 each</strong>. You may also be able to recover the cost with a <a href=\"/blog/pothole-damage-claim-uk\" class=\"text-primary hover:underline\">pothole damage claim</a>. Aftermarket replicas are cheaper but check UK TÜV / JWL / VIA certification — anything without it is unsafe and, in some insurance events, uninsured." },
 
         { type: "h2", text: "The straightening + refurb combo" },
         { type: "p", html: "For a buckled-but-not-cracked wheel, the best-value fix is often a combined straightening and refurb — hydraulic straightening restores the profile, then the wheel is sanded, primed, painted and lacquered so you can't see it ever happened. <strong>Typical UK price:</strong> £110–£180 per wheel, 3–5 working day turnaround. Cheaper than a replacement and, on a common OEM design, indistinguishable." },

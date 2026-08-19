@@ -41,7 +41,7 @@ export default function TyreAgeWhenToReplace() {
             "<strong>Ozone attack.</strong> Ozone in normal air attacks the sidewall, especially on tyres parked near electrical equipment (generators, refrigeration units, some workshops).",
           ],
         },
-        { type: "p", html: "The result: over 6–10 years the rubber loses flexibility. Grip drops, especially in the wet. Sidewalls lose their ability to absorb kerb strikes without cracking. Cornering becomes vaguer. Braking distances lengthen." },
+        { type: "p", html: "The result: over 6–10 years the rubber loses flexibility. Grip drops, especially in the wet. Sidewalls lose their ability to absorb kerb strikes without cracking — see our <a href=\"/blog/tyre-sidewall-damage-guide\" class=\"text-primary hover:underline\">tyre sidewall damage guide</a> for what's repairable. Cornering becomes vaguer. Braking distances lengthen." },
 
         { type: "h2", text: "The visual signs of an aged tyre" },
         {
@@ -73,7 +73,7 @@ export default function TyreAgeWhenToReplace() {
         { type: "p", html: "Space-saver and full-size spares often stay in the boot for the life of the car. That means a 15-year-old car might have a 15-year-old spare wheel. It's fine sitting still, but the moment you actually need it — usually in the rain, on the motorway, at speed — a 15-year-old space-saver behaves nothing like a new one. Check the DOT on your spare. If it's over 10 years, replace it or price a new-condition secondhand one from a breaker." },
 
         { type: "h2", text: "How age interacts with tread" },
-        { type: "p", html: "Two different problems, and you need to check both. A tyre with 6mm of tread and a 2015 DOT is unsafe. A tyre with 2mm of tread and a 2023 DOT is unsafe. Neither category cancels the other. The safe combination is <strong>at least 3mm of tread and under 6 years old</strong>." },
+        { type: "p", html: "Two different problems, and you need to check both. A tyre with 6mm of tread and a 2015 DOT is unsafe. A tyre with 2mm of tread and a 2023 DOT is unsafe. Neither category cancels the other. The safe combination is <strong>at least 3mm of tread and under 6 years old</strong>; the <a href=\"/blog/uk-tyre-legal-tread-depth\" class=\"text-primary hover:underline\">UK legal tread depth rules</a> cover the wear side in full." },
 
         { type: "h2", text: "What to do if your tyres are old but the tread looks good" },
         {

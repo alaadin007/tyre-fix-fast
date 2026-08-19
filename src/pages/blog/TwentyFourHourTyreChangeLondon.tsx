@@ -16,7 +16,7 @@ export default function TwentyFourHourTyreChangeLondon() {
       blocks={[
         { type: "h2", text: "The city at three in the morning" },
         { type: "p", html: "London at 3am is not the city you think you know. The buses have finished their business and the taxis are running on autopilot. The traffic lights still cycle red and green for no one. The only vehicles moving with purpose are the night buses, the police cars, the airport hires heading to Heathrow, and me — in a Sprinter with a compressor humming in the back, going to see about a Ford Kuga on the A406." },
-        { type: "p", html: "That's the honest first thing to know about a 24 hour tyre change in London: at the hours everyone else is asleep, we're the fastest we ever get. Empty roads, no double-parking politics, no school runs, no delivery vans blocking the last space on the street. If your tyre goes at 2am, you're going to be back in bed by 3.30 — the callout time might well be shorter than the daytime version of the same job." },
+        { type: "p", html: "That's the honest first thing to know about a 24 hour tyre change in London: at the hours everyone else is asleep, we're the fastest we ever get. Empty roads, no double-parking politics, no school runs, no delivery vans blocking the last space on the street. If your tyre goes at 2am, you're going to be back in bed by 3.30 — the callout time might well be shorter than the daytime version of the same job — see our <a href=\"/blog/mobile-tyre-fitting-london\" class=\"text-primary hover:underline\">mobile tyre fitting London</a> guide for daytime figures." },
 
         { type: "h2", text: "What it costs after dark" },
         { type: "p", html: "Almost every 24 hour operator charges a small overnight uplift, roughly:" },
@@ -29,7 +29,7 @@ export default function TwentyFourHourTyreChangeLondon() {
             "<strong>Early morning (5am–7am):</strong> add £10–£20",
           ],
         },
-        { type: "p", html: "The overnight surcharge is real work, not a scam — we're paying premium wages, running a stocked van at low daytime utilisation, and driving further because there are fewer of us awake. It's still, in almost every case, cheaper than a recovery truck plus a taxi home plus a garage appointment tomorrow." },
+        { type: "p", html: "The overnight surcharge is real work, not a scam — we're paying premium wages, running a stocked van at low daytime utilisation, and driving further because there are fewer of us awake. It's still, in almost every case, cheaper than a recovery truck plus a taxi home plus a garage appointment tomorrow — and far cheaper than an <a href=\"/blog/emergency-puncture-repair-london\" class=\"text-primary hover:underline\">emergency puncture repair</a> that turns into a full replacement." },
 
         { type: "h2", text: "The jobs we actually get overnight" },
         { type: "p", html: "The pattern is remarkably consistent, week to week." },
