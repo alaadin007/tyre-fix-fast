@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link } from "@/lib/router-compat";
 import { z } from "zod";
 import { toast } from "sonner";
 import {
@@ -1108,7 +1108,7 @@ function ConversationThread({ thread }: { thread: Thread }) {
                   </a>
                 )}
                 {failed && (
-                  <div className="mt-2 inline-flex items-center gap-1 rounded border border-destructive/40 bg-destructive/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-destructive">
+                  <div className="mt-2 inline-flex items-center gap-1 rounded-sm border border-destructive/40 bg-destructive/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-destructive">
                     <AlertTriangle className="h-3 w-3" /> Delivery failed
                   </div>
                 )}
@@ -1453,7 +1453,7 @@ function JobDecisionCard({
   );
 
   return (
-    <div className="overflow-hidden rounded-xl border-2 border-[hsl(var(--accent))]/40 bg-white/85 p-3 shadow-sm">
+    <div className="overflow-hidden rounded-xl border-2 border-[hsl(var(--accent))]/40 bg-white/85 p-3 shadow-xs">
       {/* Enquiry header */}
       <div className="min-w-0 break-words">
         <div className="flex items-center gap-2 flex-wrap min-w-0">
@@ -1551,7 +1551,7 @@ function JobDecisionCard({
                       <p className="text-[10px] text-muted-foreground italic line-clamp-1">{alloc.ai_reasoning}</p>
                     )}
                     {quote?.raw_message && (
-                      <p className="mt-1 line-clamp-2 rounded bg-muted/70 px-1.5 py-1 text-[11px] text-foreground/85">
+                      <p className="mt-1 line-clamp-2 rounded-sm bg-muted/70 px-1.5 py-1 text-[11px] text-foreground/85">
                         “{quote.raw_message}”
                       </p>
                     )}

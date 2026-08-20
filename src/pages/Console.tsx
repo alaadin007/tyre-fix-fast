@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "@/lib/router-compat";
 import { X, Star, Search, Sparkles, UserCheck, UserPlus, Users, Phone, MapPin, Camera, Trash2 } from "lucide-react";
 import { PendingTechnicians } from "@/components/admin/PendingTechnicians";
 import { JobConversation } from "@/components/console/JobConversation";
@@ -297,7 +297,7 @@ export default function Console() {
                         <span>{job.customer_phone}</span>
                       </div>
                       {job.vehicle_reg && (
-                        <div className="mt-1 inline-block rounded bg-amber-400/10 px-1.5 py-0.5 font-mono text-[11px] uppercase tracking-wider text-amber-300">
+                        <div className="mt-1 inline-block rounded-sm bg-amber-400/10 px-1.5 py-0.5 font-mono text-[11px] uppercase tracking-wider text-amber-300">
                           {job.vehicle_reg}
                         </div>
                       )}
@@ -767,7 +767,7 @@ function DispatchModal({ job, allTechs, onClose, onDispatch }: DispatchModalProp
                       return (
                         <label
                           key={t.id}
-                          className={`flex cursor-pointer items-center justify-between gap-2 rounded px-2 py-1.5 text-sm hover:bg-white/[0.05] ${
+                          className={`flex cursor-pointer items-center justify-between gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-white/[0.05] ${
                             checked ? "bg-primary/10" : ""
                           }`}
                         >
@@ -884,7 +884,7 @@ function DispatchModal({ job, allTechs, onClose, onDispatch }: DispatchModalProp
                   <button
                     key={t.id}
                     onClick={() => { selectTech(t.id); setSearch(""); }}
-                    className={`flex w-full items-center justify-between rounded px-3 py-2 text-left text-sm hover:bg-white/[0.06] ${
+                    className={`flex w-full items-center justify-between rounded-sm px-3 py-2 text-left text-sm hover:bg-white/[0.06] ${
                       techId === t.id ? "bg-primary/10 text-primary" : ""
                     }`}
                   >
@@ -922,7 +922,7 @@ function DispatchModal({ job, allTechs, onClose, onDispatch }: DispatchModalProp
                 <button
                   type="button"
                   onClick={() => setPrice(String(techQuotes[techId]!.price))}
-                  className="rounded px-1.5 py-0.5 text-[10px] font-semibold normal-case tracking-normal text-emerald-300 hover:bg-emerald-500/10"
+                  className="rounded-sm px-1.5 py-0.5 text-[10px] font-semibold normal-case tracking-normal text-emerald-300 hover:bg-emerald-500/10"
                   title="Use technician's submitted price"
                 >
                   Tech: £{techQuotes[techId]!.price!.toFixed(2)}
@@ -944,7 +944,7 @@ function DispatchModal({ job, allTechs, onClose, onDispatch }: DispatchModalProp
                 <button
                   type="button"
                   onClick={() => setEta(String(techQuotes[techId]!.eta))}
-                  className="rounded px-1.5 py-0.5 text-[10px] font-semibold normal-case tracking-normal text-emerald-300 hover:bg-emerald-500/10"
+                  className="rounded-sm px-1.5 py-0.5 text-[10px] font-semibold normal-case tracking-normal text-emerald-300 hover:bg-emerald-500/10"
                   title="Use technician's submitted ETA"
                 >
                   Tech: {techQuotes[techId]!.eta}m
@@ -1178,7 +1178,7 @@ function AllTechniciansPanel({ onClose }: { onClose: () => void }) {
                   {t.service_postcodes && t.service_postcodes.length > 0 && (
                     <div className="mt-2 flex flex-wrap gap-1">
                       {t.service_postcodes.slice(0, 8).map((p) => (
-                        <span key={p} className="rounded bg-white/5 px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
+                        <span key={p} className="rounded-sm bg-white/5 px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
                           {p}
                         </span>
                       ))}

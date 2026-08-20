@@ -87,7 +87,7 @@ export function MatchingTechniciansPanel({
   return (
     <div className="space-y-3">
       {problemAllocs.length > 0 && (
-        <div className="flex items-start justify-between gap-3 rounded border border-rose-500/40 bg-rose-500/10 p-3 text-xs text-rose-100">
+        <div className="flex items-start justify-between gap-3 rounded-sm border border-rose-500/40 bg-rose-500/10 p-3 text-xs text-rose-100">
           <div>
             <div className="font-semibold">Broadcast issue</div>
             <div className="mt-0.5 text-rose-200/90">
@@ -110,13 +110,13 @@ export function MatchingTechniciansPanel({
       </div>
 
       {intakeIncomplete && (
-        <div className="rounded border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-200">
+        <div className="rounded-sm border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-200">
           Broadcasting is disabled until the customer finishes the WhatsApp intake and the job posting is complete.
         </div>
       )}
 
       {visible.length === 0 && (
-        <div className="rounded border border-white/10 bg-white/[0.03] p-4 text-sm text-muted-foreground">
+        <div className="rounded-sm border border-white/10 bg-white/[0.03] p-4 text-sm text-muted-foreground">
           No technicians match this postcode area yet.
         </div>
       )}
@@ -126,7 +126,7 @@ export function MatchingTechniciansPanel({
           const t = m.tech;
           const wa = t.whatsapp || t.phone;
           return (
-            <div key={t.id} className="flex items-start gap-3 rounded border border-white/10 bg-white/[0.03] p-3 text-sm">
+            <div key={t.id} className="flex items-start gap-3 rounded-sm border border-white/10 bg-white/[0.03] p-3 text-sm">
               <Checkbox
                 checked={selected.has(t.id)}
                 onCheckedChange={() => toggle(t.id)}

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "@/lib/router-compat";
 import { loadGoogleMaps } from "@/lib/googleMapsLoader";
 import { useDashboardData, shortRef, fmtRelative, type DashJob, type DashTech } from "@/hooks/useDashboardData";
 import { jobStatusLabel, paymentStatusLabel } from "@/lib/jobStatus";

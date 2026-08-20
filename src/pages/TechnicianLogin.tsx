@@ -202,7 +202,7 @@ export default function TechnicianLogin() {
               placeholder="+44 7447 184489"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              className="flex-1 rounded-lg border border-white/15 bg-black/40 px-3 py-2.5 text-sm text-white placeholder-white/30 outline-none focus:border-[#FF6B1A]"
+              className="flex-1 rounded-lg border border-white/15 bg-black/40 px-3 py-2.5 text-sm text-white placeholder-white/30 outline-hidden focus:border-[#FF6B1A]"
             />
             <button
               type="submit"

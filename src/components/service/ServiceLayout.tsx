@@ -1,5 +1,5 @@
 import { ReactNode } from "react";
-import { Link } from "react-router-dom";
+import { Link } from "@/lib/router-compat";
 import { MessageSquare, Phone } from "lucide-react";
 import { SUPPORT_WHATSAPP, SUPPORT_WA_DISPLAY, waLink } from "@/lib/whatsapp";
 import logo from "@/assets/tyrefly-logo.png";

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { useParams } from "@/lib/router-compat";
+import { resolveShortLink } from "@/lib/resolve-short-link.functions";
 
 export default function ShortLinkRedirect() {
   const { code } = useParams<{ code: string }>();
@@ -10,16 +10,16 @@ export default function ShortLinkRedirect() {
     let cancelled = false;
     (async () => {
       if (!code) return;
-      const { data, error } = await supabase.functions.invoke("resolve-short-link", {
-        body: { code },
-      });
+      const result = await resolveShortLink({ data: { code } }).catch(
+        () => ({ status: "not_found" as const }),
+      );
       if (cancelled) return;
-      if (error || !data?.target_url) {
+      if (result.status !== "ok") {
         setError("Link not found or expired.");
         return;
       }
       // Immediate redirect — no intermediate copy shown.
-      window.location.replace(data.target_url as string);
+      window.location.replace(result.target_url);
 
     })();
     return () => { cancelled = true; };

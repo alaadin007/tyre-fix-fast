@@ -1,0 +1,397 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * Tyrefly design system — ported verbatim from the pre-migration src/index.css.
+ * Tokens are HSL triples consumed as hsl(var(--token)) so all existing raw-CSS
+ * references keep working; @theme inline maps them to Tailwind utilities.
+ */
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --radius-4xl: calc(var(--radius) + 16px);
+
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-accent-glow: hsl(var(--accent-glow));
+  --color-success: hsl(var(--success));
+  --color-success-foreground: hsl(var(--success-foreground));
+  --color-warning: hsl(var(--warning));
+  --color-warning-foreground: hsl(var(--warning-foreground));
+  --color-info: hsl(var(--info));
+  --color-info-foreground: hsl(var(--info-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+  --color-ring-offset-background: hsl(var(--background));
+  --color-sidebar: hsl(var(--sidebar-background));
+  --color-sidebar-foreground: hsl(var(--sidebar-foreground));
+  --color-sidebar-primary: hsl(var(--sidebar-primary));
+  --color-sidebar-primary-foreground: hsl(var(--sidebar-primary-foreground));
+  --color-sidebar-accent: hsl(var(--sidebar-accent));
+  --color-sidebar-accent-foreground: hsl(var(--sidebar-accent-foreground));
+  --color-sidebar-border: hsl(var(--sidebar-border));
+  --color-sidebar-ring: hsl(var(--sidebar-ring));
+
+  --animate-accordion-down: accordion-down 0.2s ease-out;
+  --animate-accordion-up: accordion-up 0.2s ease-out;
+
+  @keyframes accordion-down {
+    from {
+      height: 0;
+    }
+    to {
+      height: var(--radix-accordion-content-height);
+    }
+  }
+  @keyframes accordion-up {
+    from {
+      height: var(--radix-accordion-content-height);
+    }
+    to {
+      height: 0;
+    }
+  }
+}
+
+/* v3 container config port: centered, 2rem padding, 2xl capped at 1400px */
+@utility container {
+  width: 100%;
+  margin-inline: auto;
+  padding-inline: 2rem;
+  @media (min-width: 640px) {
+    max-width: 640px;
+  }
+  @media (min-width: 768px) {
+    max-width: 768px;
+  }
+  @media (min-width: 1024px) {
+    max-width: 1024px;
+  }
+  @media (min-width: 1280px) {
+    max-width: 1280px;
+  }
+  @media (min-width: 1400px) {
+    max-width: 1400px;
+  }
+}
+
+:root {
+  --background: 0 0% 100%;
+  --foreground: 222 47% 8%;
+
+  --card: 0 0% 100%;
+  --card-foreground: 222 47% 8%;
+
+  --popover: 0 0% 100%;
+  --popover-foreground: 222 47% 8%;
+
+  /* Brand: deep midnight navy */
+  --primary: 222 60% 11%;
+  --primary-foreground: 0 0% 100%;
+
+  /* Brand accent: electric orange */
+  --accent: 18 100% 55%;
+  --accent-foreground: 0 0% 100%;
+  --accent-glow: 24 100% 62%;
+
+  --secondary: 210 40% 96%;
+  --secondary-foreground: 222 47% 11%;
+
+  --muted: 210 40% 96%;
+  --muted-foreground: 215 16% 42%;
+
+  --success: 142 71% 38%;
+  --success-foreground: 0 0% 100%;
+
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 100%;
+
+  --warning: 42 100% 50%;
+  --warning-foreground: 0 0% 8%;
+
+  --info: 210 100% 50%;
+  --info-foreground: 0 0% 100%;
+
+  --border: 214 32% 91%;
+  --input: 214 32% 91%;
+  --ring: 18 100% 55%;
+
+  --radius: 0.75rem;
+
+  /* Tokens */
+  --gradient-hero: linear-gradient(135deg, hsl(222 60% 8%) 0%, hsl(222 55% 14%) 60%, hsl(18 70% 22%) 100%);
+  --gradient-accent: linear-gradient(135deg, hsl(var(--accent)) 0%, hsl(var(--accent-glow)) 100%);
+  --shadow-elegant: 0 20px 50px -20px hsl(222 60% 11% / 0.35);
+  --shadow-accent: 0 18px 40px -16px hsl(18 100% 55% / 0.55);
+
+  --sidebar-background: 0 0% 98%;
+  --sidebar-foreground: 240 5% 26%;
+  --sidebar-primary: 240 6% 10%;
+  --sidebar-primary-foreground: 0 0% 98%;
+  --sidebar-accent: 240 5% 96%;
+  --sidebar-accent-foreground: 240 6% 10%;
+  --sidebar-border: 220 13% 91%;
+  --sidebar-ring: 18 100% 55%;
+}
+
+.dark {
+  /* Command-center: near-black surfaces, neon orange primary, vivid status accents */
+  --background: 222 40% 5%;
+  --foreground: 30 25% 92%;
+
+  --card: 222 35% 8%;
+  --card-foreground: 30 25% 92%;
+
+  --popover: 222 35% 8%;
+  --popover-foreground: 30 25% 92%;
+
+  /* Primary = electric orange (TyreFly brand) */
+  --primary: 22 100% 56%;
+  --primary-foreground: 0 0% 100%;
+
+  --secondary: 222 30% 12%;
+  --secondary-foreground: 30 25% 92%;
+
+  --muted: 222 28% 11%;
+  --muted-foreground: 215 16% 62%;
+
+  --accent: 22 100% 56%;
+  --accent-foreground: 0 0% 100%;
+  --accent-glow: 28 100% 64%;
+
+  --success: 152 76% 46%;
+  --success-foreground: 0 0% 8%;
+
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 100%;
+
+  --warning: 42 100% 58%;
+  --warning-foreground: 0 0% 8%;
+
+  --info: 210 100% 62%;
+  --info-foreground: 0 0% 100%;
+
+  --border: 222 25% 16%;
+  --input: 222 25% 14%;
+  --ring: 22 100% 56%;
+
+  --sidebar-background: 222 42% 6%;
+  --sidebar-foreground: 215 16% 70%;
+  --sidebar-primary: 22 100% 56%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 222 30% 12%;
+  --sidebar-accent-foreground: 30 25% 92%;
+  --sidebar-border: 222 25% 14%;
+  --sidebar-ring: 22 100% 56%;
+}
+
+@layer base {
+  * {
+    border-color: hsl(var(--border));
+  }
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: "ss01", "cv11";
+  }
+  h1,
+  h2,
+  h3,
+  h4 {
+    letter-spacing: -0.025em;
+  }
+}
+
+@layer utilities {
+  .bg-hero {
+    background-image: var(--gradient-hero);
+  }
+  .bg-accent-gradient {
+    background-image: var(--gradient-accent);
+  }
+  .shadow-elegant {
+    box-shadow: var(--shadow-elegant);
+  }
+  .shadow-accent {
+    box-shadow: var(--shadow-accent);
+  }
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  /* Glassmorphism */
+  .glass {
+    background: hsl(0 0% 100% / 0.55);
+    backdrop-filter: blur(22px) saturate(180%);
+    -webkit-backdrop-filter: blur(22px) saturate(180%);
+    border: 1px solid hsl(0 0% 100% / 0.5);
+    box-shadow: 0 12px 40px -12px hsl(222 60% 11% / 0.25), inset 0 1px 0 hsl(0 0% 100% / 0.6);
+  }
+  .glass-dark {
+    background: hsl(222 47% 8% / 0.55);
+    backdrop-filter: blur(22px) saturate(180%);
+    -webkit-backdrop-filter: blur(22px) saturate(180%);
+    border: 1px solid hsl(0 0% 100% / 0.08);
+    box-shadow: 0 12px 40px -12px hsl(0 0% 0% / 0.5), inset 0 1px 0 hsl(0 0% 100% / 0.08);
+    color: hsl(0 0% 98%);
+  }
+  .glass-panel {
+    background: hsl(0 0% 100% / 0.4);
+    backdrop-filter: blur(28px) saturate(180%);
+    -webkit-backdrop-filter: blur(28px) saturate(180%);
+    border: 1px solid hsl(0 0% 100% / 0.55);
+  }
+  .bg-aurora {
+    background:
+      radial-gradient(900px 600px at 8% 8%, hsl(18 100% 65% / 0.35), transparent 60%),
+      radial-gradient(900px 700px at 95% 15%, hsl(222 80% 55% / 0.35), transparent 60%),
+      radial-gradient(900px 700px at 50% 95%, hsl(280 80% 60% / 0.30), transparent 60%),
+      linear-gradient(135deg, hsl(222 60% 8%) 0%, hsl(222 55% 14%) 60%, hsl(18 70% 22%) 100%);
+  }
+}
+
+/* Map technician name labels */
+.tf-tech-label {
+  background: rgba(15, 23, 42, 0.85);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  padding: 2px 6px;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: system-ui, -apple-system, sans-serif;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  white-space: nowrap;
+}
+.tf-tech-label::before {
+  display: none !important;
+}
+
+/* Thin themed scrollbar */
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--border)) transparent;
+}
+.scrollbar-thin::-webkit-scrollbar {
+  height: 6px;
+  width: 6px;
+}
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: hsl(var(--border));
+  border-radius: 9999px;
+  transition: background-color 0.2s ease;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--accent) / 0.7);
+}
+
+[data-sidebar="sidebar"] {
+  background-color: hsl(var(--background)) !important;
+  color: hsl(var(--foreground)) !important;
+}
+
+[data-radix-popper-content-wrapper],
+[data-sidebar="sidebar"],
+[vaul-drawer],
+.sidebar-mobile,
+[data-state="open"] [data-sidebar="sidebar"] {
+  background-color: hsl(var(--sidebar-background)) !important;
+  color: hsl(var(--sidebar-foreground)) !important;
+}
+
+/* Target Sheet overlay content used by Shadcn Sidebar on mobile */
+[role="dialog"] [data-sidebar="sidebar"],
+[data-sheet-content] {
+  background-color: hsl(var(--sidebar-background)) !important;
+  color: hsl(var(--sidebar-foreground)) !important;
+}
+
+/* Force sheet content dark */
+.fixed.inset-y-0 [data-sidebar="sidebar"] {
+  background-color: hsl(var(--sidebar-background)) !important;
+}
+
+/* Force dark background on mobile sidebar sheet */
+[data-mobile="true"] {
+  background-color: hsl(222, 42%, 6%) !important;
+  color: hsl(215, 16%, 70%) !important;
+}
+
+[data-mobile="true"] * {
+  --sidebar-background: 222 42% 6%;
+  --sidebar-foreground: 215 16% 70%;
+}
+
+[data-mobile="true"] {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Global themed scrollbar for all elements */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--border)) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: hsl(var(--border));
+  border-radius: 9999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground));
+}
+
+/* Force dark theme on Radix UI portals (Dialog, Select, Tooltip etc) */
+[data-radix-portal] > *,
+[data-radix-dialog-content],
+[role="dialog"] {
+  --background: 222 42% 6%;
+  --foreground: 30 25% 92%;
+  --card: 222 35% 8%;
+  --card-foreground: 30 25% 92%;
+  --border: 222 25% 14%;
+  --input: 222 25% 14%;
+  --muted: 222 30% 12%;
+  --muted-foreground: 215 16% 55%;
+  background-color: hsl(222, 35%, 8%) !important;
+  color: hsl(30, 25%, 92%) !important;
+}

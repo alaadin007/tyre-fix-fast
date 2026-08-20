@@ -346,10 +346,10 @@ export default function ReportsPage() {
             </div>
             <div className="mt-2 flex gap-4 text-xs text-muted-foreground">
               <span className="flex items-center gap-1">
-                <span className="inline-block h-2 w-2 rounded-sm bg-primary/40" /> Total
+                <span className="inline-block h-2 w-2 rounded-xs bg-primary/40" /> Total
               </span>
               <span className="flex items-center gap-1">
-                <span className="inline-block h-2 w-2 rounded-sm bg-emerald-400/70" /> Closed
+                <span className="inline-block h-2 w-2 rounded-xs bg-emerald-400/70" /> Closed
               </span>
             </div>
           </div>

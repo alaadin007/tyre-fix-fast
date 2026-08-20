@@ -1,4 +1,4 @@
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams } from "@/lib/router-compat";
 import { Seo } from "@/components/Seo";
 import { getService } from "@/data/services";
 import { AREAS } from "@/data/areas";

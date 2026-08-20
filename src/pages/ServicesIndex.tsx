@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link } from "@/lib/router-compat";
 import { Seo } from "@/components/Seo";
 import { SERVICES } from "@/data/services";
 import { AREAS } from "@/data/areas";

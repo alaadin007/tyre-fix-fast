@@ -134,11 +134,11 @@ export const PhotoUploader = ({
                 onClick={() => remove(idx)}
                 disabled={disabled}
                 aria-label={`Remove photo ${idx + 1}`}
-                className="absolute right-1 top-1 rounded-full bg-background/90 p-1 text-foreground shadow hover:bg-background"
+                className="absolute right-1 top-1 rounded-full bg-background/90 p-1 text-foreground shadow-sm hover:bg-background"
               >
                 <X className="h-3.5 w-3.5" />
               </button>
-              <span className="absolute bottom-1 left-1 rounded bg-background/80 px-1.5 py-0.5 text-[10px] text-muted-foreground">
+              <span className="absolute bottom-1 left-1 rounded-sm bg-background/80 px-1.5 py-0.5 text-[10px] text-muted-foreground">
                 {(p.file.size / 1024 / 1024).toFixed(1)}MB
               </span>
             </li>

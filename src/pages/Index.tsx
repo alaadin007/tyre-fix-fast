@@ -1,5 +1,5 @@
 import { MessageSquare, Star, ShieldCheck, MapPin, Sparkles, Clock, PoundSterling, Wrench, Phone } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link } from "@/lib/router-compat";
 import logo from "@/assets/tyrefly-logo.png";
 import heroTruck from "@/assets/tyrefly-hero-truck.jpg";
 import { WhatsAppChatCta } from "@/components/WhatsAppChatCta";

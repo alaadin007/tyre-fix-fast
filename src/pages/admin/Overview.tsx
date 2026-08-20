@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Link } from "react-router-dom";
+import { Link } from "@/lib/router-compat";
 import {
   Briefcase, FileText, CheckCircle2, PoundSterling, Users, AlertCircle,
   FolderOpen, FolderClosed, Clock, MapPin, ClipboardCheck, MapPinOff,
@@ -206,7 +206,7 @@ export default function Overview() {
         <div className="mb-3 flex items-center justify-between">
           <div className="flex items-center gap-2 text-sm font-semibold">
             <MapPinOff className="h-4 w-4 text-rose-300" /> Out-of-coverage demand
-            <span className="ml-2 rounded bg-rose-500/10 px-2 py-0.5 text-xs text-rose-200">
+            <span className="ml-2 rounded-sm bg-rose-500/10 px-2 py-0.5 text-xs text-rose-200">
               {outOfCoverage.total}
             </span>
           </div>
@@ -231,7 +231,7 @@ export default function Overview() {
                 {outOfCoverage.areas.map((a) => (
                   <span
                     key={a.code}
-                    className="rounded border border-rose-400/20 bg-rose-500/5 px-2 py-1 text-xs"
+                    className="rounded-sm border border-rose-400/20 bg-rose-500/5 px-2 py-1 text-xs"
                   >
                     <span className="font-mono">{a.code}</span>
                     <span className="ml-1 text-muted-foreground">× {a.count}</span>
@@ -272,11 +272,11 @@ export default function Overview() {
           <Briefcase className="h-4 w-4 text-primary" /> Quick links
         </div>
         <div className="flex flex-wrap gap-2 text-sm">
-          <Link to="/admin/dashboard/jobs" className="rounded border border-white/10 px-3 py-1.5 hover:bg-white/[0.04]">Jobs</Link>
-          <Link to="/admin/dashboard/quotes" className="rounded border border-white/10 px-3 py-1.5 hover:bg-white/[0.04]">Quotes</Link>
-          <Link to="/admin/dashboard/payments" className="rounded border border-white/10 px-3 py-1.5 hover:bg-white/[0.04]">Payments</Link>
-          <Link to="/admin/dashboard/technicians" className="rounded border border-white/10 px-3 py-1.5 hover:bg-white/[0.04]">Technicians</Link>
-          <Link to="/admin/dashboard/activity" className="rounded border border-white/10 px-3 py-1.5 hover:bg-white/[0.04]">Activity</Link>
+          <Link to="/admin/dashboard/jobs" className="rounded-sm border border-white/10 px-3 py-1.5 hover:bg-white/[0.04]">Jobs</Link>
+          <Link to="/admin/dashboard/quotes" className="rounded-sm border border-white/10 px-3 py-1.5 hover:bg-white/[0.04]">Quotes</Link>
+          <Link to="/admin/dashboard/payments" className="rounded-sm border border-white/10 px-3 py-1.5 hover:bg-white/[0.04]">Payments</Link>
+          <Link to="/admin/dashboard/technicians" className="rounded-sm border border-white/10 px-3 py-1.5 hover:bg-white/[0.04]">Technicians</Link>
+          <Link to="/admin/dashboard/activity" className="rounded-sm border border-white/10 px-3 py-1.5 hover:bg-white/[0.04]">Activity</Link>
         </div>
         <div className="mt-2 flex items-center gap-1 text-xs text-muted-foreground">
           <CheckCircle2 className="h-3 w-3 text-emerald-300" />
