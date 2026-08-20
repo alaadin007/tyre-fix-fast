@@ -240,7 +240,7 @@ export function JobDetailDrawer({
 
 function InfoTile({
   icon: Icon, label, value, sub, action,
-}: { icon: any; label: string; value: string; sub?: string; action?: React.ReactNode }) {
+}: { icon: any; label: string; value: string; sub?: string | undefined; action?: React.ReactNode }) {
   return (
     <div className="flex items-start gap-3 rounded-lg border border-border/60 bg-card/40 p-3">
       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">

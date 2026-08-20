@@ -177,7 +177,7 @@ export function QuotesComparisonPanel({
       const d = r.dist ?? 50;
       return p + e * 0.5 + d * 2;
     };
-    return live.slice().sort((a, b) => score(a) - score(b))[0].q.id;
+    return live.slice().sort((a, b) => score(a) - score(b))[0]?.q.id ?? null;
   }, [rows]);
 
   const selectedIds = Object.entries(selected).filter(([, v]) => v).map(([k]) => k);

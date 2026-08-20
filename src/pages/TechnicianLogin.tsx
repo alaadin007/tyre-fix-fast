@@ -24,7 +24,7 @@ type Step = {
   label: string;
   done: boolean;
   prompt: string; // what to send on WhatsApp to complete this step
-  detail?: string; // value already captured (shown when done)
+  detail?: string | undefined; // value already captured (shown when done)
 };
 
 function buildSteps(t: TechRow): Step[] {

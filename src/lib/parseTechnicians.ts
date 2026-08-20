@@ -5,10 +5,10 @@ import mammoth from "mammoth";
 export type ParsedTechnician = {
   name: string;
   phone: string;
-  email?: string;
+  email?: string | undefined;
   service_postcodes: string[];
-  vehicle?: string;
-  notes?: string;
+  vehicle?: string | undefined;
+  notes?: string | undefined;
 };
 
 const HEADER_MAP: Record<string, keyof ParsedTechnician> = {
@@ -107,7 +107,9 @@ export async function parseTechniciansFile(file: File): Promise<ParsedTechnician
   if (["xlsx", "xls", "xlsm", "ods"].includes(ext)) {
     const buf = await file.arrayBuffer();
     const wb = XLSX.read(buf, { type: "array" });
-    const sheet = wb.Sheets[wb.SheetNames[0]];
+    const firstSheetName = wb.SheetNames[0];
+    const sheet = firstSheetName ? wb.Sheets[firstSheetName] : undefined;
+    if (!sheet) return [];
     const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: "" });
     return rows.map(rowToTech).filter(Boolean) as ParsedTechnician[];
   }

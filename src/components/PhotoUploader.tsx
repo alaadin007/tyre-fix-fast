@@ -50,7 +50,8 @@ export const PhotoUploader = ({
 
   const remove = (idx: number) => {
     const next = [...photos];
-    URL.revokeObjectURL(next[idx].previewUrl);
+    const removed = next[idx];
+    if (removed) URL.revokeObjectURL(removed.previewUrl);
     next.splice(idx, 1);
     onChange(next);
   };

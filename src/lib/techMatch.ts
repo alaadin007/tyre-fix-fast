@@ -20,7 +20,7 @@ export function isAvailableNow(tech: DashTech & { weekly_schedule?: any }): bool
     if (!tech.available_until) return true;
     return new Date(tech.available_until).getTime() > now.getTime();
   }
-  const dayKey = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"][now.getUTCDay()];
+  const dayKey = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"][now.getUTCDay()] ?? "sun";
   const slot = (tech.weekly_schedule || {})[dayKey];
   if (slot?.start && slot?.end) {
     const hhmm = `${String(now.getUTCHours()).padStart(2, "0")}:${String(now.getUTCMinutes()).padStart(2, "0")}`;

@@ -13,7 +13,7 @@ type Event = {
   at: string;
   icon: any;
   title: string;
-  detail?: string;
+  detail?: string | undefined;
   actor: Actor;
   tone: "primary" | "emerald" | "amber" | "sky" | "rose" | "violet" | "slate";
 };

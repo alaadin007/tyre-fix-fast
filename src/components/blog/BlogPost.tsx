@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { Link } from "@/lib/router-compat";
 import { Seo } from "@/components/Seo";
 import flatTyreHero from "@/assets/blog/flat-tyre-london-hero.jpg";
@@ -137,7 +138,7 @@ function autolink(html: string, state: { used: number; hrefs: Set<string>; slug:
   for (let idx = 0; idx < parts.length; idx++) {
     if (state.used >= AUTOLINK_CAP) break;
     const seg = parts[idx];
-    if (/^<a\b/i.test(seg)) continue;
+    if (seg === undefined || /^<a\b/i.test(seg)) continue;
     let next = seg;
     for (const { pattern, href } of LINK_TARGETS) {
       if (state.used >= AUTOLINK_CAP) break;
@@ -319,7 +320,7 @@ export default function BlogPost(p: BlogPostProps) {
 
         <div className="max-w-none space-y-7 text-[17px] leading-[1.85] text-foreground/90">
           {(() => {
-            const rendered: JSX.Element[] = [];
+            const rendered: ReactNode[] = [];
             let ctaCount = 0;
             const linkState = { used: 0, hrefs: new Set<string>(), slug: p.slug };
             p.blocks.forEach((b, i) => {
@@ -401,7 +402,7 @@ export default function BlogPost(p: BlogPostProps) {
               // Insert a slim inline CTA every N blocks, but only after a paragraph/list (not a heading)
               const isBreakable = b.type !== "h2" && b.type !== "h3";
               if (isBreakable && (i + 1) % CTA_EVERY === 0 && i < p.blocks.length - 2) {
-                const cta = MICRO_CTAS[ctaCount % MICRO_CTAS.length];
+                const cta = MICRO_CTAS[ctaCount % MICRO_CTAS.length]!;
                 ctaCount++;
                 rendered.push(
                   <Link
