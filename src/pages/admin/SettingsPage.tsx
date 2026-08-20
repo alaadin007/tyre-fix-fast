@@ -317,7 +317,7 @@ export default function SettingsPage() {
                 ["notify_customer_quote", "Notify customer when a quote is sent"],
                 ["notify_customer_tech_assigned", "Notify customer when a technician is assigned"],
                 ["notify_tech_new_job", "Notify technicians when a job is broadcast"],
-              ].map(([key, label]) => (
+              ] as [string, string][]).map(([key, label]) => (
                 <div key={key} className="flex items-center justify-between rounded-md border border-white/10 p-3">
                   <Label htmlFor={key} className="text-sm">{label}</Label>
                   <Switch
