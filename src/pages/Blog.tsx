@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link } from "@/lib/router-compat";
 import { Seo } from "@/components/Seo";
 import flatTyreHero from "@/assets/blog/flat-tyre-london-hero.jpg";
 import emergencyLondonHero from "@/assets/blog/emergency-puncture-london-hero.jpg";

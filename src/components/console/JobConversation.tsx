@@ -121,7 +121,7 @@ export function JobConversation({
               >
                 {m.body && <div className="whitespace-pre-wrap break-words">{m.body}</div>}
                 {failed && (
-                  <div className="mt-2 inline-flex items-center gap-1 rounded border border-destructive/40 bg-destructive/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-destructive">
+                  <div className="mt-2 inline-flex items-center gap-1 rounded-sm border border-destructive/40 bg-destructive/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-destructive">
                     <AlertTriangle className="h-3 w-3" /> Delivery failed
                   </div>
                 )}
@@ -129,7 +129,7 @@ export function JobConversation({
                   <div className="mt-1.5 flex flex-wrap gap-1.5">
                     {m.media_urls.map((u, i) => (
                       <a key={i} href={u} target="_blank" rel="noreferrer">
-                        <img src={u} alt="" className="h-20 w-20 rounded object-cover" />
+                        <img src={u} alt="" className="h-20 w-20 rounded-sm object-cover" />
                       </a>
                     ))}
                   </div>

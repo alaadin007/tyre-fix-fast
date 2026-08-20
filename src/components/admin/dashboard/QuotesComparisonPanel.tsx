@@ -264,7 +264,7 @@ export function QuotesComparisonPanel({
       <div className="text-xs text-muted-foreground">
         {rows.length} quote{rows.length === 1 ? "" : "s"} · best value highlighted
       </div>
-      <div className="overflow-x-auto rounded border border-white/10">
+      <div className="overflow-x-auto rounded-sm border border-white/10">
         <Table>
           <TableHeader>
             <TableRow>

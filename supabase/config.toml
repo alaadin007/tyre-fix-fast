@@ -15,11 +15,5 @@ verify_jwt = false
 [functions.payments-webhook]
 verify_jwt = false
 
-[functions.resolve-short-link]
-verify_jwt = false
-
 [functions.tech-progress]
-verify_jwt = false
-
-[functions.job-public-status]
 verify_jwt = false

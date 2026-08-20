@@ -100,7 +100,7 @@ export function TechConversation({ phone }: { phone: string }) {
             className={`flex ${inbound ? "justify-start" : "justify-end"}`}
           >
             <div
-              className={`max-w-[80%] rounded-2xl px-3 py-2 text-sm shadow-sm ${
+              className={`max-w-[80%] rounded-2xl px-3 py-2 text-sm shadow-xs ${
                 inbound
                   ? "rounded-bl-sm bg-white text-foreground"
                   : failed
@@ -124,7 +124,7 @@ export function TechConversation({ phone }: { phone: string }) {
                 </p>
               )}
               {failed && (
-                <div className="mt-2 inline-flex items-center gap-1 rounded border border-destructive/40 bg-destructive/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-destructive">
+                <div className="mt-2 inline-flex items-center gap-1 rounded-sm border border-destructive/40 bg-destructive/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-destructive">
                   <AlertTriangle className="h-3 w-3" /> Delivery failed
                 </div>
               )}

@@ -1,4 +1,4 @@
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams } from "@/lib/router-compat";
 import { MessageSquare, Phone, Clock, ShieldCheck, MapPin, Sparkles, Star, PoundSterling } from "lucide-react";
 import { Seo } from "@/components/Seo";
 import { getArea, AREAS } from "@/data/areas";

@@ -149,7 +149,7 @@ export function OnboardingLogs() {
                         </Badge>
                       )}
                       <span
-                        className={`rounded border px-1.5 py-0.5 text-[10px] font-medium ${routeClass}`}
+                        className={`rounded-sm border px-1.5 py-0.5 text-[10px] font-medium ${routeClass}`}
                       >
                         {r.route_taken}
                       </span>
@@ -180,7 +180,7 @@ export function OnboardingLogs() {
                       <p className="font-semibold text-muted-foreground">
                         Inbound
                       </p>
-                      <pre className="mt-0.5 whitespace-pre-wrap rounded bg-background p-2">
+                      <pre className="mt-0.5 whitespace-pre-wrap rounded-sm bg-background p-2">
                         {r.inbound_body || "(empty)"}
                       </pre>
                     </div>
@@ -189,7 +189,7 @@ export function OnboardingLogs() {
                         <p className="font-semibold text-muted-foreground">
                           <Bot className="inline h-3 w-3" /> Reply
                         </p>
-                        <pre className="mt-0.5 whitespace-pre-wrap rounded bg-background p-2">
+                        <pre className="mt-0.5 whitespace-pre-wrap rounded-sm bg-background p-2">
                           {r.reply_sent}
                         </pre>
                       </div>
@@ -199,7 +199,7 @@ export function OnboardingLogs() {
                         <p className="font-semibold text-muted-foreground">
                           AI extraction
                         </p>
-                        <pre className="mt-0.5 overflow-x-auto rounded bg-background p-2">
+                        <pre className="mt-0.5 overflow-x-auto rounded-sm bg-background p-2">
                           {JSON.stringify(r.ai_extracted, null, 2)}
                         </pre>
                       </div>

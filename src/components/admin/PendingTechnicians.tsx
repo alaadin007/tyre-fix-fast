@@ -327,7 +327,7 @@ export function PendingTechnicians() {
                         href={u}
                         target="_blank"
                         rel="noreferrer"
-                        className="aspect-square overflow-hidden rounded border border-border"
+                        className="aspect-square overflow-hidden rounded-sm border border-border"
                       >
                         <img
                           src={u}
@@ -357,7 +357,7 @@ export function PendingTechnicians() {
                           const url = await docUrl(path);
                           if (url) window.open(url, "_blank");
                         }}
-                        className={`flex items-center gap-1 rounded border px-2 py-1 ${
+                        className={`flex items-center gap-1 rounded-sm border px-2 py-1 ${
                           path
                             ? "border-emerald-500/40 text-emerald-700 hover:bg-emerald-500/10"
                             : "border-border text-muted-foreground/50"
@@ -383,7 +383,7 @@ export function PendingTechnicians() {
                       {miss.map((m) => (
                         <li
                           key={m.label}
-                          className="rounded bg-amber-500/15 px-1.5 py-0.5 text-[11px] text-amber-800"
+                          className="rounded-sm bg-amber-500/15 px-1.5 py-0.5 text-[11px] text-amber-800"
                         >
                           {m.label}
                         </li>

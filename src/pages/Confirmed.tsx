@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "@/lib/router-compat";
 import { CheckCircle2, Loader2, ArrowLeft } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { getJobPublicStatus } from "@/lib/job-public-status.functions";
 
 type JobRow = {
   id: string;
@@ -21,10 +21,8 @@ export default function Confirmed() {
 
     const tick = async () => {
       attempts += 1;
-      const { data } = await supabase.functions.invoke("job-public-status", {
-        body: { job_id: jobId },
-      });
-      const j = data?.job as JobRow | undefined;
+      const data = await getJobPublicStatus({ data: { job_id: jobId } }).catch(() => null);
+      const j = (data?.job ?? undefined) as JobRow | undefined;
       if (cancelled || !j) return;
       setJob(j);
 
@@ -57,7 +55,7 @@ export default function Confirmed() {
         </Link>
 
         {!paid ? (
-          <div className="rounded-2xl border bg-card p-8 text-center shadow-sm">
+          <div className="rounded-2xl border bg-card p-8 text-center shadow-xs">
             <Loader2 className="mx-auto h-8 w-8 animate-spin text-muted-foreground" />
             <h1 className="mt-4 text-xl font-bold">Confirming your payment…</h1>
             <p className="mt-2 text-sm text-muted-foreground">
@@ -67,7 +65,7 @@ export default function Confirmed() {
             </p>
           </div>
         ) : (
-          <div className="rounded-2xl border bg-card p-8 shadow-sm">
+          <div className="rounded-2xl border bg-card p-8 shadow-xs">
             <div className="flex items-center gap-2 text-[hsl(var(--success))]">
               <CheckCircle2 className="h-6 w-6" />
               <h1 className="text-xl font-bold">Payment received</h1>

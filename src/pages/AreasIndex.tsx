@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link } from "@/lib/router-compat";
 import { MapPin } from "lucide-react";
 import { Seo } from "@/components/Seo";
 import { AREAS } from "@/data/areas";

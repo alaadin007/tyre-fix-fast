@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { Link, Outlet, useLocation, useNavigate } from "@/lib/router-compat";
 import tyreflyLogo from "@/assets/tyrefly-logo.png";
 import { X } from "lucide-react";
 import {
@@ -53,6 +53,7 @@ const items = [
 
 function AppSidebar() {
   const { state, isMobile, setOpenMobile } = useSidebar();
+  const { pathname } = useLocation();
   const collapsed = state === "collapsed" && !isMobile;
   const closeOnMobile = () => {
     if (isMobile) setOpenMobile(false);
@@ -90,23 +91,23 @@ function AppSidebar() {
           <SidebarGroupLabel>Manage</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {items.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <NavLink
-                      to={item.url}
-                      end={item.end}
-                      onClick={closeOnMobile}
-                      className={({ isActive }) =>
-                        `flex items-center gap-2 ${isActive ? "bg-primary/15 text-primary" : "hover:bg-muted/40"}`
-                      }
-                    >
-                      <item.icon className="h-4 w-4" />
-                      {!collapsed && <span>{item.title}</span>}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+              {items.map((item) => {
+                const isActive = item.end ? pathname === item.url : pathname.startsWith(item.url);
+                return (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild>
+                      <Link
+                        to={item.url}
+                        onClick={closeOnMobile}
+                        className={`flex items-center gap-2 ${isActive ? "bg-primary/15 text-primary" : "hover:bg-muted/40"}`}
+                      >
+                        <item.icon className="h-4 w-4" />
+                        {!collapsed && <span>{item.title}</span>}
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -116,10 +117,10 @@ function AppSidebar() {
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild>
-                  <NavLink to="/admin" onClick={closeOnMobile} className="flex items-center gap-2 hover:bg-muted/40">
+                  <Link to="/admin" onClick={closeOnMobile} className="flex items-center gap-2 hover:bg-muted/40">
                     <Map className="h-4 w-4" />
                     {!collapsed && <span>Live Console</span>}
-                  </NavLink>
+                  </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>

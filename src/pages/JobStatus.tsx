@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link } from "@/lib/router-compat";
 import { Loader2, Sparkles } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { getJobPublicStatus } from "@/lib/job-public-status.functions";
 import { Badge } from "@/components/ui/badge";
 import { WhatsAppChatCta } from "@/components/WhatsAppChatCta";
 
@@ -31,12 +31,13 @@ const JobStatus = () => {
 
     let cancelled = false;
     const load = async () => {
-      const { data, error } = await supabase.functions.invoke("job-public-status", {
-        body: { job_id: id },
-      });
-      if (!cancelled) {
-        if (!error && data?.job) setJob(data.job as Job);
-        setLoading(false);
+      try {
+        const data = await getJobPublicStatus({ data: { job_id: id } });
+        if (!cancelled && data?.job) setJob(data.job as Job);
+      } catch {
+        // ignore transient errors; polling retries
+      } finally {
+        if (!cancelled) setLoading(false);
       }
     };
     load();

@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams } from "@/lib/router-compat";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -75,7 +75,7 @@ export default function JobsPage() {
       </div>
 
       {/* Filters */}
-      <Card className="border-border/60 bg-card/60 p-3 shadow-sm backdrop-blur">
+      <Card className="border-border/60 bg-card/60 p-3 shadow-xs backdrop-blur">
         <div className="space-y-3">
           <div className="relative">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -117,7 +117,7 @@ export default function JobsPage() {
                   className={cn(
                     "inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-all",
                     active
-                      ? "border-primary bg-primary text-primary-foreground shadow-sm"
+                      ? "border-primary bg-primary text-primary-foreground shadow-xs"
                       : "border-border bg-background text-muted-foreground hover:border-primary/40 hover:text-foreground"
                   )}
                 >
@@ -138,7 +138,7 @@ export default function JobsPage() {
       </Card>
 
       {/* Table */}
-      <Card className="overflow-hidden border-border/60 bg-card shadow-sm">
+      <Card className="overflow-hidden border-border/60 bg-card shadow-xs">
         <div className="overflow-x-auto">
           <Table>
             <TableHeader className="sticky top-0 z-10 bg-muted/50 backdrop-blur">
@@ -257,7 +257,7 @@ function StatCard({
     success: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
   };
   return (
-    <Card className="flex items-center gap-2 border-border/60 bg-card p-3 shadow-sm transition-shadow hover:shadow-md md:gap-3 md:p-4">
+    <Card className="flex items-center gap-2 border-border/60 bg-card p-3 shadow-xs transition-shadow hover:shadow-md md:gap-3 md:p-4">
       <div className={cn("flex h-8 w-8 items-center justify-center rounded-lg md:h-10 md:w-10", tones[tone])}>
         <Icon className="h-4 w-4 md:h-5 md:w-5" />
       </div>
