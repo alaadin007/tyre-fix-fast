@@ -16,6 +16,7 @@ import {
   type Lane,
 } from "@/hooks/useConsoleData";
 import { useTick } from "@/hooks/useTick";
+import { adminManualDispatch } from "@/lib/admin-actions.functions";
 
 function fmtTimer(ms: number): { txt: string; cls: string } {
   const total = Math.max(0, Math.floor(ms / 1000));
@@ -112,17 +113,16 @@ export default function Console() {
     notes?: string,
   ) => {
     try {
-      const { data, error } = await supabase.functions.invoke("manual-dispatch", {
-        body: {
+      const data = await adminManualDispatch({
+        data: {
           job_id: job.id,
           technician_id: techId,
           price_gbp: priceGbp,
           eta_minutes: etaMin,
-          notes,
+          ...(notes ? { notes } : {}),
           origin: window.location.origin,
         },
       });
-      if (error) throw error;
       toast.success("Dispatched ✅ Customer sent quote + pay link.");
       console.log("manual-dispatch result", data);
       setOpenJobId(null);

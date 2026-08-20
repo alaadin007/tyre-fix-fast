@@ -20,6 +20,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { CalendarIcon, ExternalLink } from "lucide-react";
+import { adminRefundFee } from "@/lib/admin-actions.functions";
 
 export default function PaymentsPage() {
   const { jobs, quotes, techs } = useDashboardData();
@@ -71,8 +72,7 @@ export default function PaymentsPage() {
   const refund = async (jobId: string) => {
     setBusy(jobId);
     try {
-      const { error } = await supabase.functions.invoke("refund-fee", { body: { job_id: jobId } });
-      if (error) throw error;
+      await adminRefundFee({ data: { job_id: jobId } });
       toast.success("Refund triggered");
     } catch (e: any) { toast.error(e.message ?? "Failed"); } finally { setBusy(null); }
   };

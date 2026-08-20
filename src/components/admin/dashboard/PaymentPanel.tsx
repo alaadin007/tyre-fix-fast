@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import type { DashJob, DashQuote } from "@/hooks/useDashboardData";
 import { paymentStatusLabel } from "@/lib/jobStatus";
 import { fmtRelative } from "@/hooks/useDashboardData";
+import { adminRefundFee, adminSendQuote } from "@/lib/admin-actions.functions";
 
 export function PaymentPanel({ job, quotes }: { job: DashJob; quotes: DashQuote[] }) {
   const [busy, setBusy] = useState<string | null>(null);
@@ -41,8 +42,7 @@ export function PaymentPanel({ job, quotes }: { job: DashJob; quotes: DashQuote[
   const refund = async () => {
     setBusy("refund");
     try {
-      const { error } = await supabase.functions.invoke("refund-fee", { body: { job_id: job.id } });
-      if (error) throw error;
+      await adminRefundFee({ data: { job_id: job.id } });
       toast.success("Refund triggered");
     } catch (e: any) { toast.error(e.message ?? "Failed"); } finally { setBusy(null); }
   };
@@ -54,10 +54,7 @@ export function PaymentPanel({ job, quotes }: { job: DashJob; quotes: DashQuote[
     }
     setBusy("resend");
     try {
-      const { error } = await supabase.functions.invoke("admin-send-quote", {
-        body: { job_id: job.id, quote_id: acceptedQuote.id },
-      });
-      if (error) throw error;
+      await adminSendQuote({ data: { job_id: job.id, quote_id: acceptedQuote.id } });
       toast.success("Payment link resent to customer");
     } catch (e: any) { toast.error(e.message ?? "Failed"); } finally { setBusy(null); }
   };
