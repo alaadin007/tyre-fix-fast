@@ -135,7 +135,7 @@ export const Link = forwardRef<HTMLAnchorElement, LinkProps>(function Link(
   if (replace !== undefined) linkProps['replace'] = replace;
   if (state !== undefined) linkProps['state'] = state;
   return (
-    <TSLink ref={ref as never} {...(linkProps as never)}>
+    <TSLink ref={ref as never} {...(linkProps as unknown as ComponentProps<typeof TSLink>)}>
       {children}
     </TSLink>
   );
@@ -150,7 +150,7 @@ export function Navigate({ to, replace, state }: { to: string; replace?: boolean
   if (hash !== undefined) navProps['hash'] = hash;
   if (replace !== undefined) navProps['replace'] = replace;
   if (state !== undefined) navProps['state'] = state;
-  return <TSNavigate {...(navProps as never)} />;
+  return <TSNavigate {...(navProps as unknown as ComponentProps<typeof TSNavigate>)} />;
 }
 
 // ---------- Outlet ----------
