@@ -1378,7 +1378,7 @@ function JobDecisionCard({
           (a.quote!.price_gbp ?? 1e9) - (b.quote!.price_gbp ?? 1e9) ||
           (a.quote!.eta_minutes ?? 1e9) - (b.quote!.eta_minutes ?? 1e9),
       );
-      return { tech: sorted[0].tech, alloc: sorted[0].alloc, quote: sorted[0].quote, reason: "cheapest price · fastest ETA" };
+      return { tech: sorted[0]!.tech, alloc: sorted[0]!.alloc, quote: sorted[0]!.quote, reason: "cheapest price · fastest ETA" };
     }
     const sorted = [...roster].sort((a, b) => (b.alloc.match_score ?? 0) - (a.alloc.match_score ?? 0));
     if (sorted[0]) return { tech: sorted[0].tech, alloc: sorted[0].alloc, quote: null, reason: sorted[0].alloc.ai_reasoning ?? "highest match score" };
@@ -1656,7 +1656,7 @@ function SettingsSheet({
   const addTech = async (e: React.FormEvent) => {
     e.preventDefault();
     const parsed = techSchema.safeParse(form);
-    if (!parsed.success) { toast.error(parsed.error.issues[0].message); return; }
+    if (!parsed.success) { toast.error(parsed.error.issues[0]?.message ?? "Invalid input"); return; }
     const postcodes = form.service_postcodes.split(",").map((p) => p.trim().toUpperCase()).filter(Boolean);
     const { error } = await supabase.from("technicians").insert({
       name: form.name.trim(), phone: form.phone.trim(),

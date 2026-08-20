@@ -137,7 +137,7 @@ function autolink(html: string, state: { used: number; hrefs: Set<string>; slug:
   for (let idx = 0; idx < parts.length; idx++) {
     if (state.used >= AUTOLINK_CAP) break;
     const seg = parts[idx];
-    if (/^<a\b/i.test(seg)) continue;
+    if (seg === undefined || /^<a\b/i.test(seg)) continue;
     let next = seg;
     for (const { pattern, href } of LINK_TARGETS) {
       if (state.used >= AUTOLINK_CAP) break;
