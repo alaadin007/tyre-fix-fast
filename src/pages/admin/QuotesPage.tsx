@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { useDashboardData, shortRef, fmtRelative } from "@/hooks/useDashboardData";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { adminSendQuote } from "@/lib/admin-actions.functions";
 
 const STATUSES = ["all", "pending", "accepted", "lost"];
 
@@ -24,11 +25,7 @@ export default function QuotesPage() {
   const send = async (jobId: string, quoteId: string) => {
     setBusy(quoteId);
     try {
-      const { data, error } = await supabase.functions.invoke("admin-send-quote", {
-        body: { job_id: jobId, quote_id: quoteId },
-      });
-      if (error) throw error;
-      if (data?.ok === false) throw new Error(data.error || "Failed");
+      await adminSendQuote({ data: { job_id: jobId, quote_id: quoteId } });
       toast.success("Quote sent to customer");
     } catch (e: any) {
       toast.error(e.message ?? "Failed");

@@ -1,0 +1,146 @@
+// Ported from the admin-forward-quotes edge function.
+// Sends ONE consolidated WhatsApp message listing the selected quote options.
+import { isCustomerQuoteAmountValid, normalizeSuspiciousQuotePrice } from "@/lib/quote-price";
+import { createCheckoutSession } from "./stripe.server";
+import { sendMessage, serviceClient, shortenUrl } from "./ops.server";
+
+export async function runAdminForwardQuotes(input: {
+  job_id: string;
+  quote_ids: string[];
+}): Promise<{ ok: true; count: number }> {
+  const { job_id, quote_ids } = input;
+  const supabase = serviceClient();
+
+  const { data: jobRow } = await supabase
+    .from("jobs")
+    .select(
+      "id,vehicle_reg,customer_name,customer_phone,customer_email,postcode,issue_type,issue_description,damage_summary,damage_type",
+    )
+    .eq("id", job_id)
+    .maybeSingle();
+  if (!jobRow) throw new Error("Job not found");
+  if (!jobRow.customer_phone) throw new Error("Customer has no phone on file");
+
+  const { data: quoteRows } = await supabase
+    .from("quotes")
+    .select("id,technician_id,price_gbp,eta_minutes,raw_message,created_at")
+    .eq("job_id", job_id)
+    .in("id", quote_ids)
+    .order("price_gbp", { ascending: true, nullsFirst: false });
+  const quotes = quoteRows ?? [];
+  if (quotes.length === 0) throw new Error("No quotes found for given ids");
+
+  const techIds = Array.from(
+    new Set(quotes.map((q) => q.technician_id).filter(Boolean)),
+  ) as string[];
+  const techRows = techIds.length
+    ? (await supabase.from("technicians").select("id, name, tech_code").in("id", techIds)).data
+    : [];
+  const techById = new Map((techRows ?? []).map((t) => [t.id, t]));
+
+  const shortRef = String(jobRow.id).slice(0, 6).toUpperCase();
+  const issueLine =
+    jobRow.damage_summary?.trim() ||
+    jobRow.issue_description?.trim() ||
+    jobRow.damage_type?.trim() ||
+    jobRow.issue_type?.trim() ||
+    "Tyre service required";
+  const vehicleReg = jobRow.vehicle_reg?.toString().trim() || "Not provided";
+
+  const options: { name: string; price: number; eta: number | null; link: string | null }[] = [];
+  for (const q of quotes) {
+    const mergedPrice = normalizeSuspiciousQuotePrice(q.price_gbp, q.raw_message ?? "");
+    if (!isCustomerQuoteAmountValid(mergedPrice)) continue;
+    if (Number(q.price_gbp) !== Number(mergedPrice)) {
+      await supabase.from("quotes").update({ price_gbp: mergedPrice }).eq("id", q.id);
+    }
+    const tech = techById.get(q.technician_id ?? "");
+    let payUrl: string | null = null;
+    try {
+      const session = await createCheckoutSession("live", {
+        mode: "payment",
+        line_items: [
+          {
+            price_data: {
+              currency: "gbp",
+              product_data: {
+                name: `Mobile tyre service — ${jobRow.postcode ?? ""}`.trim(),
+                description: `${issueLine} · ETA ${q.eta_minutes} min`,
+              },
+              unit_amount: Math.round(Number(mergedPrice) * 100),
+            },
+            quantity: 1,
+          },
+        ],
+        success_url: `https://tyrefly.com/confirmed?job=${jobRow.id}`,
+        cancel_url: `https://tyrefly.com/job/${jobRow.id}?canceled=1`,
+        customer_email: jobRow.customer_email ?? undefined,
+        metadata: {
+          job_id: jobRow.id,
+          technician_id: q.technician_id,
+          kind: "job_full_payment",
+          price_gbp: String(mergedPrice),
+          eta_minutes: String(q.eta_minutes),
+        },
+        payment_intent_data: {
+          metadata: {
+            job_id: jobRow.id,
+            technician_id: q.technician_id,
+            kind: "job_full_payment",
+          },
+          description: `Tyrefly — job ${shortRef} — ${jobRow.postcode ?? ""}`.trim(),
+        },
+      });
+      if (session?.url) {
+        const shortened = await shortenUrl(session.url, {
+          kind: "job_full_payment",
+          job_id: jobRow.id,
+        });
+        payUrl = shortened || session.url;
+      }
+    } catch (e) {
+      console.error("consolidated stripe checkout failed", e);
+    }
+    options.push({
+      name: tech?.name ?? "Technician",
+      price: Number(mergedPrice),
+      eta: q.eta_minutes,
+      link: payUrl,
+    });
+  }
+
+  if (options.length === 0) throw new Error("Could not prepare any quote options");
+
+  const isSingle = options.length === 1;
+  const optionLines = options
+    .map(
+      (o, i) =>
+        `${isSingle ? o.name : `Option ${i + 1} — ${o.name}`}\n` +
+        `💷 Repair Cost: £${o.price}\n` +
+        `⏱ Estimated Arrival: ${o.eta} minutes\n` +
+        `🔗 Payment Link: ${o.link ?? "to be sent shortly"}`,
+    )
+    .join("\n\n");
+
+  const introLine = isSingle
+    ? `We have received a quote from our technician for your vehicle ${vehicleReg}:`
+    : `We have received quotes from our technicians for your vehicle ${vehicleReg}. Please review and choose your preferred option:`;
+  const outroLine = isSingle
+    ? `Please tap the payment link above to confirm your booking. Once payment is confirmed, your technician will proceed to your location.`
+    : `Please tap your preferred payment link to confirm your booking. Once payment is confirmed, your technician will proceed to your location.`;
+
+  const body =
+    `Job Reference: #${shortRef}\n\n` +
+    `Hello${jobRow.customer_name ? ` ${jobRow.customer_name}` : ""},\n\n` +
+    `${introLine}\n\n` +
+    `${optionLines}\n\n` +
+    `${outroLine}\n\n` +
+    `Thank you.\n— Tyrefly`;
+
+  await sendMessage(jobRow.customer_phone, body, "whatsapp", job_id);
+
+  await supabase.from("quotes").update({ status: "forwarded" }).in("id", quote_ids);
+  await supabase.from("jobs").update({ status: "awaiting_payment" }).eq("id", job_id);
+
+  return { ok: true, count: options.length };
+}

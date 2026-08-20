@@ -29,6 +29,7 @@ import { AdminAIChat } from "@/components/admin/AdminAIChat";
 import { PendingTechnicians } from "@/components/admin/PendingTechnicians";
 import { OnboardingLogs } from "@/components/admin/OnboardingLogs";
 import TechnicianLiveMap from "@/components/admin/TechnicianLiveMap";
+import { adminRefundFee } from "@/lib/admin-actions.functions";
 
 type Technician = {
   id: string; name: string; phone: string; email: string | null;
@@ -467,11 +468,12 @@ function JobCard({
 
   const refund = async () => {
     if (!confirm("Refund the customer's £20 (no-show)?")) return;
-    const { error } = await supabase.functions.invoke("refund-fee", {
-      body: { job_id: job.id, reason: "no-show" },
-    });
-    if (error) toast.error(error.message);
-    else toast.success("Refund issued");
+    try {
+      await adminRefundFee({ data: { job_id: job.id, reason: "no-show" } });
+      toast.success("Refund issued");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Refund failed");
+    }
   };
 
   const cancel = async () => {
@@ -479,9 +481,11 @@ function JobCard({
     if (reason === null) return;
     await supabase.from("jobs" as any).update({ status: "cancelled" }).eq("id", job.id);
     if (job.platform_fee_status === "paid") {
-      await supabase.functions.invoke("refund-fee", {
-        body: { job_id: job.id, reason: reason || "cancelled by ops" },
-      });
+      try {
+        await adminRefundFee({ data: { job_id: job.id, reason: reason || "cancelled by ops" } });
+      } catch (e) {
+        console.error("refund failed", e);
+      }
     }
     const msg = `Tyrefly: your booking has been cancelled${reason ? ` — ${reason}` : ""}. ${job.platform_fee_status === "paid" ? "Your £20 deposit is being refunded." : ""} Reply if you'd like us to find another technician.`;
     await supabase.functions.invoke("twilio-send", { body: { to: job.customer_phone, body: msg, channel: "whatsapp" } });

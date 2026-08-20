@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { DashJob, DashQuote, DashTech } from "@/hooks/useDashboardData";
 import { fmtRelative } from "@/hooks/useDashboardData";
+import { adminShareDetails } from "@/lib/admin-actions.functions";
 
 export function ApprovalPanel({
   job, quotes, techs,
@@ -25,11 +26,7 @@ export function ApprovalPanel({
   const sendDetails = async () => {
     setBusy("send");
     try {
-      const { data, error } = await supabase.functions.invoke("admin-share-details", {
-        body: { job_id: job.id },
-      });
-      if (error) throw error;
-      if (data?.ok === false) throw new Error(data.error || "Failed");
+      await adminShareDetails({ data: { job_id: job.id } });
       toast.success("Customer and technician have been connected. Details shared via WhatsApp.");
     } catch (e: any) { toast.error(e.message ?? "Failed"); } finally { setBusy(null); }
   };

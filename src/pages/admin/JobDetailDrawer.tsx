@@ -14,6 +14,7 @@ import { MatchingTechniciansPanel } from "@/components/admin/dashboard/MatchingT
 import { QuotesComparisonPanel } from "@/components/admin/dashboard/QuotesComparisonPanel";
 import { PaymentPanel } from "@/components/admin/dashboard/PaymentPanel";
 import { ApprovalPanel } from "@/components/admin/dashboard/ApprovalPanel";
+import { adminSendQuote } from "@/lib/admin-actions.functions";
 
 export function JobDetailDrawer({
   job, open, onOpenChange, quotes, allocations, techs,
@@ -35,11 +36,7 @@ export function JobDetailDrawer({
   const sendQuoteToCustomer = async (quoteId: string) => {
     setBusy(quoteId);
     try {
-      const { data, error } = await supabase.functions.invoke("admin-send-quote", {
-        body: { job_id: job.id, quote_id: quoteId },
-      });
-      if (error) throw error;
-      if (data?.ok === false) throw new Error(data.error || "Failed");
+      await adminSendQuote({ data: { job_id: job.id, quote_id: quoteId } });
       toast.success("Quote sent to customer");
     } catch (e: any) {
       toast.error(e.message ?? "Failed to send quote");

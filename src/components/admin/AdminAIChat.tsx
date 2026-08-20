@@ -5,10 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
+import { adminOpsChat } from "@/lib/admin-actions.functions";
 
 type Msg = { role: "user" | "assistant"; content: string };
-
-const CHAT_URL = `${import.meta.env['VITE_SUPABASE_URL']}/functions/v1/admin-chat`;
 
 const SUGGESTIONS = [
   "Summarise today's inquiries",
@@ -40,34 +39,21 @@ export function AdminAIChat() {
     scrollDown();
 
     try {
-      const resp = await fetch(CHAT_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${import.meta.env['VITE_SUPABASE_PUBLISHABLE_KEY']}`,
-        },
-        body: JSON.stringify({ messages: next }),
-      });
+      const data = await adminOpsChat({ data: { messages: next } });
 
-      if (resp.status === 429) {
+      if (data.status === 429) {
         toast.error("Rate limit hit, please wait a moment.");
         setLoading(false);
         return;
       }
-      if (resp.status === 402) {
+      if (data.status === 402) {
         toast.error("AI credits exhausted — top up in workspace settings.");
         setLoading(false);
         return;
       }
-      if (!resp.ok) {
-        toast.error("Couldn't reach the AI right now.");
-        setLoading(false);
-        return;
-      }
 
-      const data = await resp.json();
       const content: string = data.content || data.error || "(no response)";
-      const trace: Array<{ name: string; content: string }> = data.trace ?? [];
+      const trace = data.trace ?? [];
       const toolNote =
         trace.length > 0
           ? `\n\n_used: ${trace.map((t) => `\`${t.name}\``).join(", ")}_`

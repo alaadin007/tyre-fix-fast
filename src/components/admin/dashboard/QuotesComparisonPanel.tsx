@@ -11,6 +11,7 @@ import type { DashJob, DashQuote, DashTech, DashAllocation } from "@/hooks/useDa
 import { distanceMiles } from "@/lib/techMatch";
 import { Check, X, Send, ExternalLink, Trophy, Clock, Pencil } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { adminForwardQuotes } from "@/lib/admin-actions.functions";
 
 function PriceCell({ quoteId, price, locked }: { quoteId: string; price: number | null | undefined; locked?: boolean }) {
   const [editing, setEditing] = useState(false);
@@ -186,12 +187,7 @@ export function QuotesComparisonPanel({
     if (selectedIds.length === 0) return;
     setForwarding(true);
     try {
-      const { data, error } = await supabase.functions.invoke("admin-forward-quotes", {
-        body: { job_id: job.id, quote_ids: selectedIds },
-      });
-      if (error || (data as any)?.ok === false) {
-        throw new Error((data as any)?.error ?? error?.message ?? "Failed");
-      }
+      await adminForwardQuotes({ data: { job_id: job.id, quote_ids: selectedIds } });
       toast.success(`Forwarded ${selectedIds.length} quote${selectedIds.length === 1 ? "" : "s"} to customer`);
       setSelected({});
     } catch (e: any) {
