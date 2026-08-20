@@ -8,7 +8,7 @@ import { toast } from "sonner";
 
 type Msg = { role: "user" | "assistant"; content: string };
 
-const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-chat`;
+const CHAT_URL = `${import.meta.env['VITE_SUPABASE_URL']}/functions/v1/admin-chat`;
 
 const SUGGESTIONS = [
   "Summarise today's inquiries",
@@ -44,7 +44,7 @@ export function AdminAIChat() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          Authorization: `Bearer ${import.meta.env['VITE_SUPABASE_PUBLISHABLE_KEY']}`,
         },
         body: JSON.stringify({ messages: next }),
       });

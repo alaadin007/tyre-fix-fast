@@ -12,9 +12,9 @@ declare global {
 let initialized = false;
 
 export function initGA(): void {
-  const measurementId = import.meta.env.VITE_LOVABLE_CONNECTOR_GOOGLE_ANALYTICS_API_KEY;
+  const measurementId = import.meta.env['VITE_LOVABLE_CONNECTOR_GOOGLE_ANALYTICS_API_KEY'];
   if (!measurementId) {
-    if (import.meta.env.DEV) {
+    if (import.meta.env['DEV']) {
       console.warn("[analytics] VITE_LOVABLE_CONNECTOR_GOOGLE_ANALYTICS_API_KEY not set — skipping GA init.");
     }
     return;
@@ -39,7 +39,7 @@ export function initGA(): void {
 
 /** Fire a virtual page view on client-side route changes. */
 export function trackPageView(path: string = window.location.pathname): void {
-  const measurementId = import.meta.env.VITE_LOVABLE_CONNECTOR_GOOGLE_ANALYTICS_API_KEY;
+  const measurementId = import.meta.env['VITE_LOVABLE_CONNECTOR_GOOGLE_ANALYTICS_API_KEY'];
   if (!measurementId || !window.gtag) return;
   window.gtag("event", "page_view", { page_path: path });
 }
