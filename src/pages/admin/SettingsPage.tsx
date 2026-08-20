@@ -310,7 +310,7 @@ export default function SettingsPage() {
               <CardDescription>Control which events trigger WhatsApp / dashboard alerts.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {[
+              {([
                 ["notify_admin_new_job", "Notify admins when a new job arrives"],
                 ["notify_admin_payment_received", "Notify admins when payment is received"],
                 ["notify_admin_tech_application", "Notify admins on new technician application"],
