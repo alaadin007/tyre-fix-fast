@@ -3,10 +3,11 @@
 // `admin` role before doing privileged work.
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { attachSupabaseAuth } from "@/integrations/supabase/auth-attacher";
 import type { OpsChatMessage, OpsChatResult } from "@/lib/admin/ops-chat.server";
 
 export const adminSendQuote = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .inputValidator((input: { job_id: string; quote_id?: string }) => input)
   .handler(async ({ data, context }) => {
     const { assertAdmin } = await import("@/lib/admin/ops.server");
@@ -16,7 +17,7 @@ export const adminSendQuote = createServerFn({ method: "POST" })
   });
 
 export const adminForwardQuotes = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .inputValidator((input: { job_id: string; quote_ids: string[] }) => input)
   .handler(async ({ data, context }) => {
     const { assertAdmin } = await import("@/lib/admin/ops.server");
@@ -26,7 +27,7 @@ export const adminForwardQuotes = createServerFn({ method: "POST" })
   });
 
 export const adminShareDetails = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .inputValidator((input: { job_id: string }) => input)
   .handler(async ({ data, context }) => {
     const { assertAdmin } = await import("@/lib/admin/ops.server");
@@ -36,7 +37,7 @@ export const adminShareDetails = createServerFn({ method: "POST" })
   });
 
 export const adminManualDispatch = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .inputValidator(
     (input: {
       job_id: string;
@@ -55,7 +56,7 @@ export const adminManualDispatch = createServerFn({ method: "POST" })
   });
 
 export const adminRefundFee = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .inputValidator((input: { job_id: string; reason?: string }) => input)
   .handler(async ({ data, context }) => {
     const { assertAdmin } = await import("@/lib/admin/ops.server");
@@ -65,7 +66,7 @@ export const adminRefundFee = createServerFn({ method: "POST" })
   });
 
 export const adminOpsChat = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .inputValidator((input: { messages: OpsChatMessage[] }) => input)
   .handler(async ({ data, context }): Promise<OpsChatResult> => {
     const { assertAdmin } = await import("@/lib/admin/ops.server");
