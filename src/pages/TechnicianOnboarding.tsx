@@ -66,7 +66,7 @@ export default function TechnicianOnboarding() {
     if (!user) return;
     const parsed = schema.safeParse({ ...form, skills: skills.join(",") });
     if (!parsed.success) {
-      toast.error(parsed.error.issues[0].message);
+      toast.error(parsed.error.issues[0]?.message ?? "Invalid input");
       return;
     }
     setBusy(true);

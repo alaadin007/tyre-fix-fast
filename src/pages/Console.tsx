@@ -531,6 +531,7 @@ function DispatchModal({ job, allTechs, onClose, onDispatch }: DispatchModalProp
     const quotedId = Object.keys(techQuotes).find((id) => allTechs.some((t) => t.id === id));
     if (!quotedId) return;
     const q = techQuotes[quotedId];
+    if (!q) return;
     setTechId(quotedId);
     if (q.price != null) setPrice(String(q.price));
     if (q.eta != null) setEta(String(q.eta));

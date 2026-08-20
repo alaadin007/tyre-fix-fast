@@ -88,8 +88,8 @@ const extractLocation = (body: string) => {
   if (urlMatch) return { url: urlMatch[0], coords: null as null | { lat: number; lng: number } };
   const coordMatch = body.match(/(-?\d{1,2}\.\d{3,})[ ,]+(-?\d{1,3}\.\d{3,})/);
   if (coordMatch) {
-    const lat = parseFloat(coordMatch[1]);
-    const lng = parseFloat(coordMatch[2]);
+    const lat = parseFloat(coordMatch[1] ?? "");
+    const lng = parseFloat(coordMatch[2] ?? "");
     return { url: `https://www.google.com/maps?q=${lat},${lng}`, coords: { lat, lng } };
   }
   return null;

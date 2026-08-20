@@ -31,7 +31,7 @@ function bucketKey(iso: string, g: Granularity): string {
 }
 
 function normPc(s: string | null | undefined): string {
-  return (s ?? "").trim().toUpperCase().split(/\s+/)[0];
+  return (s ?? "").trim().toUpperCase().split(/\s+/)[0] ?? "";
 }
 
 function toCsv(rows: (string | number)[][]): string {

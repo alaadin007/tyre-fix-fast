@@ -56,7 +56,7 @@ export default function Overview() {
 
   // Uncovered-area demand — jobs where no active technician covered the postcode.
   const outOfCoverage = useMemo(() => {
-    const norm = (s: string) => s.trim().toUpperCase().split(/\s+/)[0];
+    const norm = (s: string) => s.trim().toUpperCase().split(/\s+/)[0] ?? "";
     const rows = jobs.filter((j) => j.status === "out_of_coverage");
     const byArea = new Map<string, number>();
     for (const j of rows) {
@@ -72,7 +72,7 @@ export default function Overview() {
   // Technician coverage by postcode (UK outward code)
   const coverage = useMemo(() => {
     const map = new Map<string, { code: string; techs: number; jobs: number }>();
-    const norm = (s: string) => s.trim().toUpperCase().split(/\s+/)[0];
+    const norm = (s: string) => s.trim().toUpperCase().split(/\s+/)[0] ?? "";
     for (const t of techs) {
       if (!t.active || t.approval_status !== "approved") continue;
       for (const pc of t.service_postcodes ?? []) {
