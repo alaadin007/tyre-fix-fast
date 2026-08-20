@@ -79,33 +79,33 @@ export default function SettingsPage() {
   }
 
   // ------- Service zip codes -------
-  const serviceZips: string[] = settings.service_zips?.list ?? [];
+  const serviceZips: string[] = settings['service_zips']?.list ?? [];
   const [newZip, setNewZip] = useState("");
 
   // ------- WhatsApp admin numbers -------
-  const masterNumbers: string[] = Array.isArray(settings.master_numbers?.numbers)
-    ? settings.master_numbers.numbers
-    : Array.isArray(settings.master_numbers)
-    ? settings.master_numbers
+  const masterNumbers: string[] = Array.isArray(settings['master_numbers']?.numbers)
+    ? settings['master_numbers'].numbers
+    : Array.isArray(settings['master_numbers'])
+    ? settings['master_numbers']
     : [];
   const [newWa, setNewWa] = useState("");
 
   // ------- Job status labels -------
-  const labels: Record<string, string> = { ...JOB_STATUS_LABELS, ...(settings.job_status_labels ?? {}) };
+  const labels: Record<string, string> = { ...JOB_STATUS_LABELS, ...(settings['job_status_labels'] ?? {}) };
 
   // ------- Notifications -------
-  const notifications = { ...DEFAULT_NOTIFICATIONS, ...(settings.notifications ?? {}) };
+  const notifications = { ...DEFAULT_NOTIFICATIONS, ...(settings['notifications'] ?? {}) };
 
   // ------- Payments -------
-  const payments = { ...DEFAULT_PAYMENTS, ...(settings.payments ?? {}) };
+  const payments = { ...DEFAULT_PAYMENTS, ...(settings['payments'] ?? {}) };
 
   // ------- Coverage areas -------
-  const coverageAreas: string[] = settings.coverage_areas?.list ?? [];
+  const coverageAreas: string[] = settings['coverage_areas']?.list ?? [];
   const [newArea, setNewArea] = useState("");
 
   async function assignRole() {
     const email = emailToAssign.trim().toLowerCase();
-    if (!email) return toast.error("Enter an email");
+    if (!email) { toast.error("Enter an email"); return; }
     // find user id via auth admin not available client-side; use a server fn-free trick: look up in user_roles by email won't work.
     // Fallback: ask user to paste a user_id if email isn't resolvable.
     const looksLikeUuid = /^[0-9a-f-]{36}$/i.test(email);
@@ -115,7 +115,7 @@ export default function SettingsPage() {
       return;
     }
     const { error } = await supabase.from("user_roles").insert({ user_id: userId, role: roleToAssign as any });
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     toast.success("Role assigned");
     setEmailToAssign("");
     loadAll();
@@ -123,7 +123,7 @@ export default function SettingsPage() {
 
   async function removeRole(id: string) {
     const { error } = await supabase.from("user_roles").delete().eq("id", id);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     toast.success("Removed");
     loadAll();
   }
@@ -164,7 +164,7 @@ export default function SettingsPage() {
                   onClick={() => {
                     const v = newZip.trim().toUpperCase();
                     if (!v) return;
-                    if (serviceZips.includes(v)) return toast.error("Already added");
+                    if (serviceZips.includes(v)) { toast.error("Already added"); return; }
                     saveKey("service_zips", { list: [...serviceZips, v] });
                     setNewZip("");
                   }}
@@ -201,7 +201,7 @@ export default function SettingsPage() {
                   onClick={() => {
                     const v = newArea.trim();
                     if (!v) return;
-                    if (coverageAreas.includes(v)) return toast.error("Already added");
+                    if (coverageAreas.includes(v)) { toast.error("Already added"); return; }
                     saveKey("coverage_areas", { list: [...coverageAreas, v] });
                     setNewArea("");
                   }}
@@ -240,8 +240,8 @@ export default function SettingsPage() {
                 <Button
                   onClick={() => {
                     const v = newWa.trim();
-                    if (!v.startsWith("+")) return toast.error("Must start with +country code");
-                    if (masterNumbers.includes(v)) return toast.error("Already added");
+                    if (!v.startsWith("+")) { toast.error("Must start with +country code"); return; }
+                    if (masterNumbers.includes(v)) { toast.error("Already added"); return; }
                     saveKey("master_numbers", { numbers: [...masterNumbers, v] });
                     setNewWa("");
                   }}
@@ -289,7 +289,7 @@ export default function SettingsPage() {
                           onBlur={(e) => {
                             const v = e.target.value.trim();
                             if (!v || v === labels[key]) return;
-                            const next = { ...(settings.job_status_labels ?? {}), [key]: v };
+                            const next = { ...(settings['job_status_labels'] ?? {}), [key]: v };
                             saveKey("job_status_labels", next);
                           }}
                         />

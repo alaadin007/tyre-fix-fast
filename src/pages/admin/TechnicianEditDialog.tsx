@@ -77,7 +77,7 @@ export function TechnicianEditDialog({
       }));
     }
     setBusy(false);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     toast.success(mode === "edit" ? "Technician updated" : "Technician added");
     onOpenChange(false);
   };

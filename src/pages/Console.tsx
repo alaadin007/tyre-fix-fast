@@ -376,8 +376,8 @@ function AddTechnicianModal({ onClose }: { onClose: () => void }) {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.name.trim()) return toast.error("Name required");
-    if (!form.phone.trim()) return toast.error("Phone required");
+    if (!form.name.trim()) { toast.error("Name required"); return; }
+    if (!form.phone.trim()) { toast.error("Phone required"); return; }
     setSaving(true);
     const postcodes = form.service_postcodes
       .split(",").map((p) => p.trim().toUpperCase()).filter(Boolean);
@@ -396,7 +396,7 @@ function AddTechnicianModal({ onClose }: { onClose: () => void }) {
       approved_at: new Date().toISOString(),
     });
     setSaving(false);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     toast.success("Technician added & approved");
     onClose();
   };
@@ -625,9 +625,9 @@ function DispatchModal({ job, allTechs, onClose, onDispatch }: DispatchModalProp
   const submit = () => {
     const p = Number(price);
     const e = Number(eta);
-    if (!techId) return toast.error("Pick a technician");
-    if (!Number.isFinite(p) || p < 1) return toast.error("Enter a valid price");
-    if (!Number.isFinite(e) || e < 1) return toast.error("Enter a valid ETA");
+    if (!techId) { toast.error("Pick a technician"); return; }
+    if (!Number.isFinite(p) || p < 1) { toast.error("Enter a valid price"); return; }
+    if (!Number.isFinite(e) || e < 1) { toast.error("Enter a valid ETA"); return; }
     onDispatch(job, techId, p, e, notes || undefined);
   };
 

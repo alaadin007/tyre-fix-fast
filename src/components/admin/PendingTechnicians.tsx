@@ -131,7 +131,7 @@ export function PendingTechnicians() {
       })
       .eq("id", t.id);
     setBusy(null);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     toast.success(`${t.name} approved`);
     // Notify technician via Meta WhatsApp (same number that handled onboarding)
     void supabase.functions.invoke("whatsapp-meta-send", {
@@ -154,7 +154,7 @@ export function PendingTechnicians() {
       })
       .eq("id", t.id);
     setBusy(null);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     toast.success(`${t.name} rejected`);
     setRejectFor(null);
     setRejectReason("");
@@ -183,7 +183,7 @@ export function PendingTechnicians() {
       body: { to: t.phone, body: requestMsg, channel: "whatsapp" },
     });
     setBusy(null);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     toast.success(`Sent to ${t.phone}`);
     setRequestFor(null);
     setRequestMsg("");
