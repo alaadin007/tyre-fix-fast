@@ -3,7 +3,7 @@ import { Seo } from "@/components/Seo";
 import heroImg from "@/assets/blog/tpms-warning-hero.jpg";
 
 export default function TpmsWarningLight() {
-  const url = "https://www.tyrefly.com/blog/tpms-warning-light";
+  const url = "https://www.tyrefly.com/blog/tpms-warning-light/";
   const imageUrl = `https://www.tyrefly.com${heroImg}`;
   const datePublished = "2026-06-11";
 
@@ -30,7 +30,7 @@ export default function TpmsWarningLight() {
     "@type": "BreadcrumbList",
     itemListElement: [
       { "@type": "ListItem", position: 1, name: "Home", item: "https://www.tyrefly.com/" },
-      { "@type": "ListItem", position: 2, name: "Blog", item: "https://www.tyrefly.com/blog" },
+      { "@type": "ListItem", position: 2, name: "Blog", item: "https://www.tyrefly.com/blog/" },
       { "@type": "ListItem", position: 3, name: "TPMS Warning Light", item: url },
     ],
   };

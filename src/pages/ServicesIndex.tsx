@@ -13,7 +13,7 @@ export default function ServicesIndex() {
       "@type": "BreadcrumbList",
       itemListElement: [
         { "@type": "ListItem", position: 1, name: "Home", item: "https://www.tyrefly.com/" },
-        { "@type": "ListItem", position: 2, name: "Services", item: "https://www.tyrefly.com/services" },
+        { "@type": "ListItem", position: 2, name: "Services", item: "https://www.tyrefly.com/services/" },
       ],
     },
     {
@@ -23,7 +23,7 @@ export default function ServicesIndex() {
         "@type": "ListItem",
         position: i + 1,
         name: s.name,
-        url: `https://www.tyrefly.com/services/${s.slug}`,
+        url: `https://www.tyrefly.com/services/${s.slug}/`,
       })),
     },
   ];

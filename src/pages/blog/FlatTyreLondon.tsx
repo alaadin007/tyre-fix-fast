@@ -4,7 +4,7 @@ import heroImg from "@/assets/blog/flat-tyre-london-hero.jpg";
 import fitterImg from "@/assets/blog/flat-tyre-london-fitter.jpg";
 
 export default function FlatTyreLondon() {
-  const url = "https://www.tyrefly.com/blog/flat-tyre-london";
+  const url = "https://www.tyrefly.com/blog/flat-tyre-london/";
   const imageUrl = `https://www.tyrefly.com${heroImg}`;
   const datePublished = "2026-06-11";
 
@@ -31,7 +31,7 @@ export default function FlatTyreLondon() {
     "@type": "BreadcrumbList",
     itemListElement: [
       { "@type": "ListItem", position: 1, name: "Home", item: "https://www.tyrefly.com/" },
-      { "@type": "ListItem", position: 2, name: "Blog", item: "https://www.tyrefly.com/blog" },
+      { "@type": "ListItem", position: 2, name: "Blog", item: "https://www.tyrefly.com/blog/" },
       { "@type": "ListItem", position: 3, name: "Flat Tyre London", item: url },
     ],
   };

@@ -32,7 +32,7 @@ export default function AreaPage() {
     "@type": "AutoRepair",
     name: `Tyrefly — ${area.name}`,
     description,
-    url: `https://www.tyrefly.com/areas/${area.slug}`,
+    url: `https://www.tyrefly.com/areas/${area.slug}/`,
     image: "https://www.tyrefly.com/og.jpg",
     telephone: "+44-800-000-0000",
     areaServed: { "@type": "AdministrativeArea", name: area.region },
@@ -61,8 +61,8 @@ export default function AreaPage() {
     "@type": "BreadcrumbList",
     itemListElement: [
       { "@type": "ListItem", position: 1, name: "Home", item: "https://www.tyrefly.com/" },
-      { "@type": "ListItem", position: 2, name: "Service Areas", item: "https://www.tyrefly.com/areas" },
-      { "@type": "ListItem", position: 3, name: area.name, item: `https://www.tyrefly.com/areas/${area.slug}` },
+      { "@type": "ListItem", position: 2, name: "Service Areas", item: "https://www.tyrefly.com/areas/" },
+      { "@type": "ListItem", position: 3, name: area.name, item: `https://www.tyrefly.com/areas/${area.slug}/` },
     ],
   };
 

@@ -117,7 +117,7 @@ const Index = () => {
             <Link to="/areas" className="hover:text-white">Areas</Link>
             <Link to="/blog" className="hover:text-white">Blog</Link>
             <a href="#reviews" className="hover:text-white">Reviews</a>
-            <a href="/technician/login" className="hover:text-white">For technicians</a>
+            <a href="/technician/login/" className="hover:text-white">For technicians</a>
           </nav>
           <a
             href={WA_HREF}
@@ -483,7 +483,7 @@ const Index = () => {
       {/* ===== Technician CTA ===== */}
       <section className="px-5 pb-12">
         <a
-          href="/technician/login"
+          href="/technician/login/"
           className="block w-full max-w-3xl mx-auto rounded-2xl border border-[#FF6B1A]/40 bg-gradient-to-br from-[#FF6B1A]/15 to-[#FF6B1A]/5 px-6 py-6 text-center hover:border-[#FF6B1A] hover:from-[#FF6B1A]/25 transition-all"
         >
           <p className="text-[11px] uppercase tracking-[0.2em] text-[#FF6B1A] font-semibold">
@@ -508,12 +508,12 @@ const Index = () => {
             </div>
             <div className="flex items-center gap-4">
               <a href={WA_HREF} target="_blank" rel="noopener noreferrer" className="hover:text-white/70">WhatsApp {SUPPORT_WA_DISPLAY}</a>
-              <a href="/privacy" className="hover:text-white/70">Privacy</a>
-              <a href="/terms" className="hover:text-white/70">Terms</a>
+              <a href="/privacy/" className="hover:text-white/70">Privacy</a>
+              <a href="/terms/" className="hover:text-white/70">Terms</a>
             </div>
           </div>
           <p className="text-[10px] text-white/30 leading-relaxed">
-            *Tyrefly is a marketplace connecting customers with independent vetted technicians across the UK. The work contract is between you and the attending technician. See <a href="/terms" className="underline hover:text-white/60">Terms</a>.
+            *Tyrefly is a marketplace connecting customers with independent vetted technicians across the UK. The work contract is between you and the attending technician. See <a href="/terms/" className="underline hover:text-white/60">Terms</a>.
           </p>
         </div>
       </footer>

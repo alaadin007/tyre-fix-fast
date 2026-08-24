@@ -11,7 +11,7 @@ export default function AreasIndex() {
     itemListElement: AREAS.map((a, i) => ({
       "@type": "ListItem",
       position: i + 1,
-      url: `https://www.tyrefly.com/areas/${a.slug}`,
+      url: `https://www.tyrefly.com/areas/${a.slug}/`,
       name: `Mobile tyre fitter ${a.name}`,
     })),
   };

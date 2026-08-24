@@ -91,7 +91,7 @@ const BLOG_LD = {
   "@context": "https://schema.org",
   "@type": "Blog",
   name: "Tyrefly Journal",
-  url: "https://www.tyrefly.com/blog",
+  url: "https://www.tyrefly.com/blog/",
   description:
     "Mobile tyre fitting, puncture repair and roadside safety guides for UK drivers, written by working tyre technicians.",
   publisher: { "@type": "Organization", name: "Tyrefly", url: "https://www.tyrefly.com/" },

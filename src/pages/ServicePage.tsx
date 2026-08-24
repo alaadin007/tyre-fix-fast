@@ -11,7 +11,7 @@ export default function ServicePage() {
   if (!svc) return <NotFound />;
 
   const MSG = `Hi Tyrefly — I need ${svc.keyword}`;
-  const url = `https://www.tyrefly.com/services/${svc.slug}`;
+  const url = `https://www.tyrefly.com/services/${svc.slug}/`;
   const title = `Mobile ${svc.keyword} UK — 24/7 Call-Out | Tyrefly`.slice(0, 62);
   const description = `${svc.tagline} ${svc.priceLine}. Text your postcode for a fixed price in 60 seconds, 24/7 UK-wide.`.slice(0, 158);
 
@@ -41,7 +41,7 @@ export default function ServicePage() {
       "@type": "BreadcrumbList",
       itemListElement: [
         { "@type": "ListItem", position: 1, name: "Home", item: "https://www.tyrefly.com/" },
-        { "@type": "ListItem", position: 2, name: "Services", item: "https://www.tyrefly.com/services" },
+        { "@type": "ListItem", position: 2, name: "Services", item: "https://www.tyrefly.com/services/" },
         { "@type": "ListItem", position: 3, name: svc.name, item: url },
       ],
     },
