@@ -12,7 +12,7 @@ export default function ServiceAreaPage() {
   if (!svc || !area) return <NotFound />;
 
   const MSG = `Hi Tyrefly — I need ${svc.keyword} in ${area.name}`;
-  const path = `/services/${svc.slug}/${area.slug}`;
+  const path = `/services/${svc.slug}/${area.slug}/`;
   const url = `https://www.tyrefly.com${path}`;
 
   const cap = svc.keyword.charAt(0).toUpperCase() + svc.keyword.slice(1);
@@ -35,7 +35,7 @@ export default function ServiceAreaPage() {
       provider: {
         "@type": "AutoRepair",
         name: `Tyrefly — ${area.name}`,
-        url: `https://www.tyrefly.com/areas/${area.slug}`,
+        url: `https://www.tyrefly.com/areas/${area.slug}/`,
         telephone: "+44-800-000-0000",
         priceRange: "££",
         areaServed: { "@type": "AdministrativeArea", name: area.region },
@@ -63,8 +63,8 @@ export default function ServiceAreaPage() {
       "@type": "BreadcrumbList",
       itemListElement: [
         { "@type": "ListItem", position: 1, name: "Home", item: "https://www.tyrefly.com/" },
-        { "@type": "ListItem", position: 2, name: "Services", item: "https://www.tyrefly.com/services" },
-        { "@type": "ListItem", position: 3, name: svc.name, item: `https://www.tyrefly.com/services/${svc.slug}` },
+        { "@type": "ListItem", position: 2, name: "Services", item: "https://www.tyrefly.com/services/" },
+        { "@type": "ListItem", position: 3, name: svc.name, item: `https://www.tyrefly.com/services/${svc.slug}/` },
         { "@type": "ListItem", position: 4, name: area.name, item: url },
       ],
     },

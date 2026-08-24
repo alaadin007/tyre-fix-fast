@@ -109,19 +109,19 @@ export type HeroKey = keyof typeof heroMap;
 type LinkTarget = { pattern: RegExp; href: string };
 
 const LINK_TARGETS: LinkTarget[] = [
-  { pattern: /\bmobile tyre fitting in london\b/i, href: "/areas/london" },
-  { pattern: /\bmobile tyre fitting london\b/i, href: "/areas/london" },
-  { pattern: /\bmobile tyre fitter in london\b/i, href: "/areas/london" },
-  { pattern: /\bmobile tyre fitting in manchester\b/i, href: "/areas/greater-manchester" },
-  { pattern: /\bmobile tyre fitting manchester\b/i, href: "/areas/greater-manchester" },
-  { pattern: /\bmobile tyre fitting in birmingham\b/i, href: "/areas/west-midlands" },
-  { pattern: /\bmobile tyre fitting birmingham\b/i, href: "/areas/west-midlands" },
-  { pattern: /\bpuncture repair cost(s)?\b/i, href: "/blog/puncture-repair-cost-uk" },
-  { pattern: /\bcost of (a )?puncture repair\b/i, href: "/blog/puncture-repair-cost-uk" },
-  { pattern: /\brun-?flat tyres?\b/i, href: "/blog/run-flat-tyres-uk-guide" },
-  { pattern: /\bsidewall damage\b/i, href: "/blog/tyre-sidewall-damage-guide" },
-  { pattern: /\blegal tread depth\b/i, href: "/blog/uk-tyre-legal-tread-depth" },
-  { pattern: /\blocking wheel[- ]nut key\b/i, href: "/blog/locking-wheel-nut-lost-uk" },
+  { pattern: /\bmobile tyre fitting in london\b/i, href: "/areas/london/" },
+  { pattern: /\bmobile tyre fitting london\b/i, href: "/areas/london/" },
+  { pattern: /\bmobile tyre fitter in london\b/i, href: "/areas/london/" },
+  { pattern: /\bmobile tyre fitting in manchester\b/i, href: "/areas/greater-manchester/" },
+  { pattern: /\bmobile tyre fitting manchester\b/i, href: "/areas/greater-manchester/" },
+  { pattern: /\bmobile tyre fitting in birmingham\b/i, href: "/areas/west-midlands/" },
+  { pattern: /\bmobile tyre fitting birmingham\b/i, href: "/areas/west-midlands/" },
+  { pattern: /\bpuncture repair cost(s)?\b/i, href: "/blog/puncture-repair-cost-uk/" },
+  { pattern: /\bcost of (a )?puncture repair\b/i, href: "/blog/puncture-repair-cost-uk/" },
+  { pattern: /\brun-?flat tyres?\b/i, href: "/blog/run-flat-tyres-uk-guide/" },
+  { pattern: /\bsidewall damage\b/i, href: "/blog/tyre-sidewall-damage-guide/" },
+  { pattern: /\blegal tread depth\b/i, href: "/blog/uk-tyre-legal-tread-depth/" },
+  { pattern: /\blocking wheel[- ]nut key\b/i, href: "/blog/locking-wheel-nut-lost-uk/" },
   { pattern: /\bmobile tyre fitter(s)?\b/i, href: "/" },
 ];
 
@@ -143,7 +143,7 @@ function autolink(html: string, state: { used: number; hrefs: Set<string>; slug:
     for (const { pattern, href } of LINK_TARGETS) {
       if (state.used >= AUTOLINK_CAP) break;
       if (state.hrefs.has(href)) continue; // one link per destination per article
-      if (href === `/blog/${state.slug}`) continue; // never self-link
+      if (href === `/blog/${state.slug}/`) continue; // never self-link
       const m = next.match(pattern);
       if (!m || m.index === undefined) continue;
       next =
@@ -183,7 +183,7 @@ const LONDON_CLUSTER: { to: string; label: string }[] = [
 ];
 
 export default function BlogPost(p: BlogPostProps) {
-  const url = `${SITE}/blog/${p.slug}`;
+  const url = `${SITE}/blog/${p.slug}/`;
   const hero = heroMap[p.heroImage ?? "flat"];
   const imageUrl = `${SITE}${hero}`;
   const isLondon = /london|m25/i.test(`${p.category} ${p.slug}`);
@@ -508,7 +508,7 @@ export default function BlogPost(p: BlogPostProps) {
                 Greater London.
               </p>
               <ul className="grid sm:grid-cols-2 gap-2">
-                {LONDON_CLUSTER.filter((l) => !l.to.endsWith(`/${p.slug}`)).map((l) => (
+                {LONDON_CLUSTER.filter((l) => !l.to.replace(/\/$/, "").endsWith(`/${p.slug}`)).map((l) => (
                   <li key={l.to}>
                     <Link
                       to={l.to}

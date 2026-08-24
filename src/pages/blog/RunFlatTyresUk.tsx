@@ -3,7 +3,7 @@ import { Seo } from "@/components/Seo";
 import heroImg from "@/assets/blog/run-flat-tyres-hero.jpg";
 
 export default function RunFlatTyresUk() {
-  const url = "https://www.tyrefly.com/blog/run-flat-tyres-uk-guide";
+  const url = "https://www.tyrefly.com/blog/run-flat-tyres-uk-guide/";
   const imageUrl = `https://www.tyrefly.com${heroImg}`;
   const datePublished = "2026-06-11";
 
@@ -30,7 +30,7 @@ export default function RunFlatTyresUk() {
     "@type": "BreadcrumbList",
     itemListElement: [
       { "@type": "ListItem", position: 1, name: "Home", item: "https://www.tyrefly.com/" },
-      { "@type": "ListItem", position: 2, name: "Blog", item: "https://www.tyrefly.com/blog" },
+      { "@type": "ListItem", position: 2, name: "Blog", item: "https://www.tyrefly.com/blog/" },
       { "@type": "ListItem", position: 3, name: "Run-Flat Tyres UK Guide", item: url },
     ],
   };

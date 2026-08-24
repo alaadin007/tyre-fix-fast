@@ -13,8 +13,16 @@ interface SeoProps {
 
 const SITE = "https://www.tyrefly.com";
 
+/** Canonical/og URLs always end in a trailing slash (ignoring query/hash). */
+function withTrailingSlash(url: string): string {
+  const [base, ...rest] = url.split(/(?=[?#])/);
+  if (!base) return url;
+  const slashed = base.endsWith("/") || /\.[a-z0-9]+$/i.test(base) ? base : `${base}/`;
+  return slashed + rest.join("");
+}
+
 export function Seo({ title, description, canonical, jsonLd, noindex, ogImage, statusCode }: SeoProps) {
-  const canonHref = canonical ? (canonical.startsWith("http") ? canonical : `${SITE}${canonical}`) : undefined;
+  const canonHref = canonical ? withTrailingSlash(canonical.startsWith("http") ? canonical : `${SITE}${canonical}`) : undefined;
   const img = ogImage ?? `${SITE}/og.jpg`;
   const ldArray = jsonLd ? (Array.isArray(jsonLd) ? jsonLd : [jsonLd]) : [];
 
