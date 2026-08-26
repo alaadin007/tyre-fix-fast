@@ -29,6 +29,7 @@ const GTM_SNIPPET =
 const ORG_JSON_LD = JSON.stringify({
   "@context": "https://schema.org",
   "@type": "Organization",
+  "@id": "https://www.tyrefly.com/#organization",
   name: "Tyrefly",
   url: "https://www.tyrefly.com/",
   logo: "https://www.tyrefly.com/favicon.png",
