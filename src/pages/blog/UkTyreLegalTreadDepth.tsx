@@ -12,7 +12,7 @@ export default function UkTyreLegalTreadDepth() {
       datePublished="2026-07-13"
       heroImage="treadDepth"
       heroAlt="A tread depth gauge measuring the shallow remaining tread in a worn tyre groove"
-      intro="UK tyre legal tread depth is 1.6mm — The UK minimum legal tread depth is 1.6mm — a number most drivers can recite but very few understand properly. This guide covers what it actually means, how the police and MOT centres measure it, the fines, and why 1.6mm is legal but not remotely safe once the rain arrives."
+      intro="UK tyre legal tread depth is 1.6mm — a number most drivers can recite but very few understand properly. This guide covers what it actually means, how the police and MOT centres measure it, the fines, and why 1.6mm is legal but not remotely safe once the rain arrives."
       blocks={[
         { type: "h2", text: "UK tyre legal tread depth, in one sentence" },
         { type: "p", html: "In the UK, every car, light van and trailer tyre must have <strong>at least 1.6mm of tread depth across the central three-quarters of the tread width, around the entire circumference</strong>. That's the wording of the Motor Vehicles (Construction and Use) Regulations 1986, Regulation 27, and it hasn't changed in decades." },
