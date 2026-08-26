@@ -24,7 +24,12 @@ export default function ServicePage() {
       serviceType: svc.keyword,
       description,
       url,
-      provider: { "@type": "AutoRepair", name: "Tyrefly", url: "https://www.tyrefly.com/" },
+      provider: {
+        "@type": "Organization",
+        "@id": "https://www.tyrefly.com/#organization",
+        name: "Tyrefly",
+        url: "https://www.tyrefly.com/",
+      },
       areaServed: { "@type": "Country", name: "United Kingdom" },
       availableChannel: { "@type": "ServiceChannel", serviceUrl: url, availableLanguage: "en-GB" },
     },

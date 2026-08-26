@@ -27,23 +27,25 @@ export default function AreaPage() {
   ];
   const allFaqs = [...baseFaqs, ...(area.extraFaqs ?? [])];
 
-  const localBusinessLd = {
+  const localServiceLd = {
     "@context": "https://schema.org",
-    "@type": "AutoRepair",
-    name: `Tyrefly — ${area.name}`,
+    "@type": "Service",
+    name: `Mobile tyre fitting ${area.name}`,
+    serviceType: "Mobile tyre fitting",
     description,
     url: `https://www.tyrefly.com/areas/${area.slug}/`,
-    image: "https://www.tyrefly.com/og.jpg",
-    telephone: "+44-800-000-0000",
-    areaServed: { "@type": "AdministrativeArea", name: area.region },
-    priceRange: "££",
-    openingHoursSpecification: {
-      "@type": "OpeningHoursSpecification",
-      dayOfWeek: ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"],
-      opens: "00:00",
-      closes: "23:59",
+    provider: {
+      "@type": "Organization",
+      "@id": "https://www.tyrefly.com/#organization",
+      name: "Tyrefly",
+      url: "https://www.tyrefly.com/",
     },
-    aggregateRating: { "@type": "AggregateRating", ratingValue: "4.9", reviewCount: "1200" },
+    areaServed: { "@type": "AdministrativeArea", name: area.region },
+    availableChannel: {
+      "@type": "ServiceChannel",
+      serviceUrl: `https://www.tyrefly.com/areas/${area.slug}/`,
+      availableLanguage: "en-GB",
+    },
   };
 
   const faqLd = {
@@ -75,7 +77,7 @@ export default function AreaPage() {
         title={title}
         description={description}
         canonical={`/areas/${area.slug}`}
-        jsonLd={[localBusinessLd, faqLd, breadcrumbsLd]}
+        jsonLd={[localServiceLd, faqLd, breadcrumbsLd]}
       />
 
       {/* Nav */}
