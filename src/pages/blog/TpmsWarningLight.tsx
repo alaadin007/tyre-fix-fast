@@ -1,4 +1,5 @@
 import { Link } from "@/lib/router-compat";
+import ServiceLinks from "@/components/blog/ServiceLinks";
 import { Seo } from "@/components/Seo";
 import heroImg from "@/assets/blog/tpms-warning-hero.jpg";
 
@@ -201,6 +202,7 @@ export default function TpmsWarningLight() {
             Get a quote in 60 seconds →
           </Link>
         </div>
+        <ServiceLinks />
       </article>
     </main>
   );

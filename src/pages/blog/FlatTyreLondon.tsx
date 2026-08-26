@@ -1,4 +1,5 @@
 import { Link } from "@/lib/router-compat";
+import ServiceLinks from "@/components/blog/ServiceLinks";
 import { Seo } from "@/components/Seo";
 import heroImg from "@/assets/blog/flat-tyre-london-hero.jpg";
 import fitterImg from "@/assets/blog/flat-tyre-london-fitter.jpg";
@@ -495,6 +496,7 @@ export default function FlatTyreLondon() {
             <Link to="/areas/greater-manchester" className="text-primary hover:underline">Manchester</Link>.
           </p>
         </div>
+        <ServiceLinks />
       </article>
     </main>
   );

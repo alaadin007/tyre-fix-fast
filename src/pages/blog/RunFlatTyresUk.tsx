@@ -1,4 +1,5 @@
 import { Link } from "@/lib/router-compat";
+import ServiceLinks from "@/components/blog/ServiceLinks";
 import { Seo } from "@/components/Seo";
 import heroImg from "@/assets/blog/run-flat-tyres-hero.jpg";
 
@@ -259,6 +260,7 @@ export default function RunFlatTyresUk() {
             Get a quote in 60 seconds →
           </Link>
         </div>
+        <ServiceLinks />
       </article>
     </main>
   );
