@@ -101,8 +101,8 @@ export default function Blog() {
   return (
     <main className="min-h-screen bg-background">
       <Seo
-        title="Tyre Guides: Puncture Repair & Mobile Fitting | Tyrefly"
-        description="Mobile tyre fitting prices, emergency puncture repair, blowouts, tread depth and tyre buying advice — practical UK guides written by working tyre fitters."
+        title="Tyre Advice Blog UK — Puncture & Fitting Guides | Tyrefly"
+        description="A tyre advice blog UK drivers can trust: mobile tyre fitting prices, emergency puncture repair, blowouts, tread depth and buying advice from working fitters."
         canonical="/blog"
         jsonLd={BLOG_LD}
       />
@@ -110,11 +110,13 @@ export default function Blog() {
       <section className="max-w-3xl mx-auto px-6 py-16">
         <p className="text-sm uppercase tracking-widest text-muted-foreground mb-3">Tyrefly Journal</p>
         <h1 className="text-4xl md:text-5xl font-semibold tracking-tight mb-4">
-          Tyre guides for drivers who'd rather not get stranded
+          Tyre advice blog UK drivers actually use
         </h1>
         <p className="text-lg text-muted-foreground mb-6">
-          Puncture repair costs, emergency roadside steps, and the tyre knowledge that keeps you off the
-          hard shoulder — from a team that fits tyres at the kerbside for a living.
+          Welcome to the Tyrefly tyre advice blog UK — puncture repair costs, emergency roadside steps and the tyre knowledge that
+          keeps you off the hard shoulder, from a team that fits tyres at the kerbside for a living. Need help now? See{" "}
+          <Link to="/services" className="text-primary hover:underline">our mobile tyre services</Link> or your{" "}
+          <Link to="/areas" className="text-primary hover:underline">local service area</Link>.
         </p>
         <p className="mb-12">
           <Link to="/" className="text-primary font-medium hover:underline">
@@ -122,7 +124,7 @@ export default function Blog() {
           </Link>
         </p>
 
-        <h2 className="text-2xl md:text-3xl font-semibold tracking-tight mb-6">Start here</h2>
+        <h2 className="text-2xl md:text-3xl font-semibold tracking-tight mb-6">Start here: the most-read tyre advice guides</h2>
         <ul className="space-y-8">
           {featured.map((p) => (
             <li key={p.slug} className="border-b border-border pb-8">
