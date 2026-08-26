@@ -82,8 +82,8 @@ export default function ServicePage() {
 
       <article className="mx-auto w-full max-w-3xl px-5 py-14">
         <p className="text-base text-white/75 leading-relaxed">
-          {svc.name} UK-wide means no garage trip and no waiting room — Tyrefly is a 24/7 {svc.keyword} service near me searches
-          usually can't match, because the van comes to you. {svc.intro}
+          {svc.name} UK-wide means no garage trip and no waiting room: a fully-equipped van comes to your car, 24 hours a day.
+          It's what most drivers mean when they search for {svc.name.toLowerCase()} near me. {svc.intro}
         </p>
         {svc.sections.map((sec) => (
           <div key={sec.h2} className="mt-10">
