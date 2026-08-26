@@ -5,7 +5,7 @@ export default function TyreAgeWhenToReplace() {
     <BlogPost
       slug="tyre-age-when-to-replace"
       metaTitle="Tyre Age: When To Replace Even With Good Tread (2026)"
-      metaDesc="Tyres age even when they're not used. How to read the DOT date code, why 6-10 years is the safe upper limit, and what old tyres feel like."
+      metaDesc="Tyre age: when to replace even with good tread. Read the DOT date code, why 6-10 years is the safe limit, and what replacement tyres cost in the UK."
       title="Tyre Age: When to Replace Even If the Tread Looks Fine"
       category="Legal"
       readMinutes={9}
@@ -18,7 +18,7 @@ export default function TyreAgeWhenToReplace() {
         { type: "p", html: "Every tyre made for sale in the UK carries a Department of Transportation (DOT) code on the sidewall. It looks like this: <code>DOT ABCD EF3823</code>. The last four digits are what matter — they're the week and year of manufacture. In this example, <strong>38</strong> is the week and <strong>23</strong> is the year: this tyre was built in week 38 of 2023, which is mid-September 2023." },
         { type: "p", html: "The DOT code is usually on the inner sidewall only (the side facing the car), so you may need to crouch and use a phone torch. If you can't see it on the outside, that's normal — check the other side of the wheel." },
 
-        { type: "h2", text: "The industry recommendations" },
+        { type: "h2", text: "Tyre age: when to replace, according to the industry" },
         { type: "p", html: "There's no UK law setting a maximum tyre age for cars. But the industry consensus is clear:" },
         {
           type: "ul",
@@ -69,7 +69,7 @@ export default function TyreAgeWhenToReplace() {
         },
         { type: "p", html: "If the DOT is over 6 years, factor a full set of tyres into the purchase price — that's often £400–£800 you can knock off, or walk." },
 
-        { type: "h2", text: "The spare wheel trap" },
+        { type: "h2", text: "The spare wheel trap — and the cost of leaving it too late" },
         { type: "p", html: "Space-saver and full-size spares often stay in the boot for the life of the car. That means a 15-year-old car might have a 15-year-old spare wheel. It's fine sitting still, but the moment you actually need it — usually in the rain, on the motorway, at speed — a 15-year-old space-saver behaves nothing like a new one. Check the DOT on your spare. If it's over 10 years, replace it or price a new-condition secondhand one from a breaker." },
 
         { type: "h2", text: "How age interacts with tread" },

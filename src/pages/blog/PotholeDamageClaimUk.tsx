@@ -6,13 +6,13 @@ export default function PotholeDamageClaimUk() {
       slug="pothole-damage-claim-uk"
       metaTitle="Pothole Damage Claim UK: How To Claim & Win in 2026"
       metaDesc="Damaged tyre or alloy from a UK pothole? Step-by-step guide to claiming from the council or National Highways in 2026, with evidence checklist."
-      title="Pothole Damage Claim: How To Actually Win Against a UK Council"
+      title="Pothole Damage Claim UK: How To Actually Win Against a Council"
       category="Legal"
       readMinutes={10}
       datePublished="2026-07-13"
       heroImage="potholeClaim"
       heroAlt="A large water-filled pothole in a UK road with parked cars either side"
-      intro="UK councils reject about 65% of pothole damage claims — mostly because drivers don't submit the right evidence in the right order. It's not that claims never win. It's that most claims lose on paperwork. Here's how to make yours one of the ones that pays out."
+      intro="A pothole damage claim UK councils cannot reject starts with evidence, not anger — and with a documented repair cost. UK councils reject about 65% of pothole damage claims — mostly because drivers don't submit the right evidence in the right order. It's not that claims never win. It's that most claims lose on paperwork. Here's how to make yours one of the ones that pays out."
       blocks={[
         { type: "h2", text: "Who's actually responsible for the road?" },
         {
@@ -51,7 +51,7 @@ export default function PotholeDamageClaimUk() {
         },
         { type: "p", html: "Keep the reference number and screenshot of the confirmation. In the meantime, a <a href=\"/blog/mobile-tyre-fitter-vs-garage\" class=\"text-primary hover:underline\">mobile tyre fitter</a> can get you road-legal again while the claim runs." },
 
-        { type: "h2", text: "Step 3: Get the damage documented and priced" },
+        { type: "h2", text: "Step 3: Get the damage documented and the repair cost priced" },
         {
           type: "ul",
           items: [

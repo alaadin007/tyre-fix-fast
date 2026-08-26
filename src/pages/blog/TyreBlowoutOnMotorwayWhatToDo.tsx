@@ -4,17 +4,17 @@ export default function TyreBlowoutOnMotorwayWhatToDo() {
   return (
     <BlogPost
       slug="tyre-blowout-on-motorway-what-to-do"
-      metaTitle="Tyre Blowout on the Motorway: What To Do (UK 2026)"
+      metaTitle="Tyre Blowout on Motorway: What To Do & Cost (UK 2026)"
       metaDesc="Step-by-step for surviving a tyre blowout on a UK motorway or smart motorway — steering, stopping, calling 999, and getting rescued fast."
-      title="Tyre Blowout on the Motorway: What To Do in the First 30 Seconds"
+      title="Tyre Blowout on Motorway: What To Do in the First 30 Seconds"
       category="Emergency Guide"
       readMinutes={11}
       datePublished="2026-07-13"
       heroImage="tyreBlowout"
       heroAlt="A shredded blown-out tyre and scattered rubber debris on a motorway hard shoulder behind a warning triangle"
-      intro="A motorway blowout is loud, sudden and disorientating — and the wrong reflex will put you in a hedge. Here's what to actually do in the first thirty seconds, based on National Highways guidance and what our mobile fitters see every week on the M25, M6 and M1."
+      intro="A tyre blowout on motorway speeds is loud, sudden and disorientating. A motorway blowout is loud, sudden and disorientating — and the wrong reflex will put you in a hedge. Here's what to actually do in the first thirty seconds, based on National Highways guidance and what our mobile fitters see every week on the M25, M6 and M1."
       blocks={[
-        { type: "h2", text: "What a blowout feels like" },
+        { type: "h2", text: "What a tyre blowout on motorway speeds feels like" },
         { type: "p", html: "A blowout is not a slow puncture. It's an instant, violent loss of pressure — usually a bang, a pull to one side (sometimes hard), a flapping noise and, on a rear tyre, a fishtailing feel in the back of the car. On a front tyre the steering goes heavy and the car lurches toward the failed side. On a rear the car snakes and the steering feels weirdly normal, which is what catches most drivers out." },
         { type: "p", html: "Blowouts at motorway speed are rare — most punctures are slow leaks discovered in a car park. But when they do happen, they're almost always caused by one of three things: an under-inflated tyre that's overheated over 60+ miles, a large piece of road debris (bolt, exhaust bracket, spring), or a sidewall that was cut or bulged by a kerb strike days or weeks earlier — the warning signs are in our <a href=\"/blog/tyre-sidewall-damage-guide\" class=\"text-primary hover:underline\">sidewall damage guide</a>." },
 
@@ -55,7 +55,7 @@ export default function TyreBlowoutOnMotorwayWhatToDo() {
         },
         { type: "p", html: "The red X above your lane is a legal instruction to other drivers to leave that lane. Ignoring it is a £100 fine and 3 points, and it's the single biggest protective tool between you and a following HGV." },
 
-        { type: "h2", text: "Who to call, in what order" },
+        { type: "h2", text: "Who to call, in what order — and what a tyre blowout on motorway rescue costs" },
         {
           type: "ol",
           items: [

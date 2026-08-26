@@ -4,15 +4,15 @@ export default function EmergencyPunctureRepairLondon() {
   return (
     <BlogPost
       slug="emergency-puncture-repair-london"
-      metaTitle="Emergency & 24 Hour Puncture Repair London | Open Now"
+      metaTitle="Emergency Puncture Repair London | 24 Hours, Open Now"
       metaDesc="Emergency puncture repair in London, 24/7 — including 3am callouts. Response times by zone, day and night prices, and how to book in 60 seconds by text."
-      title="Emergency Puncture Repair in London: Who's Actually Open Right Now (24 Hours)"
+      title="Emergency Puncture Repair London: Who's Actually Open Right Now (24 Hours)"
       category="London"
       readMinutes={13}
       datePublished="2026-07-15"
       dateModified="2026-08-18"
       heroImage="emergencyPunctureLondon"
-      intro="You've got a nail in the tread, the pressure warning light is on, and you need someone to come to your car in the next hour — not a slot at a garage next Tuesday. This is the honest guide to emergency and 24 hour puncture repair in London: prices day and night, response times, what actually happens on-site, and the mistakes that turn a £45 repair into a £250 tyre replacement."
+      intro="Emergency puncture repair London, right now: You've got a nail in the tread, the pressure warning light is on, and you need someone to come to your car in the next hour — not a slot at a garage next Tuesday. This is the honest guide to emergency and 24 hour puncture repair in London: prices day and night, response times, what actually happens on-site, and the mistakes that turn a £45 repair into a £250 tyre replacement."
       blocks={[
         { type: "h2", text: "What counts as an emergency puncture in London" },
         { type: "p", html: "For our purposes, an <strong>emergency puncture</strong> is any loss of pressure that stops you driving safely right now — a nail you can see, a valve leaking audibly, a tyre that was fine at breakfast and is on 15 PSI by lunch. It's separate from a slow puncture (losing a few PSI over days) and from a blowout (sidewall gone, tyre unrepairable). Slow punctures can wait until the weekend. An emergency puncture can't." },

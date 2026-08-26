@@ -4,18 +4,18 @@ export default function TyrePressureGuideUk() {
   return (
     <BlogPost
       slug="tyre-pressure-guide-uk"
-      metaTitle="UK Tyre Pressure Guide: Correct PSI & Cold Check (2026)"
-      metaDesc="Set the right tyre pressure in the UK: where to find your correct PSI, typical figures by car model, laden vs unladen, and the cold check rule."
-      title="UK Tyre Pressure Guide: Correct PSI, Cold Checks and the Laden Rule"
+      metaTitle="Tyre Pressure Guide UK: Correct PSI & Cold Check (2026)"
+      metaDesc="A tyre pressure guide UK drivers can use: where to find your correct PSI, typical figures by car model, laden vs unladen loads, and the cold check rule."
+      title="Tyre Pressure Guide UK: Correct PSI, Cold Checks and the Laden Rule"
       category="Maintenance"
       readMinutes={11}
       datePublished="2026-07-13"
       dateModified="2026-08-18"
       heroImage="tyrePressure"
       heroAlt="A digital tyre pressure gauge reading the pressure at a car tyre valve"
-      intro="Correct tyre pressure is the single cheapest thing you can do to make your car safer, more efficient and longer-lived — and about 60% of UK drivers get it wrong. This guide covers where to find the right number, typical PSI for popular UK cars, how to check it properly, and the difference between the everyday and the loaded pressure."
+      intro="This tyre pressure guide UK edition is the cheapest safety win available to any driver. Correct tyre pressure is the single cheapest thing you can do to make your car safer, more efficient and longer-lived — and about 60% of UK drivers get it wrong. This guide covers where to find the right number, typical PSI for popular UK cars, how to check it properly, and the difference between the everyday and the loaded pressure."
       blocks={[
-        { type: "h2", text: "Where to find your correct tyre pressure" },
+        { type: "h2", text: "Tyre pressure guide UK: where to find your correct PSI" },
         { type: "p", html: "Two places, and only two. Ignore what's printed on the sidewall of the tyre — that's the <em>maximum</em> the tyre can safely hold, not the pressure your car should run at." },
         {
           type: "ol",

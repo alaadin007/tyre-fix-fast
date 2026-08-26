@@ -4,17 +4,17 @@ export default function CrackedAlloyFromPothole() {
   return (
     <BlogPost
       slug="cracked-alloy-from-pothole"
-      metaTitle="Cracked Alloy From a Pothole: UK Repair, Cost & Claim (2026)"
-      metaDesc="What to do after a pothole cracks your alloy — how to tell if it's repairable, what a refurb or replacement costs, and how to claim from the council."
-      title="Cracked Alloy From a Pothole: Repair, Replace, or Claim?"
+      metaTitle="Cracked Alloy From Pothole: Repair, Cost & Claim UK 2026"
+      metaDesc="Cracked alloy from pothole damage: how to tell if it is repairable, what a refurb or replacement costs in the UK, and how to claim it back from the council."
+      title="Cracked Alloy From Pothole Damage: Repair, Replace or Claim?"
       category="Repair Guide"
       readMinutes={10}
       datePublished="2026-07-13"
       heroImage="crackedAlloy"
       heroAlt="A cracked alloy wheel rim next to a water-filled pothole in a broken tarmac road"
-      intro="You hit a pothole, the tyre went flat instantly, and now the alloy is buckled — maybe cracked. This guide explains how to tell repairable from scrap, what a UK refurb realistically costs in 2026, and the paperwork you need to claim the bill from the council or TfL."
+      intro="A cracked alloy from pothole impact is one of the most expensive tyre-related bills in the UK. You hit a pothole, the tyre went flat instantly, and now the alloy is buckled — maybe cracked. This guide explains how to tell repairable from scrap, what a UK refurb realistically costs in 2026, and the paperwork you need to claim the bill from the council or TfL."
       blocks={[
-        { type: "h2", text: "First: is the alloy actually cracked?" },
+        { type: "h2", text: "Cracked alloy from pothole damage: is it actually cracked?" },
         { type: "p", html: "A pothole hit produces three levels of alloy damage. Getting the diagnosis right is the difference between a £70 refurb and a £400 replacement — and if the tyre took the hit too, check our <a href=\"/blog/tyre-sidewall-damage-guide\" class=\"text-primary hover:underline\">tyre sidewall damage guide</a>." },
         {
           type: "ul",
@@ -26,7 +26,7 @@ export default function CrackedAlloyFromPothole() {
         },
         { type: "p", html: "To find a crack: with the wheel off, clean the inside of the rim with brake cleaner and shine a torch along the barrel. Any dark hairline that flexes when the wheel is stressed is a crack. On the front face, look at the paint — cracks often show as a wrinkle in the lacquer before they show in the metal." },
 
-        { type: "h2", text: "Can a cracked alloy be welded?" },
+        { type: "h2", text: "Can a cracked alloy from a pothole be welded?" },
         { type: "p", html: "Sometimes — but it's specialist work and only certain cracks qualify. TIG welding on a cast aluminium alloy requires the wheel to be stripped, pre-heated, welded, re-machined and re-balanced. A competent specialist can do it for <strong>£90–£180 per wheel</strong>, and a properly welded wheel is safe for normal road use." },
         { type: "p", html: "But there are hard limits. Cracks that <strong>run through a bolt hole</strong>, cracks <strong>on the spoke or hub face</strong>, and cracks <strong>on forged or flow-formed wheels</strong> (BMW M, Audi RS, most performance/EV OEM) are usually condemned. Repair welding a load-bearing crack on a forged wheel changes its metallurgy in ways nobody sensible will sign off on." },
 

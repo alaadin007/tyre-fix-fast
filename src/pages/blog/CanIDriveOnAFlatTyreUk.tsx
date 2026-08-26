@@ -6,13 +6,13 @@ export default function CanIDriveOnAFlatTyreUk() {
       slug="can-i-drive-on-a-flat-tyre-uk"
       metaTitle="Can I Drive on a Flat Tyre? UK Rules & Risks (2026)"
       metaDesc="How far you can safely drive on a flat tyre in the UK, when it's illegal, and the difference between standard and run-flat tyres."
-      title="Can I Drive on a Flat Tyre in the UK? The Honest Answer"
+      title="Can I Drive on a Flat Tyre UK? The Honest Answer"
       category="Emergency Guide"
       readMinutes={10}
       datePublished="2026-07-13"
       heroImage="driveOnFlatTyre"
       heroAlt="A completely deflated tyre off the rim on a residential street with a car's hazard lights glowing behind"
-      intro="You've felt the wobble, you've heard the flap, and now you're deciding whether to keep going to the next petrol station or stop right here. This is the honest answer — legal, mechanical and financial — for UK drivers in 2026."
+      intro="Can I drive on a flat tyre UK-wide, even for a mile? Here is the honest answer. You've felt the wobble, you've heard the flap, and now you're deciding whether to keep going to the next petrol station or stop right here. This is the honest answer — legal, mechanical and financial — for UK drivers in 2026."
       blocks={[
         { type: "h2", text: "The short answer" },
         { type: "p", html: "For a <strong>standard tyre</strong>, the answer is essentially no. You can drive at very low speed for 100–200 metres to reach a safe stopping point, but any further and the tyre carcass tears itself apart, damages the alloy wheel, and often takes out the wheel bearing or brake line on the way. For a <strong>genuine run-flat tyre</strong>, you can drive up to 50 miles at a maximum of 50 mph after a complete pressure loss — that's it. If you don't know which type you have, assume standard — our <a href=\"/blog/run-flat-tyres-uk-guide\" class=\"text-primary hover:underline\">run-flat tyres UK guide</a> shows how to check the sidewall markings." },
