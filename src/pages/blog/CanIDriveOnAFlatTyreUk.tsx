@@ -4,7 +4,7 @@ export default function CanIDriveOnAFlatTyreUk() {
   return (
     <BlogPost
       slug="can-i-drive-on-a-flat-tyre-uk"
-      metaTitle="Can I Drive on a Flat Tyre? UK Rules & Risks (2026)"
+      metaTitle="Can I Drive on a Flat Tyre UK? Rules & Risks (2026)"
       metaDesc="How far you can safely drive on a flat tyre in the UK, when it's illegal, and the difference between standard and run-flat tyres."
       title="Can I Drive on a Flat Tyre UK? The Honest Answer"
       category="Emergency Guide"

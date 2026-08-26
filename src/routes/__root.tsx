@@ -111,28 +111,40 @@ function RootShell({ children }: { children: React.ReactNode }) {
 }
 
 /**
- * The root head() carries fallback description/og/twitter tags for non-JS
- * crawlers. Page-level <Seo /> (react-helmet-async) adds its own tags after
- * hydration, so we remove the fallback tag whenever a Helmet-managed
- * counterpart (data-rh) exists — exactly one description/og/twitter tag per
- * page, matching the pre-migration behavior in main.tsx.
+ * The root head() carries fallback title/description/og/twitter tags for
+ * non-JS crawlers. Page-level <Seo /> adds its own tags after hydration, so
+ * once a page-specific tag exists we drop the sitewide fallback and any
+ * duplicate — exactly one title/description/og/twitter tag per page.
  */
 function dedupeFallbackHeadTags() {
-  const keys = [
-    ['meta[name="description"]', 'name'],
-    ['meta[name="keywords"]', 'name'],
-    ['meta[name="robots"]', 'name'],
-    ['meta[property^="og:"]', 'property'],
-    ['meta[name^="twitter:"]', 'name'],
-  ] as const;
-  for (const [selector] of keys) {
-    const tags = Array.from(document.head.querySelectorAll(selector));
-    const hasHelmet = tags.some((el) => el.hasAttribute("data-rh"));
-    if (!hasHelmet) continue;
+  // Titles: keep the first page-specific one, drop the sitewide fallback.
+  const titles = Array.from(document.head.querySelectorAll("title"));
+  const pageTitles = titles.filter((el) => (el.textContent || "").trim() !== SITE_TITLE);
+  const keepTitle = pageTitles[0] ?? titles[0];
+  titles.forEach((el) => {
+    if (el !== keepTitle) el.remove();
+  });
+  if (keepTitle?.textContent) document.title = keepTitle.textContent;
+
+  // Meta tags: group by name/property, prefer a value that isn't the default.
+  const defaults = new Set([SITE_TITLE, SITE_DESCRIPTION]);
+  const groups = new Map<string, HTMLMetaElement[]>();
+  const selector =
+    'meta[name="description"],meta[name="keywords"],meta[name="robots"],meta[property^="og:"],meta[name^="twitter:"]';
+  document.head.querySelectorAll<HTMLMetaElement>(selector).forEach((el) => {
+    const key = el.getAttribute("property") ?? el.getAttribute("name") ?? "";
+    const list = groups.get(key);
+    if (list) list.push(el);
+    else groups.set(key, [el]);
+  });
+  groups.forEach((tags) => {
+    if (tags.length < 2) return;
+    const specific = tags.filter((el) => !defaults.has(el.content));
+    const keep = specific[specific.length - 1] ?? tags[tags.length - 1];
     tags.forEach((el) => {
-      if (!el.hasAttribute("data-rh")) el.remove();
+      if (el !== keep) el.remove();
     });
-  }
+  });
 }
 
 function RootComponent() {
@@ -146,9 +158,11 @@ function RootComponent() {
 
   useEffect(() => {
     trackPageView(pathname);
-    const t = window.setTimeout(dedupeFallbackHeadTags, 0);
-    return () => window.clearTimeout(t);
+    // Run a few times: page-level head tags land after the first paint.
+    const timers = [0, 80, 400, 1200].map((ms) => window.setTimeout(dedupeFallbackHeadTags, ms));
+    return () => timers.forEach((t) => window.clearTimeout(t));
   }, [pathname]);
+
 
   return (
     <HelmetProvider>

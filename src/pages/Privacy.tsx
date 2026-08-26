@@ -1,4 +1,5 @@
 import { Link } from "@/lib/router-compat";
+import ServiceLinks from "@/components/blog/ServiceLinks";
 import { Seo } from "@/components/Seo";
 import logo from "@/assets/tyrefly-logo.png";
 
@@ -112,6 +113,8 @@ const Privacy = () => {
             </p>
           </section>
         </div>
+
+        <ServiceLinks heading="Mobile tyre fitting services" />
 
         <div className="mt-10 pt-6 border-t border-white/10 flex gap-4 text-sm">
           <Link to="/" className="text-white/60 hover:text-white">← Back to home</Link>
