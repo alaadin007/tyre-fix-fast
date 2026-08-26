@@ -12,8 +12,9 @@ export default function ServicePage() {
 
   const MSG = `Hi Tyrefly — I need ${svc.keyword}`;
   const url = `https://www.tyrefly.com/services/${svc.slug}/`;
-  const title = `Mobile ${svc.keyword} UK — 24/7 Call-Out | Tyrefly`.slice(0, 62);
-  const description = `${svc.tagline} ${svc.priceLine}. Text your postcode for a fixed price in 60 seconds, 24/7 UK-wide.`.slice(0, 158);
+  const title = `${svc.name} UK — 24/7 Call-Out | Tyrefly`.slice(0, 62);
+  const description =
+    `${svc.name} UK-wide, 24/7. ${svc.tagline} ${svc.priceLine}. Text your postcode for a fixed price in 60 seconds.`.slice(0, 158);
 
   const ld = [
     {
@@ -62,8 +63,8 @@ export default function ServicePage() {
           {svc.priceLine}
         </div>
         <h1 className="mt-5 text-4xl sm:text-6xl font-bold leading-[0.95] tracking-tight">
-          {svc.name}<br />
-          <span style={{ color: "#FF6B1A" }}>anywhere in the UK</span>
+          {svc.name} <span style={{ color: "#FF6B1A" }}>UK</span><br />
+          <span className="text-3xl sm:text-4xl text-white/70">wherever your car is, 24/7</span>
         </h1>
         <p className="mt-5 text-lg text-white/70 leading-relaxed max-w-2xl">{svc.tagline}</p>
         <CtaPair message={MSG} className="mt-8" />
@@ -80,7 +81,10 @@ export default function ServicePage() {
       </section>
 
       <article className="mx-auto w-full max-w-3xl px-5 py-14">
-        <p className="text-base text-white/75 leading-relaxed">{svc.intro}</p>
+        <p className="text-base text-white/75 leading-relaxed">
+          {svc.name} UK-wide means no garage trip and no waiting room: a fully-equipped van comes to your car, 24 hours a day.
+          It's what most drivers mean when they search for {svc.name.toLowerCase()} near me. {svc.intro}
+        </p>
         {svc.sections.map((sec) => (
           <div key={sec.h2} className="mt-10">
             <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">{sec.h2}</h2>
@@ -102,7 +106,8 @@ export default function ServicePage() {
         <div className="mt-12 rounded-2xl border border-[#FF6B1A]/35 bg-[#FF6B1A]/10 p-6">
           <h2 className="text-xl font-semibold">Need {svc.keyword} right now?</h2>
           <p className="mt-2 text-sm text-white/70">
-            Text your postcode and we'll come to you — 24/7, fixed price up front.
+            Text your postcode and we'll come to you — 24/7, fixed price up front. Or check{" "}
+            <Link to="/areas" className="underline hover:text-white">your local service area</Link> first.
           </p>
           <CtaPair message={MSG} className="mt-5" />
         </div>

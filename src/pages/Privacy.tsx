@@ -8,7 +8,7 @@ const Privacy = () => {
       className="min-h-[100dvh] w-full text-white px-6 py-8"
       style={{ backgroundColor: "#0D0D0D", fontFamily: "Inter, system-ui, -apple-system, sans-serif" }}
     >
-      <Seo title="Privacy Policy | Tyrefly Mobile Tyre Fitting UK 24/7" description="How Tyrefly collects, uses and protects your personal data when you book 24/7 mobile tyre fitting or puncture repair over WhatsApp." canonical="/privacy" />
+      <Seo title="Privacy Policy | Tyrefly Mobile Tyre Fitting UK 24/7" description="Tyrefly privacy policy: how we collect, use and protect your personal data when you book 24/7 mobile tyre fitting or puncture repair over WhatsApp." canonical="/privacy" />
       <div className="max-w-2xl mx-auto">
         <Link to="/" className="flex items-center gap-2.5 mb-8" aria-label="Tyrefly home">
           <img src={logo} alt="Tyrefly logo" width={36} height={36} className="h-9 w-9 object-contain" />
@@ -22,7 +22,7 @@ const Privacy = () => {
 
         <div className="space-y-6 text-white/80 leading-relaxed text-[15px]">
           <section>
-            <h2 className="text-xl font-semibold text-white mb-2">1. Who we are</h2>
+            <h2 className="text-xl font-semibold text-white mb-2">1. Who we are and what this privacy policy covers</h2>
             <p>
               Tyrefly ("we", "us", "our") provides a 24/7 mobile tyre repair and replacement service across the
               United Kingdom. We are the data controller for the personal information described in this policy.
@@ -80,7 +80,7 @@ const Privacy = () => {
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-white mb-2">7. Your rights</h2>
+            <h2 className="text-xl font-semibold text-white mb-2">7. Your privacy rights</h2>
             <p>
               You can request access, correction, deletion, restriction, or portability of your data, and object
               to certain processing. Email <a href="mailto:hello@tyrefly.com" className="text-[#FF6B1A] underline">hello@tyrefly.com</a>.

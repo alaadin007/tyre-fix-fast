@@ -4,17 +4,17 @@ export default function CanAPunctureBeRepairedUk() {
   return (
     <BlogPost
       slug="can-a-puncture-be-repaired-uk"
-      metaTitle="Can a Puncture Be Repaired? BS AU 159 Rules (2026)"
+      metaTitle="Can a Puncture Be Repaired UK? BS AU 159 Rules (2026)"
       metaDesc="Can any puncture be repaired? BS AU 159 explained: repairable vs replace-only zones, tread limits, run-flats and how to tell before removal."
-      title="Can a Puncture Always Be Repaired? The BS AU 159 Rules Explained"
+      title="Can a Puncture Be Repaired UK-Wide? The BS AU 159 Rules Explained"
       category="How-To"
       readMinutes={9}
       datePublished="2026-07-15"
       dateModified="2026-08-18"
       heroImage="canPunctureBeRepairedUk"
-      intro="No — about 1 in 5 punctures we see on mobile callouts turn out to be non-repairable once the tyre comes off the rim. Understanding why comes down to a single British Standard called BS AU 159, which every legitimate UK tyre technician follows. Here's what it says, in plain English, and how to tell in advance whether your puncture is a £45 fix or a new tyre."
+      intro="Can a puncture be repaired UK-wide, every time? No — about 1 in 5 punctures we see on mobile callouts turn out to be non-repairable once the tyre comes off the rim. Understanding why comes down to a single British Standard called BS AU 159, which every legitimate UK tyre technician follows. Here's what it says, in plain English, and how to tell in advance whether your puncture is a £45 fix or a new tyre."
       blocks={[
-        { type: "h2", text: "The single rule: BS AU 159" },
+        { type: "h2", text: "Can a puncture be repaired UK-wide? One rule: BS AU 159" },
         { type: "p", html: "BS AU 159 is the British Standard that defines when a car tyre can be safely repaired. Every reputable UK garage, mobile fitter, and fast-fit chain works to it. It exists because a badly-done puncture repair is a delayed failure — the tyre feels fine, then blows out at 70mph on the motorway six weeks later." },
         { type: "p", html: "The standard defines: <strong>where</strong> on the tyre a puncture is repairable, <strong>what size</strong> of wound is repairable, <strong>what method</strong> is required (spoiler: not an external rope plug), and <strong>what condition</strong> the tyre must be in to accept a repair." },
 

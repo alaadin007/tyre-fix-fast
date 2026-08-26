@@ -5,17 +5,17 @@ export default function MobileTyreFitterVsGarage() {
     <BlogPost
       slug="mobile-tyre-fitter-vs-garage"
       metaTitle="Mobile Tyre Fitter vs Garage: Cost, Speed & Quality (2026)"
-      metaDesc="Mobile tyre fitting or the local garage in 2026? UK comparison of price, speed, availability, stock and warranty — plus when each option wins."
-      title="Mobile Tyre Fitter vs Local Garage: The Honest 2026 Comparison"
+      metaDesc="Mobile tyre fitter vs garage in 2026: a UK comparison of price, speed, availability, stock and warranty — plus exactly when each option wins."
+      title="Mobile Tyre Fitter vs Garage: The Honest 2026 Comparison"
       category="Comparison"
       readMinutes={11}
       datePublished="2026-07-13"
       dateModified="2026-08-18"
       heroImage="fitterVsGarage"
       heroAlt="A mobile tyre fitting van at a kerbside beside a traditional tyre garage workshop"
-      intro="A decade ago, mobile tyre fitting was a novelty premium service. In 2026 it's the default for millions of UK drivers — but the local tyre bay still wins on some jobs. This is the honest side-by-side: cost, speed, quality, and the specific situations where each one is the better call."
+      intro="Mobile tyre fitter vs garage is the choice every UK driver now faces. A decade ago, mobile tyre fitting was a novelty premium service. In 2026 it's the default for millions of UK drivers — but the local tyre bay still wins on some jobs. This is the honest side-by-side: cost, speed, quality, and the specific situations where each one is the better call."
       blocks={[
-        { type: "h2", text: "Head-to-head comparison" },
+        { type: "h2", text: "Mobile tyre fitter vs garage: head-to-head comparison" },
         { type: "p", html: "The table below is the fair summary — not a sales pitch for either format. Each row reflects the honest trade-off." },
         {
           type: "table",

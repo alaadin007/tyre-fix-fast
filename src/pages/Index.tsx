@@ -146,11 +146,15 @@ const Index = () => {
             <h1 className="mt-5 text-5xl sm:text-6xl md:text-7xl font-bold leading-[0.95] tracking-tight">
               Flat tyre?<br />
               <span style={{ color: "#FF6B1A" }}>We fly to you.</span>
+              <span className="mt-4 block text-xl sm:text-2xl font-semibold tracking-tight text-white/65">
+                Mobile tyre fitter UK — 24/7 call-out
+              </span>
             </h1>
 
             <p className="mt-6 text-lg text-white/70 leading-relaxed max-w-lg">
-              <span className="text-white font-medium">WhatsApp AI</span> matches you with your nearest mobile tyre technician in seconds.
-              One message — our local pro quotes you in under 60 seconds, comes to your kerb, and gets you rolling.
+              <span className="text-white font-medium">WhatsApp AI</span> matches you with your nearest mobile tyre fitter UK-wide in seconds.
+              One message — your local pro quotes you in under 60 seconds, comes to your kerb, and gets you rolling. Puncture repair,
+              tyre replacement or an emergency fit, day or night.
             </p>
 
             <div className="mt-8 grid grid-cols-2 gap-3 max-w-md">

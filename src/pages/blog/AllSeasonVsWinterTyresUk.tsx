@@ -6,13 +6,13 @@ export default function AllSeasonVsWinterTyresUk() {
       slug="all-season-vs-winter-tyres-uk"
       metaTitle="All-Season vs Winter Tyres UK: Which For a UK Winter? (2026)"
       metaDesc="All-season vs winter tyres in the UK — do you need them? Honest 2026 guide covering the 7°C rule, snow performance and cost."
-      title="All-Season vs Winter Tyres in the UK: What You Actually Need"
+      title="All Season vs Winter Tyres UK: What You Actually Need"
       category="Seasonal"
       readMinutes={10}
       datePublished="2026-07-13"
       heroImage="allSeasonVsWinter"
       heroAlt="Winter and all-season car tyres standing on a cold, wet UK road with slush at the roadside"
-      intro="Continental drivers swap between summer and winter tyres twice a year without thinking. UK drivers mostly run summer or standard tyres year-round and hope the snow doesn't come. All-seasons sit in the middle. This is the honest 2026 breakdown of what actually works for a UK winter — mild, wet, occasionally frozen, rarely snowbound."
+      intro="All season vs winter tyres UK: here is the honest comparison. Continental drivers swap between summer and winter tyres twice a year without thinking. UK drivers mostly run summer or standard tyres year-round and hope the snow doesn't come. All-seasons sit in the middle. This is the honest 2026 breakdown of what actually works for a UK winter — mild, wet, occasionally frozen, rarely snowbound."
       blocks={[
         { type: "h2", text: "The 7°C rule (the whole reason this matters)" },
         { type: "p", html: "Summer tyres are optimised for temperatures above 7°C. Their compound stays soft and grippy in warmth but becomes hard and glassy below 7°C — grip drops sharply, braking distances lengthen. Winter tyres use a different compound with more silica, plus a sipe-heavy tread pattern that grips snow and slush." },
@@ -23,7 +23,7 @@ export default function AllSeasonVsWinterTyresUk() {
         { type: "p", html: "<strong>All-season tyres:</strong> compound that works from -10°C to +30°C, tread pattern with enough sipe density to handle snow and slush at moderate depth. Not as good as a summer tyre in summer, not as good as a winter tyre in deep snow, but good enough at both to be the only set you own. Whichever set you run, keep them within the <a href=\"/blog/uk-tyre-legal-tread-depth\" class=\"text-primary hover:underline\">UK legal tread depth</a> limits. Look for the 3PMSF (3-Peak Mountain Snowflake) symbol — that's the marking that certifies real winter capability, not just the M+S (Mud and Snow) marking, which is largely marketing." },
         { type: "p", html: "<strong>Winter tyres:</strong> optimised for cold, snow, ice, slush. Very grippy at low temperatures. Fine on cold-but-dry motorway. Bad in high summer — the compound is too soft, wears fast, and gets vague at high speeds." },
 
-        { type: "h2", text: "What actually works in a UK winter" },
+        { type: "h2", text: "All season vs winter tyres UK: what actually works in a UK winter" },
         { type: "p", html: "The UK's climate is mild, wet, occasionally frozen, rarely snowbound. Most winters see only a handful of days with meaningful snow. The everyday winter problem in the UK is <strong>cold wet roads and morning frost</strong>, not deep snow." },
         { type: "p", html: "For that climate, the honest verdict:" },
         {

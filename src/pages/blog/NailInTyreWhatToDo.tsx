@@ -6,13 +6,13 @@ export default function NailInTyreWhatToDo() {
       slug="nail-in-tyre-what-to-do"
       metaTitle="Nail In Tyre: What To Do (Leave It In or Pull It Out?) 2026"
       metaDesc="Nail or screw in your tyre? Leave it in, check the location, and get a proper plug-patch. UK guide to nail-in-tyre repair vs replace."
-      title="Nail in Your Tyre: Leave It In, and Read This First"
+      title="Nail in Tyre: Leave It In, and Read This First"
       category="Safety"
       readMinutes={8}
       datePublished="2026-07-13"
       heroImage="nailInTyre"
       heroAlt="A rusty nail embedded in the tread grooves of a car tyre, close-up"
-      intro="A nail or screw in your tyre isn't automatically a new-tyre situation. Most punctures in the tread area can be properly repaired for £25–£40 if handled correctly. The wrong first move — pulling the nail out yourself — can turn a £30 fix into a £180 replacement. Here's what to do in the right order."
+      intro="A nail in tyre tread is not automatically a new-tyre situation. A nail or screw in your tyre isn't automatically a new-tyre situation. Most punctures in the tread area can be properly repaired for £25–£40 if handled correctly. The wrong first move — pulling the nail out yourself — can turn a £30 fix into a £180 replacement. Here's what to do in the right order."
       blocks={[
         { type: "h2", text: "Step 1: Don't pull it out" },
         { type: "p", html: "This is the single most important rule. If a nail or screw is in your tyre and the tyre is still holding air, <strong>leave the object in place</strong>. It's acting as a plug. Pulling it out turns a slow leak (which you can drive on carefully) into a rapid deflation (which you can't) and can also complicate the repair by pulling internal cords out of place." },

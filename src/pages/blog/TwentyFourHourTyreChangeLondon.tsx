@@ -6,19 +6,19 @@ export default function TwentyFourHourTyreChangeLondon() {
       slug="twenty-four-hour-tyre-change-london"
       metaTitle="24 Hour Tyre Change London | Mobile Fitter, Any Hour"
       metaDesc="24 hour mobile tyre change in London: night prices, 30–60 min arrival times, and who's genuinely awake at 3am. Text your postcode and book in 60 seconds."
-      title="24 Hour Tyre Change in London: Notes From the Night Van"
+      title="24 Hour Tyre Change London: Notes From the Night Van"
       category="London"
       readMinutes={10}
       datePublished="2026-07-13"
       heroImage="twentyFourHourChangeLondon"
       heroAlt="A technician changing a tyre at night under van floodlights on an empty city street"
-      intro="Nobody's flat tyre ever happens at a convenient hour. Mine, when it comes, will be at half three in the morning outside a kebab shop in Wandsworth. Yours might already be there. This is what a 24 hour mobile tyre change in London actually looks like from the driver's seat of the van."
+      intro="A 24 hour tyre change London drivers can actually book at 3am — this is what it looks like. Nobody's flat tyre ever happens at a convenient hour. Mine, when it comes, will be at half three in the morning outside a kebab shop in Wandsworth. Yours might already be there. This is what a 24 hour mobile tyre change in London actually looks like from the driver's seat of the van."
       blocks={[
         { type: "h2", text: "The city at three in the morning" },
         { type: "p", html: "London at 3am is not the city you think you know. The buses have finished their business and the taxis are running on autopilot. The traffic lights still cycle red and green for no one. The only vehicles moving with purpose are the night buses, the police cars, the airport hires heading to Heathrow, and me — in a Sprinter with a compressor humming in the back, going to see about a Ford Kuga on the A406." },
         { type: "p", html: "That's the honest first thing to know about a 24 hour tyre change in London: at the hours everyone else is asleep, we're the fastest we ever get. Empty roads, no double-parking politics, no school runs, no delivery vans blocking the last space on the street. If your tyre goes at 2am, you're going to be back in bed by 3.30 — the callout time might well be shorter than the daytime version of the same job — see our <a href=\"/blog/mobile-tyre-fitting-london\" class=\"text-primary hover:underline\">mobile tyre fitting London</a> guide for daytime figures." },
 
-        { type: "h2", text: "What it costs after dark" },
+        { type: "h2", text: "What a 24 hour tyre change London costs after dark" },
         { type: "p", html: "Almost every 24 hour operator charges a small overnight uplift, roughly:" },
         {
           type: "ul",

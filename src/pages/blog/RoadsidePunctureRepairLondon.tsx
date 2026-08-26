@@ -4,17 +4,17 @@ export default function RoadsidePunctureRepairLondon() {
   return (
     <BlogPost
       slug="roadside-puncture-repair-london"
-      metaTitle="Mobile Tyre Fitter vs AA & RAC London | Roadside Puncture"
-      metaDesc="Mobile fitter vs AA, RAC and Green Flag for a London roadside puncture: response times, real costs, what they carry, Red Routes and ULEZ."
-      title="Mobile Tyre Fitter vs AA, RAC and Green Flag: Who to Call for a London Roadside Puncture"
+      metaTitle="Roadside Puncture Repair London: Fitter vs AA & RAC"
+      metaDesc="Roadside puncture repair London compared: mobile fitter vs AA, RAC and Green Flag — response times, real costs, what they carry, Red Routes and ULEZ."
+      title="Roadside Puncture Repair London: Mobile Fitter vs AA, RAC and Green Flag"
       category="London"
       readMinutes={11}
       datePublished="2026-07-15"
       dateModified="2026-08-18"
       heroImage="roadsidePunctureLondon"
-      intro="AA, RAC, and Green Flag membership feels like the answer when you break down — until you've actually waited four hours on the North Circular for a van that turns up, inflates your tyre, and tells you to drive it to a garage tomorrow. Here's when a mobile puncture fitter beats the recovery services in London, and when it doesn't."
+      intro="Roadside puncture repair London options come down to two routes: breakdown cover or a mobile tyre fitter. AA, RAC, and Green Flag membership feels like the answer when you break down — until you've actually waited four hours on the North Circular for a van that turns up, inflates your tyre, and tells you to drive it to a garage tomorrow. Here's when a mobile puncture fitter beats the recovery services in London, and when it doesn't."
       blocks={[
-        { type: "h2", text: "What breakdown cover actually does for a puncture" },
+        { type: "h2", text: "Roadside puncture repair London: what breakdown cover actually does" },
         { type: "p", html: "AA, RAC, and Green Flag <strong>are not tyre companies</strong>. Their remit for a puncture is:" },
         {
           type: "ol",
@@ -54,7 +54,7 @@ export default function RoadsidePunctureRepairLondon() {
         },
         { type: "p", html: "AA and RAC premium/priority tiers are faster (30–60 minutes) but still don't solve the underlying problem — they get you drivable, not repaired." },
 
-        { type: "h2", text: "The cost comparison" },
+        { type: "h2", text: "Roadside puncture repair London: the cost comparison" },
         {
           type: "ul",
           items: [

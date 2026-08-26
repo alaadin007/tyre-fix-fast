@@ -32,26 +32,28 @@ export default function ServicesIndex() {
     <ServiceShell message={MSG} breadcrumbs={[{ to: "/", label: "Home" }, { label: "Services" }]}>
       <Seo
         title="Mobile Tyre Services UK — 24/7 Call-Out | Tyrefly"
-        description="Mobile puncture repair, tyre replacement, emergency fitting and run-flat fitting across the UK. Text your postcode for a fixed price in 60 seconds, 24/7."
+        description="Mobile tyre services UK-wide: puncture repair, tyre replacement, emergency fitting and run-flat fitting. Text your postcode for a fixed price in 60 seconds, 24/7."
         canonical="/services"
         jsonLd={ld}
       />
 
       <section className="mx-auto w-full max-w-6xl px-5 py-12 md:py-16">
         <h1 className="text-4xl sm:text-6xl font-bold leading-[0.95] tracking-tight">
-          Mobile tyre services<br />
-          across the <span style={{ color: "#FF6B1A" }}>UK</span>
+          Mobile tyre services <span style={{ color: "#FF6B1A" }}>UK</span><br />
+          <span className="text-3xl sm:text-4xl text-white/70">24/7, wherever your car is</span>
         </h1>
         <p className="mt-5 text-lg text-white/70 leading-relaxed max-w-2xl">
-          Every Tyrefly job starts with one text. Send your postcode and what's wrong — a vetted local
-          technician quotes you in about 60 seconds and comes to your car, 24 hours a day.
+          Every mobile tyre services UK job starts with one text. Send your postcode and what's wrong — a vetted local
+          technician quotes you in about 60 seconds and comes to your car, 24 hours a day, anywhere from{" "}
+          <Link to="/areas/london" className="underline hover:text-white">London</Link> to{" "}
+          <Link to="/areas/glasgow" className="underline hover:text-white">Glasgow</Link>.
         </p>
         <CtaPair message={MSG} className="mt-8" />
       </section>
 
       <section className="border-t border-white/5 bg-white/[0.02]">
         <div className="mx-auto w-full max-w-6xl px-5 py-14">
-          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">What we do</h2>
+          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Mobile tyre services UK: what we do</h2>
           <div className="mt-8 grid gap-4 sm:grid-cols-2">
             {SERVICES.map((s) => (
               <Link

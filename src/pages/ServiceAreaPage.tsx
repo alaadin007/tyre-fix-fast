@@ -16,9 +16,9 @@ export default function ServiceAreaPage() {
   const url = `https://www.tyrefly.com${path}`;
 
   const cap = svc.keyword.charAt(0).toUpperCase() + svc.keyword.slice(1);
-  const title = `${cap} ${area.name} | 24/7 Mobile | Tyrefly`.slice(0, 62);
+  const title = `${svc.name} ${area.name} | 24/7 | Tyrefly`.slice(0, 62);
   const description =
-    `Mobile ${svc.keyword} in ${area.name}, 24/7 across ${area.region}. ${svc.priceLine}. Text your postcode for a fixed quote in 60 seconds.`.slice(0, 158);
+    `${svc.name} ${area.name}, 24/7 across ${area.region}. ${svc.priceLine}. Text your postcode for a fixed quote in 60 seconds.`.slice(0, 158);
 
   const intro = svc.cityIntro(area.name, area.region);
   const sections = svc.citySections(area.name, area.region, area.postcodes);
@@ -93,8 +93,8 @@ export default function ServiceAreaPage() {
           24/7 across {area.region}
         </div>
         <h1 className="mt-5 text-4xl sm:text-6xl font-bold leading-[0.95] tracking-tight">
-          {cap}<br />
-          in <span style={{ color: "#FF6B1A" }}>{area.name}</span>
+          {svc.name}<br />
+          <span style={{ color: "#FF6B1A" }}>{area.name}</span>
         </h1>
         <p className="mt-5 text-lg text-white/70 leading-relaxed max-w-2xl">{svc.tagline}</p>
         <CtaPair message={MSG} className="mt-8" />
@@ -142,14 +142,15 @@ export default function ServiceAreaPage() {
         <p className="mt-10 text-sm text-white/60 leading-relaxed">
           Looking for the full picture on our {area.name} coverage, prices and technicians? See our{" "}
           <Link to={`/areas/${area.slug}`} className="underline hover:text-white">
-            mobile tyre fitting in {area.name}
+            mobile tyre fitter {area.name}
           </Link>{" "}
-          page, or browse all{" "}
-          <Link to="/services" className="underline hover:text-white">mobile tyre services</Link>.
+          page, browse all{" "}
+          <Link to="/services" className="underline hover:text-white">mobile tyre services</Link>, or read the{" "}
+          <Link to={`/services/${svc.slug}`} className="underline hover:text-white">{svc.name} UK guide</Link>.
         </p>
       </article>
 
-      <FaqBlock faqs={faqs} heading={`${cap} in ${area.name} — FAQs`} />
+      <FaqBlock faqs={faqs} heading={`${svc.name} ${area.name} — FAQs`} />
 
       <section className="mx-auto w-full max-w-6xl px-5 py-14">
         <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Other services in {area.name}</h2>
@@ -166,7 +167,7 @@ export default function ServiceAreaPage() {
           ))}
         </div>
 
-        <h2 className="mt-12 text-2xl sm:text-3xl font-bold tracking-tight">{cap} in nearby cities</h2>
+        <h2 className="mt-12 text-2xl sm:text-3xl font-bold tracking-tight">{svc.name} in nearby cities</h2>
         <div className="mt-6 flex flex-wrap gap-2">
           {nearbyCities.map((a) => (
             <Link

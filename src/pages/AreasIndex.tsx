@@ -19,8 +19,8 @@ export default function AreasIndex() {
   return (
     <main className="min-h-screen w-full text-white" style={{ backgroundColor: "#0D0D0D", fontFamily: "Inter, system-ui, -apple-system, sans-serif" }}>
       <Seo
-        title="Mobile Tyre Fitter Service Areas Across the UK | Tyrefly"
-        description="Tyrefly covers London, Manchester, Birmingham, Leeds, Liverpool, Glasgow and more. 24/7 mobile tyre fitting and puncture repair via WhatsApp."
+        title="Mobile Tyre Fitting Service Areas UK — 24/7 | Tyrefly"
+        description="Mobile tyre fitting service areas UK-wide: London, Manchester, Birmingham, Leeds, Liverpool, Glasgow and more. 24/7 fitting and puncture repair by WhatsApp."
         canonical="/areas"
         jsonLd={ld}
       />
@@ -35,9 +35,13 @@ export default function AreasIndex() {
       </header>
 
       <section className="mx-auto w-full max-w-6xl px-5 py-14">
-        <h1 className="text-4xl sm:text-5xl font-bold tracking-tight">UK service areas</h1>
+        <h1 className="text-4xl sm:text-5xl font-bold tracking-tight">Mobile tyre fitting service areas UK</h1>
         <p className="mt-3 text-white/70 max-w-2xl">
-          Tyrefly's mobile fitter network spans the UK. Pick your area for local coverage details, postcodes and 24/7 WhatsApp dispatch.
+          These are the mobile tyre fitting service areas UK drivers can call on around the clock. Pick your city for local coverage,
+          postcodes, prices and 24/7 WhatsApp dispatch — or jump straight to{" "}
+          <Link to="/services/puncture-repair" className="text-[#FF6B1A] underline">mobile puncture repair</Link>,{" "}
+          <Link to="/services/tyre-replacement" className="text-[#FF6B1A] underline">tyre replacement</Link> or{" "}
+          <Link to="/services/emergency-tyre-fitting" className="text-[#FF6B1A] underline">emergency tyre fitting</Link>.
         </p>
 
         <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -57,7 +61,7 @@ export default function AreasIndex() {
       </section>
 
       <section className="mx-auto w-full max-w-3xl px-5 pb-16 text-white/75 leading-relaxed text-[15px] space-y-5">
-        <h2 className="text-2xl font-bold text-white">How Tyrefly coverage works across the UK</h2>
+        <h2 className="text-2xl font-bold text-white">How our mobile tyre fitting service areas work across the UK</h2>
         <p>
           Tyrefly is a dispatch network, not a single depot. When you send your postcode over WhatsApp, the job is
           broadcast to vetted mobile tyre fitters who already work that area and are on shift at that moment. Whoever

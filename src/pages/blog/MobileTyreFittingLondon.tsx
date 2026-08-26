@@ -6,7 +6,7 @@ export default function MobileTyreFittingLondon() {
       slug="mobile-tyre-fitting-london"
       metaTitle="Mobile Tyre Fitting London | Prices & Same-Day Callout"
       metaDesc="Mobile tyre fitting in London: real prices, how fast a van actually reaches you across the boroughs, and what the big brands leave out. Book by text."
-      title="Mobile Tyre Fitting in London: Field Notes From the Van"
+      title="Mobile Tyre Fitting London: Field Notes From the Van"
       category="London"
       readMinutes={11}
       datePublished="2026-07-13"
@@ -16,7 +16,7 @@ export default function MobileTyreFittingLondon() {
       blocks={[
         { type: "p", html: "Looking for prices, arrival times by zone and how to book? Our <a href=\"/areas/london\" class=\"text-primary hover:underline\">mobile tyre fitting London</a> page has the numbers. This piece is what the job actually looks like from inside the van." },
 
-        { type: "h2", text: "The pitch, and the reality" },
+        { type: "h2", text: "Mobile tyre fitting London: the pitch, and the reality" },
         { type: "p", html: "The pitch is beautiful. You break down, you tap something into your phone, a nice person appears with a jack and a new tyre and life resumes. In London specifically, this is largely true. It's also the most oversold sentence in the trade, so let me walk you through the gap between the brochure and the pavement." },
         { type: "p", html: "London is the best market in the country for mobile tyre fitting because it's the worst market in the country to own a car. Between the potholes on the North Circular, the roofing screws that fall off vans in Wembley every Tuesday, and the drivers who park by ear against a Victorian granite kerb, we — the mobile guys — have a full calendar. Yours might be tonight." },
 

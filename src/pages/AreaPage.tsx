@@ -108,11 +108,15 @@ export default function AreaPage() {
           <MapPin className="h-3.5 w-3.5" /> Serving {area.region}
         </div>
         <h1 className="mt-5 text-4xl sm:text-6xl font-bold leading-[0.95] tracking-tight">
-          Mobile tyre fitter<br />
-          in <span style={{ color: "#FF6B1A" }}>{area.name}</span>
+          Mobile tyre fitting<br />
+          <span style={{ color: "#FF6B1A" }}>{area.name}</span>
         </h1>
         <p className="mt-5 text-lg text-white/70 leading-relaxed max-w-2xl">
-          {area.shortPitch} WhatsApp us — a vetted local technician quotes you in under 60 seconds and is at your kerb 24/7.
+          Tyrefly is the mobile tyre fitting {area.name} drivers message when a tyre goes down. {area.shortPitch} WhatsApp us — a
+          vetted local technician quotes you in under 60 seconds and is at your kerb 24/7, whether you need{" "}
+          <Link to={`/services/puncture-repair/${area.slug}`} className="underline hover:text-white">puncture repair in {area.name}</Link>,{" "}
+          <Link to={`/services/tyre-replacement/${area.slug}`} className="underline hover:text-white">a replacement tyre</Link> or{" "}
+          <Link to={`/services/emergency-tyre-fitting/${area.slug}`} className="underline hover:text-white">emergency tyre fitting</Link>.
         </p>
 
         <div className="mt-8 flex flex-col sm:flex-row gap-3 max-w-md">

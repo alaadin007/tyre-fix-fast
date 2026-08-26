@@ -78,7 +78,7 @@ export default function TpmsWarningLight() {
     <main className="min-h-screen bg-background">
       <Seo
         title="TPMS Warning Light: What It Means & What to Do (UK 2026)"
-        description="Your TPMS tyre pressure light just came on — what it means, is it safe to drive, how to reset it, and when to call a mobile tyre fitter."
+        description="Your TPMS warning light just came on — what the TPMS warning light means, is it safe to drive, how to reset it, and when to call a mobile tyre fitter."
         canonical="/blog/tpms-warning-light"
         ogImage={imageUrl}
         jsonLd={[articleLd, breadcrumbLd, faqLd]}
@@ -123,7 +123,7 @@ export default function TpmsWarningLight() {
             <li><strong>Flashing for ~60 seconds, then solid</strong> — the TPMS system itself has a fault (failed sensor, dead sensor battery, missing wheel). The system can't monitor pressure until fixed.</li>
           </ul>
 
-          <h2 className="text-2xl font-semibold">Is it safe to keep driving?</h2>
+          <h2 className="text-2xl font-semibold">TPMS warning light on: is it safe to keep driving?</h2>
           <p>
             Short answer: get to a safe stop, then check. A 25% under-inflated tyre runs hotter, flexes more in the sidewall, increases stopping distance and burns more fuel. At motorway speed it can fail catastrophically within 50–100 miles.
           </p>
@@ -141,7 +141,7 @@ export default function TpmsWarningLight() {
             <li><strong>Aftermarket sealant.</strong> Tyre sealant from emergency kits can clog the sensor port. Tell your fitter — most can clean and re-seat it.</li>
           </ol>
 
-          <h2 className="text-2xl font-semibold">How to reset the TPMS light</h2>
+          <h2 className="text-2xl font-semibold">How to reset the TPMS warning light</h2>
           <p>
             First, fix the underlying cause — inflate to the correct pressure or replace the faulty tyre/sensor. Reset method depends on which system you have:
           </p>

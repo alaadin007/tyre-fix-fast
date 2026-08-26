@@ -6,13 +6,13 @@ export default function BudgetVsPremiumTyresUk() {
       slug="budget-vs-premium-tyres-uk"
       metaTitle="Budget vs Premium Tyres UK: Is Michelin Worth It? (2026)"
       metaDesc="Budget vs premium tyres in the UK — honest 2026 comparison of wet grip, braking distance, tyre life, and whether Michelin is worth the extra £50."
-      title="Budget vs Premium Tyres: Where Your £50 Extra Actually Goes"
+      title="Budget vs Premium Tyres UK: Where Your £50 Extra Goes"
       category="Comparison"
       readMinutes={10}
       datePublished="2026-07-13"
       heroImage="budgetVsPremium"
       heroAlt="A budget car tyre and a premium car tyre side by side on a workshop floor, tread patterns compared"
-      intro={`"Are premium tyres worth it?" is one of the most asked questions in the UK tyre trade — and the honest answer is neither an unqualified yes nor a blanket no. What you get for the extra money varies by tyre size, driving style, mileage and weather. This is the plain-English breakdown so you can make the call for your own car.`}
+      intro={`Budget vs premium tyres UK-wide: "Are premium tyres worth it?" is one of the most asked questions in the UK tyre trade — and the honest answer is neither an unqualified yes nor a blanket no. What you get for the extra money varies by tyre size, driving style, mileage and weather. This is the plain-English breakdown so you can make the call for your own car.`}
       blocks={[
         { type: "h2", text: "What defines each tier in 2026" },
         {

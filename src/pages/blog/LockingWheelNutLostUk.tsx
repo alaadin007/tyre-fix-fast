@@ -4,17 +4,17 @@ export default function LockingWheelNutLostUk() {
   return (
     <BlogPost
       slug="locking-wheel-nut-lost-uk"
-      metaTitle="Lost Locking Wheel Nut Key? UK Removal Guide (2026)"
+      metaTitle="Locking Wheel Nut Lost UK: Key & Removal Guide (2026)"
       metaDesc="Lost your locking wheel nut key? How to identify the pattern, where to find a replacement, and how a mobile fitter removes it — costs and options."
-      title="Lost Your Locking Wheel Nut Key? Here's How to Get the Wheel Off"
+      title="Locking Wheel Nut Lost UK: How to Get the Wheel Off"
       category="Repair Guide"
       readMinutes={9}
       datePublished="2026-07-13"
       heroImage="lockingWheelNut"
       heroAlt="A locking wheel nut key socket held beside an alloy wheel hub with the patterned locking nut visible"
-      intro="You've got a flat tyre, the fitter is 15 minutes away, and you can't find the little black adapter that unlocks one nut on each wheel. Panic, but the productive kind — this is a solvable problem. Here's every option, ranked by cost and time."
+      intro="Locking wheel nut lost UK-wide is one of the most common callout complications we see. You've got a flat tyre, the fitter is 15 minutes away, and you can't find the little black adapter that unlocks one nut on each wheel. Panic, but the productive kind — this is a solvable problem. Here's every option, ranked by cost and time."
       blocks={[
-        { type: "h2", text: "What a locking wheel nut actually is" },
+        { type: "h2", text: "Locking wheel nut lost UK: what the nut actually is" },
         { type: "p", html: "Most cars sold in the UK since the late 1990s ship with one \"locking\" wheel nut per wheel. It has a unique keyed pattern on its head so a standard 17 or 19 mm socket won't turn it — only the matching adapter (the \"key\") that came with the car. It's an anti-theft measure aimed at stopping opportunists lifting a set of alloys in the middle of the night." },
         { type: "p", html: "It also means that no fitter, garage or breakdown crew can take a wheel off your car without either the key or a specialist removal tool. And roughly 1 in 4 UK drivers has no idea where their key is." },
 
