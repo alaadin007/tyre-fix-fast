@@ -41,12 +41,14 @@ const ORG_JSON_LD = JSON.stringify({
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
   head: () => ({
+    // NOTE: title / description / og:* / twitter:* text tags are intentionally
+    // NOT set here. Every public page renders <Seo /> which owns them; adding
+    // sitewide copies here produced duplicate title + meta description tags in
+    // the server-rendered HTML (flagged by Ahrefs/Semrush).
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1.0" },
       { name: "theme-color", content: "#0D0D0D" },
-      { title: SITE_TITLE },
-      { name: "description", content: SITE_DESCRIPTION },
       {
         name: "keywords",
         content:
@@ -55,23 +57,15 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "author", content: "Tyrefly" },
       { name: "robots", content: "index, follow, max-image-preview:large" },
       { property: "og:site_name", content: "Tyrefly" },
-      { property: "og:type", content: "website" },
-      { property: "og:url", content: "https://www.tyrefly.com/" },
       { property: "og:locale", content: "en_GB" },
-      { property: "og:image", content: OG_IMAGE },
       { property: "og:image:secure_url", content: OG_IMAGE },
       { property: "og:image:type", content: "image/jpeg" },
       { property: "og:image:width", content: "1200" },
       { property: "og:image:height", content: "630" },
       { property: "og:image:alt", content: OG_IMAGE_ALT },
-      { property: "og:title", content: SITE_TITLE },
-      { property: "og:description", content: SITE_DESCRIPTION },
-      { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:image", content: OG_IMAGE },
       { name: "twitter:image:alt", content: OG_IMAGE_ALT },
-      { name: "twitter:title", content: SITE_TITLE },
-      { name: "twitter:description", content: SITE_DESCRIPTION },
     ],
+
     links: [
       { rel: "stylesheet", href: appCss },
       { rel: "icon", type: "image/png", href: "/favicon.png" },
