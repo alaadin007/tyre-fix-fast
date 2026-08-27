@@ -154,9 +154,16 @@ function RootComponent() {
   useEffect(() => {
     trackPageView(pathname);
     // Run a few times: page-level head tags land after the first paint.
-    const timers = [0, 80, 400, 1200].map((ms) => window.setTimeout(dedupeFallbackHeadTags, ms));
+    const timers = [0, 80, 400, 1200].map((ms) =>
+      window.setTimeout(() => {
+        dedupeFallbackHeadTags();
+        // Internal pages don't render <Seo />; give them a sane tab title.
+        if (!document.title.trim()) document.title = SITE_TITLE;
+      }, ms),
+    );
     return () => timers.forEach((t) => window.clearTimeout(t));
   }, [pathname]);
+
 
 
   return (
