@@ -428,6 +428,88 @@ const Index = () => {
         </div>
       </section>
 
+      {/* ===== Long-form: what we do ===== */}
+      <section id="about" className="border-t border-white/5">
+        <div className="mx-auto w-full max-w-3xl px-5 py-16 space-y-6 text-white/70 leading-relaxed">
+          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">
+            Mobile tyre fitting and puncture repair, wherever you're stuck
+          </h2>
+          <p>
+            Tyrefly is a UK-wide mobile tyre fitting service built for the moment a tyre lets you
+            down. There's no app to download and no call centre queue: you send one WhatsApp message
+            with your postcode, your number plate and a photo of the damage, and a vetted local
+            technician comes to your driveway, your office car park or the hard shoulder. Most
+            customers get a fixed quote back inside 60 seconds and a fitter on site within 35 to 90
+            minutes, at any hour of the day or night.
+          </p>
+
+          <h3 className="text-xl font-semibold text-white">Puncture repair vs. a new tyre</h3>
+          <p>
+            Not every flat needs a replacement. A puncture repair is legal and safe in the UK when
+            the damage sits in the central three-quarters of the tread, the hole is no wider than
+            6&nbsp;mm, and the tyre hasn't been driven on while flat. Our technicians carry out a
+            proper internal plug-and-patch repair to BS AU 159 standards rather than a temporary
+            external plug, so the fix lasts the life of the tyre. If the damage is in the sidewall or
+            shoulder, if the inner liner is scuffed from running deflated, or if the tread is already
+            close to the 1.6&nbsp;mm legal limit, the honest answer is a new tyre — and we'll tell
+            you which it is before you commit to anything. Read more on{" "}
+            <Link to="/blog/can-a-puncture-be-repaired-uk" className="underline hover:text-white">
+              when a puncture can be repaired
+            </Link>{" "}
+            and how{" "}
+            <Link to="/blog/puncture-repair-cost-uk" className="underline hover:text-white">
+              puncture repair costs
+            </Link>{" "}
+            compare with a replacement.
+          </p>
+
+          <h3 className="text-xl font-semibold text-white">What our mobile tyre fitters handle</h3>
+          <p>
+            The vans carry everything a fixed garage bay would: a mobile tyre changer and balancer,
+            torque wrenches, TPMS programming tools, locking-nut removal kits and a working stock of
+            common sizes for cars, vans and light commercials. Typical jobs include emergency
+            puncture repair, same-day tyre replacement, run-flat fitting, blowout recovery on
+            motorways and A-roads, valve and TPMS sensor replacement, wheel balancing, and swapping
+            a space-saver back to a full-size wheel. Run-flats and low-profile performance tyres are
+            routine work rather than an exception, and every wheel is torqued to the manufacturer's
+            spec and rebalanced before the technician leaves.
+          </p>
+
+          <h3 className="text-xl font-semibold text-white">Coverage across the UK</h3>
+          <p>
+            Mobile tyre fitting in London is our busiest service — congestion and parking make a trip
+            to a tyre bay a half-day job — but the network runs nationwide. Technicians cover
+            Manchester, Birmingham, Leeds, Liverpool, Sheffield, Newcastle, Bristol, Nottingham,
+            Glasgow, Edinburgh, Cardiff and Belfast, plus the M25, M1, M6 and M4 corridors. Because
+            the fitters are independent and locally based, the person who turns up actually knows the
+            roads. You can check{" "}
+            <Link to="/areas" className="underline hover:text-white">coverage in your area</Link> or
+            browse the full list of{" "}
+            <Link to="/services" className="underline hover:text-white">mobile tyre services</Link>.
+          </p>
+
+          <h3 className="text-xl font-semibold text-white">Pricing that doesn't move</h3>
+          <p>
+            The price you're quoted on WhatsApp is the price you pay. A £20 booking fee secures the
+            slot and is deducted from the final bill; the technician takes the balance on site by
+            card, payment link, bank transfer or cash. There are no call-out surcharges for evenings,
+            weekends or bank holidays, and no hidden disposal or balancing extras bolted on at the
+            end. If a technician can't complete the job, the booking fee is refunded.
+          </p>
+
+          <h3 className="text-xl font-semibold text-white">If you're stranded right now</h3>
+          <p>
+            Get the vehicle somewhere safe first. On a motorway, pull onto the hard shoulder as far
+            left as you can, exit through the passenger door, and wait behind the barrier — never
+            attempt a wheel change in a live lane. On an ordinary road, park on level ground, put the
+            hazards on, and only change the wheel yourself if you're clear of traffic. Then message
+            us your location: a what3words address, a dropped WhatsApp pin or a postcode all work.
+            Driving on a fully deflated tyre destroys the sidewall within a few hundred metres and
+            can damage the wheel itself, so it's usually cheaper to wait than to limp home.
+          </p>
+        </div>
+      </section>
+
       {/* ===== FAQs (visible — mirrors FAQPage schema) ===== */}
       <section id="faqs" className="border-t border-white/5">
         <div className="mx-auto w-full max-w-3xl px-5 py-16">
