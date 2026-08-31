@@ -90,7 +90,7 @@ export function ServiceShell({
         <div className="mx-auto w-full max-w-6xl px-5 py-8 flex flex-col gap-4 text-xs text-white/40">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">
-              <img src={logo} alt="" width={20} height={20} className="h-5 w-5 object-contain opacity-70" />
+              <img src={logo} alt="Tyrefly mobile tyre fitting logo" width={20} height={20} className="h-5 w-5 object-contain opacity-70" />
               <span>© Tyrefly · UK-wide mobile tyre fitting</span>
             </div>
             <div className="flex items-center gap-4">
