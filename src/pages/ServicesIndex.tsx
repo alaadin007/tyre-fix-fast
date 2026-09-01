@@ -18,6 +18,35 @@ export default function ServicesIndex() {
     },
     {
       "@context": "https://schema.org",
+      "@type": "Service",
+      name: "Mobile tyre services UK",
+      description:
+        "Mobile tyre services UK-wide: puncture repair, tyre replacement, emergency fitting and run-flat fitting, 24/7 at your home, work or roadside.",
+      serviceType: "Mobile tyre services",
+      url: "https://www.tyrefly.com/services/",
+      provider: {
+        "@type": "AutoRepair",
+        "@id": "https://www.tyrefly.com/#business",
+        name: "Tyrefly",
+        url: "https://www.tyrefly.com/",
+      },
+      areaServed: { "@type": "Country", name: "United Kingdom" },
+      availableChannel: {
+        "@type": "ServiceChannel",
+        serviceUrl: "https://www.tyrefly.com/services/",
+        availableLanguage: "en-GB",
+      },
+      hasOfferCatalog: {
+        "@type": "OfferCatalog",
+        name: "Mobile tyre services",
+        itemListElement: SERVICES.map((s) => ({
+          "@type": "Offer",
+          itemOffered: { "@type": "Service", name: s.name, serviceType: s.keyword, url: `https://www.tyrefly.com/services/${s.slug}/` },
+        })),
+      },
+    },
+    {
+      "@context": "https://schema.org",
       "@type": "ItemList",
       itemListElement: SERVICES.map((s, i) => ({
         "@type": "ListItem",
