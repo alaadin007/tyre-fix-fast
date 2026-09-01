@@ -64,6 +64,8 @@ export interface BlogPostProps {
   faqs: Faq[];
   cta?: { headline: string; body: string; label: string };
   related?: { to: string; label: string }[];
+  /** Nearby city/area pages relevant to this post. */
+  areaLinks?: { to: string; label: string }[];
 }
 
 const heroMap = {
@@ -498,6 +500,26 @@ export default function BlogPost(p: BlogPostProps) {
             </div>
           )}
 
+          {p.areaLinks && p.areaLinks.length > 0 && (
+            <div className="mt-14 pt-8 border-t border-border">
+              <p className="text-sm uppercase tracking-widest text-muted-foreground mb-4 font-semibold">
+                Mobile tyre fitting in your area
+              </p>
+              <ul className="grid sm:grid-cols-2 gap-3">
+                {p.areaLinks.map((a) => (
+                  <li key={a.to}>
+                    <Link
+                      to={a.to}
+                      className="block p-4 rounded-xl border border-border hover:border-accent hover:bg-accent/5 transition font-medium"
+                    >
+                      {a.label} →
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           <div className="mt-14 pt-8 border-t border-border">
             <p className="text-sm uppercase tracking-widest text-muted-foreground mb-4 font-semibold">
               Book a mobile tyre fitter
@@ -509,8 +531,8 @@ export default function BlogPost(p: BlogPostProps) {
                 { to: "/services/emergency-tyre-fitting", label: "Emergency mobile tyre fitting" },
                 { to: "/services/run-flat-tyre-fitting", label: "Run-flat tyre fitting" },
                 { to: "/areas/london", label: "Mobile tyre fitting London" },
-                { to: "/areas/manchester", label: "Mobile tyre fitting Manchester" },
-                { to: "/areas/birmingham", label: "Mobile tyre fitting Birmingham" },
+                { to: "/areas/greater-manchester", label: "Mobile tyre fitting Manchester" },
+                { to: "/areas/west-midlands", label: "Mobile tyre fitting Birmingham" },
                 { to: "/areas", label: "All service areas" },
                 { to: "/services", label: "All mobile tyre services" },
               ].map((l) => (
