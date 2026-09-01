@@ -89,6 +89,9 @@ export default function RunFlatPunctureRepairLondon() {
         { q: "Can I switch my run-flats for normal tyres?", a: "Yes, but you'll have no spare (most run-flat cars don't carry one). Check your insurance and owner's manual first." },
       ]}
       cta={{ headline: "Run-flat puncture in London?", body: "Send your reg and a photo of the tyre — we'll tell you upfront whether a repair is possible or whether we need to bring a replacement.", label: "Get a run-flat quote →" }}
+      areaLinks={[
+        { to: "/areas/london", label: "Run-flat tyre fitters in London" },
+      ]}
       related={[
         { to: "/blog/run-flat-tyres-uk-guide", label: "Run Flat Tyres: UK Guide" },
         { to: "/blog/tyre-sidewall-damage-guide", label: "Sidewall Damage Guide" },

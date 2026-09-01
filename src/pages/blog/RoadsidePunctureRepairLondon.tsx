@@ -163,6 +163,9 @@ export default function RoadsidePunctureRepairLondon() {
         { q: "Is Green Flag or Start Rescue faster than the AA or RAC in London?", a: "No — if anything they're typically slower, since both subcontract to local recovery partners rather than running their own patrol fleet, which can add to response time at peak periods." },
       ]}
       cta={{ headline: "Broken down with a puncture in London?", body: "Send your what3words or postcode and the tyre size — we'll dispatch a mobile fitter who can actually repair or replace the tyre on-site.", label: "Get roadside help →" }}
+      areaLinks={[
+        { to: "/areas/london", label: "Roadside tyre fitters across London" },
+      ]}
       related={[
         { to: "/blog/emergency-puncture-repair-london", label: "Emergency & 24 Hour Puncture Repair London" },
         { to: "/blog/tyre-blowout-on-motorway-what-to-do", label: "Motorway Blowout: What to Do" },

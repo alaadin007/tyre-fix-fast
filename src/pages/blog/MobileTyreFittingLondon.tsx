@@ -94,6 +94,9 @@ export default function MobileTyreFittingLondon() {
         { q: "Do mobile fitters work in the Congestion Charge zone?", a: "Yes, 24/7. Some operators add the £15 charge to your bill during charging hours; a good one will tell you up front." },
         { q: "Do I have to be with the car for a mobile fitting?", a: "Not always. If the car is on a driveway or private car park and you can leave the key or the locking wheel-nut key accessible, most fitters will do the job unattended and take payment by card link afterwards." },
       ]}
+      areaLinks={[
+        { to: "/areas/london", label: "Mobile tyre fitting across Greater London" },
+      ]}
       related={[
         { to: "/areas/london", label: "Mobile Tyre Fitting London" },
         { to: "/blog/twenty-four-hour-tyre-change-london", label: "24 Hour Tyre Change London" },

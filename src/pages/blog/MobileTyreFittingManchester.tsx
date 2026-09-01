@@ -100,6 +100,9 @@ export default function MobileTyreFittingManchester() {
         { q: "Do mobile fitters work at Manchester Airport?", a: "Yes, in all car parks. Some multi-storey levels have low clearance (under 2 metres) so double-check when booking." },
         { q: "Can I claim pothole damage from Manchester City Council?", a: "Yes — file dated photos, GPS location and itemised receipts through the council's damage claim form within 14 days. Claims are more likely to succeed if the pothole was already reported." },
       ]}
+      areaLinks={[
+        { to: "/areas/greater-manchester", label: "Mobile tyre fitting across Greater Manchester" },
+      ]}
       related={[
         { to: "/areas/greater-manchester", label: "Mobile Tyre Fitting Manchester" },
         { to: "/blog/mobile-tyre-fitting-birmingham", label: "Mobile Tyre Fitting Birmingham" },

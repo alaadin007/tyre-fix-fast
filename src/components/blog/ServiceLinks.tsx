@@ -6,8 +6,8 @@ const LINKS = [
   { to: "/services/emergency-tyre-fitting", label: "Emergency mobile tyre fitting" },
   { to: "/services/run-flat-tyre-fitting", label: "Run-flat tyre fitting" },
   { to: "/areas/london", label: "Mobile tyre fitting London" },
-  { to: "/areas/manchester", label: "Mobile tyre fitting Manchester" },
-  { to: "/areas/birmingham", label: "Mobile tyre fitting Birmingham" },
+  { to: "/areas/greater-manchester", label: "Mobile tyre fitting Manchester" },
+  { to: "/areas/west-midlands", label: "Mobile tyre fitting Birmingham" },
   { to: "/areas", label: "All service areas" },
   { to: "/services", label: "All mobile tyre services" },
 ];

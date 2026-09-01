@@ -114,6 +114,9 @@ export default function MobileTyreFittingBirmingham() {
         { q: "Are potholes a big cause of tyre and wheel damage in the West Midlands?", a: "Yes — routes like the A38 Bristol Road, the A45 Coventry Road and side streets around Sandwell and Dudley see regular sidewall cuts and cracked alloys from worn surfaces and unrepaired potholes." },
       ]}
       cta={{ headline: "Need a tyre fitted in Birmingham today?", body: "Send your postcode, tyre size and photo and we'll dispatch the nearest West Midlands mobile fitter with a fixed price.", label: "Get a mobile fitter →" }}
+      areaLinks={[
+        { to: "/areas/west-midlands", label: "Mobile tyre fitting across the West Midlands" },
+      ]}
       related={[
         { to: "/areas/west-midlands", label: "Mobile Tyre Fitting Birmingham" },
         { to: "/blog/mobile-tyre-fitting-manchester", label: "Mobile Tyre Fitting Manchester" },

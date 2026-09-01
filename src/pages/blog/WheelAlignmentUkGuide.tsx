@@ -111,6 +111,10 @@ export default function WheelAlignmentUkGuide() {
         { q: "How often should I get wheel alignment?", a: "Every 12,000–15,000 miles as standard, or after any hard pothole hit, kerb strike, suspension repair or new tyre pair." },
         { q: "Can a mobile fitter do wheel alignment?", a: "Almost never. 4-wheel alignment requires fixed-garage equipment. Mobile fitters replace the tyres; a fixed garage does the alignment afterwards." },
       ]}
+      areaLinks={[
+        { to: "/areas/west-yorkshire", label: "Mobile tyre fitters in West Yorkshire" },
+        { to: "/areas/greater-manchester", label: "Mobile tyre fitting in Manchester" },
+      ]}
       related={[
         { to: "/blog/cracked-alloy-from-pothole", label: "Cracked Alloy From Pothole" },
         { to: "/blog/tyre-pressure-guide-uk", label: "UK Tyre Pressure Guide" },

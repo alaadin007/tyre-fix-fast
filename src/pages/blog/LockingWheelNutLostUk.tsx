@@ -94,6 +94,10 @@ export default function LockingWheelNutLostUk() {
         { q: "Where can I get a replacement locking wheel nut key?", a: "From a main dealer for your car brand — take the code stamped on the nut. Cost £15–£40, delivery 3–7 working days." },
         { q: "Will the AA remove a locking wheel nut?", a: "Yes, patrols carry extractor sockets and will attempt removal as part of a standard breakdown callout. If they can't, they'll recover you to a garage." },
       ]}
+      areaLinks={[
+        { to: "/areas/glasgow", label: "Mobile tyre fitters in Glasgow" },
+        { to: "/areas/belfast", label: "Mobile tyre fitting in Belfast" },
+      ]}
       related={[
         { to: "/blog/can-i-drive-on-a-flat-tyre-uk", label: "Can I Drive on a Flat Tyre?" },
         { to: "/blog/slow-puncture-uk-guide", label: "Slow Puncture UK Guide" },

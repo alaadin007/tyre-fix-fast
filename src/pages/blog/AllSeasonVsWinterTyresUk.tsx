@@ -87,6 +87,10 @@ export default function AllSeasonVsWinterTyresUk() {
         { q: "Are all-season tyres actually good in snow?", a: "Modern premium all-seasons like the Michelin CrossClimate 2 or Continental AllSeasonContact 2 with the 3PMSF symbol perform close to dedicated winter tyres in the light-to-moderate snow typical of UK winters. In deep snow or ice, dedicated winter tyres still win." },
         { q: "Can I mix summer and winter tyres on the same car?", a: "You can (it's not illegal), but you shouldn't — mismatched compounds front-to-rear can cause dangerous handling. Always run all four the same." },
       ]}
+      areaLinks={[
+        { to: "/areas/tyne-and-wear", label: "Winter tyre fitting in Newcastle" },
+        { to: "/areas/edinburgh", label: "Mobile tyre fitting in Edinburgh" },
+      ]}
       related={[
         { to: "/blog/uk-tyre-legal-tread-depth", label: "UK Legal Tread Depth" },
         { to: "/blog/budget-vs-premium-tyres-uk", label: "Budget vs Premium Tyres" },

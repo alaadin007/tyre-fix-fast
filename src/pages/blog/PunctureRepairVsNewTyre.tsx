@@ -162,6 +162,10 @@ export default function PunctureRepairVsNewTyre() {
         { q: "Is a repaired tyre as safe as a replaced one?", a: "A correctly repaired tyre (internal combined plug-patch, within the size and location limits) is considered fully roadworthy. The safety question isn't repair vs new — it's whether the specific puncture qualifies for repair at all." },
       ]}
       cta={{ headline: "Not sure — repair or replace?", body: "Send us the tyre size, the tread depth (or photo of a coin in the groove), and where the puncture is. We'll give you an honest recommendation before the van leaves.", label: "Get an honest quote →" }}
+      areaLinks={[
+        { to: "/areas/merseyside", label: "Mobile tyre fitting across Merseyside" },
+        { to: "/areas/west-midlands", label: "Mobile tyre replacement in Birmingham" },
+      ]}
       related={[
         { to: "/blog/can-a-puncture-be-repaired-uk", label: "Can Any Puncture Be Repaired?" },
         { to: "/blog/puncture-repair-cost-uk", label: "Puncture Repair Cost UK" },

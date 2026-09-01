@@ -200,6 +200,15 @@ export default function TpmsWarningLight() {
             Get a quote in 60 seconds →
           </Link>
         </div>
+        <div className="mt-12 pt-8 border-t border-border">
+          <p className="text-sm uppercase tracking-widest text-muted-foreground mb-4 font-semibold">
+            Mobile tyre fitting in your area
+          </p>
+          <ul className="grid sm:grid-cols-2 gap-3">
+            <li><Link to="/areas/london" className="block p-4 rounded-xl border border-border hover:border-accent hover:bg-accent/5 transition font-medium">Mobile tyre fitters in London →</Link></li>
+            <li><Link to="/areas/greater-manchester" className="block p-4 rounded-xl border border-border hover:border-accent hover:bg-accent/5 transition font-medium">Mobile tyre fitting in Manchester →</Link></li>
+          </ul>
+        </div>
         <ServiceLinks />
       </article>
     </main>

@@ -101,6 +101,10 @@ export default function CrackedAlloyFromPothole() {
         { q: "Will the council pay for pothole damage to my alloy?", a: "Sometimes. You need dated photos, GPS location, itemised receipts and a written claim within 14 days. Success rates are 30–60% depending on prior reports and the authority's inspection record." },
         { q: "Should I claim on my insurance for pothole damage?", a: "Usually only if the bill exceeds £400 or so, because you'll lose your No Claims Discount for 3–5 years. Under that, pay out of pocket and pursue the council claim in parallel." },
       ]}
+      areaLinks={[
+        { to: "/areas/south-yorkshire", label: "Mobile tyre fitting in Sheffield and Doncaster" },
+        { to: "/areas/tyne-and-wear", label: "Mobile tyre fitters in Newcastle" },
+      ]}
       related={[
         { to: "/blog/flat-tyre-london", label: "Flat Tyre London Guide" },
         { to: "/blog/wheel-alignment-uk-guide", label: "Wheel Alignment UK Guide" },

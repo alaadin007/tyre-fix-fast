@@ -102,6 +102,10 @@ export default function TyreBlowoutOnMotorwayWhatToDo() {
         { q: "What number do I call if I break down on a smart motorway?", a: "999 if you're in a live lane or in immediate danger — ask for Highways. National Highways on 0300 123 5000 if you're safely in an ERA or on the hard shoulder." },
         { q: "How common are tyre blowouts on UK motorways?", a: "Rare compared to slow punctures — the AA estimates roughly 15% of motorway breakdowns are tyre-related, and only a small share of those are true blowouts. Most are caused by low pressure or old sidewall damage that failed at speed." },
       ]}
+      areaLinks={[
+        { to: "/areas/bristol", label: "Motorway tyre callouts around Bristol" },
+        { to: "/areas/cardiff", label: "Mobile tyre fitting in Cardiff and the M4" },
+      ]}
       related={[
         { to: "/blog/can-i-drive-on-a-flat-tyre-uk", label: "Can I Drive on a Flat Tyre?" },
         { to: "/blog/mobile-tyre-fitter-m25", label: "M25 Mobile Tyre Fitter" },

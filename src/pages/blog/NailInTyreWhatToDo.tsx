@@ -100,6 +100,10 @@ export default function NailInTyreWhatToDo() {
         { q: "How much does it cost to repair a nail in a tyre in the UK?", a: "£20–£45 for a proper internal plug-patch. If a fitter offers a £10 external string plug, that's not compliant with BS AU 159 — pay the extra for the correct repair." },
         { q: "Can any nail-in-tyre be repaired?", a: "No. Punctures over 6mm, on the shoulder or sidewall, or on tyres driven flat, older than 10 years, or with tread below 3mm cannot be repaired. Location and condition decide it." },
       ]}
+      areaLinks={[
+        { to: "/areas/west-midlands", label: "Mobile tyre fitters in Birmingham" },
+        { to: "/areas/merseyside", label: "Puncture repair specialists in Liverpool" },
+      ]}
       related={[
         { to: "/blog/slow-puncture-uk-guide", label: "Slow Puncture Guide" },
         { to: "/blog/tyre-sidewall-damage-guide", label: "Sidewall Damage Guide" },

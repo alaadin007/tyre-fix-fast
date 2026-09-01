@@ -79,6 +79,10 @@ export default function CanIDriveOnAFlatTyreUk() {
         { q: "Will insurance cover damage from driving on a flat?", a: "Usually not. Most UK insurers will reduce or void a claim if driving on a deflated tyre contributed to the incident." },
         { q: "What if I only have a repair kit, not a spare?", a: "Use it only if the alternative is unsafe. Sealant kits work only on small tread punctures, contaminate the tyre so it can't be properly repaired afterwards, and limit you to 50 mph." },
       ]}
+      areaLinks={[
+        { to: "/areas/belfast", label: "Mobile tyre fitters in Belfast" },
+        { to: "/areas/glasgow", label: "Mobile tyre fitting in Glasgow" },
+      ]}
       related={[
         { to: "/blog/flat-tyre-london", label: "Flat Tyre London Guide" },
         { to: "/blog/run-flat-tyres-uk-guide", label: "Run-Flat Tyres UK Guide" },
