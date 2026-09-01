@@ -33,12 +33,28 @@ export default function ServiceAreaPage() {
       description,
       url,
       provider: {
-        "@type": "Organization",
-        "@id": "https://www.tyrefly.com/#organization",
+        "@type": "AutoRepair",
+        "@id": "https://www.tyrefly.com/#business",
         name: "Tyrefly",
         url: "https://www.tyrefly.com/",
+        logo: "https://www.tyrefly.com/favicon.png",
+        priceRange: "££",
+        address: {
+          "@type": "PostalAddress",
+          addressLocality: area.name,
+          addressRegion: area.region,
+          addressCountry: "GB",
+        },
+        openingHours: "Mo-Su 00:00-23:59",
+        areaServed: [
+          { "@type": "City", name: area.name },
+          { "@type": "AdministrativeArea", name: area.region },
+        ],
       },
-      areaServed: { "@type": "AdministrativeArea", name: area.region },
+      areaServed: [
+        { "@type": "City", name: area.name },
+        { "@type": "AdministrativeArea", name: area.region },
+      ],
     },
     {
       "@context": "https://schema.org",
