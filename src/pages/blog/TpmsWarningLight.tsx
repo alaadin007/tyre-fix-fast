@@ -36,43 +36,33 @@ export default function TpmsWarningLight() {
     ],
   };
 
+  const faqs = [
+    {
+      q: "Is it safe to drive with the TPMS light on?",
+      a: "Only briefly, and only at reduced speed. The light means at least one tyre is 25% below the recommended pressure. Drive to the nearest petrol station or safe stop, check pressures, and re-inflate. If a tyre is visibly flat or losing air fast, stop and call a mobile fitter.",
+    },
+    {
+      q: "Why is my TPMS light on but tyres look fine?",
+      a: "Cold weather drops tyre pressure by ~1 PSI per 10\u00B0C, so a chilly UK morning can trigger TPMS even with no leak. Other causes: slow puncture from a small nail, a failed TPMS sensor battery (5\u201310 year life), or a sensor knocked off during a tyre change.",
+    },
+    {
+      q: "How do I reset the TPMS light?",
+      a: "First, inflate all four tyres to the correct pressure (driver's door jamb or fuel filler flap). For indirect systems, drive 10\u201320 minutes above 25 mph or press the reset button. For direct sensors, some cars relearn automatically; others need a menu reset or an OBD tool.",
+    },
+    {
+      q: "How much does a TPMS sensor cost in the UK?",
+      a: "Universal programmable sensors cost \u00A325\u2013\u00A345 each. OEM sensors (BMW, Audi, Mercedes) are \u00A355\u2013\u00A3110. Fitting and programming adds \u00A315\u2013\u00A325 per wheel. A full set of four typically lands at \u00A3160\u2013\u00A3360 fitted.",
+    },
+  ];
+
   const faqLd = {
     "@context": "https://schema.org",
     "@type": "FAQPage",
-    mainEntity: [
-      {
-        "@type": "Question",
-        name: "Is it safe to drive with the TPMS light on?",
-        acceptedAnswer: {
-          "@type": "Answer",
-          text: "Only briefly, and only at reduced speed. The light means at least one tyre is 25% below the recommended pressure. Drive to the nearest petrol station or safe stop, check pressures, and re-inflate. If a tyre is visibly flat or losing air fast, stop and call a mobile fitter.",
-        },
-      },
-      {
-        "@type": "Question",
-        name: "Why is my TPMS light on but tyres look fine?",
-        acceptedAnswer: {
-          "@type": "Answer",
-          text: "Cold weather drops tyre pressure by ~1 PSI per 10°C, so a chilly UK morning can trigger TPMS even with no leak. Other causes: slow puncture from a small nail, a failed TPMS sensor battery (5–10 year life), or a sensor knocked off during a tyre change.",
-        },
-      },
-      {
-        "@type": "Question",
-        name: "How do I reset the TPMS light?",
-        acceptedAnswer: {
-          "@type": "Answer",
-          text: "First, inflate all four tyres to the correct pressure (driver's door jamb or fuel filler flap). For indirect systems, drive 10–20 minutes above 25 mph or press the reset button. For direct sensors, some cars relearn automatically; others need a menu reset or an OBD tool.",
-        },
-      },
-      {
-        "@type": "Question",
-        name: "How much does a TPMS sensor cost in the UK?",
-        acceptedAnswer: {
-          "@type": "Answer",
-          text: "Universal programmable sensors cost £25–£45 each. OEM sensors (BMW, Audi, Mercedes) are £55–£110. Fitting and programming adds £15–£25 per wheel. A full set of four typically lands at £160–£360 fitted.",
-        },
-      },
-    ],
+    mainEntity: faqs.map((f) => ({
+      "@type": "Question",
+      name: f.q,
+      acceptedAnswer: { "@type": "Answer", text: f.a },
+    })),
   };
 
   return (
@@ -187,6 +177,14 @@ export default function TpmsWarningLight() {
           <p>
             <Link to="/" className="text-primary underline">Book a mobile tyre fitter</Link> — most jobs across London and major UK cities are completed in 35–60 minutes, including TPMS reset on the way out.
           </p>
+
+          <h2 className="text-2xl font-semibold">TPMS warning light FAQs</h2>
+          {faqs.map((f) => (
+            <div key={f.q}>
+              <h3 className="text-xl font-semibold">{f.q}</h3>
+              <p>{f.a}</p>
+            </div>
+          ))}
 
           <h2 className="text-2xl font-semibold">Related reading</h2>
           <ul className="list-disc pl-6 space-y-1">
