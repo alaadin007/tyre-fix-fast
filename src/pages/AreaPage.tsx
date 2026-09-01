@@ -35,12 +35,40 @@ export default function AreaPage() {
     description,
     url: `https://www.tyrefly.com/areas/${area.slug}/`,
     provider: {
-      "@type": "Organization",
-      "@id": "https://www.tyrefly.com/#organization",
+      "@type": "AutoRepair",
+      "@id": "https://www.tyrefly.com/#business",
       name: "Tyrefly",
       url: "https://www.tyrefly.com/",
+      logo: "https://www.tyrefly.com/favicon.png",
+      image: "https://www.tyrefly.com/og.jpg",
+      telephone: SUPPORT_WA_DISPLAY,
+      priceRange: "££",
+      currenciesAccepted: "GBP",
+      paymentAccepted: "Card, Bank transfer, Cash, Payment link",
+      address: {
+        "@type": "PostalAddress",
+        addressLocality: area.name,
+        addressRegion: area.region,
+        addressCountry: "GB",
+      },
+      openingHours: "Mo-Su 00:00-23:59",
+      openingHoursSpecification: [
+        {
+          "@type": "OpeningHoursSpecification",
+          dayOfWeek: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+          opens: "00:00",
+          closes: "23:59",
+        },
+      ],
+      areaServed: [
+        { "@type": "City", name: area.name },
+        { "@type": "AdministrativeArea", name: area.region },
+      ],
     },
-    areaServed: { "@type": "AdministrativeArea", name: area.region },
+    areaServed: [
+      { "@type": "City", name: area.name },
+      { "@type": "AdministrativeArea", name: area.region },
+    ],
     availableChannel: {
       "@type": "ServiceChannel",
       serviceUrl: `https://www.tyrefly.com/areas/${area.slug}/`,

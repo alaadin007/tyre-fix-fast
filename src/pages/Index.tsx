@@ -44,6 +44,10 @@ const HOME_LD = [
       "South Yorkshire", "Tyne and Wear", "Bristol", "Edinburgh", "Glasgow", "Cardiff", "Belfast",
     ].map((n) => ({ "@type": "AdministrativeArea", name: n })),
     address: { "@type": "PostalAddress", addressCountry: "GB" },
+    currenciesAccepted: "GBP",
+    paymentAccepted: "Card, Bank transfer, Cash, Payment link",
+    serviceArea: { "@type": "Country", name: "United Kingdom" },
+    openingHours: "Mo-Su 00:00-23:59",
     openingHoursSpecification: [
       {
         "@type": "OpeningHoursSpecification",
