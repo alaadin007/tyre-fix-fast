@@ -36,43 +36,45 @@ export default function RunFlatTyresUk() {
     ],
   };
 
+  const faqs = [
+    {
+      q: "How far can I drive on a run-flat tyre after a puncture?",
+      a: "Most manufacturers rate run-flats for 50 miles at up to 50 mph after total air loss. BMW and Mini quote the same. Always check your handbook \u2014 some performance run-flats are limited to 30 miles.",
+    },
+    {
+      q: "Can a run-flat tyre be repaired?",
+      a: "Most tyre manufacturers (Bridgestone, Michelin, Pirelli, Continental, Goodyear) advise against repairing run-flats once they have been driven on flat. The reinforced sidewall hides internal damage. Replacement is the safe option.",
+    },
+    {
+      q: "Do I need run-flats if my car came with them?",
+      a: "If your car has no spare wheel and no repair kit, yes \u2014 switching to standard tyres leaves you stranded after a puncture and may affect ride quality tuned for run-flats. If you fit a spare or carry a sealant kit, standard tyres are legal and often cheaper and more comfortable.",
+    },
+    {
+      q: "How much do run-flat tyres cost in the UK?",
+      a: "Budget run-flats start around \u00A3110 fitted, mid-range \u00A3140\u2013\u00A3190 and premium (Michelin, Bridgestone, Pirelli) \u00A3180\u2013\u00A3320 per tyre fitted. SUV and performance sizes can exceed \u00A3400.",
+    },
+    {
+      q: "Do I have to replace run-flats in pairs?",
+      a: "Best practice: yes on the same axle if tread depths differ by more than 2 mm. All four only if the others are near the legal 1.6 mm limit.",
+    },
+    {
+      q: "Will my TPMS light stay on after a new run-flat?",
+      a: "Sometimes. Many cars relearn within 10\u201320 minutes of driving above 25 mph. Others (BMW, Mercedes) need a menu reset or an OBD tool \u2014 the mobile fitter will do this before leaving.",
+    },
+    {
+      q: "Can I mix run-flats with standard tyres?",
+      a: "Not recommended. Different stiffness front to rear affects ABS, ESC and handling. UK MOT doesn't ban it, but most manufacturers do.",
+    },
+  ];
+
   const faqLd = {
     "@context": "https://schema.org",
     "@type": "FAQPage",
-    mainEntity: [
-      {
-        "@type": "Question",
-        name: "How far can I drive on a run-flat tyre after a puncture?",
-        acceptedAnswer: {
-          "@type": "Answer",
-          text: "Most manufacturers rate run-flats for 50 miles at up to 50 mph after total air loss. BMW and Mini quote the same. Always check your handbook — some performance run-flats are limited to 30 miles.",
-        },
-      },
-      {
-        "@type": "Question",
-        name: "Can a run-flat tyre be repaired?",
-        acceptedAnswer: {
-          "@type": "Answer",
-          text: "Most tyre manufacturers (Bridgestone, Michelin, Pirelli, Continental, Goodyear) advise against repairing run-flats once they have been driven on flat. The reinforced sidewall hides internal damage. Replacement is the safe option.",
-        },
-      },
-      {
-        "@type": "Question",
-        name: "Do I need run-flats if my car came with them?",
-        acceptedAnswer: {
-          "@type": "Answer",
-          text: "If your car has no spare wheel and no repair kit, yes — switching to standard tyres leaves you stranded after a puncture and may affect ride quality tuned for run-flats. If you fit a spare or carry a sealant kit, standard tyres are legal and often cheaper and more comfortable.",
-        },
-      },
-      {
-        "@type": "Question",
-        name: "How much do run-flat tyres cost in the UK?",
-        acceptedAnswer: {
-          "@type": "Answer",
-          text: "Budget run-flats start around £110 fitted, mid-range £140–£190 and premium (Michelin, Bridgestone, Pirelli) £180–£320 per tyre fitted. SUV and performance sizes can exceed £400.",
-        },
-      },
-    ],
+    mainEntity: faqs.map((f) => ({
+      "@type": "Question",
+      name: f.q,
+      acceptedAnswer: { "@type": "Answer", text: f.a },
+    })),
   };
 
   return (
@@ -238,19 +240,13 @@ export default function RunFlatTyresUk() {
             Need a run-flat replaced at the roadside today? <Link to="/" className="text-primary underline">Get a mobile fitter on the way</Link> — most London jobs are completed in 35–60 minutes.
           </p>
 
-          <h2 className="text-2xl font-semibold">FAQs</h2>
-          <h3 className="text-xl font-semibold">Do I have to replace run-flats in pairs?</h3>
-          <p>
-            Best practice: yes on the same axle if tread depths differ by more than 2 mm. All four only if the others are near the legal 1.6 mm limit.
-          </p>
-          <h3 className="text-xl font-semibold">Will my TPMS light stay on after a new run-flat?</h3>
-          <p>
-            Sometimes. Many cars relearn within 10–20 minutes of driving above 25 mph. Others (BMW, Mercedes) need a menu reset or an OBD tool — the mobile fitter will do this before leaving.
-          </p>
-          <h3 className="text-xl font-semibold">Can I mix run-flats with standard tyres?</h3>
-          <p>
-            Not recommended. Different stiffness front to rear affects ABS, ESC and handling. UK MOT doesn't ban it, but most manufacturers do.
-          </p>
+          <h2 className="text-2xl font-semibold">Run-flat tyres FAQs</h2>
+          {faqs.map((f) => (
+            <div key={f.q}>
+              <h3 className="text-xl font-semibold">{f.q}</h3>
+              <p>{f.a}</p>
+            </div>
+          ))}
         </section>
 
         <div className="mt-12 p-6 rounded-2xl bg-card border border-border">
