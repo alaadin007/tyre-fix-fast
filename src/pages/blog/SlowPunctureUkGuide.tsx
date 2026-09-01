@@ -95,6 +95,10 @@ export default function SlowPunctureUkGuide() {
         { q: "Is it safe to drive with a slow puncture?", a: "Only if you top up the pressure daily and never let it drop below 25 PSI. It's not a long-term solution and can convert to a blowout at motorway speed." },
         { q: "Why does my TPMS light come on and off?", a: "Almost always a slow puncture. Cold air overnight drops the pressure below the threshold; driving warms the air enough to re-inflate the tyre and the light goes off." },
       ]}
+      areaLinks={[
+        { to: "/areas/greater-manchester", label: "Puncture repair specialists in Manchester" },
+        { to: "/areas/london", label: "Mobile puncture repair in London" },
+      ]}
       related={[
         { to: "/blog/tpms-warning-light", label: "TPMS Warning Light Guide" },
         { to: "/blog/tyre-pressure-guide-uk", label: "UK Tyre Pressure Guide" },

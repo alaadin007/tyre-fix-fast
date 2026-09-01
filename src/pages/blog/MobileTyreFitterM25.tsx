@@ -103,6 +103,9 @@ export default function MobileTyreFitterM25() {
         { q: "How long does it take to get a tyre changed on the M25?", a: "Typically 90 minutes to 3 hours end-to-end — 15–45 minutes for Highways patrol, 30–60 minutes for recovery off the motorway, and another 30–75 minutes for the mobile fitter to meet you at services." },
         { q: "What are the best meeting points on the M25 for mobile fitters?", a: "Cobham (J9/10), Clacket Lane (J5/6), South Mimms (J23) and Thurrock (J30/31) are the most-used because they have good van access and 24/7 mobile coverage in the region." },
       ]}
+      areaLinks={[
+        { to: "/areas/london", label: "Mobile tyre fitting across London and the M25" },
+      ]}
       related={[
         { to: "/blog/tyre-blowout-on-motorway-what-to-do", label: "Motorway Blowout Guide" },
         { to: "/blog/mobile-tyre-fitting-london", label: "Mobile Tyre Fitting London" },

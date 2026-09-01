@@ -144,6 +144,10 @@ export default function MobileTyreFitterVsGarage() {
         { q: "Does a mobile fitter's warranty differ from a garage's?", a: "No — the manufacturer's tyre warranty is identical regardless of who fits it. The workmanship warranty comes from the individual operator or garage, so it's worth confirming what that covers either way." },
         { q: "When should I definitely use a garage instead of mobile?", a: "When the job needs a ramp — wheel alignment, suspension inspection, or work combined with an MOT or service — or when you're in a very remote area with limited mobile coverage." },
       ]}
+      areaLinks={[
+        { to: "/areas/bristol", label: "Mobile tyre fitters in Bristol" },
+        { to: "/areas/cardiff", label: "Mobile tyre fitting in Cardiff" },
+      ]}
       related={[
         { to: "/blog/mobile-tyre-fitting-london", label: "Mobile Fitting London" },
         { to: "/blog/wheel-alignment-uk-guide", label: "Wheel Alignment Guide" },

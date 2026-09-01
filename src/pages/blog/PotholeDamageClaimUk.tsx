@@ -130,6 +130,10 @@ export default function PotholeDamageClaimUk() {
         { q: "What's Section 58 of the Highways Act?", a: "It's the council's statutory defence — they're not liable if they can show a reasonable inspection and repair regime. Defeat it with a Freedom of Information request showing the pothole was reported and not fixed in a reasonable timeframe." },
         { q: "Will my insurance go up if I claim for pothole damage?", a: "Only if you claim through your car insurance. Claiming directly from the council doesn't affect your insurance — that's the whole point." },
       ]}
+      areaLinks={[
+        { to: "/areas/south-yorkshire", label: "Mobile tyre fitters in Sheffield" },
+        { to: "/areas/west-yorkshire", label: "Mobile tyre fitting in Leeds" },
+      ]}
       related={[
         { to: "/blog/cracked-alloy-from-pothole", label: "Cracked Alloy From Pothole" },
         { to: "/blog/tyre-sidewall-damage-guide", label: "Sidewall Damage & Bulges" },

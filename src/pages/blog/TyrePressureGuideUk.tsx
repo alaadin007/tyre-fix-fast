@@ -173,6 +173,10 @@ export default function TyrePressureGuideUk() {
         { q: "Does cold weather really deflate my tyres without a puncture?", a: "Yes. Roughly 1 PSI is lost for every 5–6°C drop in temperature, purely from air contracting. A sharp autumn cold snap can leave correctly set tyres several PSI low within days." },
         { q: "Do electric cars need different tyre pressure to petrol cars?", a: "Usually yes, and higher — often 38–42 PSI versus 30–33 PSI for an equivalent combustion car — because of the extra weight from the battery pack. Always use the EV's own door placard." },
       ]}
+      areaLinks={[
+        { to: "/areas/greater-manchester", label: "Mobile tyre fitters in Greater Manchester" },
+        { to: "/areas/west-yorkshire", label: "Mobile tyre fitting in Leeds and West Yorkshire" },
+      ]}
       related={[
         { to: "/blog/tpms-warning-light", label: "TPMS Warning Light Guide" },
         { to: "/blog/slow-puncture-uk-guide", label: "Slow Puncture Guide" },

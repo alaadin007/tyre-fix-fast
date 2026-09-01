@@ -96,6 +96,10 @@ export default function UkTyreLegalTreadDepth() {
         { q: "How do I check tread depth without a gauge?", a: "Use a 20p coin — slot it into the main tread groove. If you can still see the outer band of the coin, the tread is below 2.5mm and replacement is due soon." },
         { q: "Are winter tyres held to a different tread depth in the UK?", a: "Legal minimum is still 1.6mm, but winter and all-season tyres lose their cold-weather grip below about 4mm. Industry convention is to replace at 4mm for a winter tyre." },
       ]}
+      areaLinks={[
+        { to: "/areas/west-yorkshire", label: "Mobile tyre replacement in Leeds" },
+        { to: "/areas/south-yorkshire", label: "Tyre replacement in Sheffield" },
+      ]}
       related={[
         { to: "/blog/tyre-age-when-to-replace", label: "Tyre Age: When to Replace" },
         { to: "/blog/wheel-alignment-uk-guide", label: "Wheel Alignment Guide" },

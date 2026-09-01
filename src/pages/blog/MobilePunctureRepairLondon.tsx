@@ -258,6 +258,9 @@ export default function MobilePunctureRepairLondon() {
         { q: "Does price vary much by borough?", a: "Yes, modestly — Zone 1 and inner boroughs run £50–£70, while outer boroughs like Bexley, Sutton and Harrow are usually £45–£58, reflecting van travel time rather than the job itself." },
       ]}
       cta={{ headline: "Book a mobile puncture repair now", body: "Send your postcode, reg, and tyre size and we'll dispatch the closest London fitter with a firm all-in quote.", label: "Get a mobile fitter →" }}
+      areaLinks={[
+        { to: "/areas/london", label: "Mobile puncture repair across London" },
+      ]}
       related={[
         { to: "/areas/london", label: "Mobile Tyre Fitting London" },
         { to: "/blog/emergency-puncture-repair-london", label: "Emergency & 24 Hour Puncture Repair London" },

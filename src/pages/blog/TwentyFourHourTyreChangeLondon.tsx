@@ -79,6 +79,9 @@ export default function TwentyFourHourTyreChangeLondon() {
         { q: "How quickly does a 24 hour tyre fitter arrive at night in London?", a: "Often faster than in the day — 30–60 minutes across most of inner London because the roads are empty. Outer boroughs 45–90 minutes." },
         { q: "Can I get a tyre changed at Heathrow or Gatwick at 2am?", a: "Yes, all long-stay car parks are covered by 24 hour mobile operators. Response is usually 45–75 minutes." },
       ]}
+      areaLinks={[
+        { to: "/areas/london", label: "24/7 mobile tyre fitting across London" },
+      ]}
       related={[
         { to: "/blog/mobile-tyre-fitting-london", label: "Mobile Tyre Fitting London" },
         { to: "/blog/mobile-tyre-fitter-m25", label: "M25 Mobile Fitter" },

@@ -96,6 +96,10 @@ export default function TyreAgeWhenToReplace() {
         { q: "Is there a UK law on maximum tyre age?", a: "Only for public service vehicles (buses, coaches) — front-axle tyres over 10 years are prohibited. No specific age limit for cars, but a visibly aged tyre can still fail an MOT under the general safety criteria." },
         { q: "What happens if you drive on tyres that are 15 years old?", a: "Rubber becomes hard and brittle. Grip drops significantly in the wet, braking distances lengthen, and the risk of sidewall failure or belt separation at speed rises sharply." },
       ]}
+      areaLinks={[
+        { to: "/areas/tyne-and-wear", label: "Mobile tyre replacement in Newcastle" },
+        { to: "/areas/bristol", label: "Mobile tyre fitting in Bristol" },
+      ]}
       related={[
         { to: "/blog/uk-tyre-legal-tread-depth", label: "UK Legal Tread Depth" },
         { to: "/blog/tyre-pressure-guide-uk", label: "UK Tyre Pressure Guide" },

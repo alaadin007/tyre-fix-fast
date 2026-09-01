@@ -119,6 +119,10 @@ export default function TyreSidewallDamageGuide() {
         { q: "Is kerb rash on the sidewall dangerous?", a: "Superficial scuffing that only affects the outer rubber is cosmetic. Damage deep enough to expose the cord layer or leave a raised lip is a replace." },
         { q: "Are cracks on my sidewall dangerous?", a: "Fine surface crazing is age-related and worth monitoring; cracks deeper than 2mm or that expose cord mean replace. Widespread crazing usually indicates the whole set is due." },
       ]}
+      areaLinks={[
+        { to: "/areas/cardiff", label: "Mobile tyre replacement in Cardiff" },
+        { to: "/areas/belfast", label: "Mobile tyre fitting in Belfast" },
+      ]}
       related={[
         { to: "/blog/cracked-alloy-from-pothole", label: "Cracked Alloy From Pothole" },
         { to: "/blog/tyre-age-when-to-replace", label: "Tyre Age Guide" },

@@ -189,6 +189,10 @@ export default function PunctureRepairCostUk() {
         { q: "Is it worth repairing a puncture on a nearly worn tyre?", a: "Usually not. Below about 3mm of tread, a £45–£65 repair often just delays an inevitable full-price replacement by a few months — ask the fitter for a tread reading before agreeing." },
       ]}
       cta={{ headline: "Get a firm puncture repair quote in 60 seconds", body: "Send your postcode, tyre size, and where the puncture is — we'll give you an all-in price with no add-ons.", label: "Get a mobile fitter →" }}
+      areaLinks={[
+        { to: "/areas/west-midlands", label: "Puncture repair prices in Birmingham" },
+        { to: "/areas/london", label: "Puncture repair prices in London" },
+      ]}
       related={[
         { to: "/blog/mobile-puncture-repair-london", label: "Mobile Puncture Repair London" },
         { to: "/blog/puncture-repair-vs-new-tyre", label: "Puncture Repair vs New Tyre" },

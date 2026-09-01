@@ -175,6 +175,9 @@ export default function EmergencyPunctureRepairLondon() {
         { q: "What if I'm on the motorway?", a: "Mobile fitters can't attend the hard shoulder. Call National Highways on 0300 123 5000 for recovery to the next junction — we can meet you there." },
       ]}
       cta={{ headline: "Puncture right now? Send your postcode.", body: "Tell us where you are and the tyre size — we'll dispatch the closest mobile fitter in London, day or night, and give you a firm ETA in under two minutes.", label: "Get emergency puncture repair →" }}
+      areaLinks={[
+        { to: "/areas/london", label: "Emergency mobile tyre fitting in London" },
+      ]}
       related={[
         { to: "/blog/mobile-puncture-repair-london", label: "Mobile Puncture Repair London" },
         { to: "/blog/roadside-puncture-repair-london", label: "Mobile Fitter vs AA/RAC" },

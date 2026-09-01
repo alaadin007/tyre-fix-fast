@@ -95,6 +95,10 @@ export default function BudgetVsPremiumTyresUk() {
         { q: "Is it safe to buy budget tyres?", a: "Budget tyres with a B-rated wet grip on the EU label are safe for normal use. Avoid anything E-rated on wet grip — the extra braking distance in the wet isn't worth the £30 saving." },
         { q: "What's the best mid-range tyre in the UK?", a: "Falken ZE310, Hankook Ventus Prime 4, Toyo Proxes CF2, Vredestein Ultrac and Yokohama BluEarth all consistently score well in independent tests at 25–40% below premium prices." },
       ]}
+      areaLinks={[
+        { to: "/areas/edinburgh", label: "Mobile tyre fitting in Edinburgh" },
+        { to: "/areas/glasgow", label: "Mobile tyre replacement in Glasgow" },
+      ]}
       related={[
         { to: "/blog/uk-tyre-legal-tread-depth", label: "UK Legal Tread Depth" },
         { to: "/blog/all-season-vs-winter-tyres-uk", label: "All-Season vs Winter Tyres" },

@@ -112,6 +112,10 @@ export default function CanAPunctureBeRepairedUk() {
         { q: "How long does a puncture repair last?", a: "A properly done BS AU 159 plug-patch repair lasts the life of the tyre and carries a 12-month warranty from most operators." },
       ]}
       cta={{ headline: "Not sure if your puncture is repairable?", body: "Send us a photo of the tyre and where the puncture is — we'll tell you upfront whether it's a £45 repair or a new tyre before the van leaves.", label: "Get an honest opinion →" }}
+      areaLinks={[
+        { to: "/areas/merseyside", label: "Puncture repair specialists in Liverpool" },
+        { to: "/areas/london", label: "Mobile puncture repair in London" },
+      ]}
       related={[
         { to: "/blog/puncture-repair-vs-new-tyre", label: "Puncture Repair vs New Tyre" },
         { to: "/blog/nail-in-tyre-what-to-do", label: "Nail in Tyre: What to Do" },
