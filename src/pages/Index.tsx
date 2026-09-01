@@ -60,8 +60,16 @@ const HOME_LD = [
   {
     "@context": "https://schema.org",
     "@type": "Service",
+    name: "Mobile tyre fitting and emergency puncture repair UK",
+    description:
+      "24/7 mobile tyre fitting, emergency puncture repair and tyre replacement across the UK. Text your postcode for a fixed price in 60 seconds and a vetted technician comes to your car.",
     serviceType: "Mobile tyre fitting and emergency puncture repair",
-    provider: { "@id": "https://www.tyrefly.com/#business" },
+    provider: {
+      "@type": "AutoRepair",
+      "@id": "https://www.tyrefly.com/#business",
+      name: "Tyrefly",
+      url: "https://www.tyrefly.com/",
+    },
     areaServed: { "@type": "Country", name: "United Kingdom" },
     availableChannel: {
       "@type": "ServiceChannel",
