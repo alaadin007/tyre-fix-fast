@@ -37,43 +37,33 @@ export default function FlatTyreLondon() {
     ],
   };
 
+  const faqs = [
+    {
+      q: "What should I do immediately after getting a flat tyre in London?",
+      a: "Don't brake hard. Ease off the accelerator, grip the wheel firmly, indicate and aim for a safe spot (hard shoulder, layby, petrol station or side street). Put hazards on, get everyone out behind a barrier, and call a mobile tyre fitter or recovery.",
+    },
+    {
+      q: "How much does a mobile tyre fitter cost in London?",
+      a: "Puncture repairs run \u00A335\u2013\u00A355. Replacement tyres fitted at the roadside in London typically cost \u00A385\u2013\u00A3130 for budget tyres, \u00A3150\u2013\u00A3240 for premium brands and \u00A3220\u2013\u00A3420 for performance or SUV sizes. Out-of-hours work adds \u00A320\u2013\u00A340.",
+    },
+    {
+      q: "Can I keep driving on a flat tyre?",
+      a: "Only if it's a genuine run-flat tyre (marked RFT, ROF, EMT, ZP or SSR), and only up to 50 miles at 50 mph. Standard tyres driven flat for more than 100\u2013200 metres are destroyed and may damage the alloy and suspension.",
+    },
+    {
+      q: "Is a flat tyre an MOT failure?",
+      a: "Yes if tread depth drops below 1.6 mm across the central three-quarters of the tread, or if there are visible cuts, bulges or exposed cord. Each illegal tyre carries a \u00A32,500 fine and 3 penalty points.",
+    },
+  ];
+
   const faqLd = {
     "@context": "https://schema.org",
     "@type": "FAQPage",
-    mainEntity: [
-      {
-        "@type": "Question",
-        name: "What should I do immediately after getting a flat tyre in London?",
-        acceptedAnswer: {
-          "@type": "Answer",
-          text: "Don't brake hard. Ease off the accelerator, grip the wheel firmly, indicate and aim for a safe spot (hard shoulder, layby, petrol station or side street). Put hazards on, get everyone out behind a barrier, and call a mobile tyre fitter or recovery.",
-        },
-      },
-      {
-        "@type": "Question",
-        name: "How much does a mobile tyre fitter cost in London?",
-        acceptedAnswer: {
-          "@type": "Answer",
-          text: "Puncture repairs run £35–£55. Replacement tyres fitted at the roadside in London typically cost £85–£130 for budget tyres, £150–£240 for premium brands and £220–£420 for performance or SUV sizes. Out-of-hours work adds £20–£40.",
-        },
-      },
-      {
-        "@type": "Question",
-        name: "Can I keep driving on a flat tyre?",
-        acceptedAnswer: {
-          "@type": "Answer",
-          text: "Only if it's a genuine run-flat tyre (marked RFT, ROF, EMT, ZP or SSR), and only up to 50 miles at 50 mph. Standard tyres driven flat for more than 100–200 metres are destroyed and may damage the alloy and suspension.",
-        },
-      },
-      {
-        "@type": "Question",
-        name: "Is a flat tyre an MOT failure?",
-        acceptedAnswer: {
-          "@type": "Answer",
-          text: "Yes if tread depth drops below 1.6 mm across the central three-quarters of the tread, or if there are visible cuts, bulges or exposed cord. Each illegal tyre carries a £2,500 fine and 3 penalty points.",
-        },
-      },
-    ],
+    mainEntity: faqs.map((f) => ({
+      "@type": "Question",
+      name: f.q,
+      acceptedAnswer: { "@type": "Answer", text: f.a },
+    })),
   };
 
   return (
@@ -473,6 +463,14 @@ export default function FlatTyreLondon() {
             now, send a WhatsApp with your postcode and tyre size from the sidewall — we'll quote
             in minutes and dispatch the nearest van.
           </p>
+
+          <h2 className="text-2xl font-semibold mt-12">Flat tyre in London FAQs</h2>
+          {faqs.map((f) => (
+            <div key={f.q}>
+              <h3 className="text-xl font-semibold mt-6">{f.q}</h3>
+              <p>{f.a}</p>
+            </div>
+          ))}
 
           <div className="mt-12 p-6 rounded-2xl border border-border bg-muted/30">
             <p className="font-semibold mb-2">Need help right now?</p>
