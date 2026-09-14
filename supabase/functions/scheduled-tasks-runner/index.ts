@@ -8,16 +8,30 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Hard cap on any outbound call so one hung request can't consume the whole
+// function invocation budget (was causing 504s on the cron runner).
+const FETCH_TIMEOUT_MS = 10_000;
+
+async function postJson(path: string, payload: unknown) {
+  const url = `${Deno.env.get("SUPABASE_URL")}/functions/v1/${path}`;
+  try {
+    await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+      },
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+    });
+  } catch (e) {
+    console.error(`postJson ${path} failed`, e);
+    throw e;
+  }
+}
+
 async function send(to: string, body: string) {
-  const url = `${Deno.env.get("SUPABASE_URL")}/functions/v1/twilio-send`;
-  await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
-    },
-    body: JSON.stringify({ to, body, channel: "sms" }),
-  });
+  await postJson("twilio-send", { to, body, channel: "sms" });
 }
 
 Deno.serve(async (req) => {
