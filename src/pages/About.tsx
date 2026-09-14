@@ -38,6 +38,25 @@ const ABOUT_LD = {
     email: CONTACT_EMAIL,
     availableLanguage: "English",
   },
+  ...(COMPANY_LEGAL_NAME ? { legalName: COMPANY_LEGAL_NAME } : {}),
+  ...(COMPANY_NUMBER
+    ? {
+        identifier: {
+          "@type": "PropertyValue",
+          name: "Companies House Number",
+          value: COMPANY_NUMBER,
+        },
+      }
+    : {}),
+  ...(REGISTERED_ADDRESS
+    ? {
+        address: {
+          "@type": "PostalAddress",
+          streetAddress: REGISTERED_ADDRESS,
+          addressCountry: "GB",
+        },
+      }
+    : {}),
 };
 
 const About = () => {
