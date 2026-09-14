@@ -27,6 +27,45 @@ export default function AreaPage() {
   ];
   const allFaqs = [...baseFaqs, ...(area.extraFaqs ?? [])];
 
+  const businessId = `https://www.tyrefly.com/areas/${area.slug}/#business`;
+
+  // LocalBusiness (AutoRepair is a LocalBusiness subtype) — top-level node with
+  // every field Google requires, scoped to this city.
+  const localBusinessLd = {
+    "@context": "https://schema.org",
+    "@type": ["LocalBusiness", "AutoRepair"],
+    "@id": businessId,
+    name: `Tyrefly — Mobile Tyre Fitting ${area.name}`,
+    description,
+    url: `https://www.tyrefly.com/areas/${area.slug}/`,
+    logo: "https://www.tyrefly.com/favicon.png",
+    image: "https://www.tyrefly.com/og.jpg",
+    telephone: SUPPORT_WA_DISPLAY,
+    priceRange: "££",
+    currenciesAccepted: "GBP",
+    paymentAccepted: "Card, Bank transfer, Cash, Payment link",
+    parentOrganization: { "@id": "https://www.tyrefly.com/#organization" },
+    address: {
+      "@type": "PostalAddress",
+      addressLocality: area.name,
+      addressRegion: area.region,
+      addressCountry: "GB",
+    },
+    openingHours: "Mo-Su 00:00-23:59",
+    openingHoursSpecification: [
+      {
+        "@type": "OpeningHoursSpecification",
+        dayOfWeek: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+        opens: "00:00",
+        closes: "23:59",
+      },
+    ],
+    areaServed: [
+      { "@type": "City", name: area.name },
+      { "@type": "AdministrativeArea", name: area.region },
+    ],
+  };
+
   const localServiceLd = {
     "@context": "https://schema.org",
     "@type": "Service",
@@ -34,37 +73,7 @@ export default function AreaPage() {
     serviceType: "Mobile tyre fitting",
     description,
     url: `https://www.tyrefly.com/areas/${area.slug}/`,
-    provider: {
-      "@type": "AutoRepair",
-      "@id": "https://www.tyrefly.com/#business",
-      name: "Tyrefly",
-      url: "https://www.tyrefly.com/",
-      logo: "https://www.tyrefly.com/favicon.png",
-      image: "https://www.tyrefly.com/og.jpg",
-      telephone: SUPPORT_WA_DISPLAY,
-      priceRange: "££",
-      currenciesAccepted: "GBP",
-      paymentAccepted: "Card, Bank transfer, Cash, Payment link",
-      address: {
-        "@type": "PostalAddress",
-        addressLocality: area.name,
-        addressRegion: area.region,
-        addressCountry: "GB",
-      },
-      openingHours: "Mo-Su 00:00-23:59",
-      openingHoursSpecification: [
-        {
-          "@type": "OpeningHoursSpecification",
-          dayOfWeek: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
-          opens: "00:00",
-          closes: "23:59",
-        },
-      ],
-      areaServed: [
-        { "@type": "City", name: area.name },
-        { "@type": "AdministrativeArea", name: area.region },
-      ],
-    },
+    provider: { "@id": businessId },
     areaServed: [
       { "@type": "City", name: area.name },
       { "@type": "AdministrativeArea", name: area.region },
@@ -105,7 +114,7 @@ export default function AreaPage() {
         title={title}
         description={description}
         canonical={`/areas/${area.slug}`}
-        jsonLd={[localServiceLd, faqLd, breadcrumbsLd]}
+        jsonLd={[localBusinessLd, localServiceLd, faqLd, breadcrumbsLd]}
       />
 
       {/* Nav */}
