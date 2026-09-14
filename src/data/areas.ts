@@ -1,4 +1,4 @@
-import { CITY_PRICING, priceBullets, priceFaqAnswer, range } from "./pricing";
+import { getPricing, priceBullets, priceFaqAnswer, range } from "./pricing";
 // UK service areas — used to generate SEO landing pages at /areas/:slug
 export interface AreaSection {
   h2: string;
@@ -92,7 +92,7 @@ export const AREAS: Area[] = [
     ],
     extraFaqs: [
       { q: "How much is mobile tyre fitting in London?", a: priceFaqAnswer("London", "london") },
-      { q: "Can a mobile tyre fitter come inside the Congestion Charge zone?", a: "Yes, every day of the week. During charging hours a small " + range(CITY_PRICING.london.zoneCharge!.band) + " uplift covers a share of the daily charge; evenings and weekends carry no surcharge." },
+      { q: "Can a mobile tyre fitter come inside the Congestion Charge zone?", a: "Yes, every day of the week. During charging hours a small " + range(getPricing("london").zoneCharge!.band) + " uplift covers a share of the daily charge; evenings and weekends carry no surcharge." },
       { q: "Can you fit tyres in a London underground car park?", a: "Usually — most vans need about 2 metres of clearance. Check the height when you book; where the van can't get in, the wheel can be brought out for fitting." },
       { q: "Do I need to be with the car?", a: "Not if it's on a driveway or private car park and the key and locking wheel-nut key are accessible. Payment can be taken by card link afterwards." },
     ],
