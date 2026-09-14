@@ -1,3 +1,4 @@
+import { priceBullets, priceFaqAnswer } from "./pricing";
 // UK service areas — used to generate SEO landing pages at /areas/:slug
 export interface AreaSection {
   h2: string;
@@ -40,13 +41,7 @@ export const AREAS: Area[] = [
           "These are the real 2026 all-in numbers across the capital — callout, tyre, fitting, balancing and disposal of the old tyre included. Anything materially cheaper usually means an external plug repair (not road-legal on its own) or a tyre that isn't actually in the van.",
         ],
         bullets: [
-          "<strong>Puncture repair (BS AU 159 internal plug-patch):</strong> £45–£65",
-          "<strong>Budget tyre supplied and fitted:</strong> £95–£135",
-          "<strong>Mid-range premium (Michelin, Continental, Bridgestone):</strong> £140–£200",
-          "<strong>Performance, SUV or run-flat:</strong> £220–£420",
-          "<strong>Overnight surcharge (10pm–6am):</strong> +£20–£40",
-          "<strong>Congestion Charge zone during charging hours:</strong> +£5–£15",
-          "<strong>Locking wheel nut removal (no key):</strong> +£20–£40",
+          ...priceBullets("london"),
         ],
       },
       {
@@ -55,7 +50,7 @@ export const AREAS: Area[] = [
           "<strong>Zones 1–2 (Central and inner):</strong> 30–60 minutes",
           "<strong>Zones 3–4 (Hackney, Camden, Wandsworth, Ealing):</strong> 45–75 minutes",
           "<strong>Zones 5–6 (Bromley, Croydon, Enfield, Kingston):</strong> 60–90 minutes",
-          "<strong>Overnight, anywhere inside the M25:</strong> 40–75 minutes — often the fastest window, because the roads are empty",
+          ...priceBullets("london"),
           "<strong>Weekday rush hour (7.30–9.30am, 4.30–7pm):</strong> add 15–30 minutes",
         ],
         paragraphs: [
@@ -96,8 +91,8 @@ export const AREAS: Area[] = [
       },
     ],
     extraFaqs: [
-      { q: "How much is mobile tyre fitting in London?", a: "£95–£135 for a budget tyre supplied and fitted, £140–£200 mid-range premium, and £220–£420 for performance, SUV or run-flat. Puncture repairs are £45–£65. Overnight adds £20–£40." },
-      { q: "Can a mobile tyre fitter come inside the Congestion Charge zone?", a: "Yes, every day of the week. During charging hours a small £5–£15 uplift covers a share of the daily charge; evenings and weekends carry no surcharge." },
+      { q: "How much is mobile tyre fitting in London?", a: priceFaqAnswer("London", "london") },
+      { q: "Can a mobile tyre fitter come inside the Congestion Charge zone?", a: "Yes, every day of the week. During charging hours a small ${surcharge(CITY_PRICING.london.zoneCharge!.band).slice(1)} uplift covers a share of the daily charge; evenings and weekends carry no surcharge." },
       { q: "Can you fit tyres in a London underground car park?", a: "Usually — most vans need about 2 metres of clearance. Check the height when you book; where the van can't get in, the wheel can be brought out for fitting." },
       { q: "Do I need to be with the car?", a: "Not if it's on a driveway or private car park and the key and locking wheel-nut key are accessible. Payment can be taken by card link afterwards." },
     ],
@@ -123,12 +118,7 @@ export const AREAS: Area[] = [
       {
         h2: "Manchester mobile tyre fitting prices",
         bullets: [
-          "<strong>Puncture repair (internal plug-patch):</strong> £40–£60",
-          "<strong>Budget tyre supplied and fitted:</strong> £85–£125",
-          "<strong>Mid-range premium:</strong> £130–£185",
-          "<strong>Performance, SUV or run-flat:</strong> £200–£390",
-          "<strong>Overnight (10pm–6am):</strong> +£20–£35",
-          "<strong>Locking wheel nut removal:</strong> +£20–£40",
+          ...priceBullets("greater-manchester"),
         ],
         paragraphs: [
           "Prices run slightly below London because there's no Congestion Charge and the road network moves faster outside peak hours.",
@@ -169,7 +159,7 @@ export const AREAS: Area[] = [
       },
     ],
     extraFaqs: [
-      { q: "How much is mobile tyre fitting in Manchester?", a: "£85–£125 for a budget tyre supplied and fitted, £130–£185 mid-range premium, and £200–£390 for performance, SUV or run-flat. Puncture repairs are £40–£60." },
+      { q: "How much is mobile tyre fitting in Manchester?", a: priceFaqAnswer("Manchester", "greater-manchester") },
       { q: "How fast can a mobile tyre fitter get to me in Manchester?", a: "30–55 minutes in the city centre, Salford and Trafford; 40–70 minutes across Stockport, Bury, Oldham and Tameside; 50–85 minutes in Bolton, Rochdale and Wigan." },
       { q: "Do you cover Manchester Airport?", a: "Yes — all terminals and long-stay car parks, 24/7, with typical arrival in 40–70 minutes." },
       { q: "Can you attend the M60 or M62?", a: "Not the hard shoulder — mobile fitters can't legally work there. Call National Highways on 0300 123 5000 for recovery to the next junction and we'll meet you." },
@@ -195,11 +185,7 @@ export const AREAS: Area[] = [
       {
         h2: "Birmingham mobile tyre fitting prices",
         bullets: [
-          "<strong>Puncture repair (internal plug-patch):</strong> £40–£60",
-          "<strong>Budget tyre supplied and fitted:</strong> £85–£125",
-          "<strong>Mid-range premium:</strong> £130–£185",
-          "<strong>Performance, SUV or run-flat:</strong> £200–£390",
-          "<strong>Overnight (10pm–6am):</strong> +£20–£35",
+          ...priceBullets("west-midlands"),
           "<strong>Clean Air Zone:</strong> our vans are compliant, so the charge never lands on your invoice",
         ],
       },
@@ -238,7 +224,7 @@ export const AREAS: Area[] = [
       },
     ],
     extraFaqs: [
-      { q: "How much is mobile tyre fitting in Birmingham?", a: "£85–£125 for a budget tyre supplied and fitted, £130–£185 mid-range premium, £200–£390 for performance, SUV or run-flat. Puncture repairs are £40–£60." },
+      { q: "How much is mobile tyre fitting in Birmingham?", a: priceFaqAnswer("Birmingham", "west-midlands") },
       { q: "How fast can a mobile tyre fitter reach me in Birmingham?", a: "30–55 minutes in the city centre, 40–70 minutes across Solihull, Sandwell and Dudley, and 45–80 minutes in Walsall, Wolverhampton and Coventry." },
       { q: "Does the Birmingham Clean Air Zone affect the callout?", a: "No. Our vans are CAZ-compliant, so the charge never appears on your bill." },
       { q: "Do you cover the NEC and Birmingham Airport?", a: "Yes, 24/7, with typical arrival in 40–70 minutes including long-stay car parks." },
@@ -269,12 +255,7 @@ export const AREAS: Area[] = [
           "North East pricing sits below the national average, and every quote is all-in — no separate callout line that appears once the fitter's on your drive.",
         ],
         bullets: [
-          "<strong>Puncture repair (internal plug-patch):</strong> £40–£55",
-          "<strong>Budget tyre supplied and fitted:</strong> £80–£115",
-          "<strong>Mid-range premium (Michelin, Continental, Goodyear):</strong> £120–£175",
-          "<strong>Performance, SUV or run-flat:</strong> £190–£360",
-          "<strong>Overnight (10pm–6am):</strong> +£20–£35",
-          "<strong>Locking wheel nut removal (no key):</strong> +£20–£40",
+          ...priceBullets("tyne-and-wear"),
         ],
       },
       {
@@ -324,7 +305,7 @@ export const AREAS: Area[] = [
       },
     ],
     extraFaqs: [
-      { q: "How much is mobile tyre fitting in Newcastle?", a: "£80–£115 for a budget tyre supplied and fitted, £120–£175 mid-range premium, and £190–£360 for performance, SUV or run-flat. Puncture repairs are £40–£55." },
+      { q: "How much is mobile tyre fitting in Newcastle?", a: priceFaqAnswer("Newcastle", "tyne-and-wear") },
       { q: "Does the Newcastle Clean Air Zone add a charge?", a: "No. Our vans are CAZ-compliant, so working inside the zone doesn't add anything to your bill." },
       { q: "Can you reach me on the A1 or A19?", a: "Not on the hard shoulder — that's for National Highways (0300 123 5000) to recover you first. We'll meet you at the next junction or services." },
       { q: "Do you cover Sunderland and South Tyneside as well as Newcastle?", a: "Yes — all five Tyne & Wear boroughs, 24/7, with typical arrival of 40–75 minutes depending on how far you are from the Tyne." },
@@ -353,12 +334,7 @@ export const AREAS: Area[] = [
           "These are realistic 2026 all-in prices for the Bristol and Bath area — callout, tyre, fitting, balancing and old-tyre disposal all included.",
         ],
         bullets: [
-          "<strong>Puncture repair (internal plug-patch):</strong> £40–£60",
-          "<strong>Budget tyre supplied and fitted:</strong> £85–£120",
-          "<strong>Mid-range premium (Michelin, Continental, Bridgestone):</strong> £130–£185",
-          "<strong>Performance, SUV or run-flat:</strong> £200–£380",
-          "<strong>Overnight surcharge (10pm–6am):</strong> +£20–£35",
-          "<strong>Locking wheel nut removal (no key):</strong> +£20–£40",
+          ...priceBullets("bristol"),
         ],
       },
       {
@@ -409,7 +385,7 @@ export const AREAS: Area[] = [
       },
     ],
     extraFaqs: [
-      { q: "How much is mobile tyre fitting in Bristol?", a: "£85–£120 for a budget tyre supplied and fitted, £130–£185 mid-range premium, and £200–£380 for performance, SUV or run-flat. Puncture repairs are £40–£60." },
+      { q: "How much is mobile tyre fitting in Bristol?", a: priceFaqAnswer("Bristol", "bristol") },
       { q: "Does Bristol's Clean Air Zone add a charge to my callout?", a: "No. Our vans are CAZ-compliant, so working inside the zone never adds anything to your invoice." },
       { q: "Can a van reach me on a steep Clifton or Totterdown street?", a: "Usually, but on very narrow inclines we may ask you to move the car a short distance to a flatter, wider spot so the fitter has room to work safely." },
       { q: "Do you cover Bath as well as Bristol?", a: "Yes — Bath, Keynsham, Saltford and BANES are all covered, with typical arrival of 45–75 minutes." },
@@ -435,12 +411,7 @@ export const AREAS: Area[] = [
       {
         h2: "Leeds mobile tyre fitting prices",
         bullets: [
-          "<strong>Puncture repair (internal plug-patch):</strong> £40–£55",
-          "<strong>Budget tyre supplied and fitted:</strong> £80–£115",
-          "<strong>Mid-range premium (Michelin, Continental, Goodyear):</strong> £120–£175",
-          "<strong>Performance, SUV or run-flat:</strong> £190–£360",
-          "<strong>Overnight (10pm–6am):</strong> +£20–£35",
-          "<strong>Locking wheel nut removal (no key):</strong> +£20–£40",
+          ...priceBullets("west-yorkshire"),
         ],
       },
       {
@@ -488,7 +459,7 @@ export const AREAS: Area[] = [
       },
     ],
     extraFaqs: [
-      { q: "How much is mobile tyre fitting in Leeds?", a: "£80–£115 for a budget tyre supplied and fitted, £120–£175 mid-range premium, and £190–£360 for performance, SUV or run-flat. Puncture repairs are £40–£55." },
+      { q: "How much is mobile tyre fitting in Leeds?", a: priceFaqAnswer("Leeds", "west-yorkshire") },
       { q: "How fast can a fitter reach me in Leeds?", a: "30–55 minutes inside the ring road, 35–60 minutes in Headingley and Roundhay, and 40–70 minutes across Bradford and Wakefield." },
       { q: "Can you reach me on the M62 or M621?", a: "Not on the hard shoulder — National Highways (0300 123 5000) handles recovery from there. We'll meet you at the next junction or services." },
       { q: "Do you cover Huddersfield and Halifax as well as Leeds?", a: "Yes — all five West Yorkshire districts, 24/7, with typical arrival of 45–80 minutes for the Calder Valley towns." },
@@ -514,12 +485,7 @@ export const AREAS: Area[] = [
       {
         h2: "Liverpool mobile tyre fitting prices",
         bullets: [
-          "<strong>Puncture repair (internal plug-patch):</strong> £40–£55",
-          "<strong>Budget tyre supplied and fitted:</strong> £80–£115",
-          "<strong>Mid-range premium (Michelin, Continental, Goodyear):</strong> £120–£175",
-          "<strong>Performance, SUV or run-flat:</strong> £190–£360",
-          "<strong>Overnight (10pm–6am):</strong> +£20–£35",
-          "<strong>Locking wheel nut removal (no key):</strong> +£20–£40",
+          ...priceBullets("merseyside"),
         ],
       },
       {
@@ -569,7 +535,7 @@ export const AREAS: Area[] = [
       },
     ],
     extraFaqs: [
-      { q: "How much is mobile tyre fitting in Liverpool?", a: "£80–£115 for a budget tyre supplied and fitted, £120–£175 mid-range premium, and £190–£360 for performance, SUV or run-flat. Puncture repairs are £40–£55." },
+      { q: "How much is mobile tyre fitting in Liverpool?", a: priceFaqAnswer("Liverpool", "merseyside") },
       { q: "Do you cover the Wirral as well as Liverpool?", a: "Yes — Birkenhead, Wallasey, Heswall and the rest of the peninsula, with typical arrival of 40–70 minutes via the Mersey tunnels." },
       { q: "Can you reach me on the M62, M57 or M53?", a: "Not on the hard shoulder — National Highways (0300 123 5000) handles recovery from there. We'll meet you at the next junction or services." },
       { q: "Do you cover Liverpool John Lennon Airport?", a: "Yes, 24/7, with typical arrival of 35–60 minutes including the long-stay car parks." },
@@ -595,12 +561,7 @@ export const AREAS: Area[] = [
       {
         h2: "Sheffield mobile tyre fitting prices",
         bullets: [
-          "<strong>Puncture repair (internal plug-patch):</strong> £40–£55",
-          "<strong>Budget tyre supplied and fitted:</strong> £80–£115",
-          "<strong>Mid-range premium (Michelin, Continental, Goodyear):</strong> £120–£175",
-          "<strong>Performance, SUV or run-flat:</strong> £190–£360",
-          "<strong>Overnight (10pm–6am):</strong> +£20–£35",
-          "<strong>Locking wheel nut removal (no key):</strong> +£20–£40",
+          ...priceBullets("south-yorkshire"),
         ],
       },
       {
@@ -651,7 +612,7 @@ export const AREAS: Area[] = [
       },
     ],
     extraFaqs: [
-      { q: "How much is mobile tyre fitting in Sheffield?", a: "£80–£115 for a budget tyre supplied and fitted, £120–£175 mid-range premium, and £190–£360 for performance, SUV or run-flat. Puncture repairs are £40–£55." },
+      { q: "How much is mobile tyre fitting in Sheffield?", a: priceFaqAnswer("Sheffield", "south-yorkshire") },
       { q: "Can a fitter work on a steep Sheffield street?", a: "Usually, but on genuinely steep gradients around Crookes or Walkley we'll ask you to move to flatter ground nearby for the fitter's safety." },
       { q: "Can you reach me on the M1 or M18?", a: "Not on the hard shoulder — National Highways (0300 123 5000) handles recovery from there. We'll meet you at the next junction or services." },
       { q: "Do you cover Doncaster and Barnsley as well as Sheffield?", a: "Yes — all four South Yorkshire boroughs, 24/7, with typical arrival of 40–70 minutes." },
@@ -671,7 +632,7 @@ export const AREAS: Area[] = [
     hubs: ["Edinburgh city centre", "Leith", "Portobello", "Musselburgh", "Livingston", "Dalkeith"],
     faqAnswer: "We cover the City of Edinburgh, Midlothian, East Lothian and West Lothian, plus the A720 city bypass.",
     metaTitle: "Mobile Tyre Fitter Edinburgh & Lothians | Tyrefly",
-    metaDesc: "LEZ-ready vans reach Edinburgh drivers wherever they stop, including the A720 bypass. Puncture repair from £40 — WhatsApp us and we'll price it fast.",
+    metaDesc: "LEZ-ready vans reach Edinburgh drivers wherever they stop, including the A720 bypass. Puncture repair from £45 — WhatsApp us and we'll price it fast.",
     intro: "Mobile tyre fitting in Edinburgh means a fully-equipped van reaching you on a cobbled Old Town close, a Leith side street, or out along the A720 bypass, instead of a wasted trip to a garage. Tyrefly matches you to a vetted local fitter across the City of Edinburgh and the three Lothians, 24 hours a day, with a firm all-in price agreed before dispatch.",
     sections: [
       {
@@ -680,12 +641,7 @@ export const AREAS: Area[] = [
           "Pricing in and around Edinburgh runs a little above the English North because stock has to travel further and city-centre parking eats into a fitter's day — but every quote is fixed and all-in.",
         ],
         bullets: [
-          "<strong>Puncture repair (internal plug-patch):</strong> £45–£60",
-          "<strong>Budget tyre supplied and fitted:</strong> £90–£125",
-          "<strong>Mid-range premium (Michelin, Continental, Goodyear):</strong> £135–£190",
-          "<strong>Performance, SUV or run-flat:</strong> £210–£390",
-          "<strong>Overnight (10pm–6am):</strong> +£20–£40",
-          "<strong>Locking wheel nut removal (no key):</strong> +£20–£40",
+          ...priceBullets("edinburgh"),
         ],
       },
       {
@@ -736,7 +692,7 @@ export const AREAS: Area[] = [
       },
     ],
     extraFaqs: [
-      { q: "How much is mobile tyre fitting in Edinburgh?", a: "£90–£125 for a budget tyre supplied and fitted, £135–£190 mid-range premium, and £210–£390 for performance, SUV or run-flat. Puncture repairs are £45–£60." },
+      { q: "How much is mobile tyre fitting in Edinburgh?", a: priceFaqAnswer("Edinburgh", "edinburgh") },
       { q: "Does Edinburgh's LEZ add a charge to my callout?", a: "No. Our vans are LEZ-compliant, so working inside the zone never adds anything to your invoice." },
       { q: "Can a fitter reach me on a cobbled Old Town street?", a: "Usually, though on very narrow setts we may ask you to move to a nearby wider street or car park so the fitter can work safely." },
       { q: "Do you cover Livingston and the Lothians as well as Edinburgh?", a: "Yes — City of Edinburgh, Midlothian, East Lothian and West Lothian, 24/7, with typical arrival of 45–75 minutes further out." },
@@ -762,12 +718,7 @@ export const AREAS: Area[] = [
       {
         h2: "Glasgow mobile tyre fitting prices",
         bullets: [
-          "<strong>Puncture repair (internal plug-patch):</strong> £45–£60",
-          "<strong>Budget tyre supplied and fitted:</strong> £90–£125",
-          "<strong>Mid-range premium (Michelin, Continental, Goodyear):</strong> £135–£190",
-          "<strong>Performance, SUV or run-flat:</strong> £210–£390",
-          "<strong>Overnight (10pm–6am):</strong> +£20–£40",
-          "<strong>Locking wheel nut removal (no key):</strong> +£20–£40",
+          ...priceBullets("glasgow"),
         ],
       },
       {
@@ -818,7 +769,7 @@ export const AREAS: Area[] = [
       },
     ],
     extraFaqs: [
-      { q: "How much is mobile tyre fitting in Glasgow?", a: "£90–£125 for a budget tyre supplied and fitted, £135–£190 mid-range premium, and £210–£390 for performance, SUV or run-flat. Puncture repairs are £45–£60." },
+      { q: "How much is mobile tyre fitting in Glasgow?", a: priceFaqAnswer("Glasgow", "glasgow") },
       { q: "Does Glasgow's LEZ add a charge to my callout?", a: "No. Our vans are LEZ-compliant, so working inside the zone never adds anything to your invoice." },
       { q: "Can you reach me on the M8, M74 or M77?", a: "Not on the hard shoulder — Traffic Scotland (0800 028 1414) handles recovery from there. We'll meet you at the next junction or services." },
       { q: "Do you cover Paisley and East Kilbride as well as Glasgow?", a: "Yes — Renfrewshire, East and South Lanarkshire are all covered, 24/7, with typical arrival of 35–70 minutes." },
@@ -844,12 +795,7 @@ export const AREAS: Area[] = [
       {
         h2: "Cardiff mobile tyre fitting prices",
         bullets: [
-          "<strong>Puncture repair (internal plug-patch):</strong> £40–£55",
-          "<strong>Budget tyre supplied and fitted:</strong> £80–£115",
-          "<strong>Mid-range premium (Michelin, Continental, Goodyear):</strong> £120–£175",
-          "<strong>Performance, SUV or run-flat:</strong> £190–£360",
-          "<strong>Overnight (10pm–6am):</strong> +£20–£35",
-          "<strong>Locking wheel nut removal (no key):</strong> +£20–£40",
+          ...priceBullets("cardiff"),
         ],
       },
       {
@@ -900,7 +846,7 @@ export const AREAS: Area[] = [
       },
     ],
     extraFaqs: [
-      { q: "How much is mobile tyre fitting in Cardiff?", a: "£80–£115 for a budget tyre supplied and fitted, £120–£175 mid-range premium, and £190–£360 for performance, SUV or run-flat. Puncture repairs are £40–£55." },
+      { q: "How much is mobile tyre fitting in Cardiff?", a: priceFaqAnswer("Cardiff", "cardiff") },
       { q: "Do you cover the Valleys as well as Cardiff?", a: "Yes — Pontypridd, Caerphilly and the surrounding Valleys towns, though on very narrow terraces we may ask you to move to a wider spot nearby." },
       { q: "Can you reach me on the M4 or in the Brynglas Tunnels?", a: "Not on the hard shoulder or inside the tunnels — National Highways (0300 123 5000) handles recovery from there. We'll meet you at the next junction." },
       { q: "Do you cover Swansea as well as Cardiff and Newport?", a: "Yes, though it's further out — typical arrival in Swansea is 50–85 minutes rather than the 30–55 minutes you'd see in central Cardiff." },
@@ -929,12 +875,7 @@ export const AREAS: Area[] = [
           "Prices in Northern Ireland sit close to the English North, with one difference worth knowing: unusual or large tyre sizes sometimes come in on the next ferry rather than same-day, so we'll always tell you upfront if your size needs a day's notice rather than promising stock that isn't actually on the island yet.",
         ],
         bullets: [
-          "<strong>Puncture repair (internal plug-patch):</strong> £40–£55",
-          "<strong>Budget tyre supplied and fitted:</strong> £80–£115",
-          "<strong>Mid-range premium (Michelin, Continental, Goodyear):</strong> £120–£175",
-          "<strong>Performance, SUV or run-flat:</strong> £190–£370 (uncommon sizes may need next-day ferry stock)",
-          "<strong>Overnight (10pm–6am):</strong> +£20–£35",
-          "<strong>Locking wheel nut removal (no key):</strong> +£20–£40",
+          ...priceBullets("belfast"),
         ],
       },
       {
@@ -982,7 +923,7 @@ export const AREAS: Area[] = [
       },
     ],
     extraFaqs: [
-      { q: "How much is mobile tyre fitting in Belfast?", a: "£80–£115 for a budget tyre supplied and fitted, £120–£175 mid-range premium, and £190–£370 for performance, SUV or run-flat. Puncture repairs are £40–£55." },
+      { q: "How much is mobile tyre fitting in Belfast?", a: priceFaqAnswer("Belfast", "belfast") },
       { q: "Is every tyre size available same-day in Belfast?", a: "Common sizes yes. Unusual or large sizes sometimes rely on stock coming over on the next ferry, so we'll flag upfront if your size needs a day's notice." },
       { q: "Can you reach me on the M1 or M2?", a: "Not on the hard shoulder — call 101 for PSNI/recovery assistance from a live carriageway. We'll meet you at the next junction or services." },
       { q: "Do you cover Lisburn and Bangor as well as Belfast?", a: "Yes — Greater Belfast including Lisburn, Newtownabbey, Carrickfergus and Bangor, 24/7, with typical arrival of 35–75 minutes." },
