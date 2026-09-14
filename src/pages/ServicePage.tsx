@@ -4,6 +4,7 @@ import { getService } from "@/data/services";
 import { AREAS } from "@/data/areas";
 import { ServiceShell, CtaPair, FaqBlock } from "@/components/service/ServiceLayout";
 import NotFound from "@/pages/NotFound";
+import { cityFromServiceHref, isComboPublished } from "@/data/publishing";
 
 export default function ServicePage() {
   const { service = "" } = useParams();
@@ -125,10 +126,10 @@ export default function ServicePage() {
             {AREAS.map((a) => (
               <Link
                 key={a.slug}
-                to={`/services/${svc.slug}/${a.slug}`}
+                to={cityFromServiceHref(svc.slug, a.slug)}
                 className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs text-white/80 hover:border-[#FF6B1A]/50 hover:text-[#FF6B1A]"
               >
-                {svc.keyword} in {a.name}
+                {isComboPublished(a.slug) ? `${svc.keyword} in ${a.name}` : a.name}
               </Link>
             ))}
           </div>

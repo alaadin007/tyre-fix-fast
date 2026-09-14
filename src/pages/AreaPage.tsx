@@ -1,6 +1,7 @@
 import { Link, useParams } from "@/lib/router-compat";
 import { MessageSquare, Phone, Clock, ShieldCheck, MapPin, Sparkles, PoundSterling } from "lucide-react";
 import { Seo } from "@/components/Seo";
+import { serviceCityHref } from "@/data/publishing";
 import { getArea, AREAS } from "@/data/areas";
 import { SUPPORT_WHATSAPP, SUPPORT_WA_DISPLAY, waLink } from "@/lib/whatsapp";
 import logo from "@/assets/tyrefly-logo.png";
@@ -153,9 +154,9 @@ export default function AreaPage() {
         <p className="mt-5 text-lg text-white/70 leading-relaxed max-w-2xl">
           Tyrefly is the mobile tyre fitting {area.name} drivers message when a tyre goes down. {area.shortPitch} WhatsApp us — a
           vetted local technician quotes you in under 60 seconds and is at your kerb 24/7, whether you need{" "}
-          <Link to={`/services/puncture-repair/${area.slug}`} className="underline hover:text-white">puncture repair in {area.name}</Link>,{" "}
-          <Link to={`/services/tyre-replacement/${area.slug}`} className="underline hover:text-white">a replacement tyre</Link> or{" "}
-          <Link to={`/services/emergency-tyre-fitting/${area.slug}`} className="underline hover:text-white">emergency tyre fitting</Link>.
+          <Link to={serviceCityHref("puncture-repair", area.slug)} className="underline hover:text-white">puncture repair in {area.name}</Link>,{" "}
+          <Link to={serviceCityHref("tyre-replacement", area.slug)} className="underline hover:text-white">a replacement tyre</Link> or{" "}
+          <Link to={serviceCityHref("emergency-tyre-fitting", area.slug)} className="underline hover:text-white">emergency tyre fitting</Link>.
         </p>
 
         <div className="mt-8 flex flex-col sm:flex-row gap-3 max-w-md">

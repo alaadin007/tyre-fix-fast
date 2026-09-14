@@ -55,7 +55,6 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
           "tyrefly, mobile tyre fitter, puncture repair, 24 hour tyre repair, emergency tyre, tyre replacement UK",
       },
       { name: "author", content: "Tyrefly" },
-      { name: "robots", content: "index, follow, max-image-preview:large" },
       { property: "og:site_name", content: "Tyrefly" },
       { property: "og:locale", content: "en_GB" },
       { property: "og:image:secure_url", content: OG_IMAGE },
