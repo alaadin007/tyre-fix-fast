@@ -1,4 +1,4 @@
-import { priceBullets, priceFaqAnswer } from "./pricing";
+import { CITY_PRICING, priceBullets, priceFaqAnswer, range } from "./pricing";
 // UK service areas — used to generate SEO landing pages at /areas/:slug
 export interface AreaSection {
   h2: string;
@@ -50,7 +50,7 @@ export const AREAS: Area[] = [
           "<strong>Zones 1–2 (Central and inner):</strong> 30–60 minutes",
           "<strong>Zones 3–4 (Hackney, Camden, Wandsworth, Ealing):</strong> 45–75 minutes",
           "<strong>Zones 5–6 (Bromley, Croydon, Enfield, Kingston):</strong> 60–90 minutes",
-          ...priceBullets("london"),
+          "<strong>Overnight, anywhere inside the M25:</strong> 40–75 minutes — often the fastest window, because the roads are empty",
           "<strong>Weekday rush hour (7.30–9.30am, 4.30–7pm):</strong> add 15–30 minutes",
         ],
         paragraphs: [
@@ -92,7 +92,7 @@ export const AREAS: Area[] = [
     ],
     extraFaqs: [
       { q: "How much is mobile tyre fitting in London?", a: priceFaqAnswer("London", "london") },
-      { q: "Can a mobile tyre fitter come inside the Congestion Charge zone?", a: "Yes, every day of the week. During charging hours a small ${surcharge(CITY_PRICING.london.zoneCharge!.band).slice(1)} uplift covers a share of the daily charge; evenings and weekends carry no surcharge." },
+      { q: "Can a mobile tyre fitter come inside the Congestion Charge zone?", a: "Yes, every day of the week. During charging hours a small " + range(CITY_PRICING.london.zoneCharge!.band) + " uplift covers a share of the daily charge; evenings and weekends carry no surcharge." },
       { q: "Can you fit tyres in a London underground car park?", a: "Usually — most vans need about 2 metres of clearance. Check the height when you book; where the van can't get in, the wheel can be brought out for fitting." },
       { q: "Do I need to be with the car?", a: "Not if it's on a driveway or private car park and the key and locking wheel-nut key are accessible. Payment can be taken by card link afterwards." },
     ],
