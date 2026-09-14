@@ -4,6 +4,7 @@ import { getService, SERVICES } from "@/data/services";
 import { getArea, AREAS } from "@/data/areas";
 import { ServiceShell, CtaPair, FaqBlock } from "@/components/service/ServiceLayout";
 import NotFound from "@/pages/NotFound";
+import { isComboPublished, serviceCityHref } from "@/data/publishing";
 
 export default function ServiceAreaPage() {
   const { service = "", city = "" } = useParams();
@@ -15,6 +16,7 @@ export default function ServiceAreaPage() {
   const path = `/services/${svc.slug}/${area.slug}/`;
   const url = `https://www.tyrefly.com${path}`;
 
+  const published = isComboPublished(area.slug);
   const priceLine = svc.cityPriceLine(area.slug);
   const cap = svc.keyword.charAt(0).toUpperCase() + svc.keyword.slice(1);
   const title = `${svc.name} ${area.name} | 24/7 | Tyrefly`.slice(0, 62);
@@ -79,7 +81,7 @@ export default function ServiceAreaPage() {
   ];
 
   const otherServices = SERVICES.filter((s) => s.slug !== svc.slug);
-  const nearbyCities = AREAS.filter((a) => a.slug !== area.slug).slice(0, 6);
+  const nearbyCities = AREAS.filter((a) => a.slug !== area.slug && isComboPublished(a.slug)).slice(0, 6);
 
   return (
     <ServiceShell
@@ -91,7 +93,7 @@ export default function ServiceAreaPage() {
         { label: area.name },
       ]}
     >
-      <Seo title={title} description={description} canonical={path} jsonLd={ld} />
+      <Seo title={title} description={description} canonical={path} jsonLd={ld} noindex={!published} />
 
       <section className="mx-auto w-full max-w-6xl px-5 py-12 md:py-16">
         <div
@@ -166,7 +168,7 @@ export default function ServiceAreaPage() {
           {otherServices.map((s) => (
             <Link
               key={s.slug}
-              to={`/services/${s.slug}/${area.slug}`}
+              to={serviceCityHref(s.slug, area.slug)}
               className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 hover:border-[#FF6B1A]/40 transition"
             >
               <h3 className="font-semibold text-sm">{s.name} in {area.name}</h3>
@@ -175,6 +177,8 @@ export default function ServiceAreaPage() {
           ))}
         </div>
 
+        {nearbyCities.length > 0 && (
+          <>
         <h2 className="mt-12 text-2xl sm:text-3xl font-bold tracking-tight">{svc.name} in nearby cities</h2>
         <div className="mt-6 flex flex-wrap gap-2">
           {nearbyCities.map((a) => (
@@ -187,6 +191,8 @@ export default function ServiceAreaPage() {
             </Link>
           ))}
         </div>
+          </>
+        )}
 
         <h2 className="mt-12 text-2xl sm:text-3xl font-bold tracking-tight">Related guides</h2>
         <div className="mt-6 grid gap-3 sm:grid-cols-3">
