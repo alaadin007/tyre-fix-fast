@@ -2,6 +2,7 @@ import { Link } from "@/lib/router-compat";
 import { MapPin } from "lucide-react";
 import { Seo } from "@/components/Seo";
 import { AREAS } from "@/data/areas";
+import { NATIONAL_PRICING, range } from "@/data/pricing";
 import logo from "@/assets/tyrefly-logo.png";
 
 export default function AreasIndex() {
@@ -82,8 +83,9 @@ export default function AreasIndex() {
         <p>
           In dense urban areas — inner London, central Manchester, Birmingham city centre — arrival is usually 30 to 60
           minutes. Suburban and motorway call-outs typically land in 45 to 90 minutes. Puncture repairs start around
-          £45 to £60, budget replacement tyres fitted from roughly £85 to £110, mid-range from about £110 to £150, and
-          run-flats or larger performance sizes higher again. Every quote you receive is the full price, so there are
+          {" "}{range(NATIONAL_PRICING.puncture)}, budget replacement tyres fitted from roughly{" "}
+          {range(NATIONAL_PRICING.budget)}, mid-range from about {range(NATIONAL_PRICING.midRange)}, and run-flats or
+          larger performance sizes up to {range(NATIONAL_PRICING.performance)}. Every quote you receive is the full price, so there are
           no call-out surcharges added after the work.
         </p>
         <h2 className="text-2xl font-bold text-white">Motorways, red routes and clean air zones</h2>

@@ -15,14 +15,15 @@ export default function ServiceAreaPage() {
   const path = `/services/${svc.slug}/${area.slug}/`;
   const url = `https://www.tyrefly.com${path}`;
 
+  const priceLine = svc.cityPriceLine(area.slug);
   const cap = svc.keyword.charAt(0).toUpperCase() + svc.keyword.slice(1);
   const title = `${svc.name} ${area.name} | 24/7 | Tyrefly`.slice(0, 62);
   const description =
-    `${svc.name} ${area.name}, 24/7 across ${area.region}. ${svc.priceLine}. Text your postcode for a fixed quote in 60 seconds.`.slice(0, 158);
+    `${svc.name} ${area.name}, 24/7 across ${area.region}. ${priceLine}. Text your postcode for a fixed quote in 60 seconds.`.slice(0, 158);
 
-  const intro = svc.cityIntro(area.name, area.region);
-  const sections = svc.citySections(area.name, area.region, area.postcodes);
-  const faqs = svc.cityFaqs(area.name, area.region);
+  const intro = svc.cityIntro(area.name, area.region, area.slug);
+  const sections = svc.citySections(area.name, area.region, area.postcodes, area.slug);
+  const faqs = svc.cityFaqs(area.name, area.region, area.slug);
 
   const ld = [
     {
@@ -169,7 +170,7 @@ export default function ServiceAreaPage() {
               className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 hover:border-[#FF6B1A]/40 transition"
             >
               <h3 className="font-semibold text-sm">{s.name} in {area.name}</h3>
-              <p className="mt-1.5 text-xs text-white/60 leading-relaxed">{s.priceLine}</p>
+              <p className="mt-1.5 text-xs text-white/60 leading-relaxed">{s.cityPriceLine(area.slug)}</p>
             </Link>
           ))}
         </div>
