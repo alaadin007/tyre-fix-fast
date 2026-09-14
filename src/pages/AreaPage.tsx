@@ -1,5 +1,5 @@
 import { Link, useParams } from "@/lib/router-compat";
-import { MessageSquare, Phone, Clock, ShieldCheck, MapPin, Sparkles, Star, PoundSterling } from "lucide-react";
+import { MessageSquare, Phone, Clock, ShieldCheck, MapPin, Sparkles, PoundSterling } from "lucide-react";
 import { Seo } from "@/components/Seo";
 import { getArea, AREAS } from "@/data/areas";
 import { SUPPORT_WHATSAPP, SUPPORT_WA_DISPLAY, waLink } from "@/lib/whatsapp";
@@ -295,10 +295,7 @@ export default function AreaPage() {
       <section className="border-t border-white/5 bg-white/[0.02]">
         <div className="mx-auto w-full max-w-6xl px-5 py-14">
           <div className="flex items-center gap-2 mb-6">
-            {[0,1,2,3,4].map((i) => (
-              <Star key={i} className="h-5 w-5" style={{ color: "#FF6B1A" }} fill="#FF6B1A" />
-            ))}
-            <span className="text-sm text-white/70">4.9 · trusted by drivers across {area.region}</span>
+            <span className="text-sm text-white/70">What drivers across {area.region} say</span>
           </div>
           <p className="text-white/80 max-w-2xl">
             "Texted Tyrefly from a layby in {area.name}. Quote in 40 seconds, fitter at my kerb in under an hour. Brilliant."
