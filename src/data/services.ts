@@ -1,3 +1,5 @@
+import { BOOKING_FEE, NATIONAL_PRICING, emergencyFitted, emergencyRepair, getPricing, range, runFlatRange } from "./pricing";
+
 // Service × location matrix content — powers /services, /services/:service and /services/:service/:city
 
 export interface ServiceSection {
@@ -20,9 +22,11 @@ export interface ServiceDef {
   bullets: string[];
   faqs: { q: string; a: string }[];
   /** city page copy generator */
-  cityIntro: (city: string, region: string) => string;
-  citySections: (city: string, region: string, postcodes: string) => ServiceSection[];
-  cityFaqs: (city: string, region: string) => { q: string; a: string }[];
+  cityIntro: (city: string, region: string, citySlug?: string) => string;
+  citySections: (city: string, region: string, postcodes: string, citySlug?: string) => ServiceSection[];
+  cityFaqs: (city: string, region: string, citySlug?: string) => { q: string; a: string }[];
+  /** price chip / meta line, scoped to a city when one is given */
+  cityPriceLine: (citySlug?: string) => string;
   guides: { to: string; label: string }[];
 }
 
@@ -32,7 +36,8 @@ export const SERVICES: ServiceDef[] = [
     name: "Mobile puncture repair",
     keyword: "puncture repair",
     tagline: "Nail, screw or slow leak — repaired at your kerb, usually in under 30 minutes on-site.",
-    priceLine: "From £40–£55 for a BS AU 159 compliant repair",
+    priceLine: `From ${range(NATIONAL_PRICING.puncture)} for a BS AU 159 compliant repair`,
+    cityPriceLine: (citySlug) => `From ${range(getPricing(citySlug).puncture)} for a BS AU 159 compliant repair`,
     intro:
       "A mobile puncture repair means a fully-equipped van comes to your car, removes the wheel, finds the leak in a water bath, and fits a combined plug-and-patch from inside the tyre. Tyrefly matches you to a vetted local technician by text — no phone queue, no garage trip, no waiting room. You get a fixed all-in price before anyone sets off.",
     sections: [
@@ -59,7 +64,7 @@ export const SERVICES: ServiceDef[] = [
       {
         h2: "How much puncture repair costs in the UK",
         paragraphs: [
-          "Tyrefly technicians typically charge £40–£55 for a mobile puncture repair including callout, with a £20 booking fee deducted from the final bill. Night, motorway-junction and remote rural jobs sit at the upper end. Replacement, if the tyre fails the standard, starts at around £75–£95 for a common budget size fitted.",
+          `Tyrefly technicians typically charge ${range(NATIONAL_PRICING.puncture)} for a mobile puncture repair including callout, with a £${BOOKING_FEE} booking fee deducted from the final bill. Night, motorway-junction and remote rural jobs sit at the upper end. Replacement, if the tyre fails the standard, starts at around ${range(NATIONAL_PRICING.budget)} for a common budget size fitted.`,
         ],
       },
     ],
@@ -77,12 +82,12 @@ export const SERVICES: ServiceDef[] = [
     ],
     cityIntro: (city, region) =>
       `Mobile puncture repair ${city}, any hour of the day. Got a nail, screw or slow puncture in ${city}? Tyrefly sends a vetted mobile technician to your car — home, work, roadside or car park — anywhere across ${region}, 24 hours a day. You text your postcode, get a fixed price in about 60 seconds, and the repair itself takes roughly 20–30 minutes at the kerb.`,
-    citySections: (city, region, postcodes) => [
+    citySections: (city, region, postcodes, citySlug) => [
       {
         h2: `Mobile puncture repair ${city}: prices and costs`,
         paragraphs: [
-          `A mobile puncture repair in ${city} is typically £40–£55 all-in — callout, internal plug-and-patch, rebalancing and TPMS check included. A £20 booking fee holds the slot and comes off the final bill; the technician takes the balance on-site by card, link, transfer or cash.`,
-          `If the damage falls outside the repairable area, you'll be quoted for a replacement tyre before any work starts — normally £75–£95 for a common budget size fitted in ${city}, more for run-flat, SUV and performance sizes.`,
+          `A mobile puncture repair in ${city} is typically ${range(getPricing(citySlug).puncture)} all-in — callout, internal plug-and-patch, rebalancing and TPMS check included. A £${BOOKING_FEE} booking fee holds the slot and comes off the final bill; the technician takes the balance on-site by card, link, transfer or cash.`,
+          `If the damage falls outside the repairable area, you'll be quoted for a replacement tyre before any work starts — normally ${range(getPricing(citySlug).budget)} for a common budget size fitted in ${city}, more for run-flat, SUV and performance sizes.`,
         ],
       },
       {
@@ -104,9 +109,9 @@ export const SERVICES: ServiceDef[] = [
         ],
       },
     ],
-    cityFaqs: (city, region) => [
+    cityFaqs: (city, region, citySlug) => [
       { q: `How fast can you repair a puncture in ${city}?`, a: `Most ${city} jobs get a quote in under 60 seconds and a technician on-site in 35–90 minutes, day or night. The repair itself takes about 20–30 minutes.` },
-      { q: `How much is a puncture repair in ${city}?`, a: `£40–£55 all-in for a BS AU 159 repair including callout, rebalancing and TPMS check. A £20 booking fee secures the slot and is deducted from the final bill.` },
+      { q: `How much is a puncture repair in ${city}?`, a: `${range(getPricing(citySlug).puncture)} all-in for a BS AU 159 repair including callout, rebalancing and TPMS check. A £${BOOKING_FEE} booking fee secures the slot and is deducted from the final bill.` },
       { q: `Do you repair punctures at night in ${city}?`, a: `Yes — Tyrefly operates 24/7 across ${region}, including weekends and bank holidays. Night jobs sit at the upper end of the price range.` },
       { q: `Can you come to my workplace or a car park in ${city}?`, a: `Yes. Home, work, roadside, car parks and service areas are all fine as long as the technician can safely access the wheel. We can't work on a live motorway carriageway.` },
     ],
@@ -122,7 +127,8 @@ export const SERVICES: ServiceDef[] = [
     name: "Mobile tyre replacement",
     keyword: "tyre replacement",
     tagline: "New tyre supplied, fitted and balanced at your location — day or night.",
-    priceLine: "From £75–£95 fitted for common budget sizes",
+    priceLine: `From ${range(NATIONAL_PRICING.budget)} fitted for common budget sizes`,
+    cityPriceLine: (citySlug) => `From ${range(getPricing(citySlug).budget)} fitted for common budget sizes`,
     intro:
       "Mobile tyre replacement brings the tyre machine, wheel balancer and stock to you. Tyrefly's vetted technicians supply and fit budget, mid-range and premium tyres at your home, workplace or roadside across the UK, 24/7, with the old tyre taken away for recycling. Text your postcode and tyre size and you'll have an all-in price in about a minute.",
     sections: [
@@ -167,11 +173,11 @@ export const SERVICES: ServiceDef[] = [
     ],
     cityIntro: (city, region) =>
       `Mobile tyre replacement ${city} — a new tyre without losing half a day to a garage. Tyrefly's mobile fitters supply and fit tyres at your home, office or roadside anywhere in ${region}, 24 hours a day. Text your postcode and the size on your sidewall — you'll get a fixed all-in quote in around 60 seconds and a fitter typically within 35–90 minutes.`,
-    citySections: (city, region, postcodes) => [
+    citySections: (city, region, postcodes, citySlug) => [
       {
         h2: `Mobile tyre replacement ${city}: prices and costs`,
         paragraphs: [
-          `Typical ${city} all-in prices — tyre, callout, fitting, valve, balancing and old-tyre disposal included — run £75–£110 for budget, £120–£175 for mid-range premium, and £190–£370 for performance, SUV and run-flat sizes. The £20 booking fee comes off whatever the final bill is.`,
+          `Typical ${city} all-in prices — tyre, callout, fitting, valve, balancing and old-tyre disposal included — run ${range(getPricing(citySlug).budget)} for budget, ${range(getPricing(citySlug).midRange)} for mid-range premium, and ${range(getPricing(citySlug).performance)} for performance, SUV and run-flat sizes. The £${BOOKING_FEE} booking fee comes off whatever the final bill is.`,
           `Prices firm up once you send the size from your sidewall (for example 205/55 R16 91V). Rare or large sizes may need a short sourcing window, and the technician tells you before you commit.`,
         ],
       },
@@ -194,8 +200,8 @@ export const SERVICES: ServiceDef[] = [
         ],
       },
     ],
-    cityFaqs: (city, region) => [
-      { q: `How much is a new tyre fitted in ${city}?`, a: `£75–£110 for budget sizes, £120–£175 mid-range, £190–£370 for performance, SUV and run-flat — all-in with callout, balancing and disposal included.` },
+    cityFaqs: (city, region, citySlug) => [
+      { q: `How much is a new tyre fitted in ${city}?`, a: `${range(getPricing(citySlug).budget)} for budget sizes, ${range(getPricing(citySlug).midRange)} mid-range, ${range(getPricing(citySlug).performance)} for performance, SUV and run-flat — all-in with callout, balancing and disposal included.` },
       { q: `Can you fit a tyre at night in ${city}?`, a: `Yes. Tyrefly runs 24/7 across ${region}, including weekends and bank holidays.` },
       { q: `How quickly can a fitter reach me in ${city}?`, a: `Typically 35–90 minutes, with a quote back within 60 seconds of your text.` },
       { q: `Do you fit tyres I've bought myself?`, a: `Many ${city} technicians will fit customer-supplied tyres for a fitting-only fee. Mention it in your first message and we'll match you with one who does.` },
@@ -213,6 +219,7 @@ export const SERVICES: ServiceDef[] = [
     keyword: "emergency tyre fitting",
     tagline: "Blowout, shredded tyre or stranded at 2am — a technician dispatched immediately.",
     priceLine: "24/7 emergency call-out, quote in 60 seconds",
+    cityPriceLine: () => "24/7 emergency call-out, quote in 60 seconds",
     intro:
       "Emergency tyre fitting is for the moments you can't drive away: a blowout, a shredded sidewall, no usable spare, or a car full of people at midnight. Tyrefly's network runs around the clock — you text your postcode, we dispatch the nearest vetted technician, and you get a firm price and an ETA rather than an open-ended wait.",
     sections: [
@@ -225,13 +232,13 @@ export const SERVICES: ServiceDef[] = [
       {
         h2: "How Tyrefly dispatch works at 3am",
         paragraphs: [
-          "One text starts it. Our system reads your postcode, checks which vetted technicians are live in that area, and broadcasts the job. You get quotes back in about a minute with the arrival window attached, and the £20 booking fee locks in the slot. You then track progress by message until the van pulls up.",
+          `One text starts it. Our system reads your postcode, checks which vetted technicians are live in that area, and broadcasts the job. You get quotes back in about a minute with the arrival window attached, and the £${BOOKING_FEE} booking fee locks in the slot. You then track progress by message until the van pulls up.`,
         ],
       },
       {
         h2: "Emergency call-out costs",
         paragraphs: [
-          "Night and emergency jobs price at the upper end of the normal ranges rather than a separate surcharge tier: roughly £50–£65 for a repair and £95–£200+ for a supplied and fitted tyre depending on size. You see the number before you commit — there is no meter running while you wait.",
+          `Night and emergency jobs price at the upper end of the normal ranges rather than a separate surcharge tier: roughly ${emergencyRepair(NATIONAL_PRICING)} for a repair and ${emergencyFitted(NATIONAL_PRICING)} for a supplied and fitted tyre depending on size. You see the number before you commit — there is no meter running while you wait.`,
         ],
       },
     ],
@@ -245,11 +252,11 @@ export const SERVICES: ServiceDef[] = [
       { q: "Is Tyrefly cheaper than a breakdown recovery call-out?", a: "Usually. Recovery firms tow you to a garage that then charges separately for the tyre. Tyrefly fixes the car where it stands, so you pay for one job, not two." },
       { q: "Can you come to a motorway hard shoulder?", a: "No — that's genuinely dangerous and it's a job for the police and National Highways. Get recovered to the next junction or services and we'll meet you there." },
       { q: "What if I have no spare wheel?", a: "That's the most common emergency we handle. Most modern cars ship with a sealant kit instead of a spare, which is exactly why mobile fitting exists." },
-      { q: "How do I pay in an emergency?", a: "A £20 booking fee secures the slot, and the technician takes the balance on-site by card, payment link, bank transfer or cash." },
+      { q: "How do I pay in an emergency?", a: `A £${BOOKING_FEE} booking fee secures the slot, and the technician takes the balance on-site by card, payment link, bank transfer or cash.` },
     ],
     cityIntro: (city, region) =>
       `Emergency mobile tyre fitting ${city}, 24/7. Stranded with a blown or shredded tyre in ${city}? Tyrefly runs a 24/7 emergency mobile fitting network across ${region}. Send one text with your postcode and the nearest vetted technician is dispatched with a firm price and an arrival window — typically 35–90 minutes, at any hour.`,
-    citySections: (city, region, postcodes) => [
+    citySections: (city, region, postcodes, citySlug) => [
       {
         h2: `Emergency mobile tyre fitting ${city}: 24/7 cover across ${region}`,
         paragraphs: [
@@ -260,7 +267,7 @@ export const SERVICES: ServiceDef[] = [
       {
         h2: `Emergency mobile tyre fitting ${city}: call-out costs`,
         paragraphs: [
-          `Night and emergency jobs sit at the top of the standard ranges rather than on a separate surcharge tariff: around £50–£65 for a repair, and £95–£200+ for a supplied and fitted tyre depending on size and brand. The £20 booking fee is deducted from the final bill.`,
+          `Night and emergency jobs sit at the top of the standard ranges rather than on a separate surcharge tariff: around ${emergencyRepair(getPricing(citySlug))} for a repair, and ${emergencyFitted(getPricing(citySlug))} for a supplied and fitted tyre depending on size and brand. The £${BOOKING_FEE} booking fee is deducted from the final bill.`,
         ],
       },
       {
@@ -270,10 +277,10 @@ export const SERVICES: ServiceDef[] = [
         ],
       },
     ],
-    cityFaqs: (city, region) => [
+    cityFaqs: (city, region, citySlug) => [
       { q: `Do you cover ${city} at 3am?`, a: `Yes — the ${region} network is live 24/7, including weekends and bank holidays.` },
       { q: `How fast is an emergency call-out in ${city}?`, a: `Quote in about 60 seconds and a technician on-site typically within 35–90 minutes, depending on where you are and the time of night.` },
-      { q: `What does an emergency tyre call-out cost in ${city}?`, a: `Around £50–£65 for a repair and £95–£200+ for a supplied and fitted tyre. You see the exact figure before you commit.` },
+      { q: `What does an emergency tyre call-out cost in ${city}?`, a: `Around ${emergencyRepair(getPricing(citySlug))} for a repair and ${emergencyFitted(getPricing(citySlug))} for a supplied and fitted tyre. You see the exact figure before you commit.` },
       { q: `Can you help if I have no spare wheel?`, a: `Yes — that's the single most common emergency we attend in ${city}. The technician brings the tyre to you.` },
     ],
     guides: [
@@ -288,7 +295,8 @@ export const SERVICES: ServiceDef[] = [
     name: "Run-flat tyre fitting",
     keyword: "run-flat tyre fitting",
     tagline: "BMW, Mini and Mercedes run-flats supplied and fitted at your location.",
-    priceLine: "From £150–£370 fitted depending on size and brand",
+    priceLine: `From ${runFlatRange(NATIONAL_PRICING)} fitted depending on size and brand`,
+    cityPriceLine: (citySlug) => `From ${runFlatRange(getPricing(citySlug))} fitted depending on size and brand`,
     intro:
       "Run-flat tyres have reinforced sidewalls that let you drive roughly 50 miles at up to 50mph after a total pressure loss. That buys you time — but once a run-flat has been driven on while deflated, it must be replaced, not repaired. Tyrefly's technicians carry the right stock and the stiffer-bead fitting equipment run-flats need, and come to you 24/7.",
     sections: [
@@ -319,18 +327,18 @@ export const SERVICES: ServiceDef[] = [
     ],
     faqs: [
       { q: "How far can I drive on a flat run-flat?", a: "Around 50 miles at up to 50mph, but check your handbook — some manufacturers specify less. Drive gently and straight to a safe location." },
-      { q: "How much do run-flat tyres cost fitted?", a: "Typically £150–£370 supplied and fitted depending on size and brand. Larger BMW and Mercedes sizes sit at the upper end." },
+      { q: "How much do run-flat tyres cost fitted?", a: `Typically ${runFlatRange(NATIONAL_PRICING)} supplied and fitted depending on size and brand. Larger BMW and Mercedes sizes sit at the upper end.` },
       { q: "Do I have to replace run-flats in pairs?", a: "Not always, but matching across the axle is strongly recommended, and essential if the remaining tyre is significantly worn." },
       { q: "Will my TPMS light clear after fitting?", a: "Yes — the technician resets the system once the new tyre is inflated to the correct pressure. If a sensor has failed, they'll tell you and can usually replace it." },
     ],
     cityIntro: (city, region) =>
       `Run-flat tyre fitting ${city} on call 24/7. Run-flat gone down in ${city}? Tyrefly matches you with a ${region} technician whose van carries run-flat stock and the assist-arm machine these tyres need. Text your postcode and the size and marking from your sidewall (RSC, ROF, ZP or SSR) and you'll have a fixed all-in price in about 60 seconds.`,
-    citySections: (city, region, postcodes) => [
+    citySections: (city, region, postcodes, citySlug) => [
       {
         h2: `Run-flat tyre fitting ${city}: prices and costs`,
         paragraphs: [
-          `Run-flat fitting in ${city} typically runs £150–£370 all-in per tyre — the tyre, callout, fitting, balancing, TPMS check and old-tyre disposal. Common 17" and 18" BMW and Mini sizes sit toward the lower end; large Mercedes, X-series and performance sizes toward the top.`,
-          `The £20 booking fee holds the slot and comes off the final bill. Rarer sizes may need a short sourcing window — the technician confirms availability before you commit.`,
+          `Run-flat fitting in ${city} typically runs ${runFlatRange(getPricing(citySlug))} all-in per tyre — the tyre, callout, fitting, balancing, TPMS check and old-tyre disposal. Common 17" and 18" BMW and Mini sizes sit toward the lower end; large Mercedes, X-series and performance sizes toward the top.`,
+          `The £${BOOKING_FEE} booking fee holds the slot and comes off the final bill. Rarer sizes may need a short sourcing window — the technician confirms availability before you commit.`,
         ],
       },
       {
@@ -352,8 +360,8 @@ export const SERVICES: ServiceDef[] = [
         ],
       },
     ],
-    cityFaqs: (city, region) => [
-      { q: `How much is run-flat fitting in ${city}?`, a: `Usually £150–£370 per tyre all-in, depending on size and brand, with callout, balancing and disposal included.` },
+    cityFaqs: (city, region, citySlug) => [
+      { q: `How much is run-flat fitting in ${city}?`, a: `Usually ${runFlatRange(getPricing(citySlug))} per tyre all-in, depending on size and brand, with callout, balancing and disposal included.` },
       { q: `Can my run-flat be repaired in ${city}?`, a: `Only if it never lost pressure and the damage is inside the repairable tread area. Any run-flat driven while deflated must be replaced.` },
       { q: `Do you carry run-flat stock in ${region}?`, a: `Common BMW, Mini and Mercedes sizes yes. Unusual sizes may need a short sourcing window, which the technician confirms upfront.` },
       { q: `Can I switch to standard tyres instead?`, a: `On most cars yes, and it's cheaper — but you lose the drive-home capability, and you shouldn't mix run-flats and standard tyres on the same axle.` },
