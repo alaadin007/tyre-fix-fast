@@ -193,7 +193,7 @@ const Index = () => {
 
             <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-white/60">
               <span className="inline-flex items-center gap-1.5">
-                <Star className="h-3.5 w-3.5" style={{ color: "#FF6B1A" }} fill="#FF6B1A" /> 4.9 rated · 1,200+ jobs
+                <ShieldCheck className="h-3.5 w-3.5" /> Mobile fitters nationwide
               </span>
               <span className="inline-flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5" /> Fully insured</span>
               <span className="inline-flex items-center gap-1.5"><Clock className="h-3.5 w-3.5" /> 24/7 response</span>
@@ -414,12 +414,7 @@ const Index = () => {
       <section id="reviews" className="border-t border-white/5 bg-white/[0.02]">
         <div className="mx-auto w-full max-w-6xl px-5 py-16">
           <div className="flex items-center justify-center gap-2 mb-8">
-            <div className="flex items-center gap-0.5">
-              {[0, 1, 2, 3, 4].map((i) => (
-                <Star key={i} className="h-5 w-5" style={{ color: "#FF6B1A" }} fill="#FF6B1A" />
-              ))}
-            </div>
-            <span className="text-sm text-white/70">4.9 · 1,200+ jobs</span>
+            <span className="text-sm text-white/70">What drivers say about Tyrefly</span>
           </div>
           <div className="grid gap-4 md:grid-cols-3">
             {[
