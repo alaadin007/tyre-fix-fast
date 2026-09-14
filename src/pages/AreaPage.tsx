@@ -114,7 +114,7 @@ export default function AreaPage() {
         title={title}
         description={description}
         canonical={`/areas/${area.slug}`}
-        jsonLd={[localServiceLd, faqLd, breadcrumbsLd]}
+        jsonLd={[localBusinessLd, localServiceLd, faqLd, breadcrumbsLd]}
       />
 
       {/* Nav */}
