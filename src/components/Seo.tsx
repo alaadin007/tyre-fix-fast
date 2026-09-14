@@ -31,8 +31,8 @@ export function Seo({ title, description, canonical, jsonLd, noindex, ogImage, s
       <title>{title}</title>
       <meta name="description" content={description} />
       {canonHref && <link rel="canonical" href={canonHref} />}
-      {noindex && <meta name="robots" content="noindex, nofollow" />}
-      {noindex && <meta name="googlebot" content="noindex, nofollow" />}
+      {noindex && <meta name="robots" content="noindex, follow" />}
+      {noindex && <meta name="googlebot" content="noindex, follow" />}
       {statusCode && statusCode !== 200 && <meta name="prerender-status-code" content={String(statusCode)} />}
 
       <meta property="og:type" content="website" />
