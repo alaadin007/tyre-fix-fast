@@ -4,6 +4,7 @@ import logo from "@/assets/tyrefly-logo.png";
 import heroTruck from "@/assets/tyrefly-hero-truck.jpg";
 import { WhatsAppChatCta } from "@/components/WhatsAppChatCta";
 import { Seo } from "@/components/Seo";
+import { NATIONAL_PRICING, emergencyRepair, range, runFlatRange, surcharge } from "@/data/pricing";
 import { AREAS } from "@/data/areas";
 
 import { SUPPORT_WHATSAPP, SUPPORT_WA_DISPLAY, waLink } from "@/lib/whatsapp";
@@ -352,11 +353,11 @@ const Index = () => {
               </thead>
               <tbody className="divide-y divide-white/5 text-white/75">
                 {[
-                  ["Mobile puncture repair", "£45 – £70", "35 – 90 mins"],
-                  ["Emergency call-out, nights & weekends", "£75 – £110", "40 – 90 mins"],
-                  ["Tyre supplied and fitted (common sizes)", "£95 – £180", "1 – 3 hours"],
-                  ["Run-flat supplied and fitted", "£150 – £320", "1 – 4 hours"],
-                  ["Locking wheel nut removal", "+£20 – £40", "with the job"],
+                  ["Mobile puncture repair", range(NATIONAL_PRICING.puncture), "35 – 90 mins"],
+                  ["Emergency call-out, nights & weekends", emergencyRepair(NATIONAL_PRICING), "40 – 90 mins"],
+                  ["Tyre supplied and fitted (common sizes)", range(NATIONAL_PRICING.budget), "1 – 3 hours"],
+                  ["Run-flat supplied and fitted", runFlatRange(NATIONAL_PRICING), "1 – 4 hours"],
+                  ["Locking wheel nut removal", surcharge(NATIONAL_PRICING.lockingNut), "with the job"],
                   ["Wheel balancing (per wheel)", "£12 – £20", "with the job"],
                 ].map((r) => (
                   <tr key={r[0]}>
