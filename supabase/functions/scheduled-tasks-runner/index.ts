@@ -127,8 +127,12 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Aggregate technician ratings + suspend low performers (last 30 days)
-    const { data: recentReviews } = await supabase
+    // Aggregate technician ratings + suspend low performers (last 30 days).
+    // Skipped when the task loop already used the invocation budget — it is
+    // idempotent and simply runs on the next minute's cron tick.
+    const { data: recentReviews } = Date.now() > deadline
+      ? { data: [] as { technician_id: string | null; score: number }[] }
+      : await supabase
       .from("reviews")
       .select("technician_id, score")
       .gte("created_at", new Date(Date.now() - 30 * 24 * 60 * 60_000).toISOString());
