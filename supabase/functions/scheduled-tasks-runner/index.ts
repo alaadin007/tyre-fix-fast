@@ -42,17 +42,27 @@ Deno.serve(async (req) => {
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   );
 
+  // Stop taking on new work past this point and return cleanly; the cron runs
+  // every minute, so anything left over is picked up on the next invocation.
+  const deadline = Date.now() + 45_000;
+
   try {
     const { data: due } = await supabase
       .from("scheduled_tasks")
       .select("*")
       .eq("done", false)
       .lte("run_at", new Date().toISOString())
-      .limit(50);
+      .order("run_at", { ascending: true })
+      .limit(20);
 
     const results: any[] = [];
+    let deferred = 0;
 
     for (const t of due ?? []) {
+      if (Date.now() > deadline) {
+        deferred++;
+        continue;
+      }
       try {
         if (t.kind === "review_request") {
           const { job_id } = t.payload as any;
