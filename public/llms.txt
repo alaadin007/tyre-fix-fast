@@ -7,6 +7,7 @@ Tyrefly dispatches vetted mobile tyre fitters to homes, roadsides, and workplace
 ## Pages
 
 - [Home(/): Book a mobile tyre fitter by text. How Tyrefly works, coverage, and pricing.
+- [About](/about/): Company information, who we are, and how the Tyrefly network works.
 - [Areas we cover](/areas/): Full list of UK regions Tyrefly serves.
 - [Blog](/blog/): Guides on flat tyres, punctures, mobile fitting, and tyre law in the UK.
 - [Privacy](/privacy/): Privacy policy.
