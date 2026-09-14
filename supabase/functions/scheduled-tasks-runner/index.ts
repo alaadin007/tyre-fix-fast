@@ -8,16 +8,30 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Hard cap on any outbound call so one hung request can't consume the whole
+// function invocation budget (was causing 504s on the cron runner).
+const FETCH_TIMEOUT_MS = 10_000;
+
+async function postJson(path: string, payload: unknown) {
+  const url = `${Deno.env.get("SUPABASE_URL")}/functions/v1/${path}`;
+  try {
+    await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+      },
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+    });
+  } catch (e) {
+    console.error(`postJson ${path} failed`, e);
+    throw e;
+  }
+}
+
 async function send(to: string, body: string) {
-  const url = `${Deno.env.get("SUPABASE_URL")}/functions/v1/twilio-send`;
-  await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
-    },
-    body: JSON.stringify({ to, body, channel: "sms" }),
-  });
+  await postJson("twilio-send", { to, body, channel: "sms" });
 }
 
 Deno.serve(async (req) => {
@@ -28,17 +42,27 @@ Deno.serve(async (req) => {
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   );
 
+  // Stop taking on new work past this point and return cleanly; the cron runs
+  // every minute, so anything left over is picked up on the next invocation.
+  const deadline = Date.now() + 45_000;
+
   try {
     const { data: due } = await supabase
       .from("scheduled_tasks")
       .select("*")
       .eq("done", false)
       .lte("run_at", new Date().toISOString())
-      .limit(50);
+      .order("run_at", { ascending: true })
+      .limit(20);
 
     const results: any[] = [];
+    let deferred = 0;
 
     for (const t of due ?? []) {
+      if (Date.now() > deadline) {
+        deferred++;
+        continue;
+      }
       try {
         if (t.kind === "review_request") {
           const { job_id } = t.payload as any;
@@ -91,14 +115,7 @@ Deno.serve(async (req) => {
         } else if (t.kind === "finalize_broadcast") {
           const { job_id } = t.payload as any;
           if (job_id) {
-            await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/finalize-broadcast`, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
-              },
-              body: JSON.stringify({ job_id }),
-            });
+            await postJson("finalize-broadcast", { job_id });
           }
         }
 
@@ -110,8 +127,12 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Aggregate technician ratings + suspend low performers (last 30 days)
-    const { data: recentReviews } = await supabase
+    // Aggregate technician ratings + suspend low performers (last 30 days).
+    // Skipped when the task loop already used the invocation budget — it is
+    // idempotent and simply runs on the next minute's cron tick.
+    const { data: recentReviews } = Date.now() > deadline
+      ? { data: [] as { technician_id: string | null; score: number }[] }
+      : await supabase
       .from("reviews")
       .select("technician_id, score")
       .gte("created_at", new Date(Date.now() - 30 * 24 * 60 * 60_000).toISOString());
@@ -146,7 +167,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    return new Response(JSON.stringify({ processed: results.length, results }), {
+    return new Response(JSON.stringify({ processed: results.length, deferred, results }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
