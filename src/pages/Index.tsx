@@ -129,6 +129,7 @@ const Index = () => {
             <Link to="/services" className="hover:text-white">Services</Link>
             <Link to="/areas" className="hover:text-white">Areas</Link>
             <Link to="/blog" className="hover:text-white">Blog</Link>
+            <Link to="/about" className="hover:text-white">About</Link>
             <a href="#reviews" className="hover:text-white">Reviews</a>
             <a href="/technician/login/" className="hover:text-white">For technicians</a>
           </nav>
@@ -602,6 +603,7 @@ const Index = () => {
             </div>
             <div className="flex items-center gap-4">
               <a href={WA_HREF} target="_blank" rel="noopener noreferrer" className="hover:text-white/70">WhatsApp {SUPPORT_WA_DISPLAY}</a>
+              <a href="/about/" className="hover:text-white/70">About</a>
               <a href="/privacy/" className="hover:text-white/70">Privacy</a>
               <a href="/terms/" className="hover:text-white/70">Terms</a>
             </div>

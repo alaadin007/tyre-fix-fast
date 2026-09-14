@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AboutRouteImport } from './routes/about'
 import { Route as ConfirmedRouteImport } from './routes/confirmed'
 import { Route as ConsoleRouteImport } from './routes/console'
 import { Route as Dash2RouteImport } from './routes/dash2'
@@ -80,6 +81,11 @@ import { Route as ServicesServiceCityRouteImport } from './routes/services/$serv
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AboutRoute = AboutRouteImport.update({
+  id: '/about',
+  path: '/about',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ConfirmedRoute = ConfirmedRouteImport.update({
@@ -447,6 +453,7 @@ const ServicesServiceCityRoute = ServicesServiceCityRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
   '/confirmed': typeof ConfirmedRoute
   '/console': typeof ConsoleRoute
   '/dash2': typeof Dash2Route
@@ -516,6 +523,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
   '/confirmed': typeof ConfirmedRoute
   '/console': typeof ConsoleRoute
   '/dash2': typeof Dash2Route
@@ -585,6 +593,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
   '/confirmed': typeof ConfirmedRoute
   '/console': typeof ConsoleRoute
   '/dash2': typeof Dash2Route
@@ -656,6 +665,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/about'
     | '/confirmed'
     | '/console'
     | '/dash2'
@@ -725,6 +735,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/about'
     | '/confirmed'
     | '/console'
     | '/dash2'
@@ -793,6 +804,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/about'
     | '/confirmed'
     | '/console'
     | '/dash2'
@@ -863,6 +875,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AboutRoute: typeof AboutRoute
   ConfirmedRoute: typeof ConfirmedRoute
   ConsoleRoute: typeof ConsoleRoute
   Dash2Route: typeof Dash2Route
@@ -926,6 +939,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/about': {
+      id: '/about'
+      path: '/about'
+      fullPath: '/about'
+      preLoaderRoute: typeof AboutRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/confirmed': {
@@ -1431,6 +1451,7 @@ const AdminDashboardRouteWithChildren = AdminDashboardRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AboutRoute: AboutRoute,
   ConfirmedRoute: ConfirmedRoute,
   ConsoleRoute: ConsoleRoute,
   Dash2Route: Dash2Route,
