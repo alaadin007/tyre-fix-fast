@@ -35,6 +35,12 @@ export default function ServicePage() {
       },
       areaServed: { "@type": "Country", name: "United Kingdom" },
       availableChannel: { "@type": "ServiceChannel", serviceUrl: url, availableLanguage: "en-GB" },
+      offers: serviceOffer({
+        serviceSlug: svc.slug,
+        url,
+        name: `${svc.name} UK`,
+        areaServed: "United Kingdom",
+      }),
     },
     {
       "@context": "https://schema.org",
