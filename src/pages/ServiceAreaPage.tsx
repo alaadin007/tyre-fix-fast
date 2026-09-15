@@ -3,6 +3,7 @@ import { Seo } from "@/components/Seo";
 import { getService, SERVICES } from "@/data/services";
 import { getArea, AREAS } from "@/data/areas";
 import { ServiceShell, CtaPair, FaqBlock } from "@/components/service/ServiceLayout";
+import { DirectAnswer } from "@/components/service/DirectAnswer";
 import NotFound from "@/pages/NotFound";
 import { isComboPublished, serviceCityHref } from "@/data/publishing";
 
@@ -107,6 +108,13 @@ export default function ServiceAreaPage() {
           <span style={{ color: "#FF6B1A" }}>{area.name}</span>
         </h1>
         <p className="mt-5 text-lg text-white/70 leading-relaxed max-w-2xl">{svc.tagline}</p>
+        <DirectAnswer
+          service={svc.keyword}
+          place={area.name}
+          serviceSlug={svc.slug}
+          citySlug={area.slug}
+          className="mt-6 max-w-3xl"
+        />
         <CtaPair message={MSG} className="mt-8" />
       </section>
 

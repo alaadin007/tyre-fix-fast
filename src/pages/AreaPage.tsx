@@ -3,6 +3,7 @@ import { MessageSquare, Phone, Clock, ShieldCheck, MapPin, Sparkles, PoundSterli
 import { Seo } from "@/components/Seo";
 import { serviceCityHref } from "@/data/publishing";
 import { getArea, AREAS } from "@/data/areas";
+import { DirectAnswer } from "@/components/service/DirectAnswer";
 import { SUPPORT_WHATSAPP, SUPPORT_WA_DISPLAY, waLink } from "@/lib/whatsapp";
 import logo from "@/assets/tyrefly-logo.png";
 import NotFound from "@/pages/NotFound";
@@ -158,6 +159,8 @@ export default function AreaPage() {
           <Link to={serviceCityHref("tyre-replacement", area.slug)} className="underline hover:text-white">a replacement tyre</Link> or{" "}
           <Link to={serviceCityHref("emergency-tyre-fitting", area.slug)} className="underline hover:text-white">emergency tyre fitting</Link>.
         </p>
+
+        <DirectAnswer service="mobile tyre fitting" place={area.name} citySlug={area.slug} className="mt-6 max-w-3xl" />
 
         <div className="mt-8 flex flex-col sm:flex-row gap-3 max-w-md">
           <a href={WA_HREF} target="_blank" rel="noopener noreferrer"
