@@ -79,7 +79,7 @@ export default function PunctureRepairCostUk() {
             "<strong>Higher demand density</strong> — but also higher no-show / cancelled-in-transit rates",
           ],
         },
-        { type: "p", html: "Manchester and Birmingham are broadly similar to national averages; Edinburgh and Glasgow are a touch lower; rural Wales, the Highlands, and parts of Cornwall run £10–£15 above London because the drive time per callout is much longer." },
+        { type: "p", html: "<a href=\"/blog/mobile-tyre-fitting-manchester\" class=\"text-primary hover:underline\">Manchester</a> and <a href=\"/blog/mobile-tyre-fitting-birmingham\" class=\"text-primary hover:underline\">Birmingham</a> are broadly similar to national averages; Edinburgh and Glasgow are a touch lower; rural Wales, the Highlands, and parts of Cornwall run £10–£15 above London because the drive time per callout is much longer." },
 
         { type: "h2", text: "London vs regional: a direct comparison" },
         {

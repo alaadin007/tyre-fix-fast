@@ -134,6 +134,7 @@ export default function MobileTyreFitterVsGarage() {
 
         { type: "h2", text: "How to decide in under a minute" },
         { type: "p", html: "If the car is drivable and you have flexibility, ask yourself three quick questions: does this job need a ramp (alignment, suspension, brakes)? Am I better off not losing an afternoon? Is this happening somewhere a van can reasonably reach and park? Two \"no\" answers to the ramp question and \"yes\" to the other two means mobile is almost always the better call in 2026 — reserve the garage trip for the jobs that genuinely need one." },
+        { type: "p", html: "For a city-specific breakdown of that decision — including when a four-tyre-plus-alignment job tips toward a fixed bay — see our <a href=\"/blog/mobile-tyre-fitting-birmingham\" class=\"text-primary hover:underline\">mobile tyre fitting Birmingham</a> and <a href=\"/blog/mobile-tyre-fitting-manchester\" class=\"text-primary hover:underline\">mobile tyre fitting Manchester</a> guides." },
       ]}
       faqs={[
         { q: "Is mobile tyre fitting more expensive than a garage?", a: "In 2026 the price difference on a standard tyre supplied and fitted is usually £0–£8. Only out-of-hours callouts carry a meaningful premium (£30–£60 extra)." },

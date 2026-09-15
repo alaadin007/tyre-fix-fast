@@ -88,6 +88,7 @@ export default function SlowPunctureUkGuide() {
 
         { type: "h2", text: "When a mobile fitter is the smart call" },
         { type: "p", html: "For a slow puncture, mobile is often the best value because you're not paying with your morning off work. A fitter comes to the driveway or office car park, has the wheel off the car in five minutes, does a BS AU 159 repair in 20, and you never rearrange your day. Send a WhatsApp with your postcode, the tyre size, and a photo of the object (if visible) — you'll usually get a fixed price back in minutes." },
+        { type: "p", html: "Slow punctures cluster where road debris is worst — motorway junctions, tram-adjacent grooves and worn urban grids. Our <a href=\"/blog/mobile-tyre-fitting-manchester\" class=\"text-primary hover:underline\">mobile tyre fitting Manchester</a> and <a href=\"/blog/mobile-tyre-fitting-birmingham\" class=\"text-primary hover:underline\">mobile tyre fitting Birmingham</a> guides name the specific hotspots in each city." },
       ]}
       faqs={[
         { q: "How do I know if a puncture is repairable in the UK?", a: "It's repairable if the hole is under 6 mm, in the central three-quarters of the tread, with no sidewall damage or bulges, and the tyre has at least 1.6 mm of tread. Run-flats driven flat cannot be repaired." },

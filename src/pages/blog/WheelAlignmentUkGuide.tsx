@@ -80,6 +80,7 @@ export default function WheelAlignmentUkGuide() {
         { type: "h2", text: "Can a mobile fitter do alignment?" },
         { type: "p", html: "Almost never. 4-wheel alignment requires a hydraulic ramp or level pit, a camera or laser rig with target boards attached to each wheel, and reference software. It's a fixed-garage job. A few operators run mobile toe-only rigs for van and fleet work, but for a proper car alignment you're going to a garage." },
         { type: "p", html: "The practical workflow after a pothole or a set of new tyres: mobile fitter comes to the driveway or office, gets the new tyres on same-day. You book the alignment at a fixed garage within the following week. Two separate appointments, minimal disruption, correct result." },
+        { type: "p", html: "This pairing is especially common in cities with heavy pothole damage — after a hard strike in Manchester, for example, the mobile fitter handles the tyre the same day and the alignment follows at a garage. Our <a href=\"/blog/mobile-tyre-fitting-manchester\" class=\"text-primary hover:underline\">mobile tyre fitting Manchester</a> guide lists the roads where this sequence comes up most." },
 
         { type: "h2", text: "How to choose an alignment specialist" },
         {

@@ -61,6 +61,7 @@ export default function CrackedAlloyFromPothole() {
 
         { type: "h2", text: "Claiming the cost back from the council or TfL" },
         { type: "p", html: "UK councils, TfL, National Highways and Transport Scotland are all liable for pothole damage — <em>if</em> they were on notice of the defect and failed to fix it in a reasonable time. The claim rejection rate is high (roughly 40–70% depending on authority), but the ones that succeed usually share the same paperwork." },
+        { type: "p", html: "Pothole density varies hugely by region. Greater Manchester's freeze-thaw rainfall cycle and the West Midlands' worn urban grid are two of the worst — see our <a href=\"/blog/mobile-tyre-fitting-manchester\" class=\"text-primary hover:underline\">mobile tyre fitting Manchester</a> and <a href=\"/blog/mobile-tyre-fitting-birmingham\" class=\"text-primary hover:underline\">mobile tyre fitting Birmingham</a> guides for the specific hotspot roads in each." },
         {
           type: "ol",
           items: [
