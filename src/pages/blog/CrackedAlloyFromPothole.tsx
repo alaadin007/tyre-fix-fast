@@ -13,7 +13,7 @@ export default function CrackedAlloyFromPothole() {
       heroImage="crackedAlloy"
       heroAlt="A cracked alloy wheel rim next to a water-filled pothole in a broken tarmac road"
       intro="A cracked alloy from pothole impact is one of the most expensive tyre-related bills in the UK. You hit a pothole, the tyre went flat instantly, and now the alloy is buckled — maybe cracked. This guide explains how to tell repairable from scrap, what a UK refurb realistically costs in 2026, and the paperwork you need to claim the bill from the council or TfL."
-      howTo={ name: "How to claim the cost of pothole alloy damage back", fromHeading: "Claiming the cost back from the council or TfL" }
+      howTo={{ name: "How to claim the cost of pothole alloy damage back", fromHeading: "Claiming the cost back from the council or TfL" }}
       blocks={[
         { type: "h2", text: "Cracked alloy from pothole damage: is it actually cracked?" },
         { type: "p", html: "A pothole hit produces three levels of alloy damage. Getting the diagnosis right is the difference between a £70 refurb and a £400 replacement — and if the tyre took the hit too, check our <a href=\"/blog/tyre-sidewall-damage-guide\" class=\"text-primary hover:underline\">tyre sidewall damage guide</a>." },

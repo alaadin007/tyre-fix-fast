@@ -13,7 +13,7 @@ export default function TyreBlowoutOnMotorwayWhatToDo() {
       heroImage="tyreBlowout"
       heroAlt="A shredded blown-out tyre and scattered rubber debris on a motorway hard shoulder behind a warning triangle"
       intro="A tyre blowout on motorway speeds is loud, sudden and disorientating. A motorway blowout is loud, sudden and disorientating — and the wrong reflex will put you in a hedge. Here's what to actually do in the first thirty seconds, based on National Highways guidance and what our mobile fitters see every week on the M25, M6 and M1."
-      howTo={ name: "What to do during a tyre blowout on the motorway", fromHeading: "The 30-second survival sequence" }
+      howTo={{ name: "What to do during a tyre blowout on the motorway", fromHeading: "The 30-second survival sequence" }}
       blocks={[
         { type: "h2", text: "What a tyre blowout on motorway speeds feels like" },
         { type: "p", html: "A blowout is not a slow puncture. It's an instant, violent loss of pressure — usually a bang, a pull to one side (sometimes hard), a flapping noise and, on a rear tyre, a fishtailing feel in the back of the car. On a front tyre the steering goes heavy and the car lurches toward the failed side. On a rear the car snakes and the steering feels weirdly normal, which is what catches most drivers out." },
