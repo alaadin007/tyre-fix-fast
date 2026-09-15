@@ -86,6 +86,7 @@ export const CITY_PRICING: Record<string, CityPricing> = {
     midRange: [135, 190],
     performance: [210, 390],
     overnight: [20, 40],
+    response: [30, 60],
   },
   glasgow: {
     ...STANDARD,
