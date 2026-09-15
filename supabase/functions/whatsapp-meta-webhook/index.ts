@@ -326,15 +326,28 @@ Deno.serve(async (req) => {
         form.set(`MediaContentType${i}`, mediaTypes[i] ?? "image/jpeg");
       });
 
-      const r = await fetch(TWILIO_INBOUND_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-          Authorization: `Bearer ${SERVICE_KEY}`,
-        },
-        body: form.toString(),
-      });
-      if (!r.ok) console.error("forward to twilio-inbound failed", r.status, await r.text());
+      // Forward in the background: twilio-inbound can run long (AI + media +
+      // geocoding) and awaiting it here pushed this webhook past the 150s edge
+      // idle limit, producing 504s and silently dropped messages.
+      const forward = (async () => {
+        try {
+          const r = await fetch(TWILIO_INBOUND_URL, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/x-www-form-urlencoded",
+              Authorization: `Bearer ${SERVICE_KEY}`,
+            },
+            body: form.toString(),
+          });
+          if (!r.ok) console.error("forward to twilio-inbound failed", r.status, await r.text());
+        } catch (e) {
+          console.error("forward to twilio-inbound error", e);
+        }
+      })();
+      // deno-lint-ignore no-explicit-any
+      const rt = (globalThis as any).EdgeRuntime;
+      if (rt?.waitUntil) rt.waitUntil(forward);
+      else await forward;
     }
 
     return new Response("ok", { status: 200 });
