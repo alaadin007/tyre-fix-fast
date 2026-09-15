@@ -23,6 +23,8 @@ export interface CityPricing {
   midRangeBrands?: string;
   /** trailing note appended to the performance bullet */
   performanceNote?: string;
+  /** typical on-site arrival window in minutes for core coverage */
+  response?: Band;
 }
 
 /** Booking fee is flat nationwide and deducted from the final bill. */
