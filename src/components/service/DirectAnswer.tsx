@@ -17,12 +17,17 @@ export function DirectAnswer({
   citySlug?: string;
   className?: string;
 }) {
-  const { question, answer } = directAnswer({ service, place, serviceSlug, citySlug });
+  const { question, answer } = directAnswer({
+    service,
+    place,
+    ...(serviceSlug ? { serviceSlug } : {}),
+    ...(citySlug ? { citySlug } : {}),
+  });
   return (
     <div
       className={`rounded-2xl border p-5 sm:p-6 ${className}`}
       style={{ backgroundColor: "rgba(255,107,26,0.07)", borderColor: "rgba(255,107,26,0.30)" }}
-ađ    >
+    >
       <p className="text-sm font-semibold text-white/90">{question}</p>
       <p className="mt-2 text-sm text-white/75 leading-relaxed">{answer}</p>
     </div>
