@@ -159,6 +159,8 @@ export default function AreaPage() {
           <Link to={serviceCityHref("emergency-tyre-fitting", area.slug)} className="underline hover:text-white">emergency tyre fitting</Link>.
         </p>
 
+        <DirectAnswer service="mobile tyre fitting" place={area.name} citySlug={area.slug} className="mt-6 max-w-3xl" />
+
         <div className="mt-8 flex flex-col sm:flex-row gap-3 max-w-md">
           <a href={WA_HREF} target="_blank" rel="noopener noreferrer"
              className="inline-flex flex-1 items-center justify-center gap-2 rounded-2xl px-5 text-base font-semibold transition-transform active:scale-[0.98]"
