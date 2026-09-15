@@ -6,6 +6,7 @@ import { ServiceShell, CtaPair, FaqBlock } from "@/components/service/ServiceLay
 import { DirectAnswer } from "@/components/service/DirectAnswer";
 import NotFound from "@/pages/NotFound";
 import { isComboPublished, serviceCityHref } from "@/data/publishing";
+import { serviceOffer } from "@/data/pricing";
 
 export default function ServiceAreaPage() {
   const { service = "", city = "" } = useParams();
