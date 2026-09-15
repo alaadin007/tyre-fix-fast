@@ -38,6 +38,7 @@ const STANDARD: CityPricing = {
   overnight: [20, 35],
   lockingNut: [20, 40],
   midRangeBrands: "Michelin, Continental, Goodyear",
+  response: [30, 55],
 };
 
 export const CITY_PRICING: Record<string, CityPricing> = {
