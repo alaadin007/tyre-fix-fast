@@ -129,7 +129,7 @@ export default function ServicesIndex() {
     <ServiceShell message={MSG} breadcrumbs={[{ to: "/", label: "Home" }, { label: "Services" }]}>
       <Seo
         title="Mobile Tyre Services UK — Repair, Replacement, Run-Flat"
-        description="Mobile tyre services UK-wide: puncture repair, tyre replacement, emergency fitting and run-flat fitting. Text your postcode for a fixed price in 60 seconds, 24/7."
+        description="Mobile tyre services UK-wide: puncture repair, tyre replacement, emergency and run-flat fitting. Text your postcode for a fixed price, 24/7."
         canonical="/services"
         jsonLd={ld}
       />
