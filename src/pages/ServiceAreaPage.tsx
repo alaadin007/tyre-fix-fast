@@ -20,7 +20,10 @@ export default function ServiceAreaPage() {
   const published = isComboPublished(area.slug);
   const priceLine = svc.cityPriceLine(area.slug);
   const cap = svc.keyword.charAt(0).toUpperCase() + svc.keyword.slice(1);
-  const title = `${svc.name} ${area.name} | 24/7 | Tyrefly`.slice(0, 62);
+  const shortName = svc.shortName ?? svc.name;
+  const title = svc.cityCallout
+    ? `${shortName} ${area.name} — ${svc.cityCallout} | Tyrefly`.slice(0, 62)
+    : `${svc.name} ${area.name} | 24/7 | Tyrefly`.slice(0, 62);
   const description =
     `${svc.name} ${area.name}, 24/7 across ${area.region}. ${priceLine}. Text your postcode for a fixed quote in 60 seconds.`.slice(0, 158);
 
@@ -104,8 +107,8 @@ export default function ServiceAreaPage() {
           24/7 across {area.region}
         </div>
         <h1 className="mt-5 text-4xl sm:text-6xl font-bold leading-[0.95] tracking-tight">
-          {svc.name}<br />
-          <span style={{ color: "#FF6B1A" }}>{area.name}</span>
+          {shortName}<br />
+          <span style={{ color: "#FF6B1A" }}>{area.name}{svc.cityCallout ? ` — ${svc.cityCallout}` : ""}</span>
         </h1>
         <p className="mt-5 text-lg text-white/70 leading-relaxed max-w-2xl">{svc.tagline}</p>
         <DirectAnswer

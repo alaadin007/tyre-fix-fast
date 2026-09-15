@@ -31,7 +31,7 @@ export const AREAS: Area[] = [
     postcodes: "EC, WC, N, NW, E, SE, SW, W, BR, CR, DA, EN, HA, IG, KT, RM, SM, TW, UB, WD",
     hubs: ["Westminster", "Camden", "Islington", "Hackney", "Tower Hamlets", "Lambeth", "Southwark", "Wandsworth", "Kensington & Chelsea", "Hammersmith & Fulham", "Croydon", "Bromley", "Ealing", "Hounslow", "Brent", "Barnet", "Enfield", "Haringey", "Waltham Forest", "Newham", "Redbridge", "Havering", "Bexley", "Greenwich", "Lewisham", "Merton", "Sutton", "Kingston upon Thames", "Richmond upon Thames", "Harrow", "Hillingdon", "Barking & Dagenham", "City of London"],
     faqAnswer: "Yes — we cover every London borough and the M25 corridor 24/7. Most jobs inside the North & South Circular get a fitter within 35–60 minutes.",
-    metaTitle: "Mobile Tyre Fitting London | 24/7 from £95 | Tyrefly",
+    metaTitle: "Mobile Tyre Fitter London — 24/7 | Tyrefly",
     metaDesc: "Flat tyre anywhere in London? A vetted fitter reaches you in 35–90 minutes, day or night. Puncture repair from £45 — message us on WhatsApp.",
     intro: "Mobile tyre fitting in London means a fully-equipped van — tyre machine, wheel balancer, compressor, stock — coming to your car instead of you limping to a garage. Tyrefly matches you to a vetted local fitter across all 33 boroughs and the M25 corridor, 24 hours a day, with a firm all-in price before anyone sets off.",
     sections: [
@@ -111,7 +111,7 @@ export const AREAS: Area[] = [
     postcodes: "M, BL, OL, SK, WA, WN",
     hubs: ["Manchester city centre", "Salford", "Trafford", "Stockport", "Bolton", "Bury", "Oldham", "Rochdale", "Tameside", "Wigan"],
     faqAnswer: "We cover all 10 Greater Manchester boroughs plus the M60 ring. Average arrival on the M60 is under 50 minutes.",
-    metaTitle: "Manchester Mobile Tyre Fitting, 24/7 | Tyrefly",
+    metaTitle: "Mobile Tyre Fitter Manchester — 24/7 | Tyrefly",
     metaDesc: "Stuck with a puncture in Manchester? We repair and fit tyres at the roadside across all 10 boroughs, round the clock. Get a price in 60 seconds.",
     intro: "Mobile tyre fitting in Manchester puts a fully-stocked van at your kerb instead of costing you half a day at a garage. Tyrefly matches you to a vetted fitter across all ten Greater Manchester boroughs and the M60 ring, 24 hours a day, with a firm price agreed before dispatch.",
     sections: [
