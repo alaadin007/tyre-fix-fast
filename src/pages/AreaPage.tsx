@@ -348,6 +348,7 @@ export default function AreaPage() {
             <span>© Tyrefly · UK-wide mobile tyre fitting</span>
             <div className="flex items-center gap-4">
               <Link to="/areas" className="hover:text-white/70">All areas</Link>
+              <Link to="/about" className="hover:text-white/70">About</Link>
               <Link to="/privacy" className="hover:text-white/70">Privacy</Link>
               <Link to="/terms" className="hover:text-white/70">Terms</Link>
             </div>
