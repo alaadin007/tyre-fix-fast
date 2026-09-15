@@ -60,7 +60,7 @@ export default function ServicesIndex() {
   return (
     <ServiceShell message={MSG} breadcrumbs={[{ to: "/", label: "Home" }, { label: "Services" }]}>
       <Seo
-        title="Mobile Tyre Services UK — 24/7 Call-Out | Tyrefly"
+        title="Mobile Tyre Services UK — Repair, Replacement, Run-Flat"
         description="Mobile tyre services UK-wide: puncture repair, tyre replacement, emergency fitting and run-flat fitting. Text your postcode for a fixed price in 60 seconds, 24/7."
         canonical="/services"
         jsonLd={ld}
@@ -69,7 +69,7 @@ export default function ServicesIndex() {
       <section className="mx-auto w-full max-w-6xl px-5 py-12 md:py-16">
         <h1 className="text-4xl sm:text-6xl font-bold leading-[0.95] tracking-tight">
           Mobile tyre services <span style={{ color: "#FF6B1A" }}>UK</span><br />
-          <span className="text-3xl sm:text-4xl text-white/70">24/7, wherever your car is</span>
+          <span className="text-3xl sm:text-4xl text-white/70">Repair, replacement, run-flat — 24/7</span>
         </h1>
         <p className="mt-5 text-lg text-white/70 leading-relaxed max-w-2xl">
           Every mobile tyre services UK job starts with one text. Send your postcode and what's wrong — a vetted local

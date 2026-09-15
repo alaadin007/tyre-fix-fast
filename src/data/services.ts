@@ -14,6 +14,10 @@ export interface ServiceDef {
   name: string;
   /** short keyword form used in H1s: "puncture repair" */
   keyword: string;
+  /** shorter form for city page title/H1, e.g. "Emergency Tyre Fitting" */
+  shortName?: string;
+  /** callout modifier shown after the city in the city page title/H1 */
+  cityCallout?: string;
   tagline: string;
   priceLine: string;
   /** national page intro */
@@ -217,6 +221,8 @@ export const SERVICES: ServiceDef[] = [
     slug: "emergency-tyre-fitting",
     name: "Emergency mobile tyre fitting",
     keyword: "emergency tyre fitting",
+    shortName: "Emergency Tyre Fitting",
+    cityCallout: "60-Min Callout",
     tagline: "Blowout, shredded tyre or stranded at 2am — a technician dispatched immediately.",
     priceLine: "24/7 emergency call-out, quote in 60 seconds",
     cityPriceLine: () => "24/7 emergency call-out, quote in 60 seconds",
