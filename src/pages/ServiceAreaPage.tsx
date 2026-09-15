@@ -62,6 +62,13 @@ export default function ServiceAreaPage() {
         { "@type": "City", name: area.name },
         { "@type": "AdministrativeArea", name: area.region },
       ],
+      offers: serviceOffer({
+        serviceSlug: svc.slug,
+        citySlug: area.slug,
+        url,
+        name: `${cap} in ${area.name}`,
+        areaServed: area.name,
+      }),
     },
     {
       "@context": "https://schema.org",
