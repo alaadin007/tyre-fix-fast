@@ -312,7 +312,9 @@ export default function BlogPost(p: BlogPostProps) {
       }
     : null;
 
-  const jsonLd = [articleLd, breadcrumbLd, serviceLd, faqLd].filter(Boolean) as Record<
+  const howToLd = buildHowToLd(p, url, imageUrl);
+
+  const jsonLd = [articleLd, breadcrumbLd, serviceLd, faqLd, howToLd].filter(Boolean) as Record<
     string,
     unknown
   >[];
