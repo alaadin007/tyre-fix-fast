@@ -51,6 +51,7 @@ export const CITY_PRICING: Record<string, CityPricing> = {
     lockingNut: [20, 40],
     midRangeBrands: "Michelin, Continental, Bridgestone",
     zoneCharge: { label: "Congestion Charge zone during charging hours", band: [5, 15] },
+    response: [30, 60],
   },
   "greater-manchester": {
     ...STANDARD,
