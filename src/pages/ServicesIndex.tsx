@@ -2,9 +2,67 @@ import { Link } from "@/lib/router-compat";
 import { Seo } from "@/components/Seo";
 import { SERVICES } from "@/data/services";
 import { AREAS } from "@/data/areas";
-import { ServiceShell, CtaPair } from "@/components/service/ServiceLayout";
+import { ServiceShell, CtaPair, FaqBlock } from "@/components/service/ServiceLayout";
+import { DirectAnswer } from "@/components/service/DirectAnswer";
+import { NATIONAL_PRICING, BOOKING_FEE, range, surcharge, runFlatRange } from "@/data/pricing";
 
 const MSG = "Hi Tyrefly — I need a mobile tyre fitter";
+
+const P = NATIONAL_PRICING;
+
+const PRICE_ROWS: { service: string; price: string; time: string; best: string }[] = [
+  {
+    service: "Mobile puncture repair",
+    price: range(P.puncture),
+    time: "20–30 min on site",
+    best: "Nail, screw or slow leak in the central tread",
+  },
+  {
+    service: "Mobile tyre replacement",
+    price: `${range(P.budget)} budget · ${range(P.midRange)} premium`,
+    time: "30–45 min on site",
+    best: "Worn, aged or unrepairable tyres, planned or urgent",
+  },
+  {
+    service: "Emergency tyre fitting",
+    price: `${range(P.budget)}+ depending on size`,
+    time: "Dispatched immediately, 24/7",
+    best: "Blowout, shredded tyre, stranded roadside or at night",
+  },
+  {
+    service: "Run-flat tyre fitting",
+    price: runFlatRange(P),
+    time: "40–60 min on site",
+    best: "BMW, Mini and Mercedes run-flats needing a specialist machine",
+  },
+];
+
+const FAQS = [
+  {
+    q: "Which mobile tyre service do I need?",
+    a: "If the tyre still holds some air and the damage is a nail or screw in the central tread, start with a puncture repair. If the sidewall or shoulder is damaged, the tread is below 1.6mm, or the tyre has been driven on flat, it needs replacing. If you are stranded now, choose emergency fitting and we dispatch the nearest available technician straight away.",
+  },
+  {
+    q: "How much do mobile tyre services cost in the UK?",
+    a: `Puncture repairs are ${range(P.puncture)}. A budget tyre supplied and fitted is ${range(P.budget)}, mid-range premium ${range(P.midRange)}, and performance, SUV or run-flat ${range(P.performance)}. Overnight work between 10pm and 6am adds ${surcharge(P.overnight)}. The price you are quoted by message is the price you pay — there is no separate call-out charge.`,
+  },
+  {
+    q: "Is there a call-out fee?",
+    a: `No separate call-out fee. A £${BOOKING_FEE} booking fee secures the technician and slot, and it is deducted from the final bill, so it is not an extra cost on top of your quote.`,
+  },
+  {
+    q: "How quickly can a technician reach me?",
+    a: `Typically ${P.response?.[0] ?? 30}–${P.response?.[1] ?? 60} minutes in our core city coverage, and we operate 24 hours a day including weekends and bank holidays. Outside those areas we will tell you the honest arrival window before you commit to anything.`,
+  },
+  {
+    q: "Can you fit tyres at my home or workplace?",
+    a: "Yes. Most jobs are done on a driveway, in a car park, on a work forecourt or at the roadside. The technician needs a reasonably flat, safe place to jack the car. If the car is in an unsafe position on a live carriageway, get behind a barrier first and tell us — we will coordinate with recovery where needed.",
+  },
+  {
+    q: "Do you carry my tyre size in stock?",
+    a: "Common car, van and SUV sizes are carried or sourced locally the same day. Rare performance, run-flat and light commercial sizes are checked against local supply before we quote, so you are told up front whether it is same-day or next-day rather than after the van arrives.",
+  },
+];
 
 export default function ServicesIndex() {
   const ld = [
