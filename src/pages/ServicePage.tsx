@@ -3,6 +3,7 @@ import { Seo } from "@/components/Seo";
 import { getService } from "@/data/services";
 import { AREAS } from "@/data/areas";
 import { ServiceShell, CtaPair, FaqBlock } from "@/components/service/ServiceLayout";
+import { DirectAnswer } from "@/components/service/DirectAnswer";
 import NotFound from "@/pages/NotFound";
 import { cityFromServiceHref, isComboPublished } from "@/data/publishing";
 
