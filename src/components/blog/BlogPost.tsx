@@ -80,7 +80,7 @@ const stripTags = (html: string) => html.replace(/<[^>]+>/g, "").replace(/\s+/g,
 function stepFromItem(item: string) {
   const text = stripTags(item);
   const strong = item.match(/<strong>(.*?)<\/strong>/i);
-  const rawName = strong ? stripTags(strong[1]) : text.split(/(?<=[.?!])\s/)[0] || text;
+  const rawName = strong ? stripTags(strong[1] ?? "") : text.split(/(?<=[.?!])\s/)[0] || text;
   const name = rawName.replace(/[.:]$/, "").slice(0, 80);
   return { "@type": "HowToStep", name, text };
 }
@@ -118,7 +118,6 @@ function buildHowToLd(p: BlogPostProps, url: string, image: string) {
     description: p.howTo.description ?? p.metaDesc,
     image: [image],
     inLanguage: "en-GB",
-    totalTime: undefined,
     step: steps,
   };
 }
