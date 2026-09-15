@@ -13,6 +13,7 @@ export default function PotholeDamageClaimUk() {
       heroImage="potholeClaim"
       heroAlt="A large water-filled pothole in a UK road with parked cars either side"
       intro="A pothole damage claim UK councils cannot reject starts with evidence, not anger — and with a documented repair cost. UK councils reject about 65% of pothole damage claims — mostly because drivers don't submit the right evidence in the right order. It's not that claims never win. It's that most claims lose on paperwork. Here's how to make yours one of the ones that pays out."
+      howTo={{ name: "How to claim pothole damage from a UK council" }}
       blocks={[
         { type: "h2", text: "Who's actually responsible for the road?" },
         {

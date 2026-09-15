@@ -66,6 +66,60 @@ export interface BlogPostProps {
   related?: { to: string; label: string }[];
   /** Nearby city/area pages relevant to this post. */
   areaLinks?: { to: string; label: string }[];
+  /**
+   * HowTo schema for procedural guides. Steps are derived from what is already
+   * visible in `blocks` — never hand-written here, so schema can't drift from copy.
+   * - `fromHeading`: use the first ordered list that follows that H2.
+   * - omit `fromHeading`: use every H2 that starts with "Step N:" plus its first paragraph.
+   */
+  howTo?: { name: string; description?: string; fromHeading?: string };
+}
+
+const stripTags = (html: string) => html.replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
+
+function stepFromItem(item: string) {
+  const text = stripTags(item);
+  const strong = item.match(/<strong>(.*?)<\/strong>/i);
+  const rawName = strong ? stripTags(strong[1] ?? "") : text.split(/(?<=[.?!])\s/)[0] || text;
+  const name = rawName.replace(/[.:]$/, "").slice(0, 80);
+  return { "@type": "HowToStep", name, text };
+}
+
+function buildHowToLd(p: BlogPostProps, url: string, image: string) {
+  if (!p.howTo) return null;
+  let steps: Record<string, unknown>[] = [];
+
+  if (p.howTo.fromHeading) {
+    const start = p.blocks.findIndex(
+      (b) => b.type === "h2" && b.text === p.howTo!.fromHeading,
+    );
+    if (start === -1) return null;
+    const list = p.blocks.slice(start + 1).find((b) => b.type === "ol" || b.type === "h2");
+    if (!list || list.type !== "ol") return null;
+    steps = list.items.map(stepFromItem);
+  } else {
+    p.blocks.forEach((b, i) => {
+      if (b.type !== "h2" || !/^Step\s+\d+\s*[:.]/i.test(b.text)) return;
+      const body = p.blocks.slice(i + 1).find((n) => n.type === "p" || n.type === "h2");
+      steps.push({
+        "@type": "HowToStep",
+        name: b.text.replace(/^Step\s+\d+\s*[:.]\s*/i, ""),
+        text: body && body.type === "p" ? stripTags(body.html) : b.text,
+        url: `${url}#step-${steps.length + 1}`,
+      });
+    });
+  }
+
+  if (steps.length < 2) return null;
+  return {
+    "@context": "https://schema.org",
+    "@type": "HowTo",
+    name: p.howTo.name,
+    description: p.howTo.description ?? p.metaDesc,
+    image: [image],
+    inLanguage: "en-GB",
+    step: steps,
+  };
 }
 
 const heroMap = {
@@ -258,7 +312,9 @@ export default function BlogPost(p: BlogPostProps) {
       }
     : null;
 
-  const jsonLd = [articleLd, breadcrumbLd, serviceLd, faqLd].filter(Boolean) as Record<
+  const howToLd = buildHowToLd(p, url, imageUrl);
+
+  const jsonLd = [articleLd, breadcrumbLd, serviceLd, faqLd, howToLd].filter(Boolean) as Record<
     string,
     unknown
   >[];

@@ -13,6 +13,7 @@ export default function LockingWheelNutLostUk() {
       heroImage="lockingWheelNut"
       heroAlt="A locking wheel nut key socket held beside an alloy wheel hub with the patterned locking nut visible"
       intro="Locking wheel nut lost UK-wide is one of the most common callout complications we see. You've got a flat tyre, the fitter is 15 minutes away, and you can't find the little black adapter that unlocks one nut on each wheel. Panic, but the productive kind — this is a solvable problem. Here's every option, ranked by cost and time."
+      howTo={{ name: "How to find a lost locking wheel nut key", fromHeading: "Where the key usually lives" }}
       blocks={[
         { type: "h2", text: "Locking wheel nut lost UK: what the nut actually is" },
         { type: "p", html: "Most cars sold in the UK since the late 1990s ship with one \"locking\" wheel nut per wheel. It has a unique keyed pattern on its head so a standard 17 or 19 mm socket won't turn it — only the matching adapter (the \"key\") that came with the car. It's an anti-theft measure aimed at stopping opportunists lifting a set of alloys in the middle of the night." },
