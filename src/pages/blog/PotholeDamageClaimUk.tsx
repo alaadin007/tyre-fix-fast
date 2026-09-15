@@ -90,6 +90,7 @@ export default function PotholeDamageClaimUk() {
           ],
         },
         { type: "p", html: "FOI requests are free and must be answered within 20 working days. If the response shows the pothole was reported and not fixed, the council's Section 58 defence collapses and the claim moves toward payout. This is the single most effective step in a UK pothole claim, and 90% of drivers don't take it." },
+        { type: "p", html: "In the West Midlands, routes like the A38 Bristol Road and the A45 Coventry Road generate some of the country's highest pothole claim volumes — our <a href=\"/blog/mobile-tyre-fitting-birmingham\" class=\"text-primary hover:underline\">mobile tyre fitting Birmingham</a> guide maps the worst hotspots and what repairs there typically cost." },
 
         { type: "h2", text: "Step 6: Escalation — small claims court" },
         { type: "p", html: "If the council still refuses after your FOI evidence is in hand, you can escalate to the small claims track of the county court. For claims under £10,000 the process is designed to work without a solicitor, court fees are £35–£185 depending on claim size (added to your claim if you win), and mediation is offered before hearing." },
