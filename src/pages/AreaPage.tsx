@@ -3,6 +3,7 @@ import { MessageSquare, Phone, Clock, ShieldCheck, MapPin, Sparkles, PoundSterli
 import { Seo } from "@/components/Seo";
 import { serviceCityHref } from "@/data/publishing";
 import { getArea, AREAS } from "@/data/areas";
+import { DirectAnswer } from "@/components/service/DirectAnswer";
 import { SUPPORT_WHATSAPP, SUPPORT_WA_DISPLAY, waLink } from "@/lib/whatsapp";
 import logo from "@/assets/tyrefly-logo.png";
 import NotFound from "@/pages/NotFound";
