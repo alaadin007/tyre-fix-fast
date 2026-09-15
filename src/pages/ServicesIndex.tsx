@@ -98,7 +98,7 @@ export default function ServicesIndex() {
         "@type": "OfferCatalog",
         name: "Mobile tyre services",
         itemListElement: SERVICES.map((s) => ({
-          "@type": "Offer",
+          ...serviceOffer({ serviceSlug: s.slug, url: `https://www.tyrefly.com/services/${s.slug}/`, name: s.name, areaServed: "United Kingdom" }),
           itemOffered: { "@type": "Service", name: s.name, serviceType: s.keyword, url: `https://www.tyrefly.com/services/${s.slug}/` },
         })),
       },
