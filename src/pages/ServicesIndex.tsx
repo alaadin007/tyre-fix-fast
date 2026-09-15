@@ -4,7 +4,7 @@ import { SERVICES } from "@/data/services";
 import { AREAS } from "@/data/areas";
 import { ServiceShell, CtaPair, FaqBlock } from "@/components/service/ServiceLayout";
 import { DirectAnswer } from "@/components/service/DirectAnswer";
-import { NATIONAL_PRICING, BOOKING_FEE, range, surcharge, runFlatRange } from "@/data/pricing";
+import { NATIONAL_PRICING, BOOKING_FEE, range, surcharge, runFlatRange, serviceOffer } from "@/data/pricing";
 
 const MSG = "Hi Tyrefly — I need a mobile tyre fitter";
 
