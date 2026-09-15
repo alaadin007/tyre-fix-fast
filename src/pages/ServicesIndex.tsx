@@ -146,6 +146,7 @@ export default function ServicesIndex() {
           <Link to="/areas/glasgow" className="underline hover:text-white">Glasgow</Link>.
         </p>
         <CtaPair message={MSG} className="mt-8" />
+        <DirectAnswer service="mobile tyre fitting" place="the UK" className="mt-8 max-w-2xl" />
       </section>
 
       <section className="border-t border-white/5 bg-white/[0.02]">
