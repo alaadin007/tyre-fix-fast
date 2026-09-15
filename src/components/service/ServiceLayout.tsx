@@ -97,6 +97,7 @@ export function ServiceShell({
               <Link to="/services" className="hover:text-white/70">Services</Link>
               <Link to="/areas" className="hover:text-white/70">Service areas</Link>
               <Link to="/blog" className="hover:text-white/70">Guides</Link>
+              <Link to="/about" className="hover:text-white/70">About</Link>
               <Link to="/privacy" className="hover:text-white/70">Privacy</Link>
               <Link to="/terms" className="hover:text-white/70">Terms</Link>
             </div>
