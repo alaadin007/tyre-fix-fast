@@ -118,10 +118,64 @@ export const NATIONAL_PRICING: CityPricing = {
   overnight: nationalBand("overnight"),
   lockingNut: nationalBand("lockingNut"),
   midRangeBrands: "Michelin, Continental, Goodyear",
+  response: [
+    Math.min(...Object.values(CITY_PRICING).map((c) => (c.response ?? [30, 55])[0])),
+    Math.max(...Object.values(CITY_PRICING).map((c) => (c.response ?? [30, 55])[1])),
+  ],
 };
 
 export function getPricing(citySlug?: string): CityPricing {
   return (citySlug && CITY_PRICING[citySlug]) || NATIONAL_PRICING;
+}
+
+/** Typical on-site arrival window, e.g. "30–60 minutes". */
+export function responseWindow(citySlug?: string): string {
+  const r = getPricing(citySlug).response ?? [30, 60];
+  return `${r[0]}–${r[1]} minutes`;
+}
+
+/** The price band a given service slug is quoted in, for a city (or nationwide). */
+export function serviceBand(serviceSlug: string, citySlug?: string): Band {
+  const p = getPricing(citySlug);
+  switch (serviceSlug) {
+    case "puncture-repair":
+      return p.puncture;
+    case "run-flat-tyre-fitting":
+      return p.performance;
+    case "emergency-tyre-fitting":
+      return [p.puncture[0], p.performance[1]];
+    case "tyre-replacement":
+    default:
+      return [p.budget[0], p.performance[1]];
+  }
+}
+
+/**
+ * 40–60 word direct-answer opening block for a commercial page.
+ * All figures come from CITY_PRICING / NATIONAL_PRICING — never hand-typed.
+ */
+export function directAnswer(opts: {
+  /** lower-case service phrase, e.g. "puncture repair" */
+  service: string;
+  /** "London", or "the UK" for nationwide pages */
+  place: string;
+  /** service slug used to pick the price band; omit on area pages */
+  serviceSlug?: string;
+  citySlug?: string;
+}): { question: string; answer: string } {
+  const { service, place, serviceSlug, citySlug } = opts;
+  const p = getPricing(citySlug);
+  const band = serviceSlug ? serviceBand(serviceSlug, citySlug) : [p.budget[0], p.performance[1]];
+  const win = responseWindow(citySlug);
+  const question = `How much does ${service} cost in ${place}?`;
+  const answer =
+    `${range(band as Band)}, 24/7, typically within ${win}. ` +
+    (serviceSlug === "puncture-repair"
+      ? ""
+      : `Puncture repairs are ${range(p.puncture)}. `) +
+    `Tyrefly sends a vetted mobile technician to your home, work or the roadside anywhere in ${place}, day or night. ` +
+    `You get a fixed all-in price by WhatsApp in about 60 seconds, and the £${BOOKING_FEE} booking fee comes off your final bill.`;
+  return { question, answer };
 }
 
 /** "£40–£55" */
