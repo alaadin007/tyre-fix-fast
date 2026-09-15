@@ -6,6 +6,7 @@ import { ServiceShell, CtaPair, FaqBlock } from "@/components/service/ServiceLay
 import { DirectAnswer } from "@/components/service/DirectAnswer";
 import NotFound from "@/pages/NotFound";
 import { isComboPublished, serviceCityHref } from "@/data/publishing";
+import { serviceOffer } from "@/data/pricing";
 
 export default function ServiceAreaPage() {
   const { service = "", city = "" } = useParams();
@@ -62,6 +63,13 @@ export default function ServiceAreaPage() {
         { "@type": "City", name: area.name },
         { "@type": "AdministrativeArea", name: area.region },
       ],
+      offers: serviceOffer({
+        serviceSlug: svc.slug,
+        citySlug: area.slug,
+        url,
+        name: `${cap} in ${area.name}`,
+        areaServed: area.name,
+      }),
     },
     {
       "@context": "https://schema.org",

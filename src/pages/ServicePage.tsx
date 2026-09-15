@@ -6,6 +6,7 @@ import { ServiceShell, CtaPair, FaqBlock } from "@/components/service/ServiceLay
 import { DirectAnswer } from "@/components/service/DirectAnswer";
 import NotFound from "@/pages/NotFound";
 import { cityFromServiceHref, isComboPublished } from "@/data/publishing";
+import { serviceOffer } from "@/data/pricing";
 
 export default function ServicePage() {
   const { service = "" } = useParams();
@@ -34,6 +35,12 @@ export default function ServicePage() {
       },
       areaServed: { "@type": "Country", name: "United Kingdom" },
       availableChannel: { "@type": "ServiceChannel", serviceUrl: url, availableLanguage: "en-GB" },
+      offers: serviceOffer({
+        serviceSlug: svc.slug,
+        url,
+        name: `${svc.name} UK`,
+        areaServed: "United Kingdom",
+      }),
     },
     {
       "@context": "https://schema.org",

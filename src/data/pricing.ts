@@ -178,6 +178,37 @@ export function directAnswer(opts: {
   return { question, answer };
 }
 
+/**
+ * Machine-readable Offer for a Service JSON-LD node, built from the same
+ * price bands the visible copy uses. GBP, all-in, per job.
+ */
+export function serviceOffer(opts: {
+  serviceSlug: string;
+  citySlug?: string;
+  url: string;
+  /** e.g. "Mobile puncture repair in London" */
+  name: string;
+  areaServed?: string;
+}): Record<string, unknown> {
+  const [low, high] = serviceBand(opts.serviceSlug, opts.citySlug);
+  return {
+    "@type": "Offer",
+    name: opts.name,
+    url: opts.url,
+    priceCurrency: "GBP",
+    availability: "https://schema.org/InStock",
+    priceSpecification: {
+      "@type": "PriceSpecification",
+      priceCurrency: "GBP",
+      minPrice: low,
+      maxPrice: high,
+      valueAddedTaxIncluded: true,
+      description: `All-in price per tyre, quoted before work starts. A £${BOOKING_FEE} booking fee is deducted from the final bill.`,
+    },
+    ...(opts.areaServed ? { areaServed: { "@type": "Place", name: opts.areaServed } } : {}),
+  };
+}
+
 /** "£40–£55" */
 export function range(band: Band): string {
   return `£${band[0]}–£${band[1]}`;
