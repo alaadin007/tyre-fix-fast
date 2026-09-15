@@ -174,7 +174,7 @@ export function directAnswer(opts: {
       ? ""
       : `Puncture repairs are ${range(p.puncture)}. `) +
     `Tyrefly sends a vetted mobile technician to your home, work or the roadside anywhere in ${place}, day or night. ` +
-    `You get a fixed all-in price by WhatsApp in about 60 seconds, and the £${BOOKING_FEE} booking fee comes off your final bill.`;
+    `You get a fixed all-in price by WhatsApp in about 60 seconds, with the £${BOOKING_FEE} booking fee deducted from your bill.`;
   return { question, answer };
 }
 
