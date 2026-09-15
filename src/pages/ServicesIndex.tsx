@@ -314,6 +314,7 @@ export default function ServicesIndex() {
           ))}
         </div>
       </section>
+      <FaqBlock heading="Mobile tyre services: common questions" faqs={FAQS} />
     </ServiceShell>
   );
 }
