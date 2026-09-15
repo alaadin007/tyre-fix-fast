@@ -73,6 +73,7 @@ export default function ServicePage() {
           <span className="text-3xl sm:text-4xl text-white/70">wherever your car is, 24/7</span>
         </h1>
         <p className="mt-5 text-lg text-white/70 leading-relaxed max-w-2xl">{svc.tagline}</p>
+        <DirectAnswer service={svc.keyword} place="the UK" serviceSlug={svc.slug} className="mt-6 max-w-3xl" />
         <CtaPair message={MSG} className="mt-8" />
       </section>
 
